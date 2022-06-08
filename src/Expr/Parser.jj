@@ -1,0 +1,211 @@
+
+options {
+	JDK_VERSION = "17";
+	static = false;
+	debug_parser = false;
+}
+
+
+PARSER_BEGIN(Parser)
+
+package Expr;
+
+import static Wat.Utility.$;
+import static Wat.Utility.classForName;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
+
+@SuppressWarnings("all")
+public class Parser {
+	
+	/* static=true
+	public static <T> T parse(String line) throws Exception {
+		// E' necessario inizializzare jj_input_stream con un SimpleCharStream!
+		if (jj_input_stream == null) jj_input_stream = new SimpleCharStream((Reader) null);
+		ReInit(new StringReader(line));
+		return (T) parse();
+	}
+	//*/
+	
+	// static=false
+	public static Object[] parse(String rest) throws Exception {
+		return new Parser(rest).parse();
+	}
+	
+	public Parser(String line) {
+		this(new StringReader(line));
+	}
+	
+	public static void main(String args []) throws Exception {
+		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+		boolean expr = true;
+		for (;;) {
+			System.out.print("> ");
+			String line = in.readLine();
+			if (line.length() == 0) break;
+			try {
+				if (expr) {
+					line = line.replaceAll("\\\\n", "\n");
+					System.out.println(line);
+					//Object o = Parser.parse(line); // static=true
+					Object o = parse(line); // static=false
+					System.out.println("OK: " + toString(o));
+				}
+				else {
+					// static=false
+					Parser parser = new Parser(line);
+					for(;;) {
+						Token token = parser.getNextToken();
+						if (token.kind == 0) break;
+						System.out.printf("%s:\t%s\n", ParserConstants.tokenImage[token.kind], token.image);
+					}
+				}
+			}
+			catch (Exception e) {
+				System.out.println("NOK! " /*+ e.getMessage()*/);
+				e.printStackTrace(System.out);
+			}
+			catch (Error e) {
+				System.out.println("Oops! " /*+ e.getMessage()*/);
+				e.printStackTrace(System.out);
+			}
+		}
+		System.out.println("finito!");
+	}
+	
+	public static String toString(Object o) {
+		if (o == null) return "null";
+		if (!(o instanceof Object[])) return o.toString();
+		StringBuffer sb = new StringBuffer();
+		sb.append("(");
+		for (Object e: (Object[]) o) sb.append((sb.length()==1 ? "" : " ") + toString(e) );
+		sb.append(")");
+		return sb.toString();
+	}
+
+	public boolean isNil(Object o) {
+		return o instanceof Object[] && ((Object[]) o).length == 0;
+	}
+	
+	public static String toStringTokenImage(String s) {
+		return toString(s.substring(1, s.length()-1));
+	}
+	
+	public static String toString(String s) {
+		//System.out.println("i:" + s);
+		s = s
+			//.replaceAll("\\\\\\\\", "\\\\")
+			//.replaceAll("\\\\\"", "\"")
+			.replaceAll("\\\\'", "'")
+			.replaceAll("\\\\n", "\n")
+			.replaceAll("\\\\t", "\t")
+			.replaceAll("\\\\r", "\r")
+			.replaceAll("\\\\b", "\b")
+			.replaceAll("\\\\f", "\f")
+		;
+		//System.out.println("f:" + s);
+		return s;
+	}
+	
+	public static TokenMgrError redoTokenMgrError(TokenMgrError e, String msg) {
+		StackTraceElement ste[] = e.getStackTrace();
+		e = new TokenMgrError(msg, e.errorCode);
+		e.setStackTrace(ste);
+		return e;
+	}
+	
+	public static ParseException redoParseException(ParseException e, String msg) {
+		StackTraceElement ste[] = e.getStackTrace();
+		e = new ParseException(msg);
+		e.setStackTrace(ste);
+		return e;
+	}
+}
+
+PARSER_END(Parser)
+
+SKIP:	// white spaces
+{	< " " | "\t" | < cmt > | "\n" | "\r" >
+| 	< # cmt: ";" (~["\n"])* (("\r")? "\n")? >
+}
+
+TOKEN:	// separators
+{	"(" | ")" | "." | "'" | ":"
+}
+
+TOKEN:	// reserved words
+{	< Nil: "()" >
+| 	< Null: "#null" >
+|	< True: "#t" >
+|	< False: "#f" >
+|	< Ignore: "#ignore" >
+|	< Undefined: "#undefined" >
+}
+
+TOKEN:	// literals
+{	< Integer: "0" | <sNat> >
+|	< # sNat: ("-")? <Nat> >
+|	< # Nat: <d19> (<d09>)* >
+|	< # d19: ["1"-"9"] >
+|	< # d09: ["0"-"9"] >
+|	< Double: (<sNat> | <Integer> "." (<d09>)+) (<exp>)? >
+|	< # exp: ["e","E"] <Integer> >
+|	< String:	"\"" ( <sChr> )* "\"" >
+|	< # sChr: ~["\"","\n","\r","\f","\b","\t"] | "\\" ["\"","n","r","f","b","t"] >
+//|	< # escape: ["\"","\n","\r","\f","\b","\t"]
+//|	< # sChr: ~<escape> | "\\" <escape >
+}
+
+TOKEN:	// identifiers
+{	< Id: ("."|"@")? <first> ( <first> | <next> )* >
+|	< # first: <letter> | <special> > 
+|	< # special: [ "-", "&", "!", "=", ">", "<", "%", "+", "?", "/", "*", "$", "_", "@", "|", "~", "^" ] >
+|	< # letter: [ "A"-"Z", "a"-"z" ] >
+|	< # next: [ "0"-"9" ] >
+|  	< ClId: <jvid> ("." <jvid>)* ( ("[" "]")+ | ("$" <jvid>)+ ("[" "]")* )? >
+|	< # jvid: (<letter>| "__" | "$") (<letter> | <next> | "_" | "$")* >
+}
+
+
+Object Elt() throws Exception: {
+	Token t, t2=null;
+	Object o, o2=null;
+  	List l = new ArrayList(); 
+}	{	<Nil> 		{ return $(); }
+	|	<Null>		{ return null; }
+	|	<True> 		{ return true; }    
+	|	<False> 	{ return false; }    
+	|	t=<Ignore> 	{ return t.image; }    
+	|	t=<Undefined> 	{ return t.image; }    
+	|	t=<Integer>	{ return java.lang.Integer.parseInt(t.image); }
+	|	t=<Double>	{ return java.lang.Double.parseDouble(t.image); }
+	|	t=<String>	{ return $("wat-string", toStringTokenImage(t.image)); }
+	|	"'" o=Elt() { return $("quote", o); }
+	|	t=<ClId>	{ return classForName(t.image); }	
+	|	t=<Id> [":" t2=<Id>] {
+  		if (t2 != null) return $("eval", $("quote", t2.image), t.image);
+  		var id = t.image;
+  		if (id.length() == 1) return id;
+  		switch (id.charAt(0)) {
+  			case '.': return $("js-getter", $("wat-string", id.substring(1)));
+  			case '@': return $("js-invoker", $("wat-string", id.substring(1)));
+  			default: return id;
+  		}  	
+	}
+	|	"(" ( o=Elt(){ l.add(o); } )+ [ "." o2=Elt() ] ")" {
+		if (o2 != null && !isNil(o2)) { l.add( "." ); l.add( o2 ); };
+		return l.toArray();
+	} 
+}
+
+Object[] parse() throws Exception: {
+	Object o = null;
+  	List l = new ArrayList(); 
+}
+{	( o=Elt(){ l.add(o); } )* <EOF> { return l.toArray(); }
+}
+

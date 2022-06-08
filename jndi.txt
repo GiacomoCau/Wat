@@ -1,0 +1,13 @@
+
+Object
+	object = (new class ... args)
+
+Call
+	result = (@method object ... args)
+	
+Getter	
+	result = (.attribute object)
+
+Setter
+	result = (.attribute object value)
+	result = (set ((.attribute object) value)
