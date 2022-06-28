@@ -76,10 +76,11 @@ public class Vm {
 	};
 	public static Ign IGN = new Ign();
 	
+	boolean trace = false;
 	
 	/* Evaluation Core */
 	Object evaluate(Mark m, Env e, Object o) {
-		//print("eval:", o);
+		if (trace) print("eval:", o);
 		return o instanceof Evaluable x ? x.eval(m, e) : o;
 	}
 	
@@ -87,8 +88,7 @@ public class Vm {
 		String name;
 		Sym(String name) { this.name = name; }
 		public Object eval(Mark m, Env e) { return lookup(e, this); }
-		public Object match(Env e, Object rhs) {
-			e.put(this, rhs); return IGN; }	
+		public Object match(Env e, Object rhs) { e.put(this, rhs); if (trace) print("bind:", this.name, rhs, e); return IGN; }	
 		public int hashCode() { return Objects.hashCode(name); }
 		public boolean equals(Object obj) {
 			if (this == obj) return true;
@@ -149,7 +149,7 @@ public class Vm {
 	
 	// Operative & Applicative Combiners
 	Object combine(Mark m, Env e, Object cmb, Object o) {
-		//print("combine: ", cons(cmb, o));
+		if (trace) print("combine:", cons(cmb, o));
 		if (cmb instanceof Combinable combinable) return combinable.combine(m, e, o);
 		if (isInstance(cmb, Function.class, BiFunction.class, ArgsList.class))
 			return ((Combinable) jswrap(cmb)).combine(m, e, o);
@@ -160,14 +160,14 @@ public class Vm {
 		Object p; Object ep; Object x; Env e;
 		Opv(Object p, Object ep, Object x, Env e) { this.p = p; this.ep = ep; this.x = x; this.e = e; }
 		public Object combine(Mark m, Env e, Object o) {
-			var xe = env(e);
+			var xe = env(this.e);
 			return monadic(
 				null,
 				()-> bind(xe, p, o),
 				__-> monadic(
 					null,
 					()-> bind(xe, ep, e),
-					___-> evaluate(null, print(xe), x)
+					___-> evaluate(null, xe, x)
 				)
 			);
 		}
@@ -440,7 +440,15 @@ public class Vm {
 	}
 	Env env() { return new Env(null); }
 	Env env(Env parent) { return new Env(parent); }
-	Object lookup(Env e, Sym sym) {	Object sExpr = e.get(sym); return sExpr != null ? sExpr : e.parent != null ? lookup(e.parent, sym) : error("unbound: " + sym); };
+	//Object lookup(Env e, Sym sym) {	Object sExpr = e.get(sym); return sExpr != null ? sExpr : e.parent != null ? lookup(e.parent, sym) : error("unbound: " + sym); };
+	Object lookup(Env e, Sym sym) {
+		for(;;) {
+			Object value = e.get(sym); 
+			if (value != null) { if (trace) print("lookup:", value); return value; }
+			if (e.parent == null) return error("unbound: " + sym);
+			e = e.parent;
+		}
+	}
 	
 	Object bind(Env e, Object lhs, Object rhs) {
 		if (lhs instanceof Matchable matchable) { matchable.match(e, rhs); return IGN; }
@@ -527,7 +535,7 @@ public class Vm {
 				//t.printStackTrace();
 		}
 	}
-	Void assertAll(Object ... os) {
+	Void assertEq(Object ... os) {
 		try {
 			var a = os[0];
 			var v = evaluate(null, env(the_environment), a);
@@ -601,7 +609,7 @@ public class Vm {
 				default -> error("not a combine " + jsfun);
 			};
 		}
-		public String toString() {return "JSFun " /*+jsfun.getClass().getSimpleName()*/; }
+		public String toString() {return "JSFun" /*+jsfun.getClass().getSimpleName()*/; }
 	}
 	Object jswrap(Object jsfun) {
 		if (!isInstance(jsfun, ArgsList.class, Function.class, BiFunction.class, Consumer.class)) return error("no fun:" + jsfun);
@@ -685,7 +693,7 @@ public class Vm {
 			$("vm-def", "vm-qot", $("vm-vau", $("a"), IGN, "a")),
 			$("vm-def", "==", jswrap((BiFunction<Object,Object,Boolean>) (a,b)-> a == b)),
 			$("vm-def", "eq", jswrap((BiFunction<Object,Object,Boolean>) (a,b)-> eq(a,b))),
-			$("vm-def", "assert", (ArgsList) l-> assertAll(list_to_array(l)))
+			$("vm-def", "assert", new JSFun((ArgsList) l-> assertEq(list_to_array(l))))
 		)
 	;
 	Env the_environment = env(); {
@@ -881,7 +889,7 @@ public class Vm {
 		
 		eval("""
 			(assert (vm-def a 1) #ignore)
-			;(assert (vm-def a)          ) ;throw
+			(assert (vm-def a)          ) ;throw
 			
 			(vm-def $define! vm-def)
 			
@@ -922,13 +930,17 @@ public class Vm {
 			
 			;;;; Macro and vau
 			
+			;(@log &console "da qui ---------------------")
+			
 			; derivazione Shutt!
-			;($define! $vau
-			;  ((wrap
-			;     ($vau ($vaux) #ignore
-			;       ($vaux (formals eformal . body) env
-			;         (eval (list $vau formals eformal (cons begin body)) env) )))
-			;  $vau ))  
+			($define! $vau
+			  ((wrap
+			     ($vau ($vau) #ignore
+			       ($vau (formals eformal . body) env
+			         (eval (list $vau formals eformal (list* begin body)) env) )))
+			  $vau ))
+			(($vau (x) #ignore 1 2 3 4 x) 1)
+			  
 		""");		
 		repl();
 	}
