@@ -28,6 +28,8 @@ import java.util.function.Supplier;
 
 public class Vm {
 	
+	boolean trace = false;
+	
 	class Mark {}
 	interface Evaluable { Object eval(Mark m, Env e); }
 	interface Matchable { Object match(Env e, Object rhs); }
@@ -75,8 +77,6 @@ public class Vm {
 		public String toString() { return "#ignore"; }
 	};
 	public static Ign IGN = new Ign();
-	
-	boolean trace = false;
 	
 	/* Evaluation Core */
 	Object evaluate(Mark m, Env e, Object o) {
@@ -638,7 +638,7 @@ public class Vm {
 			// Basics
 			$("vm-def", "vm-vau", new Vau()),
 			$("vm-def", "vm-eval", wrap(new Eval())),
-			$("vm-def", "vm-make-environment", jswrap((Function<Env, Env>) parent-> env(parent))),
+			$("vm-def", "vm-make-environment", jswrap((ArgsList) args-> env(args == NIL ? null : (Env) car(args)))),
 			$("vm-def", "vm-wrap", jswrap((Function<Object, Object>) this::wrap)),
 			$("vm-def", "vm-unwrap", jswrap((Function<Object, Object>) this::unwrap)),
 			// Values
@@ -781,7 +781,7 @@ public class Vm {
 	}
 	
 	public void main() throws Exception {
-		/*
+		//*
 		//exec(parse(readString("boot.wat")));
 		eval(readString("boot.wat"));
 		//compile("boot.wat");
