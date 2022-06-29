@@ -129,8 +129,9 @@ public class Parser {
 PARSER_END(Parser)
 
 SKIP:	// white spaces
-{	< " " | "\t" | < cmt > | "\n" | "\r" >
+{	< " " | "\t" | < cmt > | < mlcmt > | "\n" | "\r" >
 | 	< # cmt: ";" (~["\n"])* (("\r")? "\n")? >
+| 	< # mlcmt: "/*" (~["*"])* "*" (~["/"] (~["*"])* "*")* "/">
 }
 
 TOKEN:	// separators
