@@ -252,7 +252,7 @@
              (list vm-dlet name value (process-bindings rest-bs)) )))
     env ))
 
-;;;; Prototypes
+/*;;;; Prototypes
 
 (define-operative (define-prototype name super-name prop-names) env
   (eval (list $define! name (make-prototype name super-name prop-names env)) env))
@@ -272,7 +272,7 @@
 
 (define (put-method ctor name fun)
   (set ((js-getter name) (.prototype ctor)) fun))
-
+*/
 ;;;; Modules
 
 (define-operative (provide symbols . body) env
@@ -296,7 +296,7 @@
          (values (map-list ($lambda (import) (eval import m)) imports)))
     (eval (list $define! imports (list* list values)) env) ))
 
-;;;; JavaScript
+/*;;;; JavaScript
 
 (define (relational-op name)
   (let ((binop (vm-js-binop name)))
@@ -474,7 +474,7 @@
     ;(print-frame k)
     (push-prompt vm-root-prompt
       (push-subcont k) )))
-
+*/
 (define (user-break err)
   ;(print-stacktrace err)
   (throw err) )
