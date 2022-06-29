@@ -15,16 +15,16 @@
 ($define! error vm-error)
 ($define! eval vm-eval)
 ($define! if vm-if)
-($define! js-getter vm-js-getter)
-($define! js-global vm-js-global)
-($define! js-invoker vm-js-invoker)
+;($define! js-getter vm-js-getter)
+;($define! js-global vm-js-global)
+;($define! js-invoker vm-js-invoker)
 ($define! list* vm-list*)
 ($define! list->array vm-list-to-array)
 ($define! make-environment vm-make-environment)
-($define! new vm-js-new)
+;($define! new vm-js-new)
 ($define! nil? vm-nil?)
 ($define! reverse-list vm-reverse-list)
-($define! setter vm-setter)
+;($define! setter vm-setter)
 ($define! string->symbol vm-string-to-symbol)
 ($define! symbol-name vm-symbol-name)
 ($define! symbol? vm-symbol?)
@@ -60,8 +60,6 @@
   (make-macro-expander
     ($vau (params env-param . body) #ignore
       (list vm-vau params env-param (list* begin body)) )))
-
-
 
 ($define! macro
   (make-macro-expander
@@ -424,7 +422,7 @@
     (log (+ "time " expr ": " (- (@getTime (new Date)) n) "ms"))
     result ))
 
-(define-operative (assert expr) env
+(define-operative (assert-true expr) env
   (unless (=== #t (eval expr env))
     (error (+ "Should be true: " expr)) ))
 
