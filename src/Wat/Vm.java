@@ -587,6 +587,7 @@ public class Vm {
 				case ArgsList f -> f.apply(o);  
 				case Function f -> f.apply(car(o));  
 				case BiFunction f -> f.apply(elt(o,0), elt(o,1));
+				case Consumer c -> { c.accept(car(o)); yield null; }
 				default -> error("not a combine " + jsfun);
 			};
 		}
