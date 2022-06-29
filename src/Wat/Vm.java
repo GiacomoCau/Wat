@@ -124,14 +124,11 @@ public class Vm {
 		public String toString() {	return "(" + toString(this) + ")"; }
 		private String toString(Cons c) {
 			if (c.cdr == NIL) return Vm.this.toString(c.car);
-			if (c.cdr instanceof Cons cons) return Vm.this.toString(c.car) + " " + toString(cons);
+			if (c.cdr instanceof Cons c2) return Vm.this.toString(c.car) + " " + toString(c2);
 			return Vm.this.toString(c.car) + " . " + Vm.this.toString(c.cdr);
 		}
 		public boolean equals(Object o) {
-			if (!(o instanceof Cons c)) return false;
-			if (!(car.equals(c.car))) return false;
-			if (!(cdr.equals(c.cdr))) return false;
-			return true;
+			return o instanceof Cons c && car.equals(c.car) && cdr.equals(c.cdr);
 		}
 	}
 	Cons cons(Object car, Object cdr) {
@@ -784,9 +781,9 @@ public class Vm {
 	}
 	
 	public void main() throws Exception {
-		//*
+		/*
 		//exec(parse(readString("boot.wat")));
-		//eval(readString("boot.wat"));
+		eval(readString("boot.wat"));
 		//compile("boot.wat");
 		//exec(readBytecode("boot.wat"));
 		//*/
@@ -890,7 +887,7 @@ public class Vm {
 		assertEq("(vm-if #null 1 2)", 2);
 		assertEq("(($vau x #ignore 1 2 3 4 5 x) 6)", 6);
 		//*/
-		
+		/*
 		eval("""
 			(assert (vm-def a 1) #ignore)
 			(assert (vm-def a)          ) ;throw
@@ -945,7 +942,8 @@ public class Vm {
 			  $vau ))
 			(($vau (x) #ignore 1 2 3 4 x) 1)
 			  
-		""");		
+		""");
+		//*/		
 		repl();
 	}
 	
