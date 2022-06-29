@@ -439,7 +439,6 @@ public class Vm {
 	}
 	Env env() { return new Env(null); }
 	Env env(Env parent) { return new Env(parent); }
-	//Object lookup(Env e, Sym sym) {	Object sExpr = e.get(sym); return sExpr != null ? sExpr : e.parent != null ? lookup(e.parent, sym) : error("unbound: " + sym); };
 	Object lookup(Env e, Sym sym) {
 		for(;;) {
 			Object value = e.get(sym); 
@@ -560,23 +559,6 @@ public class Vm {
 		if (o instanceof Object[] a) return parse_bytecode(a);
 		return o;
 	}
-	/*
-	Object parse_bytecode(Object ... objs) {
-		if (objs.length == 0) return NIL;
-		if (objs.length == 2 && objs[0].equals("wat-string")) return objs[1];
-		Object head = cons(parse_bytecode(objs[0]), NIL), cons = head;
-		for (int i=1; i<objs.length; i+=1) {
-			if (objs[i].equals(".")) {
-				if (i != objs.length-2) throw new RuntimeException(". not is the penultimate element in " + objs);
-				((Cons) cons).cdr = parse_bytecode(objs[i+1]);
-				return head;
-			}
-			var x = ((Cons) cons).cdr = cons(parse_bytecode(objs[i]), NIL);
-			cons = x;
-		}
-		return head;
-	}
-	//*/
 	Object parse_bytecode(Object ... objs) {
 		if (objs.length == 0) return NIL;
 		if (objs.length == 2 && objs[0].equals("wat-string")) return objs[1];
