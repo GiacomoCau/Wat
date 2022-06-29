@@ -151,8 +151,10 @@ public class Vm {
 	Object combine(Mark m, Env e, Object cmb, Object o) {
 		if (trace) print("combine:", cons(cmb, o));
 		if (cmb instanceof Combinable combinable) return combinable.combine(m, e, o);
-		if (isInstance(cmb, Function.class, BiFunction.class, ArgsList.class))
-			return ((Combinable) jswrap(cmb)).combine(m, e, o);
+		// TODO per default le Function non wrapped dovrebbero essere operative e non applicative
+		if (isInstance(cmb, ArgsList.class, Function.class, BiFunction.class))
+			return ((Combinable) jswrap(cmb)).combine(m, e, o); // Function x default applicative
+			//return ((Combinable) jsfun(cmb)).combine(m, e, o); // Function x default operative
 		return error("not a combiner: " + cmb.toString() + " in: " + cons(cmb, o));
 	}
 	
@@ -611,9 +613,11 @@ public class Vm {
 		}
 		public String toString() {return "JSFun" /*+jsfun.getClass().getSimpleName()*/; }
 	}
+	Object jsfun(Object jsfun) {
+		return (isInstance(jsfun, ArgsList.class, Function.class, BiFunction.class, Consumer.class)) ? new JSFun(jsfun) : error("no fun:" + jsfun);
+	}
 	Object jswrap(Object jsfun) {
-		if (!isInstance(jsfun, ArgsList.class, Function.class, BiFunction.class, Consumer.class)) return error("no fun:" + jsfun);
-		return wrap(new JSFun(jsfun));
+		return wrap(jsfun(jsfun));
 	}
 	
 	
@@ -693,7 +697,7 @@ public class Vm {
 			$("vm-def", "vm-qot", $("vm-vau", $("a"), IGN, "a")),
 			$("vm-def", "==", jswrap((BiFunction<Object,Object,Boolean>) (a,b)-> a == b)),
 			$("vm-def", "eq", jswrap((BiFunction<Object,Object,Boolean>) (a,b)-> eq(a,b))),
-			$("vm-def", "assert", new JSFun((ArgsList) l-> assertEq(list_to_array(l))))
+			$("vm-def", "assert", jsfun((ArgsList) l-> assertEq(list_to_array(l))))
 		)
 	;
 	Env the_environment = env(); {
