@@ -8,7 +8,7 @@ options {
 
 PARSER_BEGIN(Parser)
 
-package Expr;
+package List;
 
 import static Wat.Utility.$;
 import static Wat.Utility.classForName;
@@ -140,9 +140,9 @@ TOKEN:	// separators
 
 TOKEN:	// reserved words
 {	< Nil: "()" >
-| 	< Null: "#null" >
 |	< True: "#t" >
 |	< False: "#f" >
+| 	< Null: "#null" >
 |	< Ignore: "#ignore" >
 |	< Undefined: "#undefined" >
 }
@@ -162,12 +162,13 @@ TOKEN:	// literals
 }
 
 TOKEN:	// identifiers
-{	< Id: ("."|"@")? <first> ( <first> | <next> )* >
+{ 	< Prim: "boolean" | "byte" | "short" | "char" | "int" | "long" | "float" | "double" >
+|	< Id: ("."|"@")? <first> ( <first> | <next> )* >
 |	< # first: <letter> | <special> > 
 |	< # special: [ "-", "&", "!", "=", ">", "<", "%", "+", "?", "/", "*", "$", "_", "@", "|", "~", "^" ] >
 |	< # letter: [ "A"-"Z", "a"-"z" ] >
 |	< # next: [ "0"-"9" ] >
-|  	< ClId: <jvid> ("." <jvid>)* ( ("[" "]")+ | ("$" <jvid>)+ ("[" "]")* )? >
+|  	< ClId: <jvid> ("." <jvid>)* ( ("[]")+ | ("$" <jvid>)+ ("[]")* )? >
 |	< # jvid: (<letter>| "__" | "$") (<letter> | <next> | "_" | "$")* >
 }
 
@@ -181,19 +182,20 @@ Object Elt() throws Exception: {
 	|	<True> 		{ return true; }    
 	|	<False> 	{ return false; }    
 	|	t=<Ignore> 	{ return t.image; }    
-	|	t=<Undefined> 	{ return t.image; }    
+	|	t=<Undefined> { return t.image; }    
 	|	t=<Integer>	{ return java.lang.Integer.parseInt(t.image); }
 	|	t=<Double>	{ return java.lang.Double.parseDouble(t.image); }
 	|	t=<String>	{ return $("wat-string", toStringTokenImage(t.image)); }
 	|	"'" o=Elt() { return $("quote", o); }
+	|	t=<Prim>	{ return classForName(t.image); }	
 	|	t=<ClId>	{ return classForName(t.image); }	
 	|	t=<Id> [":" t2=<Id>] {
   		if (t2 != null) return $("eval", $("quote", t2.image), t.image);
   		var id = t.image;
   		if (id.length() == 1) return id;
   		switch (id.charAt(0)) {
-  			case '.': return $("js-getter", $("wat-string", id.substring(1)));
-  			case '@': return $("js-invoker", $("wat-string", id.substring(1)));
+  			case '.': return $("vm-js-getter", $("wat-string", id.substring(1)));
+  			case '@': return $("vm-js-invoker", $("wat-string", id.substring(1)));
   			default: return id;
   		}  	
 	}

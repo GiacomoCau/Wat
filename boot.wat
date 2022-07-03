@@ -252,7 +252,8 @@
              (list vm-dlet name value (process-bindings rest-bs)) )))
     env ))
 
-/*;;;; Prototypes
+/*
+;;;; Prototypes
 
 (define-operative (define-prototype name super-name prop-names) env
   (eval (list $define! name (make-prototype name super-name prop-names env)) env))
@@ -273,6 +274,7 @@
 (define (put-method ctor name fun)
   (set ((js-getter name) (.prototype ctor)) fun))
 */
+
 ;;;; Modules
 
 (define-operative (provide symbols . body) env
@@ -296,7 +298,8 @@
          (values (map-list ($lambda (import) (eval import m)) imports)))
     (eval (list $define! imports (list* list values)) env) ))
 
-/*;;;; JavaScript
+/*
+;;;; JavaScript
 
 (define (relational-op name)
   (let ((binop (vm-js-binop name)))
@@ -421,6 +424,7 @@
         (result (eval expr env)))
     (log (+ "time " expr ": " (- (@getTime (new Date)) n) "ms"))
     result ))
+*/
 
 (define-operative (assert-true expr) env
   (unless (=== #t (eval expr env))
@@ -448,6 +452,7 @@
       (lambda (exc) (return)))
     (error (+ "Should throw: " expr)) ))
 
+/*
 ;;;; Options
 
 (define-prototype Option Object ())
@@ -460,6 +465,7 @@
     (if (type? option Some)
         (eval (list (list lambda (list option-name) then) (.value option)) env)
         (eval else env) )))
+*/
 
 ;;;; Error break routine, called by VM to print stacktrace and throw
 
@@ -474,7 +480,7 @@
     ;(print-frame k)
     (push-prompt vm-root-prompt
       (push-subcont k) )))
-*/
+
 (define (user-break err)
   ;(print-stacktrace err)
   (throw err) )

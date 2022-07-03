@@ -1,8 +1,10 @@
 package Wat;
 
-import static Expr.Parser.parse;
+import static List.Parser.parse;
 import static Wat.Utility.$;
+import static Wat.Utility.getExecutable;
 import static Wat.Utility.isInstance;
+import static Wat.Utility.reorg;
 import static java.lang.System.err;
 import static java.lang.System.in;
 import static java.lang.System.out;
@@ -12,6 +14,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Executable;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -24,7 +29,6 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class Vm {
 	
@@ -36,47 +40,47 @@ public class Vm {
 	abstract class Combinable { abstract Object combine(Mark m, Env e, Object o); }
 	
 	
-	// Continuations
-	record StackFrame(Function<Mark, Object> fun, StackFrame next, Object dbg, Env e) {}
+	/* Continuations */
+	record StackFrame(Function<Mark, Object> fun, StackFrame next, Object dbg, Env e) {
+		public String toString() { return "[StackFrame %s %s %s]".formatted(fun, dbg, e); }
+	}
 	
 	class Resumption extends Mark {
 		StackFrame k; Function<Resumption, Object> f;
 		Resumption (StackFrame k, Function<Resumption, Object> f) { this.k = k; this.f = f; }
-		public String toString() { return "resumption"; }
+		public String toString() { return "[Resumption %s %s]".formatted(f, k); }
 	};
-	Object resumeFrame(Resumption m) {
-		return m.k.fun.apply(new Resumption(m.k.next, m.f));
+	Object resumeFrame(Resumption r) {
+		return r.k.fun.apply(new Resumption(r.k.next, r.f));
 	}
 	
 	class Suspension extends Mark {
 		Suspension prompt; Combinable handler; StackFrame continuation;
 		Suspension(Suspension prompt, Combinable handler) { this.prompt = prompt; this.handler = handler; }
-		public String toString() { return "suspension"; }
+		public String toString() { return "[Suspension %s %s %s]".formatted(prompt, handler, continuation); }
+	}
+	// TODO rinominare pushResume ... perdendo dbg ed e e costruendo una Resumption
+	Suspension suspendFrame(Suspension suspension, Function<Mark, Object> fun) {
+		return suspendFrame(suspension, fun, null, null);
 	}
 	Suspension suspendFrame(Suspension suspension, Function<Mark, Object> fun, Object dbg, Env e) {
 		suspension.continuation = new StackFrame(fun, suspension.continuation, dbg, e);
 		return suspension;
 	}
 	
-	Object monadic(Mark m, Supplier<Object> a, Function<Object, Object>  b) {
-		Object res = m instanceof Resumption r ? resumeFrame(r) : a.get();
-		if (res instanceof Suspension s) return suspendFrame(s, mm-> monadic(mm, a, b), null, null);
-		return b.apply(res);
-	}
-	
-	
 	/* Forms */
 	class Nil implements Matchable {
-		public Object match(Env e, Object rhs) { return rhs == NIL ? null : error("NIL expected, but got: " + rhs.toString()); }
+		public Object match(Env e, Object rhs) { return rhs == nil ? null : error("NIL expected, but got: " + rhs.toString()); }
 		public String toString() { return "()"; }
 	};
-	public Nil NIL = new Nil();
+	public Nil nil = new Nil();
 	
 	static class Ign implements Matchable {
 		public Object match(Env e, Object rhs) { return null; } 
 		public String toString() { return "#ignore"; }
 	};
-	public static Ign IGN = new Ign();
+	public static Ign ign = new Ign();
+	
 	
 	/* Evaluation Core */
 	Object evaluate(Mark m, Env e, Object o) {
@@ -88,7 +92,7 @@ public class Vm {
 		String name;
 		Sym(String name) { this.name = name; }
 		public Object eval(Mark m, Env e) { return lookup(e, this); }
-		public Object match(Env e, Object rhs) { e.put(this, rhs); if (trace) print("bind:", this.name, rhs, e); return IGN; }	
+		public Object match(Env e, Object rhs) { e.put(this, rhs); if (trace) print("bind:", this.name, rhs, e); return ign; }	
 		public int hashCode() { return Objects.hashCode(name); }
 		public boolean equals(Object obj) {
 			if (this == obj) return true;
@@ -106,24 +110,17 @@ public class Vm {
 		Object car, cdr;
 		Cons(Object car, Object cdr) { this.car = car; this.cdr = cdr; }
 		public Object eval(Mark m, Env e) {
-			return monadic(
-				null,
-				()-> evaluate(null, e, car),
-				op-> combine(null, e, op, cdr)
-			);
+			Object op = m instanceof Resumption r ? resumeFrame(r) : evaluate(null, e, car);
+			return op instanceof Suspension s ? suspendFrame(s, mm-> eval(mm, e)) : combine(null, e, op, cdr);
 		}
 		public Object match(Env e, Object rhs) {
 			if (!(car instanceof Matchable mcar)) return error("cannot match against: " + car + " in: " + this);
 			if (!(cdr instanceof Matchable mcdr)) return error("cannot match against: " + cdr + " in: " + this); 
-			return monadic(
-				null,
-				()-> mcar.match(e, car(rhs)),
-				__-> mcdr.match(e, cdr(rhs))
-			);
+			mcar.match(e, car(rhs)); return mcdr.match(e, cdr(rhs));
 		}
 		public String toString() {	return "(" + toString(this) + ")"; }
 		private String toString(Cons c) {
-			if (c.cdr == NIL) return Vm.this.toString(c.car);
+			if (c.cdr == nil) return Vm.this.toString(c.car);
 			if (c.cdr instanceof Cons c2) return Vm.this.toString(c.car) + " " + toString(c2);
 			return Vm.this.toString(c.car) + " . " + Vm.this.toString(c.cdr);
 		}
@@ -144,14 +141,14 @@ public class Vm {
 	int len(Object o) { int i=0; for (; o instanceof Cons c; o=c.cdr) i+=1; return i; }
 	
 	
-	// Operative & Applicative Combiners
+	/* Operative & Applicative Combiners */
 	Object combine(Mark m, Env e, Object cmb, Object o) {
 		if (trace) print("combine:", cons(cmb, o));
 		if (cmb instanceof Combinable combinable) return combinable.combine(m, e, o);
 		// TODO per default le Function non wrapped dovrebbero essere operative e non applicative
-		if (isInstance(cmb, ArgsList.class, Function.class, BiFunction.class))
-			return ((Combinable) jswrap(cmb)).combine(m, e, o); // Function x default applicative
-			//return ((Combinable) jsfun(cmb)).combine(m, e, o); // Function x default operative
+		if (isInstance(cmb, ArgsList.class, Function.class, BiFunction.class, Consumer.class, Executable.class))
+			//return ((Combinable) jswrap(cmb)).combine(m, e, o); // Function x default applicative
+			return ((Combinable) jsfun(cmb)).combine(m, e, o); // Function x default operative
 		return error("not a combiner: " + cmb.toString() + " in: " + cons(cmb, o));
 	}
 	
@@ -159,16 +156,7 @@ public class Vm {
 		Object p; Object ep; Object x; Env e;
 		Opv(Object p, Object ep, Object x, Env e) { this.p = p; this.ep = ep; this.x = x; this.e = e; }
 		public Object combine(Mark m, Env e, Object o) {
-			var xe = env(this.e);
-			return monadic(
-				null,
-				()-> bind(xe, p, o),
-				__-> monadic(
-					null,
-					()-> bind(xe, ep, e),
-					___-> evaluate(null, xe, x)
-				)
-			);
+			var xe = env(this.e); bind(xe, p, o); bind(xe, ep, e); return evaluate(null, xe, x);
 		}
 		public String toString() {
 			return "[Opv " + Vm.this.toString(p) + " " + Vm.this.toString(ep) + " " + Vm.this.toString(x) + "]";
@@ -179,19 +167,13 @@ public class Vm {
 		Combinable cmb;
 		Apv (Combinable cmb) { this.cmb = cmb; }
 		public Object combine(Mark m, Env e, Object o) {
-			return monadic(
-				null,
-				()-> evalArgs(null, e, o, NIL),
-				args-> cmb.combine(null, e, args)
-			);
+			var args = m instanceof Resumption r ? resumeFrame(r) : evalArgs(null, e, o, nil);
+			return args instanceof Suspension s ? suspendFrame(s, mm-> combine(mm, e, o)) : cmb.combine(null, e, args);
 		}
 		Object evalArgs(Mark m, Env e, Object todo, Object done) {
-			if (todo == NIL) return reverse_list(done);
-			return monadic(
-				null,
-				()-> evaluate(null, e, car(todo)),
-				arg-> evalArgs(null, e, cdr(todo), cons(arg, done))
-			);
+			if (todo == nil) return reverse_list(done);
+			var arg = m instanceof Resumption r ? resumeFrame(r) : evaluate(null, e, car(todo));
+			return arg instanceof Suspension s ? suspendFrame(s, mm-> evalArgs(mm, e, todo, done)) : evalArgs(null, e, cdr(todo), cons(arg, done));
 		}
 		public String toString() { return "[Apv " + Vm.this.toString(cmb) + "]"; }
 	}
@@ -206,22 +188,23 @@ public class Vm {
 			if (len(o) > 3) return error("too many operands in: " + cons(this, o));
 			var ptree = elt(o, 0);
 			var envp = elt(o, 1);
-			var msg = new PTree(ptree, envp).check(); if (msg != null) return error(msg + " in " + cons(this, o));
+			var msg = new PTree(ptree, envp).check(); if (msg != null) return error(msg + " of: " + cons(this, o));
 			return new Opv(ptree, envp, elt(o, 2), e);
 		}
 		public String toString() { return "vm-vau"; }
 	};
 	class Def extends Combinable {
 		Object combine(Mark m, Env e, Object o) {
+			// o = (ptree rhs)
 			if (len(o) > 2) return error("too many operands in: " + cons(this, o));
-			var lhs = elt(o, 0);
-			var msg = new PTree(lhs).check(); if (msg != null) return error(msg + " in " + cons(this, o));
+			var ptree = elt(o, 0);
+			if (!(ptree instanceof Sym)) {
+				if (!(ptree instanceof Cons)) return error("not a symbol: " + ptree + " in: " + cons(this, o));
+				var msg = new PTree(ptree).check(); if (msg != null) return error(msg + " of: " + cons(this, o));
+			}
 			var rhs = elt(o, 1);
-			return monadic(
-				null,
-				()-> evaluate(null, e, rhs),
-				val-> bind(e, lhs, val)
-			);
+			var val = m instanceof Resumption r ? resumeFrame(r) : evaluate(null, e, rhs);
+			return val instanceof Suspension s ? suspendFrame(s, mm-> combine(mm, e, o), null, null) : bind(e, ptree, val);
 		}
 		public String toString() { return "vm-def"; }
 	};
@@ -231,15 +214,18 @@ public class Vm {
 		PTree(Object ptree) { this.ptree = ptree; }
 		PTree(Object ptree, Object envp) { this(ptree); this.envp = envp; }
 		Object check() { 
-			if (envp != null && envp != IGN && !(envp instanceof Sym)) return "not #ignore or a symbol: " + envp;
-			var msg = check(ptree); if (msg != null) return msg;
-			return envp == null || envp == IGN || !symbols.contains(envp) ? null : "not a unique symbol: " + envp;
+			if (ptree != nil && ptree != ign) {	var msg = check(ptree); if (msg != null) return msg; }
+			if (envp == null) return symbols.size() > 0 ? null : "no one symbol in: " + ptree;
+			if (envp == ign) return null;
+			if (!(envp instanceof Sym sym)) return "not a #ignore or symbol: " + envp;
+			return !symbols.contains(sym) ? null : "not a unique symbol: " + envp;
 		}
-		private Object check(Object ptree) {
-			if (ptree == NIL || ptree == IGN) return null;
-			if (ptree instanceof Sym) { return symbols.add(ptree) ? null : "not a unique symbol: " + ptree; }
-			if (ptree instanceof Cons cons) { var msg = check(cons.car); return msg != null ? msg : check(cons.cdr); }
-			return "not a symbol: " + ptree;
+		private Object check(Object p) {
+			if (p == ign) return null;
+			if (p instanceof Sym) { return symbols.add(p) ? null : "not a unique symbol: " + p + (p == ptree ? "" : " in: " + ptree); }
+			if (!(p instanceof Cons cons)) return "not a #ignore or symbol: " + p + (p == ptree ? "" : " in: " + ptree);
+			var msg = check(cons.car); if (msg != null) return msg;
+			return cons.cdr == nil ? null : check(cons.cdr);
 		}
 	}
 	class Eval extends Combinable {
@@ -255,29 +241,20 @@ public class Vm {
 	/* First-order Control */
 	class Begin extends Combinable {
 		Object combine(Mark m, Env e, Object o) {
-			return o == NIL ? null : begin(m, e, o);
+			return o == nil ? null : begin(m, e, o);
 		}
 		Object begin(Mark m, Env e, Object xs) {
-			return monadic(
-				null,
-				()-> evaluate(null, e, car(xs)),
-				res-> {
-					var kdr = cdr(xs);
-					return kdr == NIL ? res : begin(null, e, kdr);
-				}
-			);
+			var res = m instanceof Resumption r ? resumeFrame(r) : evaluate(null, e, car(xs));
+			return res instanceof Suspension s ? suspendFrame(s, mm-> begin(mm, e, xs)) : ((Function) kdr-> kdr == nil ? res : begin(null, e, kdr)).apply(cdr(xs));
 		}
 		public String toString() { return "vm-begin"; }
 	};
 	class If extends Combinable {
 		Object combine(Mark m, Env e, Object o) {
+			// o = (test then else) 
 			if (len(o) > 3) return error("too many operands in: " + cons(this, o));
-			return monadic(
-				null,
-				()-> evaluate(null, e, elt(o, 0)),
-				test-> evaluate(null, e, test != null && test != NIL && test instanceof Boolean b && b ? elt(o, 1) : elt(o, 2))
-			);
-			
+			var test = m instanceof Resumption r ? resumeFrame(r) : evaluate(null, e, elt(o, 0));
+			return test instanceof Suspension s ? suspendFrame(s, mm-> combine(mm, e, o), null, null) : evaluate(null, e, test != null && test != nil && test instanceof Boolean b && b ? elt(o, 1) : elt(o, 2));
 		}
 		public String toString() { return "vm-if"; }
 	}
@@ -335,30 +312,33 @@ public class Vm {
 	/* Delimited Control */
 	class PushPrompt extends Combinable {
 		Object combine(Mark m, Env e, Object o) {
+			// o = (prompt expr)
 			var prompt = elt(o, 0);
 			var x = elt(o, 1);
 			var res = m instanceof Resumption r ? resumeFrame(r) : evaluate(null, e, x);	
 			if (!(res instanceof Suspension s)) return res;
 			if (s.prompt != prompt) return suspendFrame(s, mm-> combine(mm, e, o), x, e);
-			return Vm.this.combine(null, e, s.handler, cons(s.continuation, NIL));
+			return Vm.this.combine(null, e, s.handler, cons(s.continuation, nil));
 		}
 		public String toString() { return "vm-pushp-rompt"; }
 	}
 
 	class TakeSubcont extends Combinable {
 		Object combine(Mark m, Env e, Object o) {
+			// o = (prompt handler)
 			var prompt = elt(o, 0);
 			if (!(prompt instanceof Suspension s)) return error("not a suspend " + prompt); 
 			var handler = elt(o, 1);
 			if (!(handler instanceof Combinable c)) return error("not a combine " + handler); 
 			var cap = new Suspension(s, c);
-			return suspendFrame(cap, mm-> Vm.this.combine(null, e, ((Resumption) mm).f, NIL), this, e);
+			return suspendFrame(cap, mm-> Vm.this.combine(null, e, ((Resumption) mm).f, nil), this, e);
 		}
 		public String toString() { return "vm-take-subcont"; }
 	}
 	
 	class PushSubcont extends Combinable {
 		Object combine(Mark m, Env e, Object o) {
+			// o = (stackFrame function)
 			var thek = elt(o, 0);
 			if (!(thek instanceof StackFrame k)) return error("not a stackframe " + thek); 
 			var thef = elt(o, 1);
@@ -372,6 +352,7 @@ public class Vm {
 	
 	class PushPromptSubcont extends Combinable {
 		Object combine(Mark m, Env e, Object o) {
+			// o = (prompt stackFrame function)
 			var prompt = elt(o, 0);
 			var thek = elt(o, 1);
 			if (!(thek instanceof StackFrame k)) return error("not a stackframe " + thek); 
@@ -380,11 +361,10 @@ public class Vm {
 			var res = m instanceof Resumption r ? resumeFrame(r) : resumeFrame(new Resumption(k, f));
 			if (!(res instanceof Suspension s)) return res;
 			if (s.prompt != prompt) return suspendFrame(s, mm-> combine(mm, e, o), thef, e);
-			return Vm.this.combine(null, e, s.handler, cons(s.continuation, NIL));
+			return Vm.this.combine(null, e, s.handler, cons(s.continuation, nil));
 		}
 		public String toString() { return "vm-push-prompt-subcont"; }
 	}
-	
 	
 	
 	/* Dynamic Variables */
@@ -420,10 +400,10 @@ public class Vm {
 			finally {
 				dv.val = oldVal;
 			}
-			
 		}
 		public String toString() {	return "vm-dlet"; }
 	}
+	
 	
 	/* Environment */
 	class Env {
@@ -449,7 +429,7 @@ public class Vm {
 	}
 	
 	Object bind(Env e, Object lhs, Object rhs) {
-		if (lhs instanceof Matchable matchable) { matchable.match(e, rhs); return IGN; }
+		if (lhs instanceof Matchable matchable) { matchable.match(e, rhs); return ign; }
 		return error("cannot match against: " + lhs);
 	}
 	
@@ -476,32 +456,32 @@ public class Vm {
 	}
 	Object array_to_list(boolean b, Object ... args) {
 		var len = args.length-1;
-		var c = b || len < 0 ? NIL : args[len];
+		var c = b || len < 0 ? nil : args[len];
 		for (var i=len-(b?0:1); i>=0; i-=1) c = cons(args[i], c);
 		return c;
 	}
 	Object[] list_to_array(Object c) {
 		var res = new ArrayList();
-		for (; c != NIL; c = cdr(c)) res.add(car(c));
+		for (; c != nil; c = cdr(c)) res.add(car(c));
 		return res.toArray();
 	}
 	Object reverse_list(Object list) {
-		Object res = NIL;
-		for (; list != NIL; list = cdr(list)) res = cons(car(list), res);
+		Object res = nil;
+		for (; list != nil; list = cdr(list)) res = cons(car(list), res);
 		return res;
 	}
 	Object list_to_list_star(Object h) {
 		if (!(h instanceof Cons)) return h;
 		var o = cdr(h); 
-		if (o == NIL) return car(h);
+		if (o == nil) return car(h);
 		if (!(o instanceof Cons)) return error("not a proper list: " + toString(h));
 		var o2 = cdr(o);
-		if (o2 == NIL) 
+		if (o2 == nil) 
 			((Cons) h).cdr = ((Cons) o).car;
 		else if (!(o2 instanceof Cons))
 			return error("not a proper list: " + toString(h));
 		else {
-			for (Object o3; (o3=cdr(o2)) != NIL; o=o2, o2=o3) {
+			for (Object o3; (o3=cdr(o2)) != nil; o=o2, o2=o3) {
 				if (!(o3 instanceof Cons))	return error("not a proper list: " + toString(h));
 			}
 			((Cons) o).cdr = ((Cons) o2).car;
@@ -509,12 +489,13 @@ public class Vm {
 		return h;
 	}
 	<T> T print(T ... o) {
-		out.println(toString(o));
+		var s = toString(o);
+		out.println(s);
 		return o[o.length - 1];
 	}
-	boolean eq(Object a, Object b) {
+	boolean equals(Object a, Object b) {
 		if (a instanceof Object[] aa && b instanceof Object[] ab) return Arrays.deepEquals(aa, ab);
-		if (a instanceof Cons ca && b instanceof Cons cb) return eq(ca.car, cb.car) && eq(ca.cdr, cb.cdr);
+		if (a instanceof Cons ca && b instanceof Cons cb) return equals(ca.car, cb.car) && equals(ca.cdr, cb.cdr);
 		return a == b;
 	}
 	void assertEq(String expr, Object expected) {
@@ -541,7 +522,7 @@ public class Vm {
 				print(a, "should be throw but is", v);
 			else {
 				var b = os[1];
-				if (!eq(v, b)) print(a, "should be", b, "but is", v);
+				if (!equals(v, b)) print(a, "should be", b, "but is", v);
 			}
 		}
 		catch (Throwable t) {
@@ -555,18 +536,18 @@ public class Vm {
 	
 	/* Bytecode parser */
 	Object parse_bytecode(Object o) {
-		if (o instanceof String s) return s.equals("#ignore") ? IGN : sym(s);
+		if (o instanceof String s) return s.equals("#ignore") ? ign : sym(s);
 		if (o instanceof Object[] a) return parse_bytecode(a);
 		return o;
 	}
 	Object parse_bytecode(Object ... objs) {
-		if (objs.length == 0) return NIL;
+		if (objs.length == 0) return nil;
 		if (objs.length == 2 && objs[0].equals("wat-string")) return objs[1];
-		Object head = cons(parse_bytecode(objs[0]), NIL), cons = head;
+		Object head = cons(parse_bytecode(objs[0]), nil), cons = head;
 		for (int i=1; i<objs.length; i+=1) {
 			var obj = objs[i];
 			if (obj == null || !obj.equals(".")) {
-				cons = ((Cons) cons).cdr = cons(parse_bytecode(objs[i]), NIL);
+				cons = ((Cons) cons).cdr = cons(parse_bytecode(objs[i]), nil);
 				continue;
 			}
 			if (i != objs.length-2) throw new RuntimeException(". not is the penultimate element in " + objs);
@@ -583,36 +564,92 @@ public class Vm {
 		JSFun(Object jsfun) { this.jsfun = jsfun; }
 		@SuppressWarnings("preview")
 		Object combine(Mark m, Env e, Object o) {
-			return switch (jsfun) {
-				case ArgsList f -> f.apply(o);  
-				case Function f -> f.apply(car(o));  
-				case BiFunction f -> f.apply(elt(o,0), elt(o,1));
-				case Consumer c -> { c.accept(car(o)); yield null; }
-				default -> error("not a combine " + jsfun);
-			};
+			try {
+				return switch (jsfun) {
+					case ArgsList f -> f.apply(o);  
+					case Function f -> f.apply(car(o));  
+					case BiFunction f -> f.apply(elt(o,0), elt(o,1));
+					case Consumer c -> { c.accept(car(o)); yield null; }
+					case Method mt-> mt.invoke(car(o), list_to_array(cdr(o)));
+					case Constructor c-> c.newInstance(list_to_array(o));
+					default -> error("not a combine " + jsfun);
+				};
+			}
+			catch (Exception exp) {
+				throw new RuntimeException(exp.getMessage());
+			}
 		}
 		public String toString() {return "JSFun" /*+jsfun.getClass().getSimpleName()*/; }
 	}
 	Object jsfun(Object jsfun) {
-		return (isInstance(jsfun, ArgsList.class, Function.class, BiFunction.class, Consumer.class)) ? new JSFun(jsfun) : error("no fun:" + jsfun);
+		return (isInstance(jsfun, ArgsList.class, Function.class, BiFunction.class, Consumer.class, Executable.class)) ? new JSFun(jsfun) : error("no a fun:" + jsfun);
 	}
 	Object jswrap(Object jsfun) {
 		return wrap(jsfun(jsfun));
 	}
 	
+	boolean jsInstanceOf(Object o, Class c) {
+		return c.isInstance(o);
+	}
+	
+	Object jsInvoker(String name) {
+		if (name == null) return error("method name is null");
+		return (ArgsList) x-> {
+			var obj = elt(x, 0);
+			if (obj == null) return error("receiver is null");
+			var args = list_to_array(cdr(x));
+			Executable executable = getExecutable(obj, name, args);
+			if (executable == null) return error("not found method: " + name + " in: " + obj);
+			try {
+				if (executable.isVarArgs()) args = reorg(executable.getParameterTypes(), args);
+				return switch (executable) {
+					case Method m-> m.invoke(obj, args);
+					case Constructor c-> c.newInstance(args);
+				};
+			}
+			catch (Exception e) {
+				return error((name.equals("new") ? "not found constructor" : "not found method: " + name) + " in: " + obj);
+			}
+		};
+	}
+	/*
+	function js_getter(prop_name) {
+		var getter = jswrap(
+			function(rcv) {
+				if (arguments.length !== 1) return error(prop_name + " getter called with wrong args")
+				if ((rcv !== undefined) && (rcv !== null)) return rcv[prop_name]
+				return error("can't get " + prop_name + " of " + rcv)
+			}
+		)
+		getter.wat_setter = js_setter(prop_name)
+		return getter
+	}
+	function js_setter(prop_name) {
+		return jswrap(
+			function(val, rcv) {
+				if (arguments.length !== 2) return error("setter called with wrong args: " + arguments)
+				if (rcv !== undefined && rcv !== null) return rcv[prop_name] = val
+				return error("can't set " + prop_name + " of " + rcv)
+			}
+		)
+	}
+	*/
+	
 	
 	/* Stringification */
 	String toString(Object ... os) {
-		var r = "";
+		var r = new StringBuilder();
 		for (var o: os) {
-			if (!r.isEmpty()) r+= " ";
-			if (o == null) r+= "null";
-			else if (!(o instanceof Object[] a)) r+= o.toString();
+			if (!r.isEmpty()) r.append(" ");
+			if (o == null) r.append("null");
+			else if (!(o instanceof Object[] a)) r.append(o.toString());
 			else {
-				var s =""; for (var e: a) s+= (s.isEmpty() ? "" : " ") + toString(e); r+= "(" + s + ")";
+				var s = new StringBuilder();
+				for (var e: a) s.append((s.isEmpty() ? "" : ", ") + toString(e));
+				r.append("[" + s.toString() + "]");
 			}
 		}
-		return r;
+		return r.toString();
 	}
 	
 	/* Bootstrap */
@@ -621,13 +658,13 @@ public class Vm {
 			// Basics
 			$("vm-def", "vm-vau", new Vau()),
 			$("vm-def", "vm-eval", wrap(new Eval())),
-			$("vm-def", "vm-make-environment", jswrap((ArgsList) args-> env(args == NIL ? null : (Env) car(args)))),
+			$("vm-def", "vm-make-environment", jswrap((ArgsList) args-> env(args == nil ? null : (Env) car(args)))),
 			$("vm-def", "vm-wrap", jswrap((Function<Object, Object>) this::wrap)),
 			$("vm-def", "vm-unwrap", jswrap((Function<Object, Object>) this::unwrap)),
 			// Values
 			$("vm-def", "vm-cons", jswrap((BiFunction<Object, Object, Object>) this::cons)),
 			$("vm-def", "vm-cons?", jswrap((Function<Object, Boolean>) obj-> obj instanceof Cons)),
-			$("vm-def", "vm-nil?", jswrap((Function<Object, Boolean>) obj-> obj == NIL)),
+			$("vm-def", "vm-nil?", jswrap((Function<Object, Boolean>) obj-> obj == nil)),
 			$("vm-def", "vm-string-to-symbol", jswrap((Function<String, Sym>) this::sym)),
 			$("vm-def", "vm-symbol?", jswrap((Function<Object, Boolean>) obj-> obj instanceof Sym)),
 			$("vm-def", "vm-symbol-name", jswrap((Function<Sym, String>) this::sym_name)),
@@ -655,13 +692,13 @@ public class Vm {
 			//$("vm-def", "vm-js-binop", jswrap(js_binop)),
 			//$("vm-def", "vm-js-getter", jswrap(js_getter)),
 			//$("vm-def", "vm-js-setter", jswrap(js_setter)),
-			//$("vm-def", "vm-js-invoker", jswrap(js_invoker)),
+			$("vm-def", "vm-js-invoker", jswrap((Function<String,Object>) this::jsInvoker)),
 			//$("vm-def", "vm-js-function", jswrap(js_function)),
 			//$("vm-def", "vm-js-global", JS_GLOBAL),
 			//$("vm-def", "vm-js-make-object", jswrap(Object::new)),
 			//$("vm-def", "vm-js-make-prototype", jswrap(make_prototype)),
 			//$("vm-def", "vm-js-new", jswrap(jsnew)),
-			//$("vm-def", "vm-type?", jswrap(is_type)),
+			$("vm-def", "vm-type?", jswrap((BiFunction<Object,Class,Boolean>)this::jsInstanceOf)),
 			// Setters
 			//$("vm-def", "vm-setter", SETTER),
 			// Utilities
@@ -674,10 +711,11 @@ public class Vm {
 			$("vm-def", "+", jswrap((BiFunction<Integer,Integer,Integer>) (a,b)-> a + b)),
 			$("vm-def", "*", jswrap((BiFunction<Integer,Integer,Integer>) (a,b)-> a * b)),
 			//
-			$("vm-def", "vm-qot", $("vm-vau", $("a"), IGN, "a")),
+			$("vm-def", "vm-quote", $("vm-vau", $("a"), ign, "a")),
 			$("vm-def", "==", jswrap((BiFunction<Object,Object,Boolean>) (a,b)-> a == b)),
-			$("vm-def", "eq", jswrap((BiFunction<Object,Object,Boolean>) (a,b)-> eq(a,b))),
-			$("vm-def", "assert", jsfun((ArgsList) l-> assertEq(list_to_array(l))))
+			$("vm-def", "eq", jswrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
+			$("vm-def", "assert", jsfun((ArgsList) l-> assertEq(list_to_array(l)))),
+			$("vm-def", "print", jswrap((ArgsList) l-> this.print(list_to_array(l))))
 		)
 	;
 	Env the_environment = env(); {
@@ -735,7 +773,7 @@ public class Vm {
 				case String line: try {
 					//out.println(line);
 					//out.println(to_string(parse(line)));
-					print(toString(exec(parse(line))));
+					print(exec(parse(line)));
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -766,9 +804,10 @@ public class Vm {
 	public void main() throws Exception {
 		//*
 		//exec(parse(readString("boot.wat")));
-		eval(readString("boot.wat"));
 		//compile("boot.wat");
 		//exec(readBytecode("boot.wat"));
+		eval(readString("boot.wat"));
+		//eval(readString("test.wat"));
 		//*/
 					
 		/*

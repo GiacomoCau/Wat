@@ -1,13 +1,40 @@
 
+Field
+
+	field = (@getField class fieldName)
+	field = (.fieldName class) = (@getField class fieldName)
+
+Method
+
+	method = (@getMethod class methodName ... class)
+	method = (@methodName class ... class) = (@getMethod class methodName ... class)
+
+Constructor
+	
+	constructor = (@getConstructor class ... class)
+
 Object
-	object = (new class ... args)
+	object = (@newInstance constructor class ... args)
+	
+	object = (constructor class ... args) = (@newInstance constructor class ... args)
+	object = (new class ... args) = ((@getConstructor class ... (@getClass args)) ... args)
 
 Call
-	result = (@method object ... args)
+	value = (@invoke method object ... args)
+	
+	value = (method object ... args) = (@invoke method object ... args)
+	value = (@methodName object ... args) = ((@methodName (@getClass object) ... (@getClass args)) object ... args)
 	
 Getter	
-	result = (.attribute object)
+	value = (@get field object)
+	
+	value = (field object) = (@get field object)
+	value = (.fieldName object) = ((.fieldName (@getClass object)) object)
 
 Setter
-	result = (.attribute object value)
-	result = (set ((.attribute object) value)
+	void = (@set field object value)
+	
+	void = (field object value) = (@set field object value)
+	void = (.fieldName object value) = ((.fieldName (@getClass object)) object value)
+	
+	
