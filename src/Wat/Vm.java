@@ -17,6 +17,7 @@ import java.io.ObjectOutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class Vm {
 	
@@ -46,17 +48,20 @@ public class Vm {
 	}
 	
 	class Resumption extends Mark {
-		StackFrame k; Function<Resumption, Object> f;
-		Resumption (StackFrame k, Function<Resumption, Object> f) { this.k = k; this.f = f; }
-		public String toString() { return "[Resumption %s %s]".formatted(f, k); }
+		StackFrame k; Supplier<Object> s;
+		Resumption(StackFrame k, Supplier<Object> s) { this.k = k; this.s = s; }
+		public String toString() { return "[Resumption %s %s]".formatted(s, k); }
 	};
 	Object resumeFrame(Resumption r) {
-		return r.k.fun.apply(new Resumption(r.k.next, r.f));
+		return resumeFrame(r.k, r.s);
+	}
+	Object resumeFrame(StackFrame k, Supplier<Object> s) {
+		return k.fun.apply(new Resumption(k.next, s));
 	}
 	
 	class Suspension extends Mark {
-		Suspension prompt; Combinable handler; StackFrame continuation;
-		Suspension(Suspension prompt, Combinable handler) { this.prompt = prompt; this.handler = handler; }
+		Object prompt; Combinable handler; StackFrame continuation;
+		Suspension(Object prompt, Combinable handler) { this.prompt = prompt; this.handler = handler; }
 		public String toString() { return "[Suspension %s %s %s]".formatted(prompt, handler, continuation); }
 	}
 	// TODO rinominare pushResume ... perdendo dbg ed e e costruendo una Resumption
@@ -146,7 +151,7 @@ public class Vm {
 		if (trace) print("combine:", cons(cmb, o));
 		if (cmb instanceof Combinable combinable) return combinable.combine(m, e, o);
 		// TODO per default le Function non wrapped dovrebbero essere operative e non applicative
-		if (isInstance(cmb, ArgsList.class, Function.class, BiFunction.class, Consumer.class, Executable.class))
+		if (isjsfun(cmb))
 			//return ((Combinable) jswrap(cmb)).combine(m, e, o); // Function x default applicative
 			return ((Combinable) jsfun(cmb)).combine(m, e, o); // Function x default operative
 		return error("not a combiner: " + cmb.toString() + " in: " + cons(cmb, o));
@@ -277,14 +282,22 @@ public class Vm {
 			try {
 				res = m instanceof Resumption r ? resumeFrame(r) : evaluate(null, e, x);
 			}
-			catch (Throwable exc) {
+			catch (ValueException exc) {
 				// unwrap handler to prevent eval if exc is sym or cons
-				res = Vm.this.combine(null, e, unwrap(handler), list(exc));
+				res = Vm.this.combine(null, e, unwrap(handler), list(exc.value));
 			}
 			if (res instanceof Suspension s) suspendFrame(s, mm-> combine(mm, e, o), x, e);
 			return res;
 		}
 		public String toString() { return "vm-catch"; }
+	}
+	class ValueException extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+		Object value;
+		ValueException(Object value) {
+			super(Vm.this.toString(value));
+			this.value = value;
+		}
 	}
 	class Finally extends Combinable {
 		@SuppressWarnings("finally")
@@ -312,7 +325,8 @@ public class Vm {
 	/* Delimited Control */
 	class PushPrompt extends Combinable {
 		Object combine(Mark m, Env e, Object o) {
-			// o = (prompt expr)
+			// o = (prompt exp)
+			if (len(o) > 2) return error("too many operands in: " + cons(this, o));
 			var prompt = elt(o, 0);
 			var x = elt(o, 1);
 			var res = m instanceof Resumption r ? resumeFrame(r) : evaluate(null, e, x);	
@@ -326,24 +340,26 @@ public class Vm {
 	class TakeSubcont extends Combinable {
 		Object combine(Mark m, Env e, Object o) {
 			// o = (prompt handler)
+			if (len(o) > 2) return error("too many operands in: " + cons(this, o));
 			var prompt = elt(o, 0);
-			if (!(prompt instanceof Suspension s)) return error("not a suspend " + prompt); 
 			var handler = elt(o, 1);
-			if (!(handler instanceof Combinable c)) return error("not a combine " + handler); 
-			var cap = new Suspension(s, c);
-			return suspendFrame(cap, mm-> Vm.this.combine(null, e, ((Resumption) mm).f, nil), this, e);
+			if (!(handler instanceof Combinable cmb)) return error("not a combine: " + handler); 
+			var cap = new Suspension(prompt, cmb);
+			return suspendFrame(cap, mm-> Vm.this.combine(null, e, ((Resumption) mm).s, nil), this, e);
 		}
 		public String toString() { return "vm-take-subcont"; }
 	}
 	
 	class PushSubcont extends Combinable {
+		@SuppressWarnings("preview")
 		Object combine(Mark m, Env e, Object o) {
-			// o = (stackFrame function)
+			// o = (stackFrame exp)
+			if (len(o) > 2) return error("too many operands in: " + cons(this, o));
 			var thek = elt(o, 0);
-			if (!(thek instanceof StackFrame k)) return error("not a stackframe " + thek); 
+			if (!(thek instanceof StackFrame k)) return error("not a stackframe: " + thek); 
 			var thef = elt(o, 1);
-			if (!(thef instanceof Function f)) return error("not a fun " + thef); 
-			var res = m instanceof Resumption r ? resumeFrame(r) : resumeFrame(new Resumption(k, f));
+			if (!(thef instanceof Combinable)) error("not a combiner: " + thef);
+			var res = m instanceof Resumption r ? resumeFrame(r) : resumeFrame(k, ()-> Vm.this.combine(null, e, thef, nil));
 			if (res instanceof Suspension s) suspendFrame(s, mm-> combine(mm, e, o), thef, e);
 			return res;
 		}
@@ -352,13 +368,14 @@ public class Vm {
 	
 	class PushPromptSubcont extends Combinable {
 		Object combine(Mark m, Env e, Object o) {
-			// o = (prompt stackFrame function)
+			// o = (prompt stackFrame exp)
+			if (len(o) > 2) return error("too many operands in: " + cons(this, o));
 			var prompt = elt(o, 0);
 			var thek = elt(o, 1);
-			if (!(thek instanceof StackFrame k)) return error("not a stackframe " + thek); 
+			if (!(thek instanceof StackFrame k)) return error("not a stackframe: " + thek); 
 			var thef = elt(o, 2);
-			if (!(thef instanceof Function f)) return error("not a fun " + thef); 
-			var res = m instanceof Resumption r ? resumeFrame(r) : resumeFrame(new Resumption(k, f));
+			if (!(thef instanceof Combinable))return error("not a combiner: " + thef); 
+			var res = m instanceof Resumption r ? resumeFrame(r) : resumeFrame(k, ()-> Vm.this.combine(null, e, thef, nil));
 			if (!(res instanceof Suspension s)) return res;
 			if (s.prompt != prompt) return suspendFrame(s, mm-> combine(mm, e, o), thef, e);
 			return Vm.this.combine(null, e, s.handler, cons(s.continuation, nil));
@@ -415,7 +432,7 @@ public class Vm {
 		public Object get(String name) { return map.get(name); };
 		public Object put(Sym sym, Object rhs) { return put(sym.name, rhs); }
 		public Object put(String name, Object rhs) { return map.put(name, rhs); }
-		public String toString() {	return "[Env " + map + " " + parent + "]"; }
+		public String toString() { return this == the_environment ? "[The-Env]" : "[Env " + map + " " + parent + "]"; }
 	}
 	Env env() { return new Env(null); }
 	Env env(Env parent) { return new Env(parent); }
@@ -494,8 +511,12 @@ public class Vm {
 		return o[o.length - 1];
 	}
 	boolean equals(Object a, Object b) {
-		if (a instanceof Object[] aa && b instanceof Object[] ab) return Arrays.deepEquals(aa, ab);
-		if (a instanceof Cons ca && b instanceof Cons cb) return equals(ca.car, cb.car) && equals(ca.cdr, cb.cdr);
+		if (a instanceof Object[] aa && b instanceof Object[] ab)
+			return Arrays.deepEquals(aa, ab);
+		if (a instanceof Cons ca && b instanceof Cons cb)
+			return equals(ca.car, cb.car) && equals(ca.cdr, cb.cdr);
+		if (a instanceof Object && b instanceof Object)
+			return a.equals(b);
 		return a == b;
 	}
 	void assertEq(String expr, Object expected) {
@@ -566,6 +587,7 @@ public class Vm {
 		Object combine(Mark m, Env e, Object o) {
 			try {
 				return switch (jsfun) {
+					case Supplier s -> s.get();  
 					case ArgsList f -> f.apply(o);  
 					case Function f -> f.apply(car(o));  
 					case BiFunction f -> f.apply(elt(o,0), elt(o,1));
@@ -576,13 +598,16 @@ public class Vm {
 				};
 			}
 			catch (Exception exp) {
-				throw new RuntimeException(exp.getMessage());
+				throw exp instanceof RuntimeException rte ? rte : new RuntimeException(exp);
 			}
 		}
 		public String toString() {return "JSFun" /*+jsfun.getClass().getSimpleName()*/; }
 	}
+	boolean isjsfun(Object jsfun) {
+		return isInstance(jsfun, Supplier.class, ArgsList.class, Function.class, BiFunction.class, Consumer.class, Executable.class);
+	}
 	Object jsfun(Object jsfun) {
-		return (isInstance(jsfun, ArgsList.class, Function.class, BiFunction.class, Consumer.class, Executable.class)) ? new JSFun(jsfun) : error("no a fun:" + jsfun);
+		return isjsfun(jsfun) ? new JSFun(jsfun) : error("no a fun: " + jsfun);
 	}
 	Object jswrap(Object jsfun) {
 		return wrap(jsfun(jsfun));
@@ -592,6 +617,7 @@ public class Vm {
 		return c.isInstance(o);
 	}
 	
+	@SuppressWarnings("preview")
 	Object jsInvoker(String name) {
 		if (name == null) return error("method name is null");
 		return (ArgsList) x-> {
@@ -671,7 +697,7 @@ public class Vm {
 			// First-order Control
 			$("vm-def", "vm-if", new If()),
 			$("vm-def", "vm-loop", new Loop()),
-			$("vm-def", "vm-throw", jswrap((Consumer<String>) err-> { throw new RuntimeException(err); })),
+			$("vm-def", "vm-throw", jswrap((Consumer<Object>) err-> { throw new ValueException(err); })),
 			$("vm-def", "vm-catch", new Catch()),
 			$("vm-def", "vm-finally", new Finally()), //,
 			// Delimited Control
@@ -698,7 +724,7 @@ public class Vm {
 			//$("vm-def", "vm-js-make-object", jswrap(Object::new)),
 			//$("vm-def", "vm-js-make-prototype", jswrap(make_prototype)),
 			//$("vm-def", "vm-js-new", jswrap(jsnew)),
-			$("vm-def", "vm-type?", jswrap((BiFunction<Object,Class,Boolean>)this::jsInstanceOf)),
+			//$("vm-def", "vm-type?", jswrap(is_type)),
 			// Setters
 			//$("vm-def", "vm-setter", SETTER),
 			// Utilities
@@ -715,7 +741,9 @@ public class Vm {
 			$("vm-def", "==", jswrap((BiFunction<Object,Object,Boolean>) (a,b)-> a == b)),
 			$("vm-def", "eq", jswrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
 			$("vm-def", "assert", jsfun((ArgsList) l-> assertEq(list_to_array(l)))),
-			$("vm-def", "print", jswrap((ArgsList) l-> this.print(list_to_array(l))))
+			$("vm-def", "print", jswrap((ArgsList) l-> this.print(list_to_array(l)))),
+			$("vm-def", "instanceof", jswrap((BiFunction<Object,Class,Boolean>)this::jsInstanceOf)),
+			$("vm-def", "root-prompt", ROOT_PROMPT)
 		)
 	;
 	Env the_environment = env(); {
@@ -755,7 +783,7 @@ public class Vm {
 		}
 	}
     public static String readString(String filename) throws IOException {
-        return Files.readString(Paths.get(filename));
+        return Files.readString(Paths.get(filename), Charset.forName("cp1252"));
     } 
 	
 	public Object readBytecode(String fileName) throws Exception {
@@ -807,6 +835,7 @@ public class Vm {
 		//compile("boot.wat");
 		//exec(readBytecode("boot.wat"));
 		eval(readString("boot.wat"));
+		//eval(readString("boot2.wat"));
 		//eval(readString("test.wat"));
 		//*/
 					
