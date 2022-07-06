@@ -2,8 +2,11 @@
 
 ;;;;; Wat Test Suite
 
+(define (exit v)
+  (take-subcont root-prompt #ignore v) )
+
 ;;;; Utilities
-/*
+
 (define-operative (assert-true expr) env
   (unless (== (eval expr env) #t)
     (error (+ "Should be true: " expr)) ))
@@ -14,7 +17,7 @@
 
 (define-operative (assert-equal expected expr2) env
   (let ((res (eval expr2 env)))
-    (unless (== (eval expected env) res)
+    (unless (eq (eval expected env) res)
       (error (+ expr2 " should be " expected " but is " res)) )))
 
 (define-operative (assert-throws expr) env
@@ -23,14 +26,7 @@
       (lambda (exc) (return)))
     (error (+ "Should throw: " expr)) ))
 
-(print "Funzica!")
-
-(assert (lambda))
-
-(print "Funzica!")
-
-
-
+(assert-throws (lambda))
 (assert-throws (lambda 12 12))
 (assert-throws (lambda "foo" "bar"))
 (assert-throws (def))
@@ -41,28 +37,24 @@
 (assert-equal 1 (begin 1))
 (assert-equal 2 (begin 1 2))
 
-*/
 ;;;; Delimited Dynamic Binding Tests
 
 ;; adapted from 
 
 (define-macro (test-check label expr expected)
-  (list assert expr expected))
+  (list assert-equal expr expected))
 
 (define (new-prompt) (list #null))
 
 (define (abort-prompt p e)
   (take-subcont p #ignore e))
 
-(define (exit v)
-  (abort-prompt root-prompt (print v)) )
-
 (test-check 'test2
   (let ((p (new-prompt)))
     (+ (push-prompt p (push-prompt p 5))
       4))
   9)
-
+  
 (test-check 'test3
   (let ((p (new-prompt)))
     (+ (push-prompt p (+ (abort-prompt p 5) 6))
@@ -123,18 +115,18 @@
 
 (assert-throws (unwrap ($vau () #ignore)))
 
-
+/*
 (let ((obj (object ("x" 1))))
   (set (.x obj) 2)
   (assert-equal 2 (.x obj))
-  ;(set (@ obj "x") 3) not a combiner: [object Undefined] in: (3 obj "x")
+  ;(set (@ obj "x") 3) ; give not a combiner: [object Undefined] in: (3 obj "x")
   (set (.x obj) 3)
   (assert-equal 3 (.x obj)) )
-
 
 (assert-equal &x #undefined)
 (set &x 2)
 (assert-equal &x 2)
+*/
 
 (assert-equal 24 (* 1 2 3 4))
 (assert-equal 1 (*))
@@ -148,7 +140,7 @@
 (assert-equal (/ 1 5) (/ 5))
 (assert-equal 9 (/ 54 2 3))
 
-(assert-equal (@toString (list 1 2 3)) (@toString (reverse-list (list 3 2 1))))
+(assert-equal (toString (list 1 2 3)) (toString (reverse-list (list 3 2 1))))
 
 (assert-equal "logging" (log "logging" 1 2 3))
 
@@ -163,7 +155,11 @@
 (assert-true (<= 1 1 2 3 4 5 5))
 (assert-false (< 1 1 2 3 4 5 5))
 
+(exit "finito")
+
+/*
 (let ((x (cell 0)))
   (while (< (ref x) 10)
     (++ (ref x)))
   (assert-equal 10 (ref x)) )
+*/

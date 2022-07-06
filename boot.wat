@@ -111,44 +111,42 @@
 
 ($define! map-list
   ($lambda (f lst)
-    (if (nil? lst)
-        ()
+    (if (nil? lst) ()
         (cons (f (car lst)) (map-list f (cdr lst))) )))
 
 ($define! list-for-each
   ($lambda (f lst)
-    (if (nil? lst)
-        ()
+    (if (nil? lst) ()
         (begin (f (car lst)) (list-for-each f (cdr lst))) )))
 
 ($define! list-keep
   ($lambda (p lst)
-    (if (nil? lst)
-        ()
+    (if (nil? lst) ()
         (if (p (car lst))
             (cons (car lst) (list-keep p (cdr lst)))
             (list-keep p (cdr lst)) ))))
 
 ($define! fold-list
   ($lambda (f init lst)
-    (if (nil? lst)
-        init
+    (if (nil? lst) init
         (fold-list f (f init (car lst)) (cdr lst)) )))
 
-(define-macro (let x . rest)
-  (if (symbol? x)
-      (list* let-loop x rest)
-      (list* (list* $lambda (map-list car x) rest)
-             (map-list cadr x) )))
+(define-macro (let bindings . body)
+  (if (symbol? bindings)
+      (list* let-loop bindings body)
+      (list* (list* $lambda (map-list car bindings) body)
+             (map-list cadr bindings) )))
 
 (define-macro (let-loop name bindings . body)
-  (list letrec (list (list name (list* $lambda (map-list car bindings) body)))
+  (list letrec
+		(list (list name (list* $lambda (map-list car bindings) body)))
         (list* name (map-list cadr bindings) )))
 
 (define-macro (let* bindings . body)
   (if (nil? bindings)
       (list* let () body)
-      (list let (list (car bindings))
+      (list let
+			(list (car bindings))
             (list* let* (cdr bindings) body) )))
 
 (define-macro (letrec bindings . body)
@@ -214,9 +212,9 @@
   (let ((fresh (list #null)))
     (catch (fun ($lambda opt-arg (throw (list fresh opt-arg))))
       ($lambda (exc)
-        (if (and (cons? exc) (=== fresh (car exc)))
+        (if (and (cons? exc) (eq fresh (car exc)))
             (let ((opt-arg (cadr exc)))
-              (if (cons? opt-arg) (car opt-arg) #undefined))
+              (if (cons? opt-arg) (car opt-arg) #null))
             (throw exc))))))
 
 (define-macro (label name . body)
@@ -298,40 +296,39 @@
          (values (map-list ($lambda (import) (eval import m)) imports)))
     (eval (list $define! imports (list* list values)) env) ))
 
-/*
 ;;;; JavaScript
 
-(define (relational-op name)
-  (let ((binop (vm-js-binop name)))
+(define (relational-op vm-binop)
+  (let ((binop vm-binop))
     (letrec ((op (lambda (arg1 arg2 . rest)
                    (if (binop arg1 arg2)
-                       (if (nil? rest)
-                           #t
+                       (if (nil? rest) #t
                            (apply op (list* arg2 rest)))
                        #f))))
       op)))
 
-(define == (relational-op "=="))
-(define === (relational-op "==="))
-(define < (relational-op "<"))
-(define > (relational-op ">"))
-(define <= (relational-op "<="))
-(define >= (relational-op ">="))
+(define == (relational-op ==))
+;(define === (relational-op "==="))
+(define < (relational-op <))
+(define > (relational-op >))
+(define <= (relational-op <=))
+(define >= (relational-op >=))
 
 (define (!= . args) (not (apply == args)))
 (define (!== . args) (not (apply === args)))
 
 (define *
-  (let ((vm* (vm-js-binop "*")))
+  (let ((vm* *))
     (lambda args
       (fold-list vm* 1 args) )))
+      
+(assert (* 1 2 3) 6)
 
 ;; Can't simply use 0 as unit or it won't work with strings
 (define +
-  (let ((vm+ (vm-js-binop "+")))
+  (let ((vm+ +))
 	(lambda args
-	  (if (nil? args)
-	      0
+	  (if (nil? args) 0
 	      (fold-list vm+ (car args) (cdr args)) ))))
 
 (define (negative-op binop unit)
@@ -340,9 +337,10 @@
         (binop unit arg1)
         (fold-list binop arg1 rest) )))
 
-(define - (negative-op (vm-js-binop "-") 0))
-(define / (negative-op (vm-js-binop "/") 1))
+(define - (negative-op - 0))
+(define / (negative-op / 1))
 
+/*
 (define % (vm-js-binop "%"))
 (define not (vm-js-unop "!"))
 (define typeof (vm-js-unop "typeof"))
@@ -393,11 +391,13 @@
 (define Object &Object)
 (define RegExp &RegExp)
 (define String &String)
+*/
 
 (define (log x . xs)
-  (apply @log (list* &console x xs))
+  (apply print (list* x xs))
   x)
 
+/*
 ;;;; Cells
 
 (define-prototype Cell Object (value))
@@ -427,18 +427,20 @@
 */
 
 (define-operative (assert-true expr) env
-  (unless (=== #t (eval expr env))
+  (unless (== #t (eval expr env))
     (error (+ "Should be true: " expr)) ))
 
 (define-operative (assert-false expr) env
-  (unless (=== #f (eval expr env))
+  (unless (== #f (eval expr env))
      (error (+ "Should be false: " expr)) ))
 
+/*
 (define-operative (assert-=== expected expr2) env
   (let ((res (eval expr2 env))
         (exp (eval expected env)))
     (unless (=== exp res)
       (error (+ expr2 " should be " exp " but is " res) ))))
+*/
 
 (define-operative (assert-== expected expr2) env
   (let ((res (eval expr2 env))
@@ -484,5 +486,4 @@
 (define (user-break err)
   ;(print-stacktrace err)
   (throw err) )
-
 
