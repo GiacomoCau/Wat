@@ -21,7 +21,6 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -151,12 +150,12 @@ public class Vm {
 		}
 		public String toString() {	return "(" + toString(this) + ")"; }
 		private String toString(Cons c) {
-			if (c.cdr == nil) return Vm.this.toString(c.car);
-			if (c.cdr instanceof Cons c2) return Vm.this.toString(c.car) + " " + toString(c2);
-			return Vm.this.toString(c.car) + " . " + Vm.this.toString(c.cdr);
+			if (c.cdr == nil) return Vm.this.toString(true, c.car);
+			if (c.cdr instanceof Cons c2) return Vm.this.toString(true, c.car) + " " + toString(c2);
+			return Vm.this.toString(true, c.car) + " . " + Vm.this.toString(true, c.cdr);
 		}
 		public boolean equals(Object o) {
-			return this == o || o instanceof Cons c && car.equals(c.car) && cdr.equals(c.cdr);
+			return this == o || Vm.this.equals(this,  o);
 		}
 	}
 	Cons cons(Object car, Object cdr) { return new Cons(car, cdr); };
@@ -531,18 +530,24 @@ public class Vm {
 		}
 		return error("not a proper list: " + toString(ch));
 	}
-	<T> T print(T ... o) {
-		out.println(toString(o));
-		return o[o.length - 1];
+	<T> T print(T ... os) {
+		for(var o: os) out.print(toString(o));
+		out.println();
+		return os[os.length - 1];
 	}
 	boolean equals(Object a, Object b) {
-		if (a instanceof Object[] aa && b instanceof Object[] ab)
-			return Arrays.deepEquals(aa, ab);
 		if (a instanceof Cons ca && b instanceof Cons cb)
 			return equals(ca.car, cb.car) && equals(ca.cdr, cb.cdr);
+		if (a instanceof Object[] aa && b instanceof Object[] ab)
+			return equals(aa, ab);
 		if (a instanceof Object && b instanceof Object)
 			return a.equals(b);
 		return a == b;
+	}
+	boolean equals(Object[] a, Object[] b) {
+		if (a.length != b.length) return false;
+		for (int i=0; i<a.length; i+=1) if (!equals(a[i], b[i])) return false;
+		return true;
 	}
 	Void assertEq(Object ... os) {
 		var a = os[0];
@@ -683,19 +688,32 @@ public class Vm {
 	
 	
 	/* Stringification */
-	String toString(Object ... os) {
+	String toString(Object o) {
+		return toString(false, o);
+	}
+	String toString(boolean b, Object o) {
 		var r = new StringBuilder();
-		for (var o: os) {
-			if (!r.isEmpty()) r.append(" ");
-			if (o == null) r.append("null");
-			else if (!(o instanceof Object[] a)) r.append(o.toString());
-			else {
-				var s = new StringBuilder();
-				for (var e: a) s.append((s.isEmpty() ? "" : ", ") + toString(e));
-				r.append("[" + s.toString() + "]");
-			}
+		if (o == null) r.append("#null");
+		else if (o instanceof String s) r.append(!b ? s : toSource(s));
+		else if (o instanceof Object[] a) {
+			var s = new StringBuilder();
+			for (var e: a) s.append((s.isEmpty() ? "" : ", ") + toString(true, e));
+			r.append("[" + s.toString() + "]");
 		}
+		else r.append(o.toString());
 		return r.toString();
+	}
+	
+	public static String toSource(String s) {
+		s = s
+			.replaceAll("\"", "\\\\\"")
+			.replaceAll("\n", "\\\\n")
+			.replaceAll("\t", "\\\\t")
+			.replaceAll("\r", "\\\\r")
+			.replaceAll("\b", "\\\\b")
+			.replaceAll("\f", "\\\\f")
+		;
+		return '"' + s + '"';
 	}
 	
 	/* Bootstrap */
@@ -816,7 +834,6 @@ public class Vm {
     public static String readString(String filename) throws IOException {
         return Files.readString(Paths.get(filename), Charset.forName("cp1252"));
     } 
-	
 	public Object readBytecode(String fileName) throws Exception {
 		try (
 		   ObjectInputStream ois = new ObjectInputStream(new FileInputStream("build/" + fileName));
@@ -824,6 +841,7 @@ public class Vm {
 		   return ois.readObject();
 		}
 	}
+	
 	@SuppressWarnings("preview")
 	public void repl() throws Exception {
 		loop: for (;;) {
@@ -844,12 +862,50 @@ public class Vm {
 	private String readLine() throws IOException {
 		var s = new StringBuilder();
 		int open = 0, close = 0;
+		boolean inescape = false, instring = false, incomment=false, smlcomment=false, inmlcomment=false, emlcomment=false;
 		do {
 			out.print("> ");
 			for (int c; (c = in.read()) != '\n';) {
-				switch (c) { case '('-> open+=1; case ')'-> close+=1; }
-				if (c >= 32) s.append((char)c);
+				if (inescape) {
+					inescape = false;
+				}
+				else if (instring) switch (c) {
+					case '\\'-> inescape = true;
+					case '"'-> instring = false;
+				}
+				else if (incomment) switch (c) {
+					case '"'-> instring = true;
+					case '\n'-> incomment = false;
+				}
+				/*else if (emlcomment) {
+					if (c == '/') inmlcomment = emlcomment = false;
+				}*/
+				else if (emlcomment) switch (c) {
+					case '/'-> inmlcomment = emlcomment = false;
+				}
+				else if (inmlcomment) switch (c) {
+					case '"'-> instring = true;
+					case ';'-> incomment = true;
+					case '*'-> emlcomment = true;
+				}
+				/*else if (smlcomment) {
+					if (c == '*') inmlcomment = true;
+					smlcomment = false;
+				}*/
+				else if (smlcomment) switch (c) {
+					case '*': inmlcomment = true;
+					default : smlcomment = false;
+				}
+				else switch (c) {
+					case '"'-> instring = true;
+					case ';'-> incomment = true;
+					case '/'-> smlcomment = true;
+					case '('-> open += 1;
+					case ')'-> close += 1;
+				}
+				if (c >= 32) s.append((char) c);
 			}
+			if (incomment) { s.append('\n'); incomment = false; }
 		} while (open != close);
 		return s.toString();
 	}
@@ -1026,7 +1082,7 @@ public class Vm {
 			  
 		""");
 		//*/		
-		//repl();
+		repl();
 	}
 	
 	Throwable Throw = new Throwable() {
