@@ -2,6 +2,59 @@
 
 ;; ``72. An adequate bootstrap is a contradiction in terms.''
 
+;; Assert vm
+(assert (vm-quote (a b)) (a b))
+
+(assert (vm-def))      ; throw
+(assert (vm-def a))    ; throw 
+(assert (vm-def a 1)   #ignore) ; a=1
+(assert (vm-def a 1 2)); throw
+ 
+(assert (vm-begin (vm-def (a) (vm-list 1)) a)         1)
+(assert (vm-begin (vm-def (a b) (vm-list 1 2)) b)     2)
+(assert (vm-begin (vm-def (a . b) (vm-list 1 2)) b)   (2))
+(assert (vm-begin (vm-def (a . b) (vm-list 1 2 3)) b) (2 3))
+
+(assert (vm-def (a))                  ) ; throw
+(assert (vm-def (a) 1)                ) ; throw
+(assert (vm-def (a b) 1 2)     		  ) ; throw
+(assert (vm-def (a) 1 2)              ) ; throw
+(assert (vm-def (a . b) 1 2)          ) ; throw       
+(assert (vm-def (a . b) 1 2 3)        ) ; throw 
+(assert (vm-def (a . a) 1 2 3)        ) ; throw
+
+(assert (vm-def 1 1)) ; throw
+(assert (vm-def "a" 1)) ; throw
+
+
+(assert (vm-begin)     #null)
+(assert (vm-begin 1)   1)
+(assert (vm-begin 1 2) 2)
+
+(assert (vm-if)           ) ;throw
+(assert (vm-if #t)        ) ;throw
+(assert (vm-if #t 1)      1)
+(assert (vm-if #f 1)      ) ;throw
+(assert (vm-if #t 1 2)    1)
+(assert (vm-if #f 1 2)    2)
+(assert (vm-if #f 1 2 3)  ) ;throw
+
+(assert ((vm-vau))                 ) ;throw
+(assert ((vm-vau a))               ) ;throw
+(assert ((vm-vau a #ignore))       ) ;throw
+
+(assert ((vm-vau a #ignore a))     ())
+(assert ((vm-vau a #ignore a) 1)   (1))
+(assert ((vm-vau a #ignore a) 1 2) (1 2))
+(assert ((vm-vau a #ignore b))     ) ;throw
+(assert ((vm-vau (a) #ignore a) 1) 1)
+(assert ((vm-vau a #ignore 1 a) 1) ) ;throw
+
+(assert ((vm-vau 1 #ignore 1))   ) ;throw
+(assert ((vm-vau "a" #ignore 1)) ) ;throw
+(assert ((vm-vau a a 1))         ) ;throw
+(assert ((vm-vau (a . a) e 1))   ) ;throw
+
 ;; Rename ur-def
 (vm-def $define! vm-def)
 
@@ -39,6 +92,8 @@
 ($define! the-environment ($vau () e e))
 ($define! get-current-environment (wrap ($vau () e e)))
 
+;($define! (log) (wrap ($vau (msg) env (@log &console msg) )))
+
 ;;;; Macro and vau
 
 ; derivazione Shutt!
@@ -60,6 +115,9 @@
   (make-macro-expander
     ($vau (params env-param . body) #ignore
       (list vm-vau params env-param (list* begin body)) )))
+  
+(assert (($vau a #ignore 1 2 3 4 5 a) 6) (6))
+(assert (($vau (a) #ignore 1 2 3 4 5 a) 6) 6)
 
 ($define! macro
   (make-macro-expander
@@ -72,6 +130,9 @@
 
 (define-macro ($lambda params . body)
   (list wrap (list* $vau params #ignore body)) )
+
+(assert (($lambda (m)  ) 1) #null) 
+(assert (($lambda (m) m) 1) 1)
 
 (define-macro (define-operative (name . params) envparam . body)
   (list $define! name (list* $vau params envparam body)) )
@@ -114,6 +175,10 @@
     (if (nil? lst) ()
         (cons (f (car lst)) (map-list f (cdr lst))) )))
 
+(assert (map-list car '((a 1)(b 2))) (a b))
+(assert (map-list cadr '((a 1)(b 2))) (1 2))
+(assert (($vau l e (list* '$define (map-list car l) (map-list cadr l))) (a 1)(b 2))  ($define (a b) 1 2)) 
+
 ($define! list-for-each
   ($lambda (f lst)
     (if (nil? lst) ()
@@ -137,6 +202,8 @@
       (list* (list* $lambda (map-list car bindings) body)
              (map-list cadr bindings) )))
 
+(assert (let ((a 1)) a) 1)
+
 (define-macro (let-loop name bindings . body)
   (list letrec
 		(list (list name (list* $lambda (map-list car bindings) body)))
@@ -149,12 +216,20 @@
 			(list (car bindings))
             (list* let* (cdr bindings) body) )))
 
+(assert (let* () 1) 1)
+(assert (let* ((a 1)(b a)) b) 1)
+
 (define-macro (letrec bindings . body)
   (list* let ()
          (list $define!
                (map-list car bindings)
                (list* list (map-list cadr bindings)))
          body))
+
+(assert (letrec ( (a 1)) a) 1)
+(assert (letrec ( (a ($lambda () 1)) ) (a)) 1)
+
+(assert (let-loop l ((a 1)) a) 1)
 
 (define-macro (lambda params . body)
   (letrec ((typed-params->names-and-checks
@@ -321,6 +396,8 @@
   (let ((vm* *))
     (lambda args
       (fold-list vm* 1 args) )))
+
+(assert (* 1 2 3) 6)
 
 ;; Can't simply use 0 as unit or it won't work with strings
 (define +

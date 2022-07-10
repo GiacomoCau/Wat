@@ -2,9 +2,11 @@ package Wat;
 
 import static List.Parser.parse;
 import static Wat.Utility.$;
+import static Wat.Utility.getClasses;
 import static Wat.Utility.getExecutable;
 import static Wat.Utility.isInstance;
 import static Wat.Utility.reorg;
+import static Wat.Utility.toClassArray;
 import static java.lang.System.err;
 import static java.lang.System.in;
 import static java.lang.System.out;
@@ -14,8 +16,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -37,7 +41,7 @@ import java.util.function.Supplier;
 	xs: expressions
 	op: operator
 	o: operands
-	o0, o1, ..: operand 0 1 .. 
+	o0, o1, ..: operand 0, 1 .. 
 	cmb: combiner
 	opv: operative combiner
 	apv: applicative combiner
@@ -211,7 +215,7 @@ public class Vm {
 		if (op instanceof Combinable cmb) return cmb.combine(m, e, o);
 		// per default le Function non wrapped dovrebbero essere operative e non applicative
 		if (isjsfun(op))
-			//return ((Combinable) jswrap(cmb)).combine(m, e, o); // Function x default applicative
+			//return ((Combinable) jswrap(op)).combine(m, e, o); // Function x default applicative
 			return ((Combinable) jsfun(op)).combine(m, e, o); // Function x default operative
 		return error("not a combiner: " + op.toString() + " in: " + cons(op, o));
 	}
@@ -508,10 +512,23 @@ public class Vm {
 		for (var i=len-(b?0:1); i>=0; i-=1) c = cons(args[i], c);
 		return c;
 	}
+	/* sostituito dal seguente
 	Object[] list_to_array(Object c) {
 		var res = new ArrayList();
 		for (; c != nil; c = cdr(c)) res.add(car(c));
 		return res.toArray();
+	}
+	*/
+	<T> T[] list_to_array(Object c) {
+		return list_to_array(c, 0);
+	}
+	<T> T[] list_to_array(Object c, int i) {
+		return (T[]) list_to_array(c, i, Object.class);
+	}
+	<T> T[] list_to_array(Object c, int i, Class<T> cl) {
+		var res = new ArrayList();
+		for (; c != nil; c = cdr(c)) if (i-- <= 0) res.add(car(c));
+		return (T[]) res.toArray((T[]) Array.newInstance(cl, 0));
 	}
 	Object reverse_list(Object list) {
 		Object res = nil;
@@ -549,20 +566,20 @@ public class Vm {
 		for (int i=0; i<a.length; i+=1) if (!equals(a[i], b[i])) return false;
 		return true;
 	}
-	Void assertEq(Object ... os) {
-		var a = os[0];
+	Void assertEq(Object ... objs) {
+		var x = objs[0];
 		try {
-			var v = evaluate(null, env(the_environment), a);
-			if (os.length == 1)
-				print(a, "should be throw but is", v);
+			var v = evaluate(null, env(the_environment), x);
+			if (objs.length == 1)
+				print(x, "should be throw but is", v);
 			else {
-				var b = os[1]; 
-				if (!equals(v, b))
-					print(a, "should be", b, "but is", v);
+				var ex = objs[1]; 
+				if (!equals(v, ex))
+					print(x, "should be", ex, "but is", v);
 			}
 		}
 		catch (Throwable t) {
-			if (os.length > 1) print(a, "throw", t);
+			if (objs.length > 1) print(x, "throw", t);
 		}
 		return null;
 	}
@@ -611,6 +628,7 @@ public class Vm {
 		@SuppressWarnings("preview")
 		Object combine(Mark m, Env e, Object o) {
 			try {
+				/* warning preview
 				return switch (jsfun) {
 					case Supplier s -> s.get();  
 					case ArgsList f -> f.apply(o);  
@@ -621,12 +639,21 @@ public class Vm {
 					case Constructor c-> c.newInstance(list_to_array(o));
 					default -> error("not a combine " + jsfun);
 				};
+				*/
+				if (jsfun instanceof Supplier s) return s.get();  
+				if (jsfun instanceof ArgsList f) return f.apply(o);  
+				if (jsfun instanceof Function f) return f.apply(car(o));  
+				if (jsfun instanceof BiFunction f) return f.apply(elt(o,0), elt(o,1));
+				if (jsfun instanceof Consumer c) { c.accept(car(o)); return null; }
+				if (jsfun instanceof Method mt)	return mt.invoke(car(o), list_to_array(cdr(o)));
+				if (jsfun instanceof Constructor c) return c.newInstance(list_to_array(o));
+				return error("not a combine " + jsfun);
 			}
 			catch (Exception exp) {
 				throw exp instanceof RuntimeException rte ? rte : new RuntimeException(exp);
 			}
 		}
-		public String toString() {return "JSFun" /*+jsfun.getClass().getSimpleName()*/; }
+		public String toString() {return "[JSFun " + jsfun /*.getClass().getSimpleName()*/ + "]"; }
 	}
 	boolean isjsfun(Object jsfun) {
 		return isInstance(jsfun, Supplier.class, ArgsList.class, Function.class, BiFunction.class, Consumer.class, Executable.class);
@@ -645,46 +672,76 @@ public class Vm {
 	@SuppressWarnings("preview")
 	Object jsInvoker(String name) {
 		if (name == null) return error("method name is null");
-		return (ArgsList) x-> {
-			var obj = elt(x, 0);
-			if (obj == null) return error("receiver is null");
-			var args = list_to_array(cdr(x));
-			Executable executable = getExecutable(obj, name, args);
-			if (executable == null) return error("not found method: " + name + " in: " + obj);
-			try {
-				if (executable.isVarArgs()) args = reorg(executable.getParameterTypes(), args);
-				return switch (executable) {
-					case Method m-> m.invoke(obj, args);
-					case Constructor c-> c.newInstance(args);
-				};
-			}
-			catch (Exception e) {
-				return error((name.equals("new") ? "not found constructor" : "not found method: " + name) + " in: " + obj);
-			}
-		};
-	}
-	/*
-	function js_getter(prop_name) {
-		var getter = jswrap(
-			function(rcv) {
-				if (arguments.length !== 1) return error(prop_name + " getter called with wrong args")
-				if ((rcv !== undefined) && (rcv !== null)) return rcv[prop_name]
-				return error("can't get " + prop_name + " of " + rcv)
-			}
-		)
-		getter.wat_setter = js_setter(prop_name)
-		return getter
-	}
-	function js_setter(prop_name) {
 		return jswrap(
-			function(val, rcv) {
-				if (arguments.length !== 2) return error("setter called with wrong args: " + arguments)
-				if (rcv !== undefined && rcv !== null) return rcv[prop_name] = val
-				return error("can't set " + prop_name + " of " + rcv)
+			(ArgsList) x-> {
+				Object obj = elt(x, 0);
+				if (obj instanceof Apv f && f.cmb instanceof JSFun ff) obj = ff.jsfun;
+				if (obj == null) return error("receiver is null");
+				Object[] args = list_to_array(cdr(x));
+				try {
+					switch (name) {
+						case "getMethod":
+							//return jswrap(((Class) obj).getMethod((String) elt(x,1), Arrays.stream((list_to_array(cdr(cdr(x))))).toArray(Class[]::new)));
+							//return jswrap(((Class) obj).getMethod((String) elt(x,1), toClassArray(list_to_array(cdr(cdr(x))))));
+							return jswrap(((Class) obj).getMethod((String) elt(x,1), list_to_array(x, 2, Class.class)));
+						case  "invoke":
+							return ((Method) obj).invoke(elt(x,1), list_to_array(x, 2, Object.class));
+						case "getConstructor":
+							//return jswrap(((Class) obj).getConstructor(Arrays.stream(args).toArray(Class[]::new)));
+							return jswrap(((Class) obj).getConstructor(toClassArray(args)));
+						case "newInstance":
+							return ((Constructor) obj).newInstance(args);
+					}
+				}
+				catch (Exception exp) {
+					throw new RuntimeException(exp);
+				}
+				/* sostituito dal seguente
+				Executable executable = switch(name) {
+					case "new"-> getExecutable((Class) obj, name,  getClasses(args));
+					default-> getExecutable(obj.getClass(), name, getClasses(args));
+				};
+				*/
+				Executable executable = getExecutable(name.equals("new") ? (Class) obj : obj.getClass(), name,  getClasses(args));
+				if (executable == null)
+					throw new RuntimeException("not found" + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + obj);
+				try {
+					if (executable.isVarArgs()) args = reorg(executable.getParameterTypes(), args);
+					/* warning preview
+					return switch (executable) {
+						case Method m-> m.invoke(obj, args);
+						case Constructor c-> c.newInstance(args);
+					};
+					*/
+					if (executable instanceof Method m) return m.invoke(obj, args);
+					if (executable instanceof Constructor c) return c.newInstance(args);
+					throw new RuntimeException("no method no constructor");   
+				}
+				catch (Exception e) {
+					throw new RuntimeException("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + obj);
+				}
 			}
-		)
+		);
 	}
-	*/
+	Object jsGetter(String name) {
+		if (name == null) return error(name + " getter called with wrong args");
+		return jswrap(
+			(ArgsList) x-> {
+				var len = len(x);
+				if (len > 2) return error("too many operands in: " + cons(this, x));			
+				var obj = elt(x, 0);
+				try {
+					Field field = Utility.getField(obj instanceof Class c ? c : obj.getClass(), name);
+					if (len == 1) return field.get(obj);
+					field.set(obj, elt(x, 1));
+					return null;
+				}
+				catch (Exception e) {
+					return error("can't " + (len==1 ? "get" : "set") +" " + name + " of " + obj + (len == 1 ? "" : " with " + elt(x, 1)));
+				}
+			}
+		);
+	}
 	
 	
 	/* Stringification */
@@ -751,10 +808,10 @@ public class Vm {
 			$("vm-def", "vm-root-prompt", ROOT_PROMPT),
 			$("vm-def", "vm-error", jswrap((Function<String, Object>) this::error)),
 			// JS Interface
-			$("vm-def", "vm-js-wrap", jswrap((Function) this::jswrap)),
+			//$("vm-def", "vm-js-wrap", jswrap(jswrap)),
 			//$("vm-def", "vm-js-unop", jswrap(js_unop)),
 			//$("vm-def", "vm-js-binop", jswrap(js_binop)),
-			//$("vm-def", "vm-js-getter", jswrap(js_getter)),
+			$("vm-def", "vm-js-getter", jswrap((Function<String,Object>) this::jsGetter)),
 			//$("vm-def", "vm-js-setter", jswrap(js_setter)),
 			$("vm-def", "vm-js-invoker", jswrap((Function<String,Object>) this::jsInvoker)),
 			//$("vm-def", "vm-js-function", jswrap(js_function)),
@@ -845,15 +902,18 @@ public class Vm {
 	@SuppressWarnings("preview")
 	public void repl() throws Exception {
 		loop: for (;;) {
-			switch (readLine()) {
+			//switch (readLine())
+			String line; switch (line=readLine()) {
 				case "": break loop;
-				case String line: try {
+				//case String line: try { // warning preview
+				default: try {
 					//out.println(line);
 					//out.println(to_string(parse(line)));
 					print(exec(parse(line)));
 				}
 				catch (Throwable t) {
-					t.printStackTrace();
+					//t.printStackTrace(out);
+					out.println(t.getClass().getSimpleName() + ":" + t.getMessage());
 				}
 			}
 		}
@@ -1089,4 +1149,5 @@ public class Vm {
 		private static final long serialVersionUID = 1L;
 		public String toString() { return "a throw"; };		
 	};
+	
 }

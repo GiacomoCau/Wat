@@ -1,7 +1,11 @@
 package Wat;
 
+import static java.lang.System.out;
+
 import java.lang.reflect.Array;
 import java.lang.reflect.Executable;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 
@@ -97,10 +101,64 @@ public class Utility {
 	    return Array.newInstance(c, new int[n]).getClass();
 	}
 
-	public static Executable getExecutable(Object obj, String name, Object ... args) {
-		return getExecutable(/*obj instanceof Class ? (Class) obj :*/  obj.getClass(), name, getClasses(args));
+	static boolean publicMember = false;
+		
+	public static Field getField(Class <?> classe, String name) {
+		return getField(classe, publicMember, name);
+	}
+	public static Field getField(Class <?> classe, boolean onlyPublicMember, String name) {
+		do {
+			try {
+				Field f = onlyPublicMember
+					? classe.getField(name)
+					: classe.getDeclaredField(name)
+				;
+				return f;
+			}
+			catch (Exception e) {
+				if (onlyPublicMember) return null;
+			}
+		} while ((classe = classe.getSuperclass()) != null);
+		return null;
 	}
 	
+	public static void main(String[] args) throws Exception {
+		//Class c = Integer.class;
+		//out.println(getField(Integer.class, "MAX_VALUE"));
+		//out.println();
+		
+		//out.println(getExecutable((Object) Integer.class, "equals", new Object[] { Object.class }));
+		//out.println();
+		//out.println(getExecutable((Object) Prova.Box.class, "getMethod", new Object[] { "get" }));
+		//out.println();
+		//out.println(getExecutable((Object) Prova.Box.class, "getMethod", new Object[] { "set", 1 }));
+		//out.println();
+		
+		out.println(getExecutable(Prova.Box.class, "getMethod", new Class[] { String.class, Class[].class } ));
+		out.println();
+		out.println(getExecutable(Prova.Box.class, "getConstructor", new Class[] { Prova.Box.class, Class[].class } ));
+		out.println();
+		
+		Method m = (Method) getExecutable(Prova.Box.class, "getConstructor", Class[].class );
+		out.println(m);
+		out.println();
+		
+		out.println(m.invoke((Object) Prova.Box.class, int.class));
+		//Constructor c2 = (Constructor) m.invoke((Object) Class.class , int.class);
+		
+		//out.println(getExecutable((Object) Class.class, "getMethod", new Object[] { String.class, Class[].class } ));
+		//out.println(getExecutable((Object) Integer.class, "invoke", new Object[] { String.class }));
+		//out.println(getExecutable((Object) Integer.class, "new", new Object[] { String.class }));
+		//out.println(getExecutable((Object) Integer.class, "newInstance", new Object[] { String.class }));
+	}
+	
+	public static Executable getExecutable(Object obj, String name, Object ... args) {
+		return getExecutable(obj.getClass(), name, getClasses(args));
+	}
+	
+	public static Class[] toClassArray(Object ... objects) {
+		return Arrays.stream(objects).toArray(Class[]::new);
+	}
 	public static Class[] getClasses(Object ... objects) {
 		return Arrays.stream(objects).map(o-> o == null ? null : o.getClass()).toArray(Class[]::new);
 	}
@@ -110,39 +168,42 @@ public class Utility {
 	}
 	
 	public static <T extends Executable> T getExecutable(Class <?> classe, String name, Class <?> ... classes) {
-		return getExecutable(classe, true, name, classes);
+		return getExecutable(classe, publicMember, name, classes);
 	}
 	
+	private static boolean trace = false; 
+	
 	public static <T extends Executable> T getExecutable(Class <?> classe, boolean publicMember, String name, Class <?> ... argumentsClass) {
+		if (trace) out.println("%s %s(%s)".formatted(classe, name, Arrays.stream(argumentsClass).toList()));
 		boolean constructor = name.equals("new");
 		Executable r = null;
 		do {
+			if (trace) out.println("\tc: " + classe);
 			try {
-				return (T) getExecutor(classe, constructor, publicMember, name, argumentsClass);
+				var t = (T) getExecutor(classe, constructor, publicMember, name, argumentsClass);
+				if (trace) out.println("\t\t1: " + t);
+				return t;
 			}
 			catch (NoSuchMethodException nsme) {
-				for (Executable e: getExecutors(classe, constructor, publicMember)) {
-					if (!constructor && !e.getName().equals(name)) continue;
-					if (argumentsClass == null) return (T) e; // si va per nome, non si possono controllare gli argomenti
-					boolean isVarArgs = e.isVarArgs();
-					Class [] parametersClass = e.getParameterTypes();
-					if (argumentsClass.length != parametersClass.length || isVarArgs && argumentsClass.length < parametersClass.length - 1) continue;
+				for (Executable executor: getExecutors(classe, constructor, publicMember)) {
+					if (!constructor && !executor.getName().equals(name)) continue;
+					if (trace) out.println("\t\tn: " + executor);
+					if (argumentsClass == null) return (T) executor; // si va per nome, non si possono controllare gli argomenti
+					boolean isVarArgs = executor.isVarArgs();
+					Class [] parametersClass = executor.getParameterTypes();
+					if (!isVarArgs && argumentsClass.length != parametersClass.length || argumentsClass.length < parametersClass.length - 1) continue;
 					if (!isInvokeConvertible(isVarArgs, parametersClass, argumentsClass)) continue;
 					/* TODO sostituito dal seguente, eliminare appena verificato
 					return (T) e; // torna il primo buono 
 					*/
-					if (r != null && e.isVarArgs() && e.getParameterCount() >= r.getParameterCount()) continue;
-					r = e;
+					if (r != null && executor.isVarArgs() && executor.getParameterCount() >= r.getParameterCount()) continue;
+					r = executor; // torna il primo buono con meno varargs 
 				}
-				/* TODO sostituito dal seguente, eliminare appena verificato
-				if (publicMember) return null;
-				*/
 				if (publicMember) break;
 			}
 		} while ((classe = classe.getSuperclass()) != null);
-		/* TODO sostituito dal seguente, eliminare appena verificato
-		return null;
-		*/
+		// funziona ma sono valutare le implicazioni
+		//} while (classe != Class.class && (classe = classe.getSuperclass() == null ? Class.class: classe.getSuperclass()) != null);
 		return (T) r;
 	}
 
@@ -192,6 +253,7 @@ public class Utility {
 		/* TODO non necessario, eliminare
 		if (f.isPrimitive()) f = wrapper(f);
 		*/
+		if (t == Class.class && t ==  f.getClass()) return true;
 		return t.isAssignableFrom( f );
 	}
 	
@@ -207,6 +269,7 @@ public class Utility {
 		for (Class f: fs) if (isAssignableFrom(t, f)) return f;
 		return null;
 	}
+	
 	// Identity and Widening Primitive Conversion
 	private static boolean isWPConvertible(Class t, Class f) {
 		/* TODO verificare l'ottimizzazione, eliminare altrimenti
