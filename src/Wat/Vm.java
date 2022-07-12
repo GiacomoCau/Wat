@@ -4,6 +4,7 @@ import static List.Parser.parse;
 import static Wat.Utility.$;
 import static Wat.Utility.getClasses;
 import static Wat.Utility.getExecutable;
+import static Wat.Utility.getField;
 import static Wat.Utility.isInstance;
 import static Wat.Utility.reorg;
 import static Wat.Utility.toClassArray;
@@ -25,6 +26,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -97,7 +99,6 @@ public class Vm {
 		Suspension(Object prompt, Combinable handler) { this.prompt = prompt; this.handler = handler; }
 		public String toString() { return "[Suspension %s %s %s]".formatted(prompt, handler, continuation); }
 	}
-	// TODO rinominare pushResume ... perdendo dbg ed e e costruendo una Resumption
 	Suspension suspendFrame(Suspension suspension, Function<Resumption, Object> f) {
 		return suspendFrame(suspension, f, null, null);
 	}
@@ -233,7 +234,7 @@ public class Vm {
 	
 	class Apv extends Combinable {
 		Combinable cmb;
-		Apv (Combinable cmb) { this.cmb = cmb; }
+		Apv(Combinable cmb) { this.cmb = cmb; }
 		public Object combine(Resumption r, Env e, Object o) {
 			var args = r != null ? resumeFrame(r) : evalArgs(null, e, o, nil);
 			return args instanceof Suspension s ? suspendFrame(s, rr-> combine(rr, e, o)) : cmb.combine(null, e, args);
@@ -310,7 +311,7 @@ public class Vm {
 	/* First-order Control */
 	class Begin extends Combinable {
 		Object combine(Resumption r, Env e, Object o) {
-			//o = (.. xs)
+			// o = (... xs)
 			return o == nil ? null : begin(r, e, o);
 		}
 		Object begin(Resumption r, Env e, Object xs) {
@@ -646,7 +647,7 @@ public class Vm {
 				if (jsfun instanceof ArgsList f) return f.apply(o);  
 				if (jsfun instanceof Function f) return f.apply(car(o));  
 				if (jsfun instanceof BiFunction f) return f.apply(elt(o,0), elt(o,1));
-				if (jsfun instanceof Consumer c) { c.accept(car(o)); return null; }
+				if (jsfun instanceof Consumer c) { c.accept(car(o)); return ign; }
 				if (jsfun instanceof Method mt)	return mt.invoke(car(o), list_to_array(cdr(o)));
 				if (jsfun instanceof Constructor c) return c.newInstance(list_to_array(o));
 				return error("not a combine " + jsfun);
@@ -693,7 +694,9 @@ public class Vm {
 							//return jswrap(((Class) obj).getConstructor(Arrays.stream(args).toArray(Class[]::new)));
 							return jswrap(((Class) obj).getConstructor(toClassArray(args)));
 						case "newInstance":
-							return ((Constructor) obj).newInstance(args);
+							return obj == Array.class
+								? Array.newInstance((Class) elt(x, 1), Arrays.stream(list_to_array(x, 2, Integer.class)).mapToInt(i->i).toArray() )
+								: ((Constructor) obj).newInstance(args);
 					}
 				}
 				catch (Exception exp) {
@@ -707,7 +710,7 @@ public class Vm {
 				*/
 				Executable executable = getExecutable(name.equals("new") ? (Class) obj : obj.getClass(), name,  getClasses(args));
 				if (executable == null)
-					throw new RuntimeException("not found" + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + obj);
+					throw new RuntimeException("not found " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + obj);
 				try {
 					if (executable.isVarArgs()) args = reorg(executable.getParameterTypes(), args);
 					/* warning preview
@@ -726,7 +729,7 @@ public class Vm {
 			}
 		);
 	}
-	Object jsGetter(String name) {
+	Object jsGetSetter(String name) {
 		if (name == null) return error(name + " getter called with wrong args");
 		return jswrap(
 			(ArgsList) x-> {
@@ -734,10 +737,10 @@ public class Vm {
 				if (len > 2) return error("too many operands in: " + cons(this, x));			
 				var obj = elt(x, 0);
 				try {
-					Field field = Utility.getField(obj instanceof Class c ? c : obj.getClass(), name);
+					Field field = getField(obj instanceof Class c ? c : obj.getClass(), name);
 					if (len == 1) return field.get(obj);
 					field.set(obj, elt(x, 1));
-					return null;
+					return ign;
 				}
 				catch (Exception e) {
 					return error("can't " + (len==1 ? "get" : "set") +" " + name + " of " + obj + (len == 1 ? "" : " with " + elt(x, 1)));
@@ -814,7 +817,7 @@ public class Vm {
 			//$("vm-def", "vm-js-wrap", jswrap(jswrap)),
 			//$("vm-def", "vm-js-unop", jswrap(js_unop)),
 			//$("vm-def", "vm-js-binop", jswrap(js_binop)),
-			$("vm-def", "vm-js-getter", jswrap((Function<String,Object>) this::jsGetter)),
+			$("vm-def", "vm-js-getter", jswrap((Function<String,Object>) this::jsGetSetter)),
 			//$("vm-def", "vm-js-setter", jswrap(js_setter)),
 			$("vm-def", "vm-js-invoker", jswrap((Function<String,Object>) this::jsInvoker)),
 			//$("vm-def", "vm-js-function", jswrap(js_function)),
@@ -889,10 +892,10 @@ public class Vm {
 		try (
 	    	ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("build/" + fileName))
 		) {
-			oos.writeObject(parse(readString(fileName)));
+			oos.writeObject(parse(readFile(fileName)));
 		}
 	}
-    public static String readString(String filename) throws IOException {
+    public static String readFile(String filename) throws IOException {
         return Files.readString(Paths.get(filename), Charset.forName("cp1252"));
     } 
 	public Object readBytecode(String fileName) throws Exception {
@@ -906,8 +909,8 @@ public class Vm {
 	@SuppressWarnings("preview")
 	public void repl() throws Exception {
 		loop: for (;;) {
-			//switch (readLine())
-			String line; switch (line=readLine()) {
+			//switch (read())
+			String line; switch (line = read()) {
 				case "": break loop;
 				//case String line: try { // warning preview
 				default: try {
@@ -923,7 +926,7 @@ public class Vm {
 		}
 		print("finito");
 	}
-	private String readLine() throws IOException {
+	private String read() throws IOException {
 		var s = new StringBuilder();
 		int open = 0, close = 0;
 		boolean inescape = false, instring = false, incomment=false, smlcomment=false, inmlcomment=false, emlcomment=false;
@@ -985,9 +988,9 @@ public class Vm {
 		//exec(parse(readString("boot.wat")));
 		//compile("boot.wat");
 		//exec(readBytecode("boot.wat"));
-		eval(readString("boot.wat"));
+		eval(readFile("boot.wat"));
 		//eval(readString("boot2.wat"));
-		eval(readString("test.wat"));
+		eval(readFile("test.wat"));
 		//*/
 					
 		/*

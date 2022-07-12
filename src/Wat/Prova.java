@@ -9,6 +9,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
@@ -22,6 +23,11 @@ public class Prova {
 	class $ {}
 	
 	public static void main(String[] args) throws Exception {
+		var i = new Integer[] {1,2,3};
+		Arrays.stream(i).mapToInt(ii->ii).toArray();
+	}
+
+	private static void constructor() throws Exception {
 		//out.println(Utility.classForName("int"));
 		//out.println(Class.class.getClass());
 		//out.println();
@@ -105,7 +111,6 @@ public class Prova {
 	}
 
 	private static void method() throws Exception {
-		// 
 		
 		out.println(java.lang.Integer.class.getMethod("toOctalString", int.class));
 		out.println();
