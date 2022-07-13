@@ -212,7 +212,7 @@
   (let ((fresh (list #null)))
     (catch (fun ($lambda opt-arg (throw (list fresh opt-arg))))
       ($lambda (exc)
-        (if (and (cons? exc) (eq fresh (car exc)))
+        (if (and (cons? exc) (eq? fresh (car exc)))
             (let ((opt-arg (cadr exc)))
               (if (cons? opt-arg) (car opt-arg) #null))
             (throw exc))))))

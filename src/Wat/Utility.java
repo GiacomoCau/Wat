@@ -36,6 +36,7 @@ public class Utility {
 		;
 		public final String type;
 		public final Class classe;
+		@SuppressWarnings("unused")
 		public final Class wrapper;
 		public final String name;
 		Primitive(String type, Class classe, Class wrapper) {
@@ -156,9 +157,6 @@ public class Utility {
 		return getExecutable(obj.getClass(), name, getClasses(args));
 	}
 	
-	public static Class[] toClassArray(Object ... objects) {
-		return Arrays.stream(objects).toArray(Class[]::new);
-	}
 	public static Class[] getClasses(Object ... objects) {
 		return Arrays.stream(objects).map(o-> o == null ? null : o.getClass()).toArray(Class[]::new);
 	}
@@ -257,11 +255,12 @@ public class Utility {
 		return t.isAssignableFrom( f );
 	}
 	
+	/*
 	private static boolean isAssignableFrom(Class t, Class ... fs) {
 		for (Class f: fs) if (isAssignableFrom(t, f)) return true;
 		/* TODO in alternativa al precedente; eliminare altrimenti
 		for (Class f: fs) if (f == null ? !t.isPrimitive() : t.isAssignableFrom(f)) return true;
-		*/
+		* /
 		return false;
 	}
 	
@@ -269,6 +268,7 @@ public class Utility {
 		for (Class f: fs) if (isAssignableFrom(t, f)) return f;
 		return null;
 	}
+	*/
 	
 	// Identity and Widening Primitive Conversion
 	private static boolean isWPConvertible(Class t, Class f) {

@@ -252,7 +252,7 @@
     (list $define! lhs (car rhs))))
 
 (define (apply appv arg . opt)
-  (if (instanceof appv java.util.function.Function)
+  (if (instanceof appv &java.util.function.Function)
       (@apply appv #null (list->array arg))
       (eval (cons (unwrap appv) arg)
             (if (nil? opt)
@@ -287,7 +287,7 @@
   (let ((fresh (list #null)))
     (catch (fun ($lambda opt-arg (throw (list fresh opt-arg))))
       ($lambda (exc)
-        (if (and (cons? exc) (eq fresh (car exc)))
+        (if (and (cons? exc) (eq? fresh (car exc)))
             (let ((opt-arg (cadr exc)))
               (if (cons? opt-arg) (car opt-arg) #null))
             (throw exc))))))

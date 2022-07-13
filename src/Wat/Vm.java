@@ -7,8 +7,6 @@ import static Wat.Utility.getExecutable;
 import static Wat.Utility.getField;
 import static Wat.Utility.isInstance;
 import static Wat.Utility.reorg;
-import static Wat.Utility.toClassArray;
-import static java.lang.System.err;
 import static java.lang.System.in;
 import static java.lang.System.out;
 
@@ -79,7 +77,7 @@ public class Vm {
 	boolean stack = false;
 	
 	interface Evaluable { Object eval(Resumption r, Env e); }
-	interface Matchable { Object match(Env e, Object rhs); }
+	interface Bindable { Object bind(Env e, Object rhs); }
 	abstract class Combinable { abstract Object combine(Resumption r, Env e, Object o); }
 	
 	/* Continuations */
@@ -110,14 +108,14 @@ public class Vm {
 	
 	
 	/* Forms */
-	class Nil implements Matchable {
-		public Object match(Env e, Object rhs) { return rhs == nil ? null : "too many arguments"; /* + " NIL expected, but got: " + rhs.toString();*/ }
+	class Nil implements Bindable {
+		public Object bind(Env e, Object rhs) { return rhs == nil ? null : "too many arguments"; /* + " NIL expected, but got: " + rhs.toString();*/ }
 		public String toString() { return "()"; }
 	};
 	public Nil nil = new Nil();
 	
-	static class Ign implements Matchable {
-		public Object match(Env e, Object rhs) { return null; } 
+	static class Ign implements Bindable {
+		public Object bind(Env e, Object rhs) { return null; } 
 		public String toString() { return "#ignore"; }
 	};
 	public static Ign ign = new Ign();
@@ -129,11 +127,11 @@ public class Vm {
 		return o instanceof Evaluable x ? x.eval(r, e) : o;
 	}
 	
-	class Sym implements Evaluable, Matchable {
+	class Sym implements Evaluable, Bindable {
 		String name;
 		Sym(String name) { this.name = name; }
-		public Object eval(Resumption r, Env e) { return lookup(e, name); }
-		public Object match(Env e, Object rhs) { e.put(this.name, rhs); if (trace) print("bind: ", this.name, "=", rhs, " ", e); return null; }	
+		public Object eval(Resumption r, Env e) { return e.lookup(name); }
+		public Object bind(Env e, Object rhs) { return e.bind(name, rhs); }	
 		public int hashCode() { return Objects.hashCode(name); }
 		public boolean equals(Object o) {
 			return this == o || o instanceof Sym sym && name.equals(sym.name);
@@ -143,17 +141,17 @@ public class Vm {
 	Sym sym(String name) { return new Sym(name); }
 	String sym_name(Sym sym) { return sym.name; }
 	
-	class Cons implements Evaluable, Matchable {
+	class Cons implements Evaluable, Bindable {
 		Object car, cdr;
 		Cons(Object car, Object cdr) { this.car = car; this.cdr = cdr; }
 		public Object eval(Resumption r, Env e) {
 			Object op = r != null ? resumeFrame(r) : evaluate(null, e, car);
 			return op instanceof Suspension s ? suspendFrame(s, rr-> eval(rr, e)) : combine(null, e, op, cdr);
 		}
-		public Object match(Env e, Object rhs) {
-			if (!(car instanceof Matchable mcar)) return "cannot match against: " + car;
-			if (!(cdr instanceof Matchable mcdr)) return "cannot match against: " + cdr; 
-			mcar.match(e, car(rhs)); return mcdr.match(e, cdr(rhs));
+		public Object bind(Env e, Object rhs) {
+			if (!(car instanceof Bindable mcar)) return "cannot bind: " + car;
+			if (!(cdr instanceof Bindable mcdr)) return "cannot bind: " + cdr; 
+			mcar.bind(e, car(rhs)); return mcdr.bind(e, cdr(rhs));
 		}
 		public String toString() {	return "(" + toString(this) + ")"; }
 		private String toString(Cons c) {
@@ -162,16 +160,12 @@ public class Vm {
 			return Vm.this.toString(true, c.car) + " . " + Vm.this.toString(true, c.cdr);
 		}
 		public boolean equals(Object o) {
-			return this == o || Vm.this.equals(this,  o);
+			return this == o || o instanceof Cons c && Vm.this.equals(this.car,  c.car) && Vm.this.equals(this.cdr,  c.cdr);
 		}
 	}
 	Cons cons(Object car, Object cdr) { return new Cons(car, cdr); };
-	Object car(Object o) { // tc
-		return o instanceof Cons c ? c.car : error("not a cons: " + o.toString());
-	}
-	Object cdr(Object o) { // tc
-		return o instanceof Cons c ? c.cdr : error("not a cons: " + o.toString());
-	}
+	Object car(Object o) { return o instanceof Cons c ? c.car : error("not a cons: " + o.toString()); }
+	Object cdr(Object o) { return o instanceof Cons c ? c.cdr : error("not a cons: " + o.toString()); }
 	Object elt(Object o, int i) { for (; i>0; i-=1) o=cdr(o); return car(o); }
 	Object rst(Object o, int i) { for (; i>0; i-=1) o=cdr(o); return cdr(o); }
 	int len(Object o) { int i=0; for (; o instanceof Cons c; o=c.cdr) i+=1; return i; }
@@ -181,35 +175,39 @@ public class Vm {
 	class Env {
 		Map<String,Object> map = new LinkedHashMap();
 		Env parent;
-		Env() { this(null); };
 		Env(Env parent) { this.parent = parent; }
-		public boolean has(String name) { return map.containsKey(name); };
-		public Object get(String name) { return map.get(name); };
-		public Object put(String name, Object rhs) { return map.put(name, rhs); }
-		public String toString() { return this == the_environment ? "[The-Env]" : "[Env " + map + " " + parent + "]"; }
+		public Object bind(String name, Object rhs) {
+			map.put(name, rhs); if (trace) print("bind: ", name, "=", rhs, " ", this); return null; 
+		}
+		public String toString() { return this == TheEnvironment ? "[The-Env]" : "[Env " + map + " " + parent + "]"; }
+		Object lookup(String name) {
+			if (!map.containsKey(name)) return parent != null ? parent.lookup(name) : error("unbound: " + name);
+			Object value = map.get(name); if (trace) print("lookup: ", name, ":", value); return value;
+			
+		}
 	}
-	Env env() { return new Env(null); }
 	Env env(Env parent) { return new Env(parent); }
+	/*
 	Object lookup(Env e, String name) {
 		for(;;) {
-			if (e.has(name)) {Object value = e.get(name); if (trace) print("lookup: ", value); return value; }
+			if (e.has(name)) {Object value = e.get(name); if (trace) print("lookup: ", name, ":", value); return value; }
 			if (e.parent == null) return error("unbound: " + name);
 			e = e.parent;
 		}
 	}
+	*/
 	
 	
 	/* Bind */
 	Object bind(Env e, Object lhs, Object rhs, Object exp) {
-		if (!(lhs instanceof Matchable matchable)) return error("cannot match against: " + lhs);
-		Object msg;
-		try {
-			msg = matchable.match(e, rhs);
+		if (!(lhs instanceof Bindable bindable)) return error("cannot bind: " + lhs);
+		Object msg; try {
+			msg = bindable.bind(e, rhs); if (msg == null) return ign;
 		}
-		catch (RuntimeException exc) {
+		catch (ErrorException exc) { // only error in car() or cdr()
 			msg = "insufficient arguments"; // + " because " + exc.getMessage();
 		}
-		return msg == null ? ign : error(msg + " in bind: " + lhs + (exp == null ? "" : " of: " + exp) + " with: " + rhs);
+		return error(msg + " in bind: " + lhs + (exp == null ? "" : " of: " + exp) + " with: " + rhs);
 	}
 	
 	
@@ -241,7 +239,7 @@ public class Vm {
 			return args instanceof Suspension s ? suspendFrame(s, rr-> combine(rr, e, o)) : cmb.combine(null, e, args);
 		}
 		Object evalArgs(Resumption r, Env e, Object todo, Object done) {
-			if (todo == nil) return reverse_list(done);
+			if (todo == nil) return reverseList(done);
 			var arg = r != null ? resumeFrame(r) : evaluate(null, e, car(todo));
 			return arg instanceof Suspension s ? suspendFrame(s, rr-> evalArgs(rr, e, todo, done)) : evalArgs(null, e, cdr(todo), cons(arg, done));
 		}
@@ -317,7 +315,9 @@ public class Vm {
 		}
 		Object begin(Resumption r, Env e, Object xs) {
 			var res = r != null ? resumeFrame(r) : evaluate(null, e, car(xs));
-			return res instanceof Suspension s ? suspendFrame(s, rr-> begin(rr, e, xs)) : ((Function) kdr-> kdr == nil ? res : begin(null, e, kdr)).apply(cdr(xs));
+			return res instanceof Suspension s ? suspendFrame(s, rr-> begin(rr, e, xs))
+				: ((Function) kdr-> kdr == nil ? res : begin(null, e, kdr)).apply(cdr(xs))
+			;
 		}
 		public String toString() { return "vm-begin"; }
 	};
@@ -491,26 +491,31 @@ public class Vm {
 	
 	
 	/* Error handling */
-	Object ROOT_PROMPT = new Object() {
-		public String toString() { return "ROOT_PROMPT"; }
+	Object RootPrompt = new Object() {
+		public String toString() { return "RoorPrompt"; }
 	};
-	Object push_root_prompt(Object x) { return list(new PushPrompt(), ROOT_PROMPT, x); }
+	Object pushRootPrompt(Object x) { return list(new PushPrompt(), RootPrompt, x); }
 	Object error(String err) {
 		//console.log(err)
-		var user_break = the_environment.get("user-break");
-		if (user_break == null) throw new RuntimeException(err);
-		return combine(null, the_environment, user_break, list(err));
+		var user_break = TheEnvironment.lookup("user-break");
+		if (user_break == null) throw new ErrorException(err);
+		return combine(null, TheEnvironment, user_break, list(err));
+	}
+	class ErrorException extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+		public ErrorException(String message) {	super(message); }
+		public ErrorException(String message, Throwable cause) { super(message, cause); }
 	}
 	
 	
 	/* Utilities */
 	Object list(Object ... args) {
-		return array_to_list(true, args);
+		return arrayToList(true, args);
 	}
-	Object list_star(Object ... args) {
-		return array_to_list(false, args);
+	Object listStar(Object ... args) {
+		return arrayToList(false, args);
 	}
-	Object array_to_list(boolean b, Object ... args) {
+	Object arrayToList(boolean b, Object ... args) {
 		var len = args.length-1;
 		var c = b || len < 0 ? nil : args[len];
 		for (var i=len-(b?0:1); i>=0; i-=1) c = cons(args[i], c);
@@ -522,27 +527,27 @@ public class Vm {
 		for (; c != nil; c = cdr(c)) res.add(car(c));
 		return res.toArray();
 	}
-	*/
-	<T> T[] list_to_array(Object c) {
-		return list_to_array(c, 0);
+	 */
+	<T> T[] listToArray(Object c) {
+		return listToArray(c, 0);
 	}
-	<T> T[] list_to_array(Object c, Class<T> cl) {
-		return (T[]) list_to_array(c, 0, cl);
+	<T> T[] listToArray(Object c, Class<T> cl) {
+		return (T[]) listToArray(c, 0, cl);
 	}
-	<T> T[] list_to_array(Object c, int i) {
-		return (T[]) list_to_array(c, i, Object.class);
+	<T> T[] listToArray(Object c, int i) {
+		return (T[]) listToArray(c, i, Object.class);
 	}
-	<T> T[] list_to_array(Object c, int i, Class<T> cl) {
+	<T> T[] listToArray(Object c, int i, Class<T> cl) {
 		var res = new ArrayList();
 		for (; c != nil; c = cdr(c)) if (i-- <= 0) res.add(car(c));
 		return (T[]) res.toArray((T[]) Array.newInstance(cl, 0));
 	}
-	Object reverse_list(Object list) {
+	Object reverseList(Object list) {
 		Object res = nil;
 		for (; list != nil; list = cdr(list)) res = cons(car(list), res);
 		return res;
 	}
-	Object list_to_list_star(Object h) {
+	Object listToListStar(Object h) {
 		if (!(h instanceof Cons hc)) return h;
 		if (hc.cdr == nil) return hc.car;
 		if (hc.cdr instanceof Cons c1) {
@@ -560,19 +565,17 @@ public class Vm {
 		return os[os.length - 1];
 	}
 	boolean equals(Object a, Object b) {
-		if (a instanceof Cons ca && b instanceof Cons cb)
-			return equals(ca.car, cb.car) && equals(ca.cdr, cb.cdr);
-		if (a instanceof Object[] aa && b instanceof Object[] ab)
-			return equals(aa, ab);
-		if (a instanceof Object && b instanceof Object)
-			return a.equals(b);
+		if (a instanceof Object[] aa) return equals(aa, b);
+		if (a instanceof Cons ca) return ca.equals(b);
+		if (a instanceof Object) return a.equals(b);
 		return a == b;
 	}
-	boolean equals(Object[] a, Object[] b) {
-		if (a.length != b.length) return false;
+	boolean equals(Object[] a, Object o) {
+		if (!(o instanceof Object[] b) || a.length != b.length) return false;
 		for (int i=0; i<a.length; i+=1) if (!equals(a[i], b[i])) return false;
 		return true;
 	}
+	/*
 	Void assertEq(Object ... objs) {
 		var x = objs[0];
 		try {
@@ -603,25 +606,44 @@ public class Vm {
 				//t.printStackTrace();
 		}
 	}
+	//*/
+	Void assertVm(Object ... objs) {
+		var expr = objs[0];
+		try {
+			var val = expr instanceof String s ? eval(s) : evaluate(null, env(TheEnvironment), expr);
+			if (objs.length == 1) print(expr, " should be throw but is ", val);
+			else {
+				var expt = objs[1]; 
+				if (equals(val, expt) || val.equals(parseBytecode(expt))) return null;
+				print(expr, "should be ", expt, " but is ", val);
+			}
+		}
+		catch (Throwable t) {
+			if (objs.length == 1) return null;
+			if (stack) t.printStackTrace(out);
+			else print(expr, " throw ", t);
+		}
+		return null;
+	}
 	
 	/* Bytecode parser */
-	Object parse_bytecode(Object o) {
+	Object parseBytecode(Object o) {
 		if (o instanceof String s) return s.equals("#ignore") ? ign : sym(s);
-		if (o instanceof Object[] a) return parse_bytecode(a);
+		if (o instanceof Object[] a) return parseBytecode(a);
 		return o;
 	}
-	Object parse_bytecode(Object ... objs) {
+	Object parseBytecode(Object ... objs) {
 		if (objs.length == 0) return nil;
 		if (objs.length == 2 && objs[0].equals("wat-string")) return objs[1];
-		Object head = cons(parse_bytecode(objs[0]), nil), cons = head;
+		Object head = cons(parseBytecode(objs[0]), nil), cons = head;
 		for (int i=1; i<objs.length; i+=1) {
 			var obj = objs[i];
 			if (obj == null || !obj.equals(".")) {
-				cons = ((Cons) cons).cdr = cons(parse_bytecode(objs[i]), nil);
+				cons = ((Cons) cons).cdr = cons(parseBytecode(objs[i]), nil);
 				continue;
 			}
 			if (i != objs.length-2) throw new RuntimeException(". not is the penultimate element in " + objs);
-			((Cons) cons).cdr = parse_bytecode(objs[i+1]);
+			((Cons) cons).cdr = parseBytecode(objs[i+1]);
 			return head;
 		}
 		return head;
@@ -652,8 +674,8 @@ public class Vm {
 				if (jsfun instanceof Function f) return f.apply(car(o));  
 				if (jsfun instanceof BiFunction f) return f.apply(elt(o,0), elt(o,1));
 				if (jsfun instanceof Consumer c) { c.accept(car(o)); return ign; }
-				if (jsfun instanceof Method mt)	return mt.invoke(car(o), list_to_array(cdr(o)));
-				if (jsfun instanceof Constructor c) return c.newInstance(list_to_array(o));
+				if (jsfun instanceof Method mt)	return mt.invoke(car(o), listToArray(cdr(o)));
+				if (jsfun instanceof Constructor c) return c.newInstance(listToArray(o));
 				return error("not a combine " + jsfun);
 			}
 			catch (Exception exp) {
@@ -688,21 +710,21 @@ public class Vm {
 				try {
 					switch (name) {
 						case "getMethod":
-							return jswrap(((Class) obj).getMethod((String) elt(x,1), list_to_array(x, 2, Class.class)));
-						case  "invoke":
-							return ((Method) obj).invoke(elt(x,1), list_to_array(x, 2, Object.class));
+							return jswrap(((Class) obj).getMethod((String) elt(x,1), listToArray(x, 2, Class.class)));
+						case "invoke":
+							return ((Method) obj).invoke(elt(x,1), listToArray(x, 2, Object.class));
 						case "getConstructor":
-							return jswrap(((Class) obj).getConstructor(list_to_array(x, 1, Class.class)));
+							return jswrap(((Class) obj).getConstructor(listToArray(x, 1, Class.class)));
 						case "newInstance":
 							return obj == Array.class
-								? Array.newInstance((Class) elt(x, 1), Arrays.stream(list_to_array(x, 2, Integer.class)).mapToInt(i->i).toArray() )
-								: ((Constructor) obj).newInstance(list_to_array(x, 1));
+								? Array.newInstance((Class) elt(x, 1), Arrays.stream(listToArray(x, 2, Integer.class)).mapToInt(i->i).toArray() )
+								: ((Constructor) obj).newInstance(listToArray(x, 1));
 					}
 				}
 				catch (Exception exp) {
 					throw new RuntimeException("error executing method: " + name + " in: " + x, exp);
 				}
-				Object[] args = list_to_array(x, 1);
+				Object[] args = listToArray(x, 1);
 				Executable executable = getExecutable(name.equals("new") ? (Class) obj : obj.getClass(), name,  getClasses(args));
 				if (executable != null)	try {
 					if (executable.isVarArgs()) args = reorg(executable.getParameterTypes(), args);
@@ -714,12 +736,12 @@ public class Vm {
 					*/
 					if (executable instanceof Method m) return m.invoke(obj, args);
 					if (executable instanceof Constructor c) return c.newInstance(args);
-					throw new RuntimeException("no method no constructor");   
+					throw new RuntimeException("no method no constructor: " + executable);   
 				}
 				catch (Exception exp) {
 					throw new RuntimeException("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + x, exp);
 				}
-				throw new RuntimeException("not found " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + x);
+				throw new RuntimeException("not found " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + obj);
 			}
 		);
 	}
@@ -802,23 +824,39 @@ public class Vm {
 	String toString(Object o) {
 		return toString(false, o);
 	}
+	@SuppressWarnings("preview")
 	String toString(boolean b, Object o) {
 		var r = new StringBuilder();
-		if (o == null) r.append("#null");
-		else if (o instanceof String s)
-			r.append(!b ? s : toSource(s));
+		/* warning preview
+		r.append(
+			switch (o) {
+				case null-> "#null";
+				case Object[] a-> {
+					var s = new StringBuilder();
+					for (var e: a) s.append((s.isEmpty() ? "" : ", ") + toString(true, e));
+					yield "[" + s.toString() + "]";
+				}
+				case String s-> !b ? s : toSource(s);
+				case Class cl-> "&" + cl.getName();
+				default-> o.toString();
+			}
+		);
+		*/
+		if (o == null)
+			r.append("#null");
 		else if (o instanceof Object[] a) {
 			var s = new StringBuilder();
 			for (var e: a) s.append((s.isEmpty() ? "" : ", ") + toString(true, e));
 			r.append("[" + s.toString() + "]");
 		}
+		else if (o instanceof String s)
+			r.append(!b ? s : toSource(s));
 		else if (o instanceof Class cl)
 			r.append("&" + cl.getName());
 		else
 			r.append(o.toString());
 		return r.toString();
 	}
-	
 	public static String toSource(String s) {
 		s = s
 			.replaceAll("\"", "\\\\\"")
@@ -832,7 +870,7 @@ public class Vm {
 	}
 	
 	/* Bootstrap */
-	Object builtin_bytecode =
+	Object builtinBytecode =
 		$("vm-begin",
 			// Basics
 			$("vm-def", "vm-vau", new Vau()),
@@ -863,7 +901,7 @@ public class Vm {
 			$("vm-def", "vm-dlet", new DLet()),
 			$("vm-def", "vm-dref", wrap(new DRef())),
 			// Errors
-			$("vm-def", "vm-root-prompt", ROOT_PROMPT),
+			$("vm-def", "vm-root-prompt", RootPrompt),
 			$("vm-def", "vm-error", jswrap((Function<String, Object>) this::error)),
 			// JS Interface
 			//$("vm-def", "vm-js-wrap", jswrap(jswrap)),
@@ -882,10 +920,10 @@ public class Vm {
 			//$("vm-def", "vm-setter", SETTER),
 			// Utilities
 			$("vm-def", "vm-list", jswrap((ArgsList) o-> o)),
-			$("vm-def", "vm-list*", jswrap((ArgsList) this::list_to_list_star)),
-			$("vm-def", "vm-list-to-array", jswrap((Function<Object,Object[]>) this::list_to_array)),
-			$("vm-def", "vm-array-to-list", jswrap((BiFunction<Boolean,Object[],Object>) this::array_to_list)),
-			$("vm-def", "vm-reverse-list", jswrap((Function) this::reverse_list)),
+			$("vm-def", "vm-list*", jswrap((ArgsList) this::listToListStar)),
+			$("vm-def", "vm-list-to-array", jswrap((Function<Object,Object[]>) this::listToArray)),
+			$("vm-def", "vm-array-to-list", jswrap((BiFunction<Boolean,Object[],Object>) this::arrayToList)),
+			$("vm-def", "vm-reverse-list", jswrap((Function) this::reverseList)),
 			// 
 			$("vm-def", "+", jswrap((BiFunction<Integer,Integer,Integer>) (a,b)-> a + b)),
 			$("vm-def", "*", jswrap((BiFunction<Integer,Integer,Integer>) (a,b)-> a * b)),
@@ -902,35 +940,35 @@ public class Vm {
 			$("vm-def", "vm-quote", $("vm-vau", $("a"), ign, "a")),
 			$("vm-def", "==", jswrap((BiFunction<Object,Object,Boolean>) (a,b)-> a == b)),
 			$("vm-def", "!=", jswrap((BiFunction<Object,Object,Boolean>) (a,b)-> a != b)),
-			$("vm-def", "eq", jswrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
-			$("vm-def", "assert", jsfun((ArgsList) l-> assertEq(list_to_array(l)))),
-			$("vm-def", "toString", jswrap((ArgsList) l-> this.toString(list_to_array(l)))),
-			$("vm-def", "print", jswrap((ArgsList) l-> this.print(list_to_array(l)))),
+			$("vm-def", "eq?", jswrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
+			$("vm-def", "assert", jsfun((ArgsList) l-> assertVm(listToArray(l)))),
+			$("vm-def", "toString", jswrap((ArgsList) l-> this.toString(listToArray(l)))),
+			$("vm-def", "print", jswrap((ArgsList) l-> this.print(listToArray(l)))),
 			$("vm-def", "instanceof", jswrap((BiFunction<Object,Class,Boolean>)this::jsInstanceOf)),
 			$("vm-def", "trace", jswrap((Consumer<Boolean>) b-> trace=b)),
 			$("vm-def", "stack", jswrap((Consumer<Boolean>) b-> stack=b)),
-			$("vm-def", "root-prompt", ROOT_PROMPT)
+			$("vm-def", "root-prompt", RootPrompt)
 		)
 	;
-	Env the_environment = env(); {
-		bind(the_environment, sym("vm-def"), new Def(), null);
-		bind(the_environment, sym("vm-begin"), new Begin(), null);
-		evaluate(null, the_environment, parse_bytecode(builtin_bytecode));
+	Env TheEnvironment = env(null); {
+		bind(TheEnvironment, sym("vm-def"), new Def(), null);
+		bind(TheEnvironment, sym("vm-begin"), new Begin(), null);
+		evaluate(null, TheEnvironment, parseBytecode(builtinBytecode));
 	}
 	
 	
 	/* API */
 	public Object exec(Object bytecode) {
-		var wrapped = push_root_prompt(cons(new Begin(), parse_bytecode(bytecode)));
-		var res = evaluate(null, the_environment, wrapped);
+		var wrapped = pushRootPrompt(cons(new Begin(), parseBytecode(bytecode)));
+		var res = evaluate(null, TheEnvironment, wrapped);
 		if (res instanceof Suspension s) throw new RuntimeException("prompt not found: " + s.prompt);
 		return res;
 	}
-	public Object call(String fun_name, Object ... args) {
-		return exec(list(sym(fun_name), parse_bytecode(args)));
+	public Object call(String funName, Object ... args) {
+		return exec(list(sym(funName), parseBytecode(args)));
 	}
-	public Object get(String var_name) {
-		return exec(sym(var_name));
+	public Object get(String varName) {
+		return exec(sym(varName));
 	}
 	
 	
@@ -943,19 +981,19 @@ public class Vm {
 	}
 	public void compile(String fileName) throws Exception {
 		try (
-	    	ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("build/" + fileName))
+			ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("build/" + fileName))
 		) {
 			oos.writeObject(parse(readFile(fileName)));
 		}
 	}
-    public static String readFile(String filename) throws IOException {
-        return Files.readString(Paths.get(filename), Charset.forName("cp1252"));
-    } 
+	public static String readFile(String filename) throws IOException {
+		return Files.readString(Paths.get(filename), Charset.forName("cp1252"));
+	} 
 	public Object readBytecode(String fileName) throws Exception {
 		try (
-		   ObjectInputStream ois = new ObjectInputStream(new FileInputStream("build/" + fileName));
+			ObjectInputStream ois = new ObjectInputStream(new FileInputStream("build/" + fileName));
 		) {
-		   return ois.readObject();
+			return ois.readObject();
 		}
 	}
 	
@@ -1040,176 +1078,108 @@ public class Vm {
 	
 	public void main() throws Exception {
 		//*
-		//exec(parse(readString("boot.wat")));
+		//exec(parse(readFile("boot.wat")));
 		//compile("boot.wat");
 		//exec(readBytecode("boot.wat"));
 		eval(readFile("boot.wat"));
-		//eval(readString("boot2.wat"));
+		//eval(readFile("boot2.wat"));
 		eval(readFile("test.wat"));
 		//*/
-					
+		
 		/*
-		print(parse_bytecode("a"));
-		print(parse_bytecode("#ignore"));
-		print(parse_bytecode($()));
-		print(parse_bytecode($("a")));
-		print(parse_bytecode($("a", "b")));
-		print(parse_bytecode($("a", "b", ".", $())));
-		print(parse_bytecode($("a", "b", ".", "c")));
-		print(parse_bytecode($("a", $("b"), ".", "c")));
-		print(parse_bytecode($("wat-string", "string")));
-		//*/
-		/* solo se parse_bytecode -> $
-		print(vm.$("a"));
-		print(vm.$("#ignore"));
-		print(vm.$());
-		print(vm.$("a"));
-		print(vm.$("a", "b"));
-		print(vm.$("a", "b", ".", vm.$()));
-		print(vm.$("a", "b", ".", "c"));
-		print(vm.$("a", vm.$("b"), ".", "c"));
-		print(vm.$("wat-string", "string"));
+		print(parseBytecode("a"));
+		print(parseBytecode("#ignore"));
+		print(parseBytecode($()));
+		print(parseBytecode($("a")));
+		print(parseBytecode($("a", "b")));
+		print(parseBytecode($("a", "b", ".", $())));
+		print(parseBytecode($("a", "b", ".", "c")));
+		print(parseBytecode($("a", $("b"), ".", "c")));
+		print(parseBytecode($("wat-string", "string")));
 		//*/
 		/*
 		print(list());
 		print(list("a"));
 		print(list("a", "b"));
-		print(array_to_list(true));
-		print(array_to_list(true, "a"));
-		print(array_to_list(true, "a", "b"));
-		print(list_star());
-		print(list_star("a"));
-		print(list_star("a", "b"));
-		print(array_to_list(false));
-		print(array_to_list(false, "a"));
-		print(array_to_list(false, "a", "b"));
+		print(arrayToList(true));
+		print(arrayToList(true, "a"));
+		print(arrayToList(true, "a", "b"));
+		print(listStar());
+		print(listStar("a"));
+		print(listStar("a", "b"));
+		print(arrayToList(false));
+		print(arrayToList(false, "a"));
+		print(arrayToList(false, "a", "b"));
 		//*/
 		/*
-		print(parse_bytecode(parse("(vm-cons 1 2)"))); // -> ((vm-cons 1 2))
+		print(parseBytecode(parse("(vm-cons 1 2)"))); // -> ((vm-cons 1 2))
 		//*/	
 		/*
-		print(list_to_list_star(1)); // -> 1 
-		print(list_to_list_star(nil)); // -> ()
-		print(list_to_list_star(list())); // -> ()
-		print(list_to_list_star(list(1, 2))); // -> (1 . 2)
-		print(list_to_list_star(list(1, 2, 3))); // -> (1 2 . 3)
-		//print(list_to_list_star(list_star(1, 2))); -> not a proper list
-		//print(list_to_list_star(list_star(1, 2, 3)));  -> not a proper list
-		//print(list_to_list_star(list_star(1, 2, 3, 4)));  -> not a proper list
+		print(listToListStar(1)); // -> 1 
+		print(listToListStar(nil)); // -> ()
+		print(listToListStar(list())); // -> ()
+		print(listToListStar(list(1, 2))); // -> (1 . 2)
+		print(listToListStar(list(1, 2, 3))); // -> (1 2 . 3)
+		//print(listToListStar(listStar(1, 2))); // -> not a proper list
+		//print(listToListStar(listStar(1, 2, 3))); // -> not a proper list
+		//print(listToListStar(listStar(1, 2, 3, 4))); // -> not a proper list
 		//*/
-
+		
 		/*
-		assertEq("1", 1);
-		assertEq("(vm-begin 1 2 3)", 3);
-		assertEq("(vm-cons 1 2)", $(1,".",2));
-		assertEq("(vm-list 1 2 3)", $(1,2,3));
-		assertEq("(vm-list* 1 2 3 4)",$(1,2,3,".",4));
-		assertEq("(vm-list-to-array (vm-list 1 2 3 4))", new Object[] {1,2,3,4});
-		assertEq("(vm-array-to-list #t (vm-list-to-array (vm-list 1 2 3 4)))", $(1,2,3,4));
-		assertEq("(vm-array-to-list #f (vm-list-to-array (vm-list 1 2 3 4)))", $(1,2,3,".",4));
-		assertEq("(vm-reverse-list (vm-list 1 2 3 4))", $(4,3,2,1));
+		assertVm("1", 1);
+		assertVm("(vm-begin 1 2 3)", 3);
+		assertVm("(vm-cons 1 2)", $(1,".",2));
+		assertVm("(vm-list 1 2 3)", $(1,2,3));
+		assertVm("(vm-list* 1 2 3 4)", $(1,2,3,".",4));
+		assertVm("(vm-list-to-array (vm-list 1 2 3 4))", new Object[] {1,2,3,4});
+		assertVm("(vm-array-to-list #t (vm-list-to-array (vm-list 1 2 3 4)))", $(1,2,3,4));
+		assertVm("(vm-array-to-list #f (vm-list-to-array (vm-list 1 2 3 4)))", $(1,2,3,".",4));
+		assertVm("(vm-reverse-list (vm-list 1 2 3 4))", $(4,3,2,1));
 		
-		assertEq("(+ 1 2)", 3);
-		assertEq("(* 3 2)", 6);
-		assertEq("(* (* 3 2) 2)", 12);
+		assertVm("(+ 1 2)", 3);
+		assertVm("(* 3 2)", 6);
+		assertVm("(* (* 3 2) 2)", 12);
 		
-		assertEq("((vm-vau a #ignore a) 1 2)", $(1,2));
-		assertEq("((vm-vau (a b) #ignore b) 1 2)", 2);
-		assertEq("((vm-vau (a . b) #ignore b) 1 2 3)", $(2,3));
-		assertEq("(vm-begin (vm-def x (vm-list 1)) x)", $(1));
-		assertEq("(vm-def x 1)((vm-wrap(vm-vau (a) #ignore a)) x)", 1);
+		assertVm("((vm-vau a #ignore a) 1 2)", $(1,2));
+		assertVm("((vm-vau (a b) #ignore b) 1 2)", 2);
+		assertVm("((vm-vau (a . b) #ignore b) 1 2 3)", $(2,3));
+		assertVm("(vm-begin (vm-def x (vm-list 1)) x)", $(1));
+		assertVm("(vm-def x 1)((vm-wrap(vm-vau (a) #ignore a)) x)", 1);
 		
-		assertEq("(vm-def () 1) a", Throw);
-		assertEq("(vm-def a (vm-list 1)) a", $(1));
-		assertEq("(vm-def (a) (vm-list 1)) a", 1);
-		assertEq("(vm-def a (vm-list 1 2 3)) a", $(1,2,3));
-		assertEq("(vm-def (a) 1 2 3) a", Throw);
-		assertEq("(vm-def 2 1)", Throw);
-		assertEq("(vm-def (a) (vm-list 1)) a", 1);
-		assertEq("(vm-def (a b) (vm-list 1 2)) a b", 2);
-		assertEq("(vm-def (a . b) (vm-list 1 2 3)) a b", $(2,3)); 
+		assertVm("(vm-def () 1) a");
+		assertVm("(vm-def a (vm-list 1)) a", $(1));
+		assertVm("(vm-def (a) (vm-list 1)) a", 1);
+		assertVm("(vm-def a (vm-list 1 2 3)) a", $(1,2,3));
+		assertVm("(vm-def (a) 1 2 3) a");
+		assertVm("(vm-def 2 1)");
+		assertVm("(vm-def (a) (vm-list 1)) a", 1);
+		assertVm("(vm-def (a b) (vm-list 1 2)) a b", 2);
+		assertVm("(vm-def (a . b) (vm-list 1 2 3)) a b", $(2,3)); 
 				
-		assertEq("(vm-vau (a . 12) #ignore 0)", Throw);
-		assertEq("(vm-def (a b 12) 1)", Throw);
+		assertVm("(vm-vau (a . 12) #ignore 0)");
+		assertVm("(vm-def (a b 12) 1)");
 		
-		assertEq("(vm-qot a b c)", Throw);
+		assertVm("(vm-qot a b c)");
 
-		assertEq("(vm-def 2 1)", Throw);
-		assertEq("(vm-def a 1) a", 1);
-		assertEq("(vm-def (a . b) (vm-list 1 2 3)) a b", $(2,3));
-		assertEq("(vm-def define vm-def) (define a 1) a", 1);
-		assertEq("(vm-def $define! vm-def) ($define! a 1) a", 1);
-		assertEq("$define!", the_environment.get("vm-def"));
-		assertEq("a", 1);
-		assertEq("b", $(2,3));
-		assertEq("(vm-if #t 1 2)", 1);
-		assertEq("(vm-if #f 1 2)", 2);
-		assertEq("(vm-if #null 1 2)", 2);
-		assertEq("(($vau x #ignore 1 2 3 4 5 x) 6)", 6);
+		assertVm("(vm-def 2 1)");
+		assertVm("(vm-def a 1) a", 1);
+		assertVm("(vm-def (a . b) (vm-list 1 2 3)) a b", $(2,3));
+		assertVm("(vm-def define vm-def) (define a 1) a", 1);
+		assertVm("(vm-def $define! vm-def) ($define! a 1) a", 1);
+		assertVm("$define!", TheEnvironment.get("vm-def"));
+		assertVm("a", 1);
+		assertVm("b", $(2,3));
+		assertVm("(vm-if #t 1 2)", 1);
+		assertVm("(vm-if #f 1 2)", 2);
+		assertVm("(vm-if #null 1 2)", 2);
+		assertVm("(($vau (x) #ignore 1 2 3 4 5 x) 6)", 6);
 		//*/
 		/*
 		eval("""
 			(assert (vm-def a 1) #ignore)
 			(assert (vm-def a)          ) ;throw
-			
-			(vm-def $define! vm-def)
-			
-			;; Rename bindings that will be used as provided by VM
-			($define! array->list vm-array-to-list)
-			($define! begin vm-begin)
-			($define! cons vm-cons)
-			($define! cons? vm-cons?)
-			($define! dnew vm-dnew)
-			($define! dref vm-dref)
-			($define! error vm-error)
-			($define! eval vm-eval)
-			($define! if vm-if)
-			;($define! js-getter vm-js-getter)
-			;($define! js-global vm-js-global)
-			;($define! js-invoker vm-js-invoker)
-			($define! list* vm-list*)
-			($define! list->array vm-list-to-array)
-			($define! make-environment vm-make-environment)
-			;($define! new vm-js-new)
-			($define! nil? vm-nil?)
-			($define! reverse-list vm-reverse-list)
-			;($define! setter vm-setter)
-			($define! string->symbol vm-string-to-symbol)
-			($define! symbol-name vm-symbol-name)
-			($define! symbol? vm-symbol?)
-			($define! throw vm-throw)
-			($define! unwrap vm-unwrap)
-			($define! wrap vm-wrap)
-			
-			;; Important utilities
-			($define! $vau vm-vau)
-			($define! quote ($vau (x) #ignore x))
-			($define! list (wrap ($vau elts #ignore elts)))
-			($define! list vm-list)
-			($define! the-environment ($vau () e e))
-			($define! get-current-environment (wrap ($vau () e e)))
-			
-			;;;; Macro and vau
-			
-			;(@log &console "da qui ---------------------")
-			
-			; derivazione Shutt!
-			($define! $vau
-			  ((wrap
-			     ($vau ($vau) #ignore
-			       ($vau (formals eformal . body) env
-			         (eval (list $vau formals eformal (list* begin body)) env) )))
-			  $vau ))
-			(($vau (x) #ignore 1 2 3 4 x) 1)
-			  
 		""");
 		//*/		
 		repl();
 	}
-	
-	Throwable Throw = new Throwable() {
-		private static final long serialVersionUID = 1L;
-		public String toString() { return "a throw"; };		
-	};
-	
 }

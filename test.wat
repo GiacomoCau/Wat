@@ -17,7 +17,7 @@
 
 (define-operative (assert-equal expected expr2) env
   (let ((res (eval expr2 env)))
-    (unless (eq (eval expected env) res)
+    (unless (eq? (eval expected env) res)
       (error (+ expr2 " should be " expected " but is " res)) )))
 
 (define-operative (assert-throws expr) env
