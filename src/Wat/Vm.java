@@ -76,6 +76,7 @@ import java.util.function.Supplier;
 public class Vm {
 	
 	boolean trace = false;
+	boolean stack = false;
 	
 	interface Evaluable { Object eval(Resumption r, Env e); }
 	interface Matchable { Object match(Env e, Object rhs); }
@@ -132,7 +133,7 @@ public class Vm {
 		String name;
 		Sym(String name) { this.name = name; }
 		public Object eval(Resumption r, Env e) { return lookup(e, name); }
-		public Object match(Env e, Object rhs) { e.put(this.name, rhs); if (trace) print("bind: ", this.name, rhs, e); return null; }	
+		public Object match(Env e, Object rhs) { e.put(this.name, rhs); if (trace) print("bind: ", this.name, "=", rhs, " ", e); return null; }	
 		public int hashCode() { return Objects.hashCode(name); }
 		public boolean equals(Object o) {
 			return this == o || o instanceof Sym sym && name.equals(sym.name);
@@ -218,8 +219,8 @@ public class Vm {
 		if (op instanceof Combinable cmb) return cmb.combine(r, e, o);
 		// per default le Function non wrapped dovrebbero essere operative e non applicative
 		if (isjsfun(op))
-			//return ((Combinable) jswrap(op)).combine(m, e, o); // Function x default applicative
-			return ((Combinable) jsfun(op)).combine(r, e, o); // Function x default operative
+			//return ((Combinable) jswrap(op)).combine(m, e, o); // jsfun x default applicative
+			return ((Combinable) jsfun(op)).combine(r, e, o); // jsfun x default operative
 		return error("not a combiner: " + op.toString() + " in: " + cons(op, o));
 	}
 	
@@ -525,6 +526,9 @@ public class Vm {
 	<T> T[] list_to_array(Object c) {
 		return list_to_array(c, 0);
 	}
+	<T> T[] list_to_array(Object c, Class<T> cl) {
+		return (T[]) list_to_array(c, 0, cl);
+	}
 	<T> T[] list_to_array(Object c, int i) {
 		return (T[]) list_to_array(c, i, Object.class);
 	}
@@ -662,7 +666,7 @@ public class Vm {
 		return isInstance(jsfun, Supplier.class, ArgsList.class, Function.class, BiFunction.class, Consumer.class, Executable.class);
 	}
 	Object jsfun(Object jsfun) {
-		return isjsfun(jsfun) ? new JSFun(jsfun) : error("no a fun: " + jsfun);
+		return /*jsfun instanceof JSFun ? jsfun :*/ isjsfun(jsfun) ? new JSFun(jsfun) : error("no a jsfun: " + jsfun);
 	}
 	Object jswrap(Object jsfun) {
 		return wrap(jsfun(jsfun));
@@ -678,11 +682,77 @@ public class Vm {
 		return jswrap(
 			(ArgsList) x-> {
 				Object obj = elt(x, 0);
-				if (obj instanceof Apv apv && apv.cmb instanceof JSFun f) obj = f.jsfun;
-				else if (obj instanceof JSFun f) obj = f.jsfun; 
 				if (obj == null) return error("receiver is null");
-				Object[] args = list_to_array(cdr(x));
+				if (obj instanceof Apv apv) obj = apv.cmb;
+				if (obj instanceof JSFun f) obj = f.jsfun; 
 				try {
+					switch (name) {
+						case "getMethod":
+							return jswrap(((Class) obj).getMethod((String) elt(x,1), list_to_array(x, 2, Class.class)));
+						case  "invoke":
+							return ((Method) obj).invoke(elt(x,1), list_to_array(x, 2, Object.class));
+						case "getConstructor":
+							return jswrap(((Class) obj).getConstructor(list_to_array(x, 1, Class.class)));
+						case "newInstance":
+							return obj == Array.class
+								? Array.newInstance((Class) elt(x, 1), Arrays.stream(list_to_array(x, 2, Integer.class)).mapToInt(i->i).toArray() )
+								: ((Constructor) obj).newInstance(list_to_array(x, 1));
+					}
+				}
+				catch (Exception exp) {
+					throw new RuntimeException("error executing method: " + name + " in: " + x, exp);
+				}
+				Object[] args = list_to_array(x, 1);
+				Executable executable = getExecutable(name.equals("new") ? (Class) obj : obj.getClass(), name,  getClasses(args));
+				if (executable != null)	try {
+					if (executable.isVarArgs()) args = reorg(executable.getParameterTypes(), args);
+					/* warning preview
+					return switch (executable) {
+						case Method m-> m.invoke(obj, args);
+						case Constructor c-> c.newInstance(args);
+					};
+					*/
+					if (executable instanceof Method m) return m.invoke(obj, args);
+					if (executable instanceof Constructor c) return c.newInstance(args);
+					throw new RuntimeException("no method no constructor");   
+				}
+				catch (Exception exp) {
+					throw new RuntimeException("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + x, exp);
+				}
+				throw new RuntimeException("not found " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + x);
+			}
+		);
+	}
+	/*
+	@SuppressWarnings("preview")
+	Object jsInvoker(String name) {
+		if (name == null) return error("method name is null");
+		return jswrap(
+			(ArgsList) x-> {
+				Object obj = elt(x, 0);
+				if (obj == null) return error("receiver is null");
+				if (obj instanceof Apv apv) obj = apv.cmb;
+				if (obj instanceof JSFun f) obj = f.jsfun; 
+				//else error("not a JSFun: " + obj);
+				
+				Object[] args = list_to_array(cdr(x));
+				Executable executable = getExecutable(name.equals("new") ? (Class) obj : obj.getClass(), name,  getClasses(args));
+				if (executable != null)	try {
+					if (executable.isVarArgs()) args = reorg(executable.getParameterTypes(), args);
+					/* warning preview
+					return switch (executable) {
+						case Method m-> m.invoke(obj, args);
+						case Constructor c-> c.newInstance(args);
+					};
+					* /
+					if (executable instanceof Method m) return jswrap(m.invoke(obj, args));
+					if (executable instanceof Constructor c) return c.newInstance(args);
+					throw new RuntimeException("no method no constructor");   
+				}
+				catch (Exception exp) {
+					throw new RuntimeException("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + x, exp);
+				}
+				else try {
 					switch (name) {
 						case "getMethod":
 							//return jswrap(((Class) obj).getMethod((String) elt(x,1), Arrays.stream((list_to_array(cdr(cdr(x))))).toArray(Class[]::new)));
@@ -700,35 +770,13 @@ public class Vm {
 					}
 				}
 				catch (Exception exp) {
-					throw new RuntimeException(exp);
+					throw new RuntimeException("error executing method: " + name + " in: " + x, exp);
 				}
-				/* sostituito dal seguente
-				Executable executable = switch(name) {
-					case "new"-> getExecutable((Class) obj, name,  getClasses(args));
-					default-> getExecutable(obj.getClass(), name, getClasses(args));
-				};
-				*/
-				Executable executable = getExecutable(name.equals("new") ? (Class) obj : obj.getClass(), name,  getClasses(args));
-				if (executable == null)
-					throw new RuntimeException("not found " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + obj);
-				try {
-					if (executable.isVarArgs()) args = reorg(executable.getParameterTypes(), args);
-					/* warning preview
-					return switch (executable) {
-						case Method m-> m.invoke(obj, args);
-						case Constructor c-> c.newInstance(args);
-					};
-					*/
-					if (executable instanceof Method m) return m.invoke(obj, args);
-					if (executable instanceof Constructor c) return c.newInstance(args);
-					throw new RuntimeException("no method no constructor");   
-				}
-				catch (Exception e) {
-					throw new RuntimeException("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + obj);
-				}
+				throw new RuntimeException("not found " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + x);
 			}
 		);
 	}
+	*/
 	Object jsGetSetter(String name) {
 		if (name == null) return error(name + " getter called with wrong args");
 		return jswrap(
@@ -757,13 +805,17 @@ public class Vm {
 	String toString(boolean b, Object o) {
 		var r = new StringBuilder();
 		if (o == null) r.append("#null");
-		else if (o instanceof String s) r.append(!b ? s : toSource(s));
+		else if (o instanceof String s)
+			r.append(!b ? s : toSource(s));
 		else if (o instanceof Object[] a) {
 			var s = new StringBuilder();
 			for (var e: a) s.append((s.isEmpty() ? "" : ", ") + toString(true, e));
 			r.append("[" + s.toString() + "]");
 		}
-		else r.append(o.toString());
+		else if (o instanceof Class cl)
+			r.append("&" + cl.getName());
+		else
+			r.append(o.toString());
 		return r.toString();
 	}
 	
@@ -856,6 +908,7 @@ public class Vm {
 			$("vm-def", "print", jswrap((ArgsList) l-> this.print(list_to_array(l)))),
 			$("vm-def", "instanceof", jswrap((BiFunction<Object,Class,Boolean>)this::jsInstanceOf)),
 			$("vm-def", "trace", jswrap((Consumer<Boolean>) b-> trace=b)),
+			$("vm-def", "stack", jswrap((Consumer<Boolean>) b-> stack=b)),
 			$("vm-def", "root-prompt", ROOT_PROMPT)
 		)
 	;
@@ -919,8 +972,10 @@ public class Vm {
 					print(exec(parse(line)));
 				}
 				catch (Throwable t) {
-					//t.printStackTrace(out);
-					out.println(t.getClass().getSimpleName() + ":" + t.getMessage());
+					if (stack)
+						t.printStackTrace(out);
+					else
+						out.println(t.getClass().getSimpleName() + ":" + t.getMessage());
 				}
 			}
 		}
