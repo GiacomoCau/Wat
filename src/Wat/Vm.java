@@ -176,6 +176,7 @@ public class Vm {
 		Map<String,Object> map = new LinkedHashMap();
 		Env parent;
 		Env(Env parent) { this.parent = parent; }
+		public Object get(String name) { return map.get(name); };
 		public Object bind(String name, Object rhs) {
 			map.put(name, rhs); if (trace) print("bind: ", name, "=", rhs, " ", this); return null; 
 		}
@@ -497,7 +498,7 @@ public class Vm {
 	Object pushRootPrompt(Object x) { return list(new PushPrompt(), RootPrompt, x); }
 	Object error(String err) {
 		//console.log(err)
-		var user_break = TheEnvironment.lookup("user-break");
+		var user_break = TheEnvironment.get("user-break");
 		if (user_break == null) throw new ErrorException(err);
 		return combine(null, TheEnvironment, user_break, list(err));
 	}
@@ -1024,7 +1025,8 @@ public class Vm {
 		int open = 0, close = 0;
 		boolean inescape = false, instring = false, incomment=false, smlcomment=false, inmlcomment=false, emlcomment=false;
 		do {
-			out.print("> ");
+			var oc = close-open;
+			out.print((oc==0 ? "" : "%+d".formatted(oc)) + "> ");
 			for (int c; (c = in.read()) != '\n';) {
 				if (inescape) {
 					inescape = false;

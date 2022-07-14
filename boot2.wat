@@ -5,23 +5,23 @@
 ;; Assert vm
 (assert (vm-quote (a b)) (a b))
 
-(assert (vm-def))      ; throw
-(assert (vm-def a))    ; throw 
+(assert (vm-def)              ) ; throw
+(assert (vm-def a)            ) ; throw 
 (assert (vm-def a 1)   #ignore) ; a=1
-(assert (vm-def a 1 2)); throw
+(assert (vm-def a 1 2)        ) ; throw
  
 (assert (vm-begin (vm-def (a) (vm-list 1)) a)         1)
 (assert (vm-begin (vm-def (a b) (vm-list 1 2)) b)     2)
 (assert (vm-begin (vm-def (a . b) (vm-list 1 2)) b)   (2))
 (assert (vm-begin (vm-def (a . b) (vm-list 1 2 3)) b) (2 3))
 
-(assert (vm-def (a))                  ) ; throw
-(assert (vm-def (a) 1)                ) ; throw
-(assert (vm-def (a b) 1 2)     		  ) ; throw
-(assert (vm-def (a) 1 2)              ) ; throw
-(assert (vm-def (a . b) 1 2)          ) ; throw       
-(assert (vm-def (a . b) 1 2 3)        ) ; throw 
-(assert (vm-def (a . a) 1 2 3)        ) ; throw
+(assert (vm-def (a))           ) ; throw
+(assert (vm-def (a) 1)         ) ; throw
+(assert (vm-def (a b) 1 2)     ) ; throw
+(assert (vm-def (a) 1 2)       ) ; throw
+(assert (vm-def (a . b) 1 2)   ) ; throw       
+(assert (vm-def (a . b) 1 2 3) ) ; throw 
+(assert (vm-def (a . a) 1 2 3) ) ; throw
 
 (assert (vm-def 1 1)) ; throw
 (assert (vm-def "a" 1)) ; throw
@@ -115,7 +115,7 @@
   (make-macro-expander
     ($vau (params env-param . body) #ignore
       (list vm-vau params env-param (list* begin body)) )))
-  
+
 (assert (($vau a #ignore 1 2 3 4 5 a) 6) (6))
 (assert (($vau (a) #ignore 1 2 3 4 5 a) 6) 6)
 
@@ -253,7 +253,7 @@
 
 (define (apply appv arg . opt)
   (if (instanceof appv &java.util.function.Function)
-      (@apply appv #null (list->array arg))
+      (@apply appv (list->array arg))
       (eval (cons (unwrap appv) arg)
             (if (nil? opt)
                 (make-environment)
