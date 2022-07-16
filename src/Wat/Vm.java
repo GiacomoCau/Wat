@@ -338,7 +338,7 @@ public class Vm {
 			checkOperand(this, o, 2); // o = (x handler)
 			var x = elt(o, 0);
 			var handler = elt(o, 1);
-			if (!(handler instanceof Apv apv1)) return error("not a one arg applicative combiner: " + handler); 
+			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
 			Object res = null;
 			try {
 				res = r != null ? resumeFrame(r) : evaluate(null, e, x);
@@ -351,6 +351,14 @@ public class Vm {
 			return res;
 		}
 		public String toString() { return "vm-catch"; }
+	}
+	@SuppressWarnings("preview")
+	int args(Apv apv) {
+		return switch(apv.cmb) {
+			case Opv opv-> opv.p == nil ? 0 : opv.p instanceof Cons c && c.cdr == nil && (c.car == ign || c.car instanceof Sym) ? 1 : Integer.MAX_VALUE;
+			case JFun jFun-> jFun.jfun instanceof Supplier ? 0 : jFun.jfun instanceof Function ? 1 : Integer.MAX_VALUE;
+			default-> Integer.MAX_VALUE;
+		};
 	}
 	class Value extends RuntimeException {
 		private static final long serialVersionUID = 1L;
@@ -398,7 +406,7 @@ public class Vm {
 			checkOperand(this, o, 2); // o = (prompt handler)
 			var prompt = elt(o, 0);
 			var handler = elt(o, 1);
-			if (!(handler instanceof Apv apv1)) return error("not a one arg applicative combiner: " + handler); 
+			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
 			return suspendFrame(new Suspension(prompt, apv1), rr-> Vm.this.combine(null, e, rr.s, nil), this, e);
 		}
 		public String toString() { return "vm-take-subcont"; }
@@ -409,7 +417,7 @@ public class Vm {
 			var o0 = elt(o, 0);
 			if (!(o0 instanceof StackFrame k)) return error("not a stackframe: " + o0); 
 			var o1 = elt(o, 1);
-			if (!(o1 instanceof Apv apv0)) return error("not a zero args applicative combiner: " + o1);
+			if (!(o1 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o1);
 			var res = r != null ? resumeFrame(r) : resumeFrame(k, ()-> Vm.this.combine(null, e, apv0, nil));
 			if (res instanceof Suspension s) suspendFrame(s, rr-> combine(rr, e, o), apv0, e);
 			return res;
@@ -423,7 +431,7 @@ public class Vm {
 			var o1 = elt(o, 1);
 			if (!(o1 instanceof StackFrame k)) return error("not a stackframe: " + o1); 
 			var o2 = elt(o, 2);
-			if (!(o2 instanceof Apv apv0)) return error("not a zero args applicative combiner: " + o2); 
+			if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2); 
 			var res = r != null ? resumeFrame(r) : resumeFrame(k, ()-> Vm.this.combine(null, e, apv0, nil));
 			if (!(res instanceof Suspension s)) return res;
 			if (s.prompt != prompt) return suspendFrame(s, rr-> combine(rr, e, o), apv0, e);
@@ -472,7 +480,7 @@ public class Vm {
 	
 	
 	/* Error handling */
-	Object RootPrompt = new Object() { public String toString() { return "RoorPrompt"; } };
+	Object RootPrompt = new Object() { public String toString() { return "RootPrompt"; } };
 	Object pushRootPrompt(Object x) { return list(new PushPrompt(), RootPrompt, x); }
 	Object error(String err) {
 		//console.log(err)
@@ -628,6 +636,7 @@ public class Vm {
 			}
 			catch (Exception exp) {
 				throw exp instanceof RuntimeException rte ? rte : new RuntimeException(exp);
+				//return error(exp.getMessage());
 			}
 		}
 		public String toString() {return "[JSFun " + jfun + "]"; }
@@ -673,6 +682,7 @@ public class Vm {
 				}
 				catch (Exception exp) {
 					throw new RuntimeException("error executing method: " + name + " in: " + x, exp);
+					//return error("error executing method: " + name + " in: " + x + " was: " + exp.getMessage());
 				}
 				Object[] args = listToArray(x, 1);
 				Executable executable = getExecutable(name.equals("new") ? (Class) obj : obj.getClass(), name,  getClasses(args));
@@ -690,8 +700,10 @@ public class Vm {
 				}
 				catch (Exception exp) {
 					throw new RuntimeException("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + x, exp);
+					//return error("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + x + " was:" + exp.getMessage());
 				}
 				throw new RuntimeException("not found " + (name.equals("new") ? "constructor" : "method: " + name) + toString(list(getClasses(args))) + " in: " + obj);
+				//return error("not found " + (name.equals("new") ? "constructor" : "method: " + name) + toString(list(getClasses(args))) + " in: " + obj);
 			}
 		);
 	}
@@ -904,6 +916,7 @@ public class Vm {
 		}
 		print("finito");
 	}
+	
 	private String read() throws IOException {
 		var s = new StringBuilder();
 		int open = 0, close = 0;
