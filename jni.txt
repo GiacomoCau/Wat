@@ -36,4 +36,20 @@ box
 	
 	
 (@forName java.lang.Class "Wat.Prova$Box")
-	class java.lang.Integer	
+
+($define! int &int)
+($define! Array &java.lang.reflect.Array)
+($define! Object &java.lang.Object)
+($define! a (@newInstance Array int 4))	
+($define! get (@getMethod Array "get" Object int))
+($define! set (@getMethod Array "set" Object int Object))
+($define! length (@getMethod Array "getLength" Object))
+(@invoke get #null a 2)	
+(@invoke set #null a 2 4)
+(@invoke get #null a 2)
+(get #null a 2)
+(set #null a 2 6)
+(get #null a 2)
+(length #null a)
+
+((@getField &Wat.Prova$Box "i") (@new &Wat.Prova$Box 3))

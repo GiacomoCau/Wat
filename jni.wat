@@ -67,4 +67,21 @@ box
 	[[[I@533ddba, [I@246b179d]]	
 	
 (@forName java.lang.Class "Wat.Prova$Box")
-	class java.lang.Integer	
+	class java.lang.Integer
+
+($define! a (@newInstance &java.lang.reflect.Array &int 4))	
+	#ignore
+($define! get (@getMethod &java.lang.reflect.Array "get" &java.lang.Object &int))
+	#ignore
+($define! set (@getMethod &java.lang.reflect.Array "set" &java.lang.Object &int &java.lang.Object))
+	#ignore
+(@invoke get #null a 2)	
+	0
+(@invoke set #null a 2 4)
+	#null
+(get #null a 2)
+	4
+(set #null a 2 5)
+	#null
+(get #null a 2)
+	5

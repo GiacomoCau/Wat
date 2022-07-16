@@ -23,8 +23,16 @@ public class Prova {
 	class $ {}
 	
 	public static void main(String[] args) throws Exception {
-		var i = new Integer[] {1,2,3};
-		Arrays.stream(i).mapToInt(ii->ii).toArray();
+		var I = new Integer[] {1,2,3};
+		out.println(I.length);
+		out.println(I.getClass());
+		Arrays.stream(I).mapToInt(ii->ii).toArray();
+		
+		var i = new int[] {1,2,3};
+		Object o = i;
+		out.println(i.getClass());
+		out.println(((int[])o).length);
+		
 	}
 
 	private static void constructor() throws Exception {
