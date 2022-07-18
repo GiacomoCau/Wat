@@ -29,9 +29,9 @@
 (assert-throws (lambda))
 (assert-throws (lambda 12 12))
 (assert-throws (lambda "foo" "bar"))
-(assert-throws (def))
-(assert-throws (def 12))
-(assert-throws (def 12 12))
+(assert-throws (define))
+(assert-throws (define 12))
+(assert-throws (define 12 12))
 
 (assert-equal #null (begin))
 (assert-equal 1 (begin 1))

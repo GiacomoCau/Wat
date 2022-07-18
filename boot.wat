@@ -469,18 +469,17 @@
 
 ;;;; Error break routine, called by VM to print stacktrace and throw
 
-(define (print-stacktrace err)
+(define (print-stacktrace)
   (define (print-frame k)
-    (log (@toString (.fun k)) (.dbg k) (.e k)) ;; @toString di .dbg == undefined no buono
-    (when (type? (.next k) &StackFrame) ;; .next di !StackFrame no buono!
+    (log k)
+    (when (instanceof (.next k) &Wat.Vm$StackFrame) ;; .next di !StackFrame no buono!
     	(print-frame (.next k)) ))
   (take-subcont vm-root-prompt k
-  	(log err)
-  	(log k)
-    ;(print-frame k)
+    (print-frame k)
     (push-prompt vm-root-prompt
       (push-subcont k) )))
 
 (define (user-break err)
-  ;(print-stacktrace err)
+  ;(log "\nError: " err)
+  ;(print-stacktrace)
   (throw err) )

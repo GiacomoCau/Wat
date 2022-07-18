@@ -20,7 +20,7 @@
 (assert (vm-def (a b) 1 2)     ) ; throw
 (assert (vm-def (a) 1 2)       ) ; throw
 (assert (vm-def (a . b) 1 2)   ) ; throw       
-(assert (vm-def (a . b) 1 2 3) ) ; throw 
+(assert (vm-def (a . b) 1 2 3) ) ; throw
 (assert (vm-def (a . a) 1 2 3) ) ; throw
 
 (assert (vm-def 1 1)) ; throw
@@ -33,7 +33,7 @@
 
 (assert (vm-if)           ) ;throw
 (assert (vm-if #t)        ) ;throw
-(assert (vm-if #t 1)      1)
+(assert (vm-if #t 1)      ) ;throw
 (assert (vm-if #f 1)      ) ;throw
 (assert (vm-if #t 1 2)    1)
 (assert (vm-if #f 1 2)    2)
@@ -546,18 +546,17 @@
 
 ;;;; Error break routine, called by VM to print stacktrace and throw
 
-(define (print-stacktrace err)
+(define (print-stacktrace)
   (define (print-frame k)
-    (log (@toString (.fun k)) (.dbg k) (.e k)) ;; @toString di .dbg == undefined no buono
-    (when (type? (.next k) &StackFrame) ;; .next di !StackFrame no buono!
+    (log k)
+    (when (instanceof (.next k) &Wat.Vm$StackFrame) ;; .next di !StackFrame no buono!
     	(print-frame (.next k)) ))
   (take-subcont vm-root-prompt k
-  	(log err)
-  	(log k)
-    ;(print-frame k)
+    (print-frame k)
     (push-prompt vm-root-prompt
       (push-subcont k) )))
 
 (define (user-break err)
-  ;(print-stacktrace err)
+  ;(log "\nError: " err)
+  ;(print-stacktrace)
   (throw err) )
