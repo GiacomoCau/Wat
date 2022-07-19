@@ -9,6 +9,8 @@ import static Wat.Utility.isInstance;
 import static Wat.Utility.reorg;
 import static java.lang.System.in;
 import static java.lang.System.out;
+import static java.lang.reflect.Array.newInstance;
+import static java.util.Arrays.stream;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -243,7 +245,7 @@ public class Vm {
 	/* Built-in Combiners */
 	class Vau implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkOperand(this, o, 3); // o = (pt ep expr)
+			checkO(this, o, 3); // o = (pt ep expr)
 			var pt = elt(o, 0);
 			var ep = elt(o, 1);
 			var msg = new PTree(pt, ep).check(); if (msg != null) return error(msg + " of: " + cons(this, o));
@@ -253,7 +255,7 @@ public class Vm {
 	};
 	class Def implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkOperand(this, o, 2); // o = (pt arg)
+			checkO(this, o, 2); // o = (pt arg)
 			var pt = elt(o, 0);
 			if (!(pt instanceof Sym)) {
 				if (!(pt instanceof Cons)) return error("not a symbol: " + pt + " in: " + cons(this, o));
@@ -287,7 +289,7 @@ public class Vm {
 	}
 	class Eval implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkOperand(this, o, 2); // o = (x eo)
+			checkO(this, o, 2); // o = (x eo)
 			var x = elt(o, 0);
 			var eo = elt(o, 1);
 			return evaluate(r, (Env) eo, x);
@@ -312,7 +314,7 @@ public class Vm {
 	};
 	class If implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkOperand(this, o, 3); // o = (test then else) 
+			checkO(this, o, 3); // o = (test then else) 
 			var test = r != null ? resumeFrame(r) : evaluate(null, e, elt(o, 0));
 			return test instanceof Suspension s ? suspendFrame(s, rr-> combine(rr, e, o))
 				: evaluate(null, e, test != null && test != nil && test instanceof Boolean b && b ? elt(o, 1) : elt(o, 2))
@@ -322,7 +324,7 @@ public class Vm {
 	}
 	class Loop implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkOperand(this, o, 1); // o = (x)
+			checkO(this, o, 1); // o = (x)
 			var first = true; // only resume once
 			while (true) {
 				var res = first && r != null ? resumeFrame(r) : evaluate(null, e, elt(o, 0));
@@ -334,7 +336,7 @@ public class Vm {
 	}
 	class Catch implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkOperand(this, o, 2); // o = (x handler)
+			checkO(this, o, 2); // o = (x handler)
 			var x = elt(o, 0);
 			var handler = elt(o, 1);
 			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
@@ -366,7 +368,7 @@ public class Vm {
 	class Finally implements Combinable  {
 		@SuppressWarnings("finally")
 		public Object combine(Resumption r, Env e, Object o) {
-			checkOperand(this, o, 2); // o = (prot cleanup)
+			checkO(this, o, 2); // o = (prot cleanup)
 			var prot = elt(o, 0);
 			var cleanup = elt(o, 1);
 			Object res = null;
@@ -390,7 +392,7 @@ public class Vm {
 	/* Delimited Control */
 	class PushPrompt implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkOperand(this, o, 2); // o = (prompt exp)
+			checkO(this, o, 2); // o = (prompt exp)
 			var prompt = elt(o, 0);
 			var x = elt(o, 1);
 			var res = r != null ? resumeFrame(r) : evaluate(null, e, x);	
@@ -402,7 +404,7 @@ public class Vm {
 	}
 	class TakeSubcont implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkOperand(this, o, 2); // o = (prompt handler)
+			checkO(this, o, 2); // o = (prompt handler)
 			var prompt = elt(o, 0);
 			var handler = elt(o, 1);
 			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
@@ -412,7 +414,7 @@ public class Vm {
 	}
 	class PushSubcont implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkOperand(this, o, 2); // o = (k apv0)
+			checkO(this, o, 2); // o = (k apv0)
 			var o0 = elt(o, 0);
 			if (!(o0 instanceof StackFrame k)) return error("not a stackframe: " + o0); 
 			var o1 = elt(o, 1);
@@ -425,7 +427,7 @@ public class Vm {
 	}
 	class PushPromptSubcont implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkOperand(this, o, 2); // o = (prompt k apv0)
+			checkO(this, o, 2); // o = (prompt k apv0)
 			var prompt = elt(o, 0);
 			var o1 = elt(o, 1);
 			if (!(o1 instanceof StackFrame k)) return error("not a stackframe: " + o1); 
@@ -447,18 +449,18 @@ public class Vm {
 		public String toString() {	return "[vm-dv " + val + "]"; }
 	}
 	class DNew implements Combinable  {
-		public Object combine(Resumption r, Env e, Object o) { checkOperand(this, o, 1); return new DV(elt(o, 0));	}
+		public Object combine(Resumption r, Env e, Object o) { checkO(this, o, 1); return new DV(elt(o, 0));	}
 		public String toString() {	return "vm-dref"; }
 	}
 	class DRef implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkOperand(this, o, 1); var x = elt(o, 0); return x instanceof DV dv ? dv.val : error("not a dinamic variable: " + x);
+			checkO(this, o, 1); var x = elt(o, 0); return x instanceof DV dv ? dv.val : error("not a dinamic variable: " + x);
 		}
 		public String toString() {	return "vm-dnew"; }
 	}
 	class DLet implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkOperand(this, o, 3); // o = (xdv val x)
+			checkO(this, o, 3); // o = (xdv val x)
 			var xdv = elt(o, 0);
 			if (!(xdv instanceof DV dv)) return error("not a dinamic variable: " + xdv);
 			var val = elt(o, 1);
@@ -492,11 +494,14 @@ public class Vm {
 		public Error(String message) {	super(message); }
 		public Error(String message, Throwable cause) { super(message, cause); }
 	}
-	Object checkOperand(Object op, Object o, int expt) {
+	Object checkO(Object op, Object o, int expt) {
 		var len=len(o); if (len == expt) return true;
 		return error("not " + expt + " operands in: " + cons(op, o));
 	}
-	
+	Object checkO(Object op, Object o, int min, Integer max) {
+		var len=len(o); if (len >= min || max == null || len <= max) return true;
+		return error((len < min ? "less then " + min : max == null ? "" : " or more then " + max) + " operands in: " + cons(op, o));
+	}	
 	
 	/* Utilities */
 	Object list(Object ... args) {
@@ -614,7 +619,22 @@ public class Vm {
 		@SuppressWarnings("preview")
 		public Object combine(Resumption r, Env e, Object o) {
 			try {
-				// TODO andrebbe fatto il controllo sugli operandi
+				//* TODO controllo sugli operandi
+				switch (jfun) {
+					case Supplier s-> checkO(jfun, o, 0);
+					case ArgsList f-> checkO(jfun, o, 0, null);
+					case Function f-> checkO(jfun, o, 1);
+					case BiFunction f-> checkO(jfun, o, 2);
+					case Consumer c-> checkO(jfun, o, 1);
+					case Field f-> checkO(jfun, o, 1, 2);
+					case Method mt->{
+						var pc = mt.getParameterCount();
+						if (!mt.isVarArgs()) checkO(jfun, o, 1+pc); else checkO(jfun, o, pc, null);
+					}
+					case Constructor c-> checkO(jfun, o, c.getParameterCount());
+					default-> checkO(jfun, o, 1, 2);
+				}
+				//*/
 				/* warning preview
 				return switch (jsfun) {
 					case Supplier s -> s.get();  
@@ -630,9 +650,9 @@ public class Vm {
 				if (jfun instanceof Supplier s) return s.get();  
 				if (jfun instanceof ArgsList f) return f.apply(o);  
 				if (jfun instanceof Function f) return f.apply(car(o));  
-				if (jfun instanceof BiFunction f) return f.apply(car(o), elt(o,1));
 				if (jfun instanceof Consumer c) { c.accept(car(o)); return ign; }
-				if (jfun instanceof Field f) { if (len(o) < 2) return f.get(car(o)); f.set(car(o), elt(o,1)); return ign; };
+				if (jfun instanceof BiFunction f) return f.apply(car(o), elt(o,1));
+				if (jfun instanceof Field f) { if (len(o) <= 1) return f.get(car(o)); f.set(car(o), elt(o,1)); return ign; };
 				if (jfun instanceof Method mt)	return mt.invoke(car(o), listToArray(cdr(o)));
 				if (jfun instanceof Constructor c) return c.newInstance(listToArray(o));
 				return error("not a combine " + jfun);
@@ -662,33 +682,59 @@ public class Vm {
 	Object jInvoker(String name) {
 		if (name == null) return error("method name is null");
 		return jWrap(
-			(ArgsList) x-> {
-				Object obj = elt(x, 0);
-				if (obj == null) return error("receiver is null");
-				if (obj instanceof Apv apv) obj = apv.cmb;
-				if (obj instanceof JFun f) obj = f.jfun; 
+			(ArgsList) o-> {
+				Object o0 = elt(o, 0);
+				if (o0 == null) return error("receiver is null");
+				if (o0 instanceof Apv apv) o0 = apv.cmb;
+				if (o0 instanceof JFun f) o0 = f.jfun; 
 				try {
 					switch (name) {
-						case "getField":
-							return jWrap(((Class) obj).getField((String) elt(x,1)));
-						case "getMethod":
-							return jWrap(((Class) obj).getMethod((String) elt(x,1), listToArray(x, 2, Class.class)));
-						case "invoke":
-							return ((Method) obj).invoke(elt(x,1), listToArray(x, 2, Object.class));
-						case "getConstructor":
-							return jWrap(((Class) obj).getConstructor(listToArray(x, 1, Class.class)));
-						case "newInstance":
-							return obj == Array.class
-								? Array.newInstance((Class) elt(x, 1), Arrays.stream(listToArray(x, 2, Integer.class)).mapToInt(i->i).toArray() )
-								: ((Constructor) obj).newInstance(listToArray(x, 1));
+						case "getField": {
+							checkO(o0, o, 2);
+							if (!(o0 instanceof Class cl)) return error("not a Class " + o0);
+							var o1 = elt(o,1);
+							if (!(o1 instanceof String fName)) return error("not a String " + o1);
+							return jWrap(cl.getField(fName));
+						}
+						case "getMethod": {
+							checkO(o0, o, 2, null);
+							if (!(o0 instanceof Class cl)) return error("not a Class " + o0);
+							var o1 = elt(o,1);
+							if (!(o1 instanceof String mName)) return error("not a String " + o1);
+							return jWrap(cl.getMethod(mName, listToArray(o, 2, Class.class)));
+						}
+						case "invoke": {
+							//checkO(o0, o, 2, null);
+							if (!(o0 instanceof Method mt)) return error("not a Method " + o0);
+							var pc = mt.getParameterCount(); if (!mt.isVarArgs()) checkO(o0, o, 2+pc); else checkO(o0, o, 1+pc, null); 
+							return mt.invoke(elt(o,1), listToArray(o, 2));
+						}
+						case "getConstructor": {
+							//checkO(o0, o, 1, null);
+							if (!(o0 instanceof Class cl)) return error("not a Class " + o0);
+							return jWrap(cl.getConstructor(listToArray(o, 1, Class.class)));
+						}
+						case "newInstance": {
+							if (o0 == Array.class) {
+								checkO(o0, o, 2, null);
+								var o1 = elt(o, 1);
+								if (!(o1 instanceof Class cl)) return error("not a Class " + o1);
+								return newInstance(cl, stream(listToArray(o, 2, Integer.class)).mapToInt(i->i).toArray() );
+							}
+							else {
+								if (!(o0 instanceof Constructor c)) return error("not a Class " + o0);
+								checkO(o0, o, 1, 1+c.getParameterCount());
+								return c.newInstance(listToArray(o, 1));
+							}
+						}
 					}
 				}
 				catch (Exception exp) {
-					throw new RuntimeException("error executing method: " + name + " in: " + x, exp);
-					//return error("error executing method: " + name + " in: " + x + " was: " + exp.getMessage());
+					throw new RuntimeException("error executing method: " + name + " in: " + o, exp);
+					//return error("error executing method: " + name + " in: " + o + " was: " + exp.getMessage());
 				}
-				Object[] args = listToArray(x, 1);
-				Executable executable = getExecutable(name.equals("new") ? (Class) obj : obj.getClass(), name,  getClasses(args));
+				Object[] args = listToArray(o, 1);
+				Executable executable = getExecutable(name.equals("new") ? (Class) o0 : o0.getClass(), name,  getClasses(args));
 				if (executable != null)	try {
 					if (executable.isVarArgs()) args = reorg(executable.getParameterTypes(), args);
 					/* warning preview
@@ -697,16 +743,16 @@ public class Vm {
 						case Constructor c-> c.newInstance(args);
 					};
 					*/
-					if (executable instanceof Method m) return m.invoke(obj, args);
+					if (executable instanceof Method m) return m.invoke(o0, args);
 					if (executable instanceof Constructor c) return c.newInstance(args);
 					throw new RuntimeException("no method no constructor: " + executable);   
 				}
 				catch (Exception exp) {
-					throw new RuntimeException("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + x, exp);
-					//return error("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + x + " was:" + exp.getMessage());
+					throw new RuntimeException("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + o, exp);
+					//return error("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + o + " was:" + exp.getMessage());
 				}
-				throw new RuntimeException("not found " + (name.equals("new") ? "constructor" : "method: " + name) + toString(list(getClasses(args))) + " in: " + obj);
-				//return error("not found " + (name.equals("new") ? "constructor" : "method: " + name) + toString(list(getClasses(args))) + " in: " + obj);
+				throw new RuntimeException("not found " + (name.equals("new") ? "constructor" : "method: " + name) + toString(list(getClasses(args))) + " in: " + o0);
+				//return error("not found " + (name.equals("new") ? "constructor" : "method: " + name) + toString(list(getClasses(args))) + " in: " + o);
 			}
 		);
 	}

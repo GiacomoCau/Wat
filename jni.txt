@@ -32,8 +32,9 @@ box
 	
 (@newInstance (@getConstructor &Wat.Prova$Box))
 (@newInstance (@getConstructor &Wat.Prova$Box &int) 1)
-(@newInstance (@getConstructor &Wat.Prova$Box &int) 1 2 3)
-	
+
+(@newInstance &java.lang.reflect.Array &int 1)
+(@newInstance &java.lang.reflect.Array &int 1 2 3)
 	
 (@forName java.lang.Class "Wat.Prova$Box")
 
