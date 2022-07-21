@@ -1,3 +1,42 @@
+/*
+	Field
+	
+		field = (@getField class fieldName)
+		field = (.fieldName class) = (@getField class fieldName)
+	
+	Method
+	
+		method = (@getMethod class methodName ... class)
+		method = (@methodName class ... class) = (@getMethod class methodName ... class)
+	
+	Constructor
+		
+		constructor = (@getConstructor class ... class)
+	
+	Object
+		object = (@newInstance constructor class ... args)
+		
+		object = (constructor class ... args) = (@newInstance constructor class ... args)
+		object = (new class ... args) = ((@getConstructor class ... (@getClass args)) ... args)
+	
+	Call
+		value = (@invoke method object ... args)
+		
+		value = (method object ... args) = (@invoke method object ... args)
+		value = (@methodName object ... args) = ((@methodName (@getClass object) ... (@getClass args)) object ... args)
+		
+	Getter	
+		value = (@get field object)
+		
+		value = (field object) = (@get field object)
+		value = (.fieldName object) = ((.fieldName (@getClass object)) object)
+	
+	Setter
+		void = (@set field object value)
+		
+		void = (field object value) = (@set field object value)
+		void = (.fieldName object value) = ((.fieldName (@getClass object)) object value)	
+*/
 
 &Wat.Prova
 &Wat.Prova$Box
@@ -36,7 +75,7 @@ box
 (@newInstance &java.lang.reflect.Array &int 1)
 (@newInstance &java.lang.reflect.Array &int 1 2 3)
 	
-(@forName java.lang.Class "Wat.Prova$Box")
+(@forName &java.lang.Class "Wat.Prova$Box")
 
 ($define! int &int)
 ($define! Array &java.lang.reflect.Array)

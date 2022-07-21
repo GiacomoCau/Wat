@@ -1,6 +1,7 @@
 package Wat;
 
 import static java.lang.System.out;
+import static java.util.Map.of;
 
 import java.io.File;
 import java.lang.reflect.Constructor;
@@ -10,6 +11,7 @@ import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map.Entry;
 
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
@@ -23,6 +25,13 @@ public class Prova {
 	class $ {}
 	
 	public static void main(String[] args) throws Exception {
+		var s = "\"\n\t\r\b\f"; 
+		var m = of("\"", "\\\\\"", "\n", "\\\\n", "\t", "\\\\t", "\r", "\\\\r", "\b", "\\\\b", "\f", "\\\\f");
+		for (Entry<String,String> e: m.entrySet()) s = s.replaceAll(e.getKey(), e.getValue());
+		out.println("\"" + s + "\"");
+	}
+
+	private static void array() {
 		var I = new Integer[] {1,2,3};
 		out.println(I.length);
 		out.println(I.getClass());
@@ -32,7 +41,6 @@ public class Prova {
 		Object o = i;
 		out.println(i.getClass());
 		out.println(((int[])o).length);
-		
 	}
 
 	private static void constructor() throws Exception {
@@ -112,8 +120,6 @@ public class Prova {
 		//var integerGetConstructor = classGetConstructor.invoke(new Object[] {Integer.class, String.class} ); // object is not an instance of declaring class
 		//out.println(integerGetConstructor.getClass().getSimpleName());
 		//out.println();
-		
-
 
 		//getConstructor.invoke(Integer.class, java.lang.String.class);
 	}
