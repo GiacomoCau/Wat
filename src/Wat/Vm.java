@@ -167,8 +167,8 @@ public class Vm {
 		}
 	}
 	Cons cons(Object car, Object cdr) { return new Cons(car, cdr); };
-	Object car(Object o) { return o instanceof Cons c ? c.car : error("not a cons: " + o.toString()); }
-	Object cdr(Object o) { return o instanceof Cons c ? c.cdr : error("not a cons: " + o.toString()); }
+	<T> T car(Object o) { return o instanceof Cons c ? (T) c.car : error("not a cons: " + o.toString()); }
+	<T> T cdr(Object o) { return o instanceof Cons c ? (T) c.cdr : error("not a cons: " + o.toString()); }
 	Object car(Object o, int i) { for (; i>0; i-=1) o=cdr(o); return car(o); }
 	Object cdr(Object o, int i) { for (; i>0; i-=1) o=cdr(o); return cdr(o); }
 	int len(Object o) { int i=0; for (; o instanceof Cons c; o=c.cdr) i+=1; return i; }
@@ -489,11 +489,11 @@ public class Vm {
 	/* Error handling */
 	Object rootPrompt = new Object() { public String toString() { return "rootPrompt"; } };
 	Object pushRootPrompt(Object x) { return list(new PushPrompt(), rootPrompt, x); }
-	Object error(String err) {
+	<T> T error(String err) {
 		//console.log(err)
 		var user_break = theEnvironment.get("user-break");
 		if (user_break == null) throw new Error(err);
-		return combine(null, theEnvironment, user_break, list(err));
+		return (T) combine(null, theEnvironment, user_break, list(err));
 	}
 	class Error extends RuntimeException {
 		private static final long serialVersionUID = 1L;
@@ -507,6 +507,16 @@ public class Vm {
 	Object checkO(Object op, Object o, int min, Integer max) {
 		var len=len(o); if (len >= min && (max == null || len <= max)) return true;
 		return error((len < min ? "less then " + min : max == null ? "" : " or more then " + max) + " operands in: " + cons(op, o));
+	}
+	int checkO(Object o, Class ... cls) {
+		int i=0; if (o == nil) return 0;
+		for (; i<cls.length; i+=1) {
+			if (!(o instanceof Cons c)) /*if (o == nil)*/ return i;
+			var o0 = c.car;
+			if (!(cls[i].isInstance(o0))) return error("not a " + o0.getClass().getSimpleName() + ": " + o0);
+			o = c.cdr;
+		}
+		return i;
 	}
 	
 	
@@ -775,7 +785,7 @@ public class Vm {
 		return jWrap(
 			(ArgsList) x-> {
 				var len = len(x);
-				if (len > 2) return error("too many operands in: " + cons(this, x));			
+				if (len > 2) return error("too many operands in: " + cons(this, x));
 				var obj = car(x);
 				try {
 					Field field = getField(obj instanceof Class c ? c : obj.getClass(), name);
@@ -853,7 +863,7 @@ public class Vm {
 					// Basics
 					$("vm-def", "vm-vau", new Vau()),
 					$("vm-def", "vm-eval", wrap(new Eval())),
-					$("vm-def", "vm-make-environment", jWrap((ArgsList) args-> env(args == nil ? null : (Env) car(args)))),
+					$("vm-def", "vm-make-environment", jWrap((ArgsList) o-> env(checkO(o, Env.class) == 0 ? null : car(o)))),
 					$("vm-def", "vm-wrap", jWrap((Function<Object, Object>) this::wrap)),
 					$("vm-def", "vm-unwrap", jWrap((Function<Object, Object>) this::unwrap)),
 					// Values
@@ -908,11 +918,11 @@ public class Vm {
 					$("vm-def", "==", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a == b)),
 					$("vm-def", "!=", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a != b)),
 					$("vm-def", "eq?", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
-					$("vm-def", "assert", jFun((ArgsList) l-> assertVm(listToArray(l)))),
+					$("vm-def", "assert", jFun((ArgsList) o-> assertVm(listToArray(o)))),
 					$("vm-def", "toString", jWrap((Consumer) obj-> this.toString(obj))),
-					$("vm-def", "print", jWrap((ArgsList) l-> this.print(listToArray(l)))),
-					$("vm-def", "trace", jWrap((Consumer<Boolean>) b-> trace=b)),
-					$("vm-def", "stack", jWrap((Consumer<Boolean>) b-> stack=b))
+					$("vm-def", "print", jWrap((ArgsList) o-> this.print(listToArray(o)))),
+					$("vm-def", "trace", jWrap((ArgsList) o->{ if (checkO(o, Boolean.class) == 0) return trace; trace=car(o); return ign; })),
+					$("vm-def", "stack", jWrap((ArgsList) o->{ if (checkO(o, Boolean.class) == 0) return stack; stack=car(o); return ign; }))
 				)
 			)
 		);
@@ -969,7 +979,7 @@ public class Vm {
 				}
 				catch (Throwable t) {
 					if (stack) t.printStackTrace(out);
-					else out.println(t.getClass().getSimpleName() + ":" + t.getMessage());
+					else out.println(t.getClass().getSimpleName() + ": " + t.getMessage());
 				}
 			}
 		}
