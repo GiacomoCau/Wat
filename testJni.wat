@@ -1,4 +1,4 @@
-/*
+|#
 	Field
 	
 		field = (@getField class fieldName)
@@ -35,8 +35,8 @@
 		void = (@set field object value)
 		
 		void = (field object value) = (@set field object value)
-		void = (.fieldName object value) = ((.fieldName (@getClass object)) object value)	
-*/
+		void = (.fieldName object value) = ((.fieldName (@getClass object)) object value)
+#|
 
 &Wat.Prova
 &Wat.Prova$Box

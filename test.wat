@@ -3,7 +3,7 @@
 ;;;;; Wat Test Suite
 
 (define (exit v)
-  (take-subcont root-prompt #ignore v) )
+  (take-subcont vm-root-prompt #ignore v) )
 
 ;;;; Utilities
 
@@ -115,7 +115,7 @@
 
 (assert-throws (unwrap ($vau () #ignore)))
 
-/*
+|#
 (let ((obj (object ("x" 1))))
   (set (.x obj) 2)
   (assert-equal 2 (.x obj))
@@ -126,7 +126,7 @@
 (assert-equal &x #undefined)
 (set &x 2)
 (assert-equal &x 2)
-*/
+#|
 
 (assert-equal 24 (* 1 2 3 4))
 (assert-equal 1 (*))
@@ -157,9 +157,9 @@
 
 (exit "finito")
 
-/*
+|#
 (let ((x (cell 0)))
   (while (< (ref x) 10)
     (++ (ref x)))
   (assert-equal 10 (ref x)) )
-*/
+#|

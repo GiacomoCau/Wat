@@ -176,8 +176,7 @@ public class Vm {
 	
 	/* Environment */
 	class Env {
-		Map<String,Object> map = new LinkedHashMap();
-		Env parent;
+		Map<String,Object> map = new LinkedHashMap(); Env parent;
 		Env(Env parent) { this.parent = parent; }
 		public Object get(String name) { return map.get(name); };
 		public Object bind(String name, Object rhs) {
@@ -498,7 +497,7 @@ public class Vm {
 	}
 	class Error extends RuntimeException {
 		private static final long serialVersionUID = 1L;
-		public Error(String message) {	super(message); }
+		public Error(String message) { super(message); }
 		public Error(String message, Throwable cause) { super(message, cause); }
 	}
 	Object checkO(Object op, Object o, int expt) {
@@ -509,6 +508,7 @@ public class Vm {
 		var len=len(o); if (len >= min && (max == null || len <= max)) return true;
 		return error((len < min ? "less then " + min : max == null ? "" : " or more then " + max) + " operands in: " + cons(op, o));
 	}
+	
 	
 	/* Utilities */
 	<T> Object list(T ... args) {
@@ -744,7 +744,7 @@ public class Vm {
 					}
 				}
 				catch (Exception exp) {
-					//throw new RuntimeException("error executing method: " + name + " in: " + o, exp);
+					throw new RuntimeException("error executing method: " + name + " in: " + o, exp);
 					//return error("error executing method: " + name + " in: " + o, exp);
 				}
 				Object[] args = listToArray(o, 1);
@@ -912,8 +912,7 @@ public class Vm {
 					$("vm-def", "toString", jWrap((Consumer) obj-> this.toString(obj))),
 					$("vm-def", "print", jWrap((ArgsList) l-> this.print(listToArray(l)))),
 					$("vm-def", "trace", jWrap((Consumer<Boolean>) b-> trace=b)),
-					$("vm-def", "stack", jWrap((Consumer<Boolean>) b-> stack=b)),
-					$("vm-def", "root-prompt", rootPrompt)
+					$("vm-def", "stack", jWrap((Consumer<Boolean>) b-> stack=b))
 				)
 			)
 		);
@@ -969,10 +968,8 @@ public class Vm {
 					print(exec(parse(exp)));
 				}
 				catch (Throwable t) {
-					if (stack)
-						t.printStackTrace(out);
-					else
-						out.println(t.getClass().getSimpleName() + ":" + t.getMessage());
+					if (stack) t.printStackTrace(out);
+					else out.println(t.getClass().getSimpleName() + ":" + t.getMessage());
 				}
 			}
 		}
@@ -999,21 +996,21 @@ public class Vm {
 					case '\n'-> inComment = false;
 				}
 				else if (eMlComment) switch (c) {
-					case '/'-> inMlComment = eMlComment = false;
+					case '|'-> inMlComment = eMlComment = false;
 				}
 				else if (inMlComment) switch (c) {
 					case '"'-> inString = true;
 					case ';'-> inComment = true;
-					case '*'-> eMlComment = true;
+					case '#'-> eMlComment = true;
 				}
 				else if (sMlComment) switch (c) {
-					case '*': inMlComment = true;
+					case '#': inMlComment = true;
 					default : sMlComment = false;
 				}
 				else switch (c) {
 					case '"'-> inString = true;
 					case ';'-> inComment = true;
-					case '/'-> sMlComment = true;
+					case '|'-> sMlComment = true;
 					case '('-> open += 1;
 					case ')'-> close += 1;
 				}

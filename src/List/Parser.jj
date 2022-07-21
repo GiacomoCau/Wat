@@ -131,8 +131,7 @@ PARSER_END(Parser)
 SKIP:	// white spaces
 {	< " " | "\t" | < cmt > | < mlcmt > | "\n" | "\r" >
 | 	< # cmt: ";" (<String> | ~["\n"])* (("\r")? "\n")? >
-| 	< # mlcmt: "/*" (<cmt> | <String> | ~["*"])* "*" (~["/"] (~["*"])* "*")* "/">
-//| 	< # mlcmt: "|#" (<cmt> | <String> | ~["#"])* "*" (~["|"] (~["#"])* "#")* "|">
+| 	< # mlcmt: "|#" (<cmt> | <String> | ~["#"])* "#" (~["|"] (~["#"])* "#")* "|">
 }
 
 TOKEN:	// separators

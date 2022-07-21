@@ -322,7 +322,7 @@
              (list vm-dlet name value (process-bindings rest-bs)) )))
     env ))
 
-/*
+|#
 ;;;; Prototypes
 
 (define-operative (define-prototype name super-name prop-names) env
@@ -343,7 +343,7 @@
 
 (define (put-method ctor name fun)
   (set ((js-getter name) (.prototype ctor)) fun))
-*/
+#|
 
 ;;;; Modules
 
@@ -412,7 +412,7 @@
 (define - (negative-op - 0))
 (define / (negative-op / 1))
 
-/*
+|#
 (define % (vm-js-binop "%"))
 (define not (vm-js-unop "!"))
 (define typeof (vm-js-unop "typeof"))
@@ -463,13 +463,13 @@
 (define Object &Object)
 (define RegExp &RegExp)
 (define String &String)
-*/
+#|
 
 (define (log x . xs)
   (apply print (list* x xs))
   x)
 
-/*
+|#
 ;;;; Cells
 
 (define-prototype Cell Object (value))
@@ -496,7 +496,7 @@
         (result (eval expr env)))
     (log (+ "time " expr ": " (- (@getTime (new Date)) n) "ms"))
     result ))
-*/
+#|
 
 (define-operative (assert-true expr) env
   (unless (== #t (eval expr env))
@@ -506,13 +506,13 @@
   (unless (== #f (eval expr env))
      (error (+ "Should be false: " expr)) ))
 
-/*
+|#
 (define-operative (assert-=== expected expr2) env
   (let ((res (eval expr2 env))
         (exp (eval expected env)))
     (unless (=== exp res)
       (error (+ expr2 " should be " exp " but is " res) ))))
-*/
+#|
 
 (define-operative (assert-== expected expr2) env
   (let ((res (eval expr2 env))
@@ -526,7 +526,7 @@
       (lambda (exc) (return)))
     (error (+ "Should throw: " expr)) ))
 
-/*
+|#
 ;;;; Options
 
 (define-prototype Option Object ())
@@ -539,7 +539,7 @@
     (if (type? option Some)
         (eval (list (list lambda (list option-name) then) (.value option)) env)
         (eval else env) )))
-*/
+#|
 
 ;;;; Error break routine, called by VM to print stacktrace and throw
 
