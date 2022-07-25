@@ -498,14 +498,6 @@ public class Vm {
 	/* Error handling */
 	Object rootPrompt = new Object() { public String toString() { return "rootPrompt"; } };
 	Object pushRootPrompt(Object x) { return list(new PushPrompt(), rootPrompt, x); }
-	/*
-	<T> T error(String err) {
-		//console.log(err)
-		var user_break = theEnvironment.get("user-break");
-		if (user_break == null) throw new Error(err);
-		return (T) combine(null, theEnvironment, user_break, list(err));
-	}
-	*/
 	<T> T error(String msg) {
 		return error(msg, null);
 	}
@@ -660,22 +652,6 @@ public class Vm {
 		@SuppressWarnings("preview")
 		public Object combine(Resumption r, Env e, Object o) {
 			try {
-				/* TODO controllo sugli operandi
-				switch (jfun) {
-					case Supplier s-> checkO(jfun, o, 0);
-					case ArgsList f-> checkO(jfun, o, 0, null);
-					case Function f-> checkO(jfun, o, 1);
-					case BiFunction f-> checkO(jfun, o, 2);
-					case Consumer c-> checkO(jfun, o, 1);
-					case Field f-> checkO(jfun, o, 1, 2);
-					case Method mt->{
-						var pc = mt.getParameterCount();
-						if (!mt.isVarArgs()) checkO(jfun, o, 1+pc); else checkO(jfun, o, pc, null);
-					}
-					case Constructor c-> checkO(jfun, o, c.getParameterCount());
-					default-> checkO(jfun, o, 1, 2);
-				}
-				//*/
 				return switch (jfun) {
 					case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
 					case ArgsList a-> a.apply(o);  
@@ -692,17 +668,6 @@ public class Vm {
 					case Constructor c-> { checkO(jfun, o, c.getParameterCount()); yield c.newInstance(listToArray(o)); }
 					default -> error("not a combine " + jfun);
 				};
-				/*
-				if (jfun instanceof Supplier s) return s.get();  
-				if (jfun instanceof ArgsList f) return f.apply(o);  
-				if (jfun instanceof Function f) return f.apply(car(o));  
-				if (jfun instanceof Consumer c) { c.accept(car(o)); return ign; }
-				if (jfun instanceof BiFunction f) return f.apply(car(o), elt(o,1));
-				if (jfun instanceof Field f) { if (len(o) <= 1) return f.get(car(o)); f.set(car(o), elt(o,1)); return ign; };
-				if (jfun instanceof Method mt)	return mt.invoke(car(o), listToArray(cdr(o)));
-				if (jfun instanceof Constructor c) return c.newInstance(listToArray(o));
-				return error("not a combine " + jfun);
-				*/
 			}
 			catch (Exception exc) {
 				//print(exc.getClass().getSimpleName());
@@ -783,11 +748,6 @@ public class Vm {
 						case Method m-> m.invoke(o0, args);
 						case Constructor c-> c.newInstance(args);
 					};
-					/*
-					if (executable instanceof Method m) return m.invoke(o0, args);
-					if (executable instanceof Constructor c) return c.newInstance(args);
-					throw new Error("no method no constructor: " + executable);
-					*/   
 				}
 				catch (Exception exc) {
 					throw new Error("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + o, exc);
@@ -834,42 +794,7 @@ public class Vm {
 			}
 			default-> o.toString();
 		};
-		/*
-		if (o == null)
-			r.append("#null");
-		else if (o instanceof Object[] a) {
-			var s = new StringBuilder();
-			for (var e: a) s.append((s.isEmpty() ? "" : ", ") + toString(true, e));
-			r.append("[" + s.toString() + "]");
-		}
-		else if (o instanceof String s)
-			r.append(!b ? s : toSource(s));
-		else if (o instanceof Class cl)
-			r.append("&" + cl.getName());
-		else
-			r.append(o.toString());
-		return r.toString();
-		*/
-		/*
-		if (o == null) return "#null";
-		if (o instanceof Boolean b) return b ? "#t" : "#f";
-		if (o instanceof String s) return t ? toSource(s) : s;
-		if (o instanceof Class cl) return "&" + cl.getName();
-		if (o instanceof Object[] a) {
-			var s = new StringBuilder();
-			for (var e: a) s.append((s.isEmpty() ? "" : ", ") + toString(true, e));
-			return "[" + s.toString() + "]";
-		}
-		return o.toString();
-		*/
 	}
-	/*
-	public static String toSource(String s) {
-		var m = of("\"", "\\\\\"", "\n", "\\\\n", "\t", "\\\\t", "\r", "\\\\r", "\b", "\\\\b", "\f", "\\\\f");
-		for (Entry<String,String> e: m.entrySet()) s = s.replaceAll(e.getKey(), e.getValue());
-		return '"' + s + '"';
-	}
-	*/
 	
 	
 	/* Bootstrap */
@@ -989,12 +914,8 @@ public class Vm {
 	public void repl() throws Exception {
 		loop: for (;;) {
 			switch (read()) {
-			//String line; switch (line = read()) {
 				case "": break loop;
-				case String exp: try { // warning preview
-				//default: try {
-					//out.println(exp);
-					//out.println(to_string(parse(exp)));
+				case String exp: try {
 					print(exec(parse(exp)));
 				}
 				catch (Throwable t) {
@@ -1147,7 +1068,6 @@ public class Vm {
 		""");
 		//*/
 		
-		//*
 		//exec(parse(readString("boot.wat")));
 		//compile("boot.wat");
 		//exec(readBytecode("boot.wat"));
@@ -1158,6 +1078,5 @@ public class Vm {
 		if (trace) print("\n--------:  testJni.wat");
 		eval(readString("testJni.wat"));
 		repl();
-		//*/
 	}
 }
