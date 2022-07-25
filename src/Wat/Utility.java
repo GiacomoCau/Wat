@@ -1,13 +1,16 @@
 package Wat;
 
 import static java.lang.System.out;
+import static java.util.Map.of;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map.Entry;
 
 public class Utility {
 	
@@ -19,27 +22,33 @@ public class Utility {
 		return Arrays.stream(objects).toList();
 	}
 	
+	public static String toSource(String s) {
+		var m = of("\"", "\\\\\"", "\n", "\\\\n", "\t", "\\\\t", "\r", "\\\\r", "\b", "\\\\b", "\f", "\\\\f");
+		for (Entry<String,String> e: m.entrySet()) s = s.replaceAll(e.getKey(), e.getValue());
+		return s;
+	}
+	
 	public static boolean isInstance(Object o, Class ... cs) {
 		for (Class c: cs) if (c.isInstance(o)) return true;
 		return false;
 	}
 	
 	private enum Primitive {
-			byte$("B", byte.class, Byte.class),
-			short$("S", short.class, Short.class),
-			int$("I", int.class, Integer.class),
-			long$("J", long.class, Long.class),
-			float$("F", float.class, Float.class),
-			double$("D", double.class, Double.class),
-			boolean$("Z", boolean.class, Boolean.class),
-			void$("V", void.class, Void.class)
+			byte$('B', byte.class, Byte.class),
+			short$('S', short.class, Short.class),
+			int$('I', int.class, Integer.class),
+			long$('J', long.class, Long.class),
+			float$('F', float.class, Float.class),
+			double$('D', double.class, Double.class),
+			boolean$('Z', boolean.class, Boolean.class),
+			void$('V', void.class, Void.class)
 		;
-		public final String type;
+		public final char type;
 		public final Class classe;
 		@SuppressWarnings("unused")
 		public final Class wrapper;
 		public final String name;
-		Primitive(String type, Class classe, Class wrapper) {
+		Primitive(char type, Class classe, Class wrapper) {
 			this.type = type;
 			this.classe = classe;
 			this.wrapper = wrapper;
@@ -49,8 +58,6 @@ public class Utility {
 
 	public static Class <?> classForName(String name) {
 		if (name == null) return null;
-		// if (name.equals("")) return null; // va aggiunto?
-		// if (name.equals("null")) return null; // va aggiunto?
 		boolean L = true;
 		for (Primitive p: Primitive.values()) {
 			if (!name.startsWith(p.name)) continue;
@@ -69,6 +76,17 @@ public class Utility {
 		catch (ClassNotFoundException e) {
 			return null;
 		}
+	}
+	
+	public static String toSource(Class cl) {
+		var str = cl.getName();
+		var dim = ""; int i=0; for (; str.charAt(i) == '['; i+=1) dim += "[]";
+		if (dim.length() == 0) return str;
+		//str = str.substring(i);
+		char c = str.charAt(i);
+		if (c == 'L') return str.substring(i+1, str.length()-1) + dim;
+		for (var p: Primitive.values()) if (p.type == c) return p.name + dim;
+		return cl.toString();
 	}
 	
 	public static Object[] reorg(Class[] classi, Object[] args) throws Exception {
@@ -124,6 +142,10 @@ public class Utility {
 	}
 	
 	public static void main(String[] args) throws Exception {
+		getConstructor();
+	}
+
+	private static void getConstructor() throws IllegalAccessException, InvocationTargetException {
 		//Class c = Integer.class;
 		//out.println(getField(Integer.class, "MAX_VALUE"));
 		//out.println();

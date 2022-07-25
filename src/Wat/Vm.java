@@ -11,7 +11,6 @@ import static java.lang.System.in;
 import static java.lang.System.out;
 import static java.lang.reflect.Array.newInstance;
 import static java.util.Arrays.stream;
-import static java.util.Map.of;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -31,7 +30,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -79,7 +77,7 @@ import java.util.stream.Collectors;
 public class Vm {
 	
 	boolean trace = false;
-	boolean stack = false;
+	boolean stack = true;
 	
 	interface Bindable { Object bind(Env e, Object rhs); }
 	interface Evaluable { Object eval(Resumption r, Env e); }
@@ -203,7 +201,7 @@ public class Vm {
 	Object bind(Env e, Object lhs, Object rhs, Object exp) {
 		if (!(lhs instanceof Bindable bindable)) return error("cannot bind: " + lhs);
 		Object msg; try {
-			msg = bindable.bind(e, rhs); if (msg == null) return ignore;
+			msg = bindable.bind(e, rhs); if (msg == null) return inert;
 		}
 		catch (Error exc) { // only for error in car() and cdr()
 			msg = "to few arguments"; // + " because " + exc.getMessage();
@@ -682,9 +680,9 @@ public class Vm {
 					case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
 					case ArgsList a-> a.apply(o);  
 					case Function f-> { checkO(jfun, o, 1); yield f.apply(car(o)); }  
-					case Consumer c-> { checkO(jfun, o, 1); c.accept(car(o)); yield ignore; }
+					case Consumer c-> { checkO(jfun, o, 1); c.accept(car(o)); yield inert; }
 					case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(car(o), car(o, 1)); }
-					case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(car(o)); f.set(car(o), car(o, 1)); yield ignore; }
+					case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(car(o)); f.set(car(o), car(o, 1)); yield inert; }
 					case Method mt-> {
 						var pc = mt.getParameterCount();
 						if (!mt.isVarArgs()) checkO(jfun, o, 1+pc); else checkO(jfun, o, pc, null);
@@ -723,12 +721,8 @@ public class Vm {
 		return wrap(jFun(jfun));
 	}
 	
-	boolean jInstanceOf(Object o, Class c) {
-		return c.isInstance(o);
-	}
-	
 	@SuppressWarnings("preview")
-	Object jInvoker(String name) {
+	Object jInvoke(String name) {
 		if (name == null) return error("method name is null");
 		return jWrap(
 			(ArgsList) o-> {
@@ -802,7 +796,7 @@ public class Vm {
 			}
 		);
 	}
-	Object jGetSetter(String name) {
+	Object jGetSet(String name) {
 		if (name == null) return error("field name is null");
 		return jWrap(
 			(ArgsList) x-> {
@@ -814,7 +808,7 @@ public class Vm {
 					//if (obj instanceof Class) return jWrap(field);
 					if (len == 1) return field.get(obj);
 					field.set(obj, car(x, 1));
-					return ignore;
+					return inert;
 				}
 				catch (Exception e) {
 					return error("can't " + (len==1 ? "get" : "set") +" " + name + " of " + toString(obj) + (len == 1 ? "" : " with " + car(x, 1)));
@@ -831,8 +825,8 @@ public class Vm {
 		return switch (o) {
 			case null-> "#null";
 			case Boolean b-> b ? "#t" : "#f";
-			case String s-> t ? toSource(s) : s;
-			case Class cl-> "&" + cl.getName();
+			case String s-> !t ? s : '"' + Utility.toSource(s) + '"';
+			case Class cl-> "&" + Utility.toSource(cl);
 			case Object[] a-> {
 				var s = new StringBuilder();
 				for (var e: a) s.append((s.isEmpty() ? "" : ", ") + toString(true, e));
@@ -869,11 +863,13 @@ public class Vm {
 		return o.toString();
 		*/
 	}
+	/*
 	public static String toSource(String s) {
 		var m = of("\"", "\\\\\"", "\n", "\\\\n", "\t", "\\\\t", "\r", "\\\\r", "\b", "\\\\b", "\f", "\\\\f");
 		for (Entry<String,String> e: m.entrySet()) s = s.replaceAll(e.getKey(), e.getValue());
 		return '"' + s + '"';
 	}
+	*/
 	
 	
 	/* Bootstrap */
@@ -915,9 +911,9 @@ public class Vm {
 					$("vm-def", "vm-root-prompt", rootPrompt),
 					$("vm-def", "vm-error", jWrap((Function<String, Object>) this::error)),
 					// JS Interface
-					$("vm-def", "vm-js-invoker", jWrap((Function<String,Object>) this::jInvoker)),
-					$("vm-def", "vm-js-getter", jWrap((Function<String,Object>) this::jGetSetter)),
-					$("vm-def", "instanceof", jWrap((BiFunction<Object,Class,Boolean>) this::jInstanceOf)),
+					$("vm-def", "vm-jinvoke", jWrap((Function<String,Object>) this::jInvoke)),
+					$("vm-def", "vm-jgetset", jWrap((Function<String,Object>) this::jGetSet)),
+					$("vm-def", "instanceof", jWrap((BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o))),
 					// Utilities
 					$("vm-def", "vm-list", jWrap((ArgsList) o-> o)),
 					$("vm-def", "vm-list*", jWrap((ArgsList) this::listToListStar)),
@@ -945,8 +941,8 @@ public class Vm {
 					$("vm-def", "toString", jWrap((Consumer) obj-> this.toString(obj))),
 					$("vm-def", "print", jWrap((ArgsList) o-> this.print(listToArray(o)))),
 					$("vm-def", "log", jWrap((ArgsList) o-> this.log(listToArray(o)))),
-					$("vm-def", "trace", jWrap((ArgsList) o-> { if (checkO(o, Boolean.class) == 0) return trace; trace=car(o); return ignore; })),
-					$("vm-def", "stack", jWrap((ArgsList) o-> { if (checkO(o, Boolean.class) == 0) return stack; stack=car(o); return ignore; }))
+					$("vm-def", "trace", jWrap((ArgsList) o-> { if (checkO(o, Boolean.class) == 0) return trace; trace=car(o); return inert; })),
+					$("vm-def", "stack", jWrap((ArgsList) o-> { if (checkO(o, Boolean.class) == 0) return stack; stack=car(o); return inert; }))
 				)
 			)
 		);

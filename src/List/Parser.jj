@@ -12,6 +12,7 @@ package List;
 
 import static Wat.Utility.$;
 import static Wat.Utility.classForName;
+import static Wat.Utility.toSource;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -92,23 +93,7 @@ public class Parser {
 	}
 	
 	public static String toStringTokenImage(String s) {
-		return toString(s.substring(1, s.length()-1));
-	}
-	
-	public static String toString(String s) {
-		//System.out.println("i:" + s);
-		s = s
-			//.replaceAll("\\\\\\\\", "\\\\")
-			//.replaceAll("\\\\\"", "\"")
-			.replaceAll("\\\\'", "'")
-			.replaceAll("\\\\n", "\n")
-			.replaceAll("\\\\t", "\t")
-			.replaceAll("\\\\r", "\r")
-			.replaceAll("\\\\b", "\b")
-			.replaceAll("\\\\f", "\f")
-		;
-		//System.out.println("f:" + s);
-		return s;
+		return toSource(s.substring(1, s.length()-1));
 	}
 	
 	public static TokenMgrError redoTokenMgrError(TokenMgrError e, String msg) {
@@ -195,8 +180,8 @@ Object Elt() throws Exception: {
   		var id = t.image;
   		if (id.length() == 1) return id;
   		switch (id.charAt(0)) {
-  			case '.': return $("vm-js-getter", $("wat-string", id.substring(1)));
-  			case '@': return $("vm-js-invoker", $("wat-string", id.substring(1)));
+  			case '.': return $("vm-jgetset", $("wat-string", id.substring(1)));
+  			case '@': return $("vm-jinvoke", $("wat-string", id.substring(1)));
   			default: return id;
   		}  	
 	}

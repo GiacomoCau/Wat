@@ -5,10 +5,10 @@
 ;; Assert vm
 (assert (vm-quote (a b)) (a b))
 
-(assert (vm-def)              ) ; throw
-(assert (vm-def a)            ) ; throw 
-(assert (vm-def a 1)   #ignore) ; a=1
-(assert (vm-def a 1 2)        ) ; throw
+(assert (vm-def)             ) ; throw
+(assert (vm-def a)           ) ; throw 
+(assert (vm-def a 1)   #inert) ; a=1
+(assert (vm-def a 1 2)       ) ; throw
  
 (assert (vm-begin (vm-def (a) (vm-list 1)) a)         1)
 (assert (vm-begin (vm-def (a b) (vm-list 1 2)) b)     2)
@@ -261,7 +261,7 @@
 
 (define-operative (cond . clauses) env
   (if (nil? clauses)
-      #undefined
+      #inert
       (let ((((test . body) . clauses) clauses))
         (if (eval test env)
             (apply (wrap begin) body env)
