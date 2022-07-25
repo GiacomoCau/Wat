@@ -27,6 +27,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -37,6 +38,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /* Abbreviations:
 	c: cons
@@ -112,17 +114,22 @@ public class Vm {
 	
 	
 	/* Forms */
+	static class Inert {
+		public String toString() { return "#inert"; }
+	};
+	public static Inert inert = new Inert();
+	
 	class Nil implements Bindable {
 		public Object bind(Env e, Object rhs) { return rhs == nil ? null : "too many arguments"; /* + " NIL expected, but got: " + rhs.toString();*/ }
 		public String toString() { return "()"; }
 	};
 	public Nil nil = new Nil();
 	
-	static class Ign implements Bindable {
+	static class Ignore implements Bindable {
 		public Object bind(Env e, Object rhs) { return null; } 
 		public String toString() { return "#ignore"; }
 	};
-	public static Ign ign = new Ign();
+	public static Ignore ignore = new Ignore();
 	
 	
 	/* Evaluation Core */
@@ -169,8 +176,8 @@ public class Vm {
 	Cons cons(Object car, Object cdr) { return new Cons(car, cdr); };
 	<T> T car(Object o) { return o instanceof Cons c ? (T) c.car : error("not a cons: " + o.toString()); }
 	<T> T cdr(Object o) { return o instanceof Cons c ? (T) c.cdr : error("not a cons: " + o.toString()); }
-	Object car(Object o, int i) { for (; i>0; i-=1) o=cdr(o); return car(o); }
-	Object cdr(Object o, int i) { for (; i>0; i-=1) o=cdr(o); return cdr(o); }
+	<T> T car(Object o, int i) { for (; i>0; i-=1) o=cdr(o); return car(o); }
+	<T> T cdr(Object o, int i) { for (; i>0; i-=1) o=cdr(o); return cdr(o); }
 	int len(Object o) { int i=0; for (; o instanceof Cons c; o=c.cdr) i+=1; return i; }
 	
 	
@@ -180,12 +187,12 @@ public class Vm {
 		Env(Env parent) { this.parent = parent; }
 		public Object get(String name) { return map.get(name); };
 		public Object bind(String name, Object rhs) {
-			map.put(name, rhs); if (trace) print("bind ", name, "=", rhs, " in: ", this); return null; 
+			if (trace) print("    bind: ", name, "=", rhs, " in: ", this); map.put(name, rhs); return null; 
 		}
 		public String toString() { return this == theEnvironment ? "[The-Env]" : "[Env " + map + " " + parent + "]"; }
 		Object lookup(String name) {
 			if (!map.containsKey(name)) return parent != null ? parent.lookup(name) : error("unbound: " + name);
-			Object value = map.get(name); if (trace) print("lookup: ", /*name, ": ",*/ value); return value;
+			Object value = map.get(name); if (trace) print("  lookup: ", /*name, ": ",*/ value); return value;
 			
 		}
 	}
@@ -196,7 +203,7 @@ public class Vm {
 	Object bind(Env e, Object lhs, Object rhs, Object exp) {
 		if (!(lhs instanceof Bindable bindable)) return error("cannot bind: " + lhs);
 		Object msg; try {
-			msg = bindable.bind(e, rhs); if (msg == null) return ign;
+			msg = bindable.bind(e, rhs); if (msg == null) return ignore;
 		}
 		catch (Error exc) { // only for error in car() and cdr()
 			msg = "to few arguments"; // + " because " + exc.getMessage();
@@ -207,13 +214,13 @@ public class Vm {
 	
 	/* Operative & Applicative Combiners */
 	Object combine(Resumption r, Env e, Object op, Object o) {
-		if (trace) print("combine: ", cons(op, o));
+		if (trace) print(" combine: ", op, " ", o);
 		if (op instanceof Combinable cmb) return cmb.combine(r, e, o);
 		// per default le jFun non wrapped dovrebbero essere operative e non applicative
 		if (isjFun(op))
 			//return ((Combinable) jswrap(op)).combine(m, e, o); // jsfun x default applicative
 			return ((Combinable) jFun(op)).combine(r, e, o); // jsfun x default operative
-		return error("not a combiner: " + op.toString() + " in: " + cons(op, o));
+		return error("not a combiner: " + toString(op) + " in: " + cons(op, o));
 	}
 	
 	class Opv implements Combinable  {
@@ -273,14 +280,14 @@ public class Vm {
 		PTree(Object pt) { this.pt = pt; }
 		PTree(Object pt, Object ep) { this(pt); this.ep = ep; }
 		Object check() { 
-			if (pt != nil && pt != ign) {	var msg = check(pt); if (msg != null) return msg; }
+			if (pt != nil && pt != ignore) {	var msg = check(pt); if (msg != null) return msg; }
 			if (ep == null) return syms.size() > 0 ? null : "no one symbol in: " + pt;
-			if (ep == ign) return null;
+			if (ep == ignore) return null;
 			if (!(ep instanceof Sym sym)) return "not a #ignore or symbol: " + ep;
 			return !syms.contains(sym) ? null : "not a unique symbol: " + ep;
 		}
 		private Object check(Object p) {
-			if (p == ign) return null;
+			if (p == ignore) return null;
 			if (p instanceof Sym) { return syms.add(p) ? null : "not a unique symbol: " + p + (p == pt ? "" : " in: " + pt); }
 			if (!(p instanceof Cons c)) return "not a #ignore or symbol: " + p + (p == pt ? "" : " in: " + pt);
 			var msg = check(c.car); if (msg != null) return msg;
@@ -301,17 +308,21 @@ public class Vm {
 	
 	/* First-order Control */
 	class Begin implements Combinable  {
+		boolean root;
+		Begin() { } 
+		Begin(boolean root) { this.root = root; } 
 		public Object combine(Resumption r, Env e, Object o) {
 			// o = (... xs)
 			return o == nil ? null : begin(r, e, o);
 		}
 		Object begin(Resumption r, Env e, Object xs) {
+			if (trace && root && r == null) print("\n--------: ", car(xs));
 			var res = r != null ? resumeFrame(r) : evaluate(null, e, car(xs));
 			return res instanceof Suspension s ? suspendFrame(s, rr-> begin(rr, e, xs))
 				: ((Function) cdr-> cdr == nil ? res : begin(null, e, cdr)).apply(cdr(xs))
 			;
 		}
-		public String toString() { return "vm-begin"; }
+		public String toString() { return "vm-begin" + (root? "*":""); }
 	};
 	class If implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
@@ -345,9 +356,9 @@ public class Vm {
 			try {
 				res = r != null ? resumeFrame(r) : evaluate(null, e, x);
 			}
-			catch (Value exc) {
+			catch (Error | Value exc) {
 				// unwrap handler to prevent eval if exc is sym or cons
-				res = Vm.this.combine(null, e, unwrap(apv1), list(exc.value));
+				res = Vm.this.combine(null, e, unwrap(apv1), list(exc instanceof Value v ? v.value : exc));
 			}
 			if (res instanceof Suspension s) suspendFrame(s, rr-> combine(rr, e, o), x, e);
 			return res;
@@ -357,7 +368,7 @@ public class Vm {
 	@SuppressWarnings("preview")
 	int args(Apv apv) {
 		return switch(apv.cmb) {
-			case Opv opv-> opv.p == nil ? 0 : opv.p instanceof Cons c && c.cdr == nil && (c.car == ign || c.car instanceof Sym) ? 1 : Integer.MAX_VALUE;
+			case Opv opv-> opv.p == nil ? 0 : opv.p instanceof Cons c && c.cdr == nil && (c.car == ignore || c.car instanceof Sym) ? 1 : Integer.MAX_VALUE;
 			case JFun jFun-> jFun.jfun instanceof Supplier ? 0 : jFun.jfun instanceof Function ? 1 : Integer.MAX_VALUE;
 			default-> Integer.MAX_VALUE;
 		};
@@ -401,7 +412,7 @@ public class Vm {
 			if (s.prompt != prompt) return suspendFrame(s, rr-> combine(rr, e, o), x, e);
 			return Vm.this.combine(null, e, s.handler, cons(s.continuation, nil));
 		}
-		public String toString() { return "vm-pushp-rompt"; }
+		public String toString() { return "vm-push-prompt"; }
 	}
 	class TakeSubcont implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
@@ -489,11 +500,23 @@ public class Vm {
 	/* Error handling */
 	Object rootPrompt = new Object() { public String toString() { return "rootPrompt"; } };
 	Object pushRootPrompt(Object x) { return list(new PushPrompt(), rootPrompt, x); }
+	/*
 	<T> T error(String err) {
 		//console.log(err)
 		var user_break = theEnvironment.get("user-break");
 		if (user_break == null) throw new Error(err);
 		return (T) combine(null, theEnvironment, user_break, list(err));
+	}
+	*/
+	<T> T error(String msg) {
+		return error(msg, null);
+	}
+	<T> T error(String msg, Throwable cause) {
+		var userBreak = theEnvironment.get("user-break");
+		// var exc = t == null ? new Error(msg) : new Error(msg, t); // questo va in errore 
+		var exc = new Error(msg, cause); 
+		if (userBreak == null) throw exc;
+		return (T) combine(null, theEnvironment, userBreak, list(exc));
 	}
 	class Error extends RuntimeException {
 		private static final long serialVersionUID = 1L;
@@ -565,10 +588,12 @@ public class Vm {
 		return error("not a proper list: " + toString(hc));
 	}
 	<T> T print(Object ... os) {
-		//for (var o: os) out.print(toString(o));
-		int i=0; for (var o: os) out.print((i++==0 ? "" : " ") + toString(o));
-		out.println();
+		for (var o: os) out.print(toString(o)); out.println();
 		return (T) os[os.length - 1];
+	}
+	<T> T log(Object ... os) {
+		int i=0; for (var o: os) out.print((i++==0 ? "" : " ") + toString(o)); out.println();
+		return (T) os[0];
 	}
 	boolean equals(Object a, Object b) {
 		if (a instanceof Object[] aa) return equals(aa, b);
@@ -607,7 +632,7 @@ public class Vm {
 	
 	/* Bytecode parser */
 	Object parseBytecode(Object o) {
-		if (o instanceof String s) return s.equals("#ignore") ? ign : sym(s);
+		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore"-> ignore; default-> sym(s); };
 		if (o instanceof Object[] a) return parseBytecode(a);
 		return o;
 	}
@@ -621,7 +646,7 @@ public class Vm {
 				cons = ((Cons) cons).cdr = cons(parseBytecode(objs[i]), nil);
 				continue;
 			}
-			if (i != objs.length-2) throw new RuntimeException(". not is the penultimate element in " + objs);
+			if (i != objs.length-2) throw new Error(". not is the penultimate element in " + objs);
 			((Cons) cons).cdr = parseBytecode(objs[i+1]);
 			return head;
 		}
@@ -657,9 +682,9 @@ public class Vm {
 					case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
 					case ArgsList a-> a.apply(o);  
 					case Function f-> { checkO(jfun, o, 1); yield f.apply(car(o)); }  
-					case Consumer c-> { checkO(jfun, o, 1); c.accept(car(o)); yield ign; }
+					case Consumer c-> { checkO(jfun, o, 1); c.accept(car(o)); yield ignore; }
 					case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(car(o), car(o, 1)); }
-					case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(car(o)); f.set(car(o), car(o, 1)); yield ign; }
+					case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(car(o)); f.set(car(o), car(o, 1)); yield ignore; }
 					case Method mt-> {
 						var pc = mt.getParameterCount();
 						if (!mt.isVarArgs()) checkO(jfun, o, 1+pc); else checkO(jfun, o, pc, null);
@@ -681,12 +706,12 @@ public class Vm {
 				return error("not a combine " + jfun);
 				*/
 			}
-			catch (Exception exp) {
-				throw exp instanceof RuntimeException rte ? rte : new RuntimeException(exp);
-				//return error(exp.getMessage());
+			catch (Exception exc) {
+				//print(exc.getClass().getSimpleName());
+				throw exc instanceof RuntimeException rte ? rte : new RuntimeException(exc);
 			}
 		}
-		public String toString() {return "[JSFun " + jfun + "]"; }
+		public String toString() {return "[JSFun " + Arrays.stream(jfun.getClass().getInterfaces()).map(c->c.getSimpleName()).collect(Collectors.joining(" ")) + " " + jfun + "]"; }
 	}
 	boolean isjFun(Object jfun) {
 		return isInstance(jfun, Supplier.class, ArgsList.class, Function.class, BiFunction.class, Consumer.class, Executable.class, Field.class);
@@ -753,9 +778,8 @@ public class Vm {
 						}
 					}
 				}
-				catch (Exception exp) {
-					throw new RuntimeException("error executing method: " + name + " in: " + o, exp);
-					//return error("error executing method: " + name + " in: " + o, exp);
+				catch (Exception exc) {
+					throw new Error("error executing method: " + name + " in: " + o, exc);
 				}
 				Object[] args = listToArray(o, 1);
 				Executable executable = getExecutable(name.equals("new") ? (Class) o0 : o0.getClass(), name,  getClasses(args));
@@ -768,15 +792,13 @@ public class Vm {
 					/*
 					if (executable instanceof Method m) return m.invoke(o0, args);
 					if (executable instanceof Constructor c) return c.newInstance(args);
-					throw new RuntimeException("no method no constructor: " + executable);
+					throw new Error("no method no constructor: " + executable);
 					*/   
 				}
-				catch (Exception exp) {
-					throw new RuntimeException("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + o, exp);
-					//return error("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + o + " was:" + exp.getMessage());
+				catch (Exception exc) {
+					throw new Error("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + o, exc);
 				}
-				throw new RuntimeException("not found " + (name.equals("new") ? "constructor" : "method: " + name) + toString(list(getClasses(args))) + " in: " + o0);
-				//return error("not found " + (name.equals("new") ? "constructor" : "method: " + name) + toString(list(getClasses(args))) + " in: " + o);
+				throw new Error("not found " + (name.equals("new") ? "constructor" : "method: " + name) + toString(list(getClasses(args))) + " in: " + o0);
 			}
 		);
 	}
@@ -789,9 +811,10 @@ public class Vm {
 				var obj = car(x);
 				try {
 					Field field = getField(obj instanceof Class c ? c : obj.getClass(), name);
+					//if (obj instanceof Class) return jWrap(field);
 					if (len == 1) return field.get(obj);
 					field.set(obj, car(x, 1));
-					return ign;
+					return ignore;
 				}
 				catch (Exception e) {
 					return error("can't " + (len==1 ? "get" : "set") +" " + name + " of " + toString(obj) + (len == 1 ? "" : " with " + car(x, 1)));
@@ -876,7 +899,7 @@ public class Vm {
 					// First-order Control
 					$("vm-def", "vm-if", new If()),
 					$("vm-def", "vm-loop", new Loop()),
-					$("vm-def", "vm-throw", jWrap((Consumer<Object>) obj-> { throw new Value(obj); })),
+					$("vm-def", "vm-throw", jWrap((Consumer<Object>) obj-> { if (obj instanceof Error e) throw e; else throw new Value(obj); })),
 					$("vm-def", "vm-catch", new Catch()),
 					$("vm-def", "vm-finally", new Finally()), //,
 					// Delimited Control
@@ -914,15 +937,16 @@ public class Vm {
 					$("vm-def", ">", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a > b)),
 					$("vm-def", ">=", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a >= b)),
 					//
-					$("vm-def", "vm-quote", $("vm-vau", $("a"), ign, "a")),
+					$("vm-def", "vm-quote", $("vm-vau", $("a"), ignore, "a")),
 					$("vm-def", "==", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a == b)),
 					$("vm-def", "!=", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a != b)),
 					$("vm-def", "eq?", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
 					$("vm-def", "assert", jFun((ArgsList) o-> assertVm(listToArray(o)))),
 					$("vm-def", "toString", jWrap((Consumer) obj-> this.toString(obj))),
 					$("vm-def", "print", jWrap((ArgsList) o-> this.print(listToArray(o)))),
-					$("vm-def", "trace", jWrap((ArgsList) o->{ if (checkO(o, Boolean.class) == 0) return trace; trace=car(o); return ign; })),
-					$("vm-def", "stack", jWrap((ArgsList) o->{ if (checkO(o, Boolean.class) == 0) return stack; stack=car(o); return ign; }))
+					$("vm-def", "log", jWrap((ArgsList) o-> this.log(listToArray(o)))),
+					$("vm-def", "trace", jWrap((ArgsList) o-> { if (checkO(o, Boolean.class) == 0) return trace; trace=car(o); return ignore; })),
+					$("vm-def", "stack", jWrap((ArgsList) o-> { if (checkO(o, Boolean.class) == 0) return stack; stack=car(o); return ignore; }))
 				)
 			)
 		);
@@ -931,9 +955,9 @@ public class Vm {
 	
 	/* API */
 	public Object exec(Object bytecode) {
-		var wrapped = pushRootPrompt(cons(new Begin(), parseBytecode(bytecode)));
+		var wrapped = pushRootPrompt(cons(new Begin(true), parseBytecode(bytecode)));
 		var res = evaluate(null, theEnvironment, wrapped);
-		if (res instanceof Suspension s) throw new RuntimeException("prompt not found: " + s.prompt);
+		if (res instanceof Suspension s) throw new Error("prompt not found: " + s.prompt);
 		return res;
 	}
 	public Object call(String funName, Object ... args) {
@@ -1131,8 +1155,11 @@ public class Vm {
 		//exec(parse(readString("boot.wat")));
 		//compile("boot.wat");
 		//exec(readBytecode("boot.wat"));
+		if (trace) print("\n--------:  boot.wat");
 		eval(readString("boot.wat"));
+		if (trace) print("\n--------:  test.wat");
 		eval(readString("test.wat"));
+		if (trace) print("\n--------:  testJni.wat");
 		eval(readString("testJni.wat"));
 		repl();
 		//*/

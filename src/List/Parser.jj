@@ -135,7 +135,7 @@ SKIP:	// white spaces
 }
 
 TOKEN:	// separators
-{	"(" | ")" | "." | "'" | ":"
+{	"(" | ")" /*| "."*/ | "'" | ":"
 }
 
 TOKEN:	// reserved words
@@ -143,8 +143,8 @@ TOKEN:	// reserved words
 |	< True: "#t" >
 |	< False: "#f" >
 | 	< Null: "#null" >
+|	< Inert: "#inert" >
 |	< Ignore: "#ignore" >
-|	< Undefined: "#undefined" >
 }
 
 TOKEN:	// literals
@@ -166,9 +166,9 @@ TOKEN:	// identifiers
 |  	< ClsId: "&" <jvid> ("." <jvid>)* ( ("[]")+ | ("$" <jvid> ("[]")* )+ )? >
 |	< # jvid: ( <jvf> | "_" <jvf> ) ( <jvf> | <digit> | "_" )* >
 |	< # jvf:  "$" | <letter> >
-|	< Id: ("."|"@")? <first> ( <first> | <digit> )* >
+|	< Id: ("."|"@")? <first> ( <first> | "." | <digit> )* >
 |	< # first: <letter> | <special> > 
-|	< # special: [ "-", "&", "!", "=", ">", "<", "%", "+", "?", "/", "*", "$", "_", "@", "|", "~", "^" ] >
+|	< # special: [ "-", "&", "!", "=", ">", "<", "%", "+", "?", "/", "*", "$", "_", "@", "|", "~", "^"] >
 |	< # letter: [ "A"-"Z", "a"-"z" ] >
 |	< # digit: [ "0"-"9" ] >
 }
@@ -182,8 +182,8 @@ Object Elt() throws Exception: {
 	|	<Null>		{ return null; }
 	|	<True> 		{ return true; }    
 	|	<False> 	{ return false; }    
+	|	t=<Inert>	{ return t.image; }    
 	|	t=<Ignore> 	{ return t.image; }    
-	|	t=<Undefined> { return t.image; }    
 	|	t=<Integer>	{ return java.lang.Integer.parseInt(t.image); }
 	|	t=<Double>	{ return java.lang.Double.parseDouble(t.image); }
 	|	t=<String>	{ return $("wat-string", toStringTokenImage(t.image)); }

@@ -70,6 +70,7 @@
 ;($define! js-getter vm-js-getter)
 ;($define! js-global vm-js-global)
 ;($define! js-invoker vm-js-invoker)
+;($define! list vm-list)
 ($define! list* vm-list*)
 ($define! list->array vm-list-to-array)
 ($define! make-environment vm-make-environment)
@@ -463,13 +464,11 @@
 (define Object &Object)
 (define RegExp &RegExp)
 (define String &String)
-#|
 
 (define (log x . xs)
-  (apply print (list* x xs))
+  (apply @log (list* &console x xs))
   x)
 
-|#
 ;;;; Cells
 
 (define-prototype Cell Object (value))
