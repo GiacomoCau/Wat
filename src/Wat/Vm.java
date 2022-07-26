@@ -11,6 +11,7 @@ import static java.lang.System.in;
 import static java.lang.System.out;
 import static java.lang.reflect.Array.newInstance;
 import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.joining;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -36,7 +37,6 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /* Abbreviations:
 	c: cons
@@ -77,7 +77,7 @@ import java.util.stream.Collectors;
 public class Vm {
 	
 	boolean trace = false;
-	boolean stack = true;
+	boolean stack = false;
 	
 	interface Bindable { Object bind(Env e, Object rhs); }
 	interface Evaluable { Object eval(Resumption r, Env e); }
@@ -118,7 +118,7 @@ public class Vm {
 	public static Inert inert = new Inert();
 	
 	class Nil implements Bindable {
-		public Object bind(Env e, Object rhs) { return rhs == nil ? null : "too many arguments"; /* + " NIL expected, but got: " + rhs.toString();*/ }
+		public Object bind(Env e, Object rhs) { return rhs == nil ? null : "too many arguments"; /* + " NIL expected, but got: " + toString(rhs);*/ }
 		public String toString() { return "()"; }
 	};
 	public Nil nil = new Nil();
@@ -172,8 +172,8 @@ public class Vm {
 		}
 	}
 	Cons cons(Object car, Object cdr) { return new Cons(car, cdr); };
-	<T> T car(Object o) { return o instanceof Cons c ? (T) c.car : error("not a cons: " + o.toString()); }
-	<T> T cdr(Object o) { return o instanceof Cons c ? (T) c.cdr : error("not a cons: " + o.toString()); }
+	<T> T car(Object o) { return o instanceof Cons c ? (T) c.car : error("not a cons: " + toString(o)); }
+	<T> T cdr(Object o) { return o instanceof Cons c ? (T) c.cdr : error("not a cons: " + toString(o)); }
 	<T> T car(Object o, int i) { for (; i>0; i-=1) o=cdr(o); return car(o); }
 	<T> T cdr(Object o, int i) { for (; i>0; i-=1) o=cdr(o); return cdr(o); }
 	int len(Object o) { int i=0; for (; o instanceof Cons c; o=c.cdr) i+=1; return i; }
@@ -190,7 +190,7 @@ public class Vm {
 		public String toString() { return this == theEnvironment ? "[The-Env]" : "[Env " + map + " " + parent + "]"; }
 		Object lookup(String name) {
 			if (!map.containsKey(name)) return parent != null ? parent.lookup(name) : error("unbound: " + name);
-			Object value = map.get(name); if (trace) print("  lookup: ", /*name, ": ",*/ value); return value;
+			Object value = map.get(name); if (trace) print("  lookup: ", value); return value;
 			
 		}
 	}
@@ -216,8 +216,8 @@ public class Vm {
 		if (op instanceof Combinable cmb) return cmb.combine(r, e, o);
 		// per default le jFun non wrapped dovrebbero essere operative e non applicative
 		if (isjFun(op))
-			//return ((Combinable) jswrap(op)).combine(m, e, o); // jsfun x default applicative
-			return ((Combinable) jFun(op)).combine(r, e, o); // jsfun x default operative
+			//return ((Combinable) jWrap(op)).combine(r, e, o); // jfun x default applicative
+			return ((Combinable) jFun(op)).combine(r, e, o); // jfun x default operative
 		return error("not a combiner: " + toString(op) + " in: " + cons(op, o));
 	}
 	
@@ -463,7 +463,7 @@ public class Vm {
 			checkO(this, o, 1); // o = (x)
 			return new DV(car(o));
 		}
-		public String toString() { return "vm-dref"; }
+		public String toString() { return "vm-dnew"; }
 	}
 	class DRef implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
@@ -471,7 +471,7 @@ public class Vm {
 			var x = car(o);
 			return x instanceof DV dv ? dv.val : error("not a dinamic variable: " + x);
 		}
-		public String toString() { return "vm-dnew"; }
+		public String toString() { return "vm-dref"; }
 	}
 	class DLet implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
@@ -503,7 +503,7 @@ public class Vm {
 	}
 	<T> T error(String msg, Throwable cause) {
 		var userBreak = theEnvironment.get("user-break");
-		// var exc = t == null ? new Error(msg) : new Error(msg, t); // questo va in errore 
+		// var exc = t == null ? new Error(msg) : new Error(msg, t); // this throw
 		var exc = new Error(msg, cause); 
 		if (userBreak == null) throw exc;
 		return (T) combine(null, theEnvironment, userBreak, list(exc));
@@ -513,21 +513,19 @@ public class Vm {
 		public Error(String message) { super(message); }
 		public Error(String message, Throwable cause) { super(message, cause); }
 	}
-	Object checkO(Object op, Object o, int expt) {
-		var len=len(o); if (len == expt) return true;
-		return error("not " + expt + " operands in: " + cons(op, o));
+	int checkO(Object op, Object o, int expt, Class ... cls) {
+		var len=len(o); if (len == expt) { checkO(op, o, cls); return len; }
+		return error("not " + expt + " operands for combine: " + op + " with: " + o);
 	}
-	Object checkO(Object op, Object o, int min, Integer max) {
-		var len=len(o); if (len >= min && (max == null || len <= max)) return true;
-		return error((len < min ? "less then " + min : max == null ? "" : " or more then " + max) + " operands in: " + cons(op, o));
+	int checkO(Object op, Object o, int min, int max, Class ... cls) {
+		var len=len(o); if (len >= min && (max == -1 || len <= max)) { checkO(op, o, cls); return len; } 
+		return error((len < min ? "less then " + min : max == -1 ? "" : " or more then " + max) + " operands for combine: " + op + " with: " + o);
 	}
-	int checkO(Object o, Class ... cls) {
+	int checkO(Object op, Object o, Class ... cls) {
 		int i=0; if (o == nil) return 0;
-		for (; i<cls.length; i+=1) {
-			if (!(o instanceof Cons c)) /*if (o == nil)*/ return i;
-			var o0 = c.car;
-			if (!(cls[i].isInstance(o0))) return error("not a " + o0.getClass().getSimpleName() + ": " + o0);
-			o = c.cdr;
+		for (; i<cls.length && o instanceof Cons c; i+=1, o=c.cdr) {
+			var o0 = c.car; var cl=cls[i]; if (cl == null || cl.isInstance(o0)) continue;
+			return error("not a " + toString(cls[i]) + ": " + o0 + " for combine: " + op + " with: " + o);
 		}
 		return i;
 	}
@@ -661,8 +659,7 @@ public class Vm {
 					case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(car(o)); f.set(car(o), car(o, 1)); yield inert; }
 					case Method mt-> {
 						var pc = mt.getParameterCount();
-						if (!mt.isVarArgs()) checkO(jfun, o, 1+pc); else checkO(jfun, o, pc, null);
-						// !mt.isVarArgs() ? checkO(jfun, o, 1+pc) : checkO(jfun, o, pc, null);
+						if (!mt.isVarArgs()) checkO(jfun, o, 1+pc); else checkO(jfun, o, pc, -1);
 						yield mt.invoke(car(o), listToArray(cdr(o)));
 					}
 					case Constructor c-> { checkO(jfun, o, c.getParameterCount()); yield c.newInstance(listToArray(o)); }
@@ -670,11 +667,10 @@ public class Vm {
 				};
 			}
 			catch (Exception exc) {
-				//print(exc.getClass().getSimpleName());
 				throw exc instanceof RuntimeException rte ? rte : new RuntimeException(exc);
 			}
 		}
-		public String toString() {return "[JSFun " + Arrays.stream(jfun.getClass().getInterfaces()).map(c->c.getSimpleName()).collect(Collectors.joining(" ")) + " " + jfun + "]"; }
+		public String toString() {return "[JFun " + Arrays.stream(jfun.getClass().getInterfaces()).map(c->Vm.this.toString(c)).collect(joining(" ")) + " " + jfun + "]"; }
 	}
 	boolean isjFun(Object jfun) {
 		return isInstance(jfun, Supplier.class, ArgsList.class, Function.class, BiFunction.class, Consumer.class, Executable.class, Field.class);
@@ -691,6 +687,7 @@ public class Vm {
 		if (name == null) return error("method name is null");
 		return jWrap(
 			(ArgsList) o-> {
+				if (!(o instanceof Cons)) return error("no operands for executing: " + name) ;  
 				Object o0 = car(o);
 				if (o0 == null) return error("receiver is null");
 				if (o0 instanceof Apv apv) o0 = apv.cmb;
@@ -705,7 +702,7 @@ public class Vm {
 							return jWrap(cl.getField(fName));
 						}
 						case "getMethod": {
-							checkO(o0, o, 2, null);
+							checkO(o0, o, 2, -1);
 							if (!(o0 instanceof Class cl)) return error("not a Class " + o0);
 							var o1 = car(o, 1);
 							if (!(o1 instanceof String mName)) return error("not a String " + o1);
@@ -714,7 +711,7 @@ public class Vm {
 						case "invoke": {
 							//checkO(o0, o, 2, null);
 							if (!(o0 instanceof Method mt)) return error("not a Method " + o0);
-							var pc = mt.getParameterCount(); if (!mt.isVarArgs()) checkO(o0, o, 2+pc); else checkO(o0, o, 1+pc, null); 
+							var pc = mt.getParameterCount(); if (!mt.isVarArgs()) checkO(o0, o, 2+pc); else checkO(o0, o, 1+pc, -1); 
 							return mt.invoke(car(o, 1), listToArray(o, 2));
 						}
 						case "getConstructor": {
@@ -724,7 +721,7 @@ public class Vm {
 						}
 						case "newInstance": {
 							if (o0 == Array.class) {
-								checkO(o0, o, 2, null);
+								checkO(o0, o, 2, -1);
 								var o1 = car(o, 1);
 								if (!(o1 instanceof Class cl)) return error("not a Class " + o1);
 								return newInstance(cl, stream(listToArray(o, 2, Integer.class)).mapToInt(i->i).toArray() );
@@ -738,7 +735,7 @@ public class Vm {
 					}
 				}
 				catch (Exception exc) {
-					throw new Error("error executing method: " + name + " in: " + o, exc);
+					return error("error executing: " + name + " in: " + o, exc);
 				}
 				Object[] args = listToArray(o, 1);
 				Executable executable = getExecutable(name.equals("new") ? (Class) o0 : o0.getClass(), name,  getClasses(args));
@@ -750,28 +747,27 @@ public class Vm {
 					};
 				}
 				catch (Exception exc) {
-					throw new Error("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + o, exc);
+					return error("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + o, exc);
 				}
-				throw new Error("not found " + (name.equals("new") ? "constructor" : "method: " + name) + toString(list(getClasses(args))) + " in: " + o0);
+				return error("not found " + (name.equals("new") ? "constructor" : "method: " + name) + toString(list(getClasses(args))) + " in: " + o0);
 			}
 		);
 	}
 	Object jGetSet(String name) {
 		if (name == null) return error("field name is null");
 		return jWrap(
-			(ArgsList) x-> {
-				var len = len(x);
-				if (len > 2) return error("too many operands in: " + cons(this, x));
-				var obj = car(x);
+			(ArgsList) o-> {
+				var len = checkO("jGetSet", o, 1, 2); 
+				var obj = car(o);
 				try {
-					Field field = getField(obj instanceof Class c ? c : obj.getClass(), name);
+					Field field = getField(obj instanceof Class cl ? cl : obj.getClass(), name);
 					//if (obj instanceof Class) return jWrap(field);
 					if (len == 1) return field.get(obj);
-					field.set(obj, car(x, 1));
+					field.set(obj, car(o, 1));
 					return inert;
 				}
 				catch (Exception e) {
-					return error("can't " + (len==1 ? "get" : "set") +" " + name + " of " + toString(obj) + (len == 1 ? "" : " with " + car(x, 1)));
+					return error("can't " + (len==1 ? "get" : "set") + " " + name + " of " + toString(obj) + (len == 1 ? "" : " with " + car(o, 1)));
 				}
 			}
 		);
@@ -785,8 +781,8 @@ public class Vm {
 		return switch (o) {
 			case null-> "#null";
 			case Boolean b-> b ? "#t" : "#f";
-			case String s-> !t ? s : '"' + Utility.toSource(s) + '"';
 			case Class cl-> "&" + Utility.toSource(cl);
+			case String s-> !t ? s : '"' + Utility.toSource(s) + '"';
 			case Object[] a-> {
 				var s = new StringBuilder();
 				for (var e: a) s.append((s.isEmpty() ? "" : ", ") + toString(true, e));
@@ -807,7 +803,7 @@ public class Vm {
 					// Basics
 					$("vm-def", "vm-vau", new Vau()),
 					$("vm-def", "vm-eval", wrap(new Eval())),
-					$("vm-def", "vm-make-environment", jWrap((ArgsList) o-> env(checkO(o, Env.class) == 0 ? null : car(o)))),
+					$("vm-def", "vm-make-environment", jWrap((ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : car(o)))),
 					$("vm-def", "vm-wrap", jWrap((Function<Object, Object>) this::wrap)),
 					$("vm-def", "vm-unwrap", jWrap((Function<Object, Object>) this::unwrap)),
 					// Values
@@ -863,11 +859,11 @@ public class Vm {
 					$("vm-def", "!=", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a != b)),
 					$("vm-def", "eq?", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
 					$("vm-def", "assert", jFun((ArgsList) o-> assertVm(listToArray(o)))),
-					$("vm-def", "toString", jWrap((Consumer) obj-> this.toString(obj))),
-					$("vm-def", "print", jWrap((ArgsList) o-> this.print(listToArray(o)))),
-					$("vm-def", "log", jWrap((ArgsList) o-> this.log(listToArray(o)))),
-					$("vm-def", "trace", jWrap((ArgsList) o-> { if (checkO(o, Boolean.class) == 0) return trace; trace=car(o); return inert; })),
-					$("vm-def", "stack", jWrap((ArgsList) o-> { if (checkO(o, Boolean.class) == 0) return stack; stack=car(o); return inert; }))
+					$("vm-def", "toString", jWrap((Consumer) obj-> toString(obj))),
+					$("vm-def", "print", jWrap((ArgsList) o-> print(listToArray(o)))),
+					$("vm-def", "log", jWrap((ArgsList) o-> log(listToArray(o)))),
+					$("vm-def", "trace", jWrap((ArgsList) o-> { if (checkO("trace", o, 0, 1, Boolean.class) == 0) return trace; trace=car(o); return inert; })),
+					$("vm-def", "stack", jWrap((ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=car(o); return inert; }))
 				)
 			)
 		);
@@ -887,19 +883,16 @@ public class Vm {
 	public Object get(String varName) {
 		return exec(sym(varName));
 	}
-	
-	
-	/* Wat */
-	public Object eval(String sexpr) throws Exception {
-		return exec(parse(sexpr));
+	public Object eval(String exp) throws Exception {
+		return exec(parse(exp));
 	}
 	public void compile(String fileName) throws Exception {
 		try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("build/" + fileName))) {
 			oos.writeObject(parse(readString(fileName)));
 		}
 	}
-	public static String readString(String filename) throws IOException {
-		return Files.readString(Paths.get(filename), Charset.forName("cp1252"));
+	public static String readString(String fileName) throws IOException {
+		return Files.readString(Paths.get(fileName), Charset.forName("cp1252"));
 	} 
 	public Object exec(String fileName) throws Exception {
 		return exec(readBytecode(fileName));
@@ -927,7 +920,7 @@ public class Vm {
 		print("finito");
 	}
 	
-	private String read() throws IOException {
+	public String read() throws IOException {
 		var s = new StringBuilder();
 		int open = 0, close = 0;
 		boolean inEscape = false, inString = false, inComment=false, sMlComment=false, inMlComment=false, eMlComment=false;
@@ -1063,8 +1056,8 @@ public class Vm {
 		//*/
 		/*
 		eval("""
-			(assert (vm-def a 1) #ignore)
-			(assert (vm-def a)          ) ;throw
+			(assert (vm-def a 1) #inert)
+			(assert (vm-def a)         ) ;throw
 		""");
 		//*/
 		
