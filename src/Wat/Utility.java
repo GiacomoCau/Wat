@@ -74,7 +74,8 @@ public class Utility {
 			return Class.forName(name);
 		}
 		catch (ClassNotFoundException e) {
-			return null;
+			//return null;
+			throw new Error("not a class: &" + name, e);
 		}
 	}
 	
@@ -180,7 +181,7 @@ public class Utility {
 	}
 	
 	public static Class[] getClasses(Object ... objects) {
-		return Arrays.stream(objects).map(o-> o == null ? null : o.getClass()).toArray(Class[]::new);
+		return Arrays.stream(objects).map(o-> o == null ? null : o instanceof Class c ? c : o.getClass()).toArray(Class[]::new);
 	}
 
 	public static <T extends Executable> T getExecutable(Class <?> classe, String name) {

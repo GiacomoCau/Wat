@@ -699,39 +699,39 @@ public class Vm {
 				try {
 					switch (name) {
 						case "getField": {
-							checkO(o0, o, 2);
-							if (!(o0 instanceof Class cl)) return error("not a Class " + o0);
+							checkO(o0, o, 2 /*, Class.class, String.class*/);
+							if (!(o0 instanceof Class cl)) return error("not a Class " + toString(o0));
 							var o1 = car(o, 1);
-							if (!(o1 instanceof String fName)) return error("not a String " + o1);
+							if (!(o1 instanceof String fName)) return error("not a String " + toString(o1));
 							return jWrap(cl.getField(fName));
 						}
 						case "getMethod": {
-							checkO(o0, o, 2, -1);
-							if (!(o0 instanceof Class cl)) return error("not a Class " + o0);
+							checkO(o0, o, 2, -1 /*, Class.class, String.class*/);
+							if (!(o0 instanceof Class cl)) return error("not a Class " + toString(o0));
 							var o1 = car(o, 1);
-							if (!(o1 instanceof String mName)) return error("not a String " + o1);
+							if (!(o1 instanceof String mName)) return error("not a String " + toString(o1));
 							return jWrap(cl.getMethod(mName, listToArray(o, 2, Class.class)));
 						}
 						case "invoke": {
-							//checkO(o0, o, 2, null);
-							if (!(o0 instanceof Method mt)) return error("not a Method " + o0);
+							//checkO(o0, o, 2, -1 /*, Method.class, Object.class*/);
+							if (!(o0 instanceof Method mt)) return error("not a Method " + toString(o0));
 							var pc = mt.getParameterCount(); if (!mt.isVarArgs()) checkO(o0, o, 2+pc); else checkO(o0, o, 1+pc, -1); 
 							return mt.invoke(car(o, 1), listToArray(o, 2));
 						}
 						case "getConstructor": {
-							//checkO(o0, o, 1, null);
-							if (!(o0 instanceof Class cl)) return error("not a Class " + o0);
+							//checkO(o0, o, 1, -1 /*, Class.class*/);
+							if (!(o0 instanceof Class cl)) return error("not a Class " + toString(o0));
 							return jWrap(cl.getConstructor(listToArray(o, 1, Class.class)));
 						}
 						case "newInstance": {
 							if (o0 == Array.class) {
-								checkO(o0, o, 2, -1);
+								checkO(o0, o, 2, -1 /*, Class.class*/);
 								var o1 = car(o, 1);
-								if (!(o1 instanceof Class cl)) return error("not a Class " + o1);
+								if (!(o1 instanceof Class cl)) return error("not a Class " + toString(o1));
 								return newInstance(cl, stream(listToArray(o, 2, Integer.class)).mapToInt(i->i).toArray() );
 							}
 							else {
-								if (!(o0 instanceof Constructor c)) return error("not a Class " + o0);
+								if (!(o0 instanceof Constructor c)) return error("not a Class " + toString(o0));
 								checkO(o0, o, 1, 1+c.getParameterCount());
 								return c.newInstance(listToArray(o, 1));
 							}
@@ -739,11 +739,18 @@ public class Vm {
 					}
 				}
 				catch (Exception exc) {
-					return error("error executing: " + name + " in: " + o, exc);
+					return error("error executing: " + name + " in: " + toString(o), exc);
 				}
 				Object[] args = listToArray(o, 1);
-				Executable executable = getExecutable(name.equals("new") ? (Class) o0 : o0.getClass(), name,  getClasses(args));
-				if (executable != null)	try {
+				//Executable executable = getExecutable(name.equals("new") ? (Class) o0 : o0.getClass(), name,  getClasses(args));
+				// (@new class classes)   -> class.getConstructor(classes) -> constructor
+				// (@new class objects)   -> class.getConstructor(classes).newInstance(objects) -> constructor.newInstance(objects)
+				// (@name class classes)  -> class.getMethod(name, classes) -> method
+				// (@name object objects) -> object.getClass().getMethod(name, getClasses(objects)).invocke(object, objects) -> method.invoke(object, objects)
+				Executable executable = getExecutable(o0 instanceof Class cl ? cl : o0.getClass(), name, getClasses(args));
+				if (executable == null) return error("not found " + executable(name, args) + " of: " + toString(o0));
+				if (o0 instanceof Class && stream(args).allMatch(a-> a instanceof Class)) return jWrap(executable);
+				try {
 					if (executable.isVarArgs()) args = reorg(executable.getParameterTypes(), args);
 					return switch (executable) {
 						case Method m-> m.invoke(o0, args);
@@ -751,27 +758,32 @@ public class Vm {
 					};
 				}
 				catch (Exception exc) {
-					return error("error executing " + (name.equals("new") ? "constructor" : "method: " + name) + " in: " + o, exc);
+					return error("error executing " + executable(name, args) + "of: " + toString(o0) + " with: " + toString(args), exc);
 				}
-				return error("not found " + (name.equals("new") ? "constructor" : "method: " + name) + toString(list(getClasses(args))) + " in: " + o0);
 			}
 		);
+	}
+	private String executable(String name, Object[] args) {
+		return (name.equals("new") ? "constructor" : "method: " + name) + toString(list(getClasses(args)));
 	}
 	Object jGetSet(String name) {
 		if (name == null) return error("field name is null");
 		return jWrap(
 			(ArgsList) o-> {
 				var len = checkO("jGetSet", o, 1, 2); 
-				var obj = car(o);
+				var o0 = car(o);
+				// (.name class)        -> class.getField(name) -> field
+				// (.name object)       -> object.getclass().getField(name).get(object) -> field.get(object) 
+				// (.name object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
+				Field field = getField(o0 instanceof Class cl ? cl : o0.getClass(), name);
+				if (field == null) return error("not found field: " + name + " in: " + toString(o0));
+				if (o0 instanceof Class) return jWrap(field);
 				try {
-					Field field = getField(obj instanceof Class cl ? cl : obj.getClass(), name);
-					//if (obj instanceof Class) return jWrap(field);
-					if (len == 1) return field.get(obj);
-					field.set(obj, car(o, 1));
-					return inert;
+					if (len == 1) return field.get(o0);
+					field.set(o0, car(o, 1)); return inert;
 				}
 				catch (Exception e) {
-					return error("can't " + (len==1 ? "get" : "set") + " " + name + " of " + toString(obj) + (len == 1 ? "" : " with " + car(o, 1)));
+					return error("can't " + (len==1 ? "get" : "set") + " " + name + " of " + toString(o0) + (len == 1 ? "" : " with " + toString(car(o, 1))));
 				}
 			}
 		);

@@ -12,18 +12,19 @@
 	Constructor
 		
 		constructor = (@getConstructor class ... class)
+		constructor = (@new class ... class) = (@getConstructor class ... class)
 	
 	Object
 		object = (@newInstance constructor class ... args)
 		
 		object = (constructor class ... args) = (@newInstance constructor class ... args)
-		object = (new class ... args) = ((@getConstructor class ... (@getClass args)) ... args)
+		object = (@new class ... args) = ((@new class (getClasses ... args)) ... args)
 	
 	Call
 		value = (@invoke method object ... args)
 		
 		value = (method object ... args) = (@invoke method object ... args)
-		value = (@methodName object ... args) = ((@methodName (@getClass object) ... (@getClass args)) object ... args)
+		value = (@methodName object ... args) = ((@methodName (@getClass object) (getClasses ... args)) object ... args)
 		
 	Getter	
 		value = (@get field object)
