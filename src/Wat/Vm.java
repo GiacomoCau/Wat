@@ -81,7 +81,7 @@ public class Vm {
 	
 	interface Bindable { Object bind(Env e, Object rhs); }
 	interface Evaluable { Object eval(Resumption r, Env e); }
-	interface Combinable { Object combine(Resumption r, Env e, Object o); int param=0; }
+	interface Combinable { Object combine(Resumption r, Env e, Object o); }
 	
 	
 	/* Continuations */
@@ -112,22 +112,22 @@ public class Vm {
 	
 	
 	/* Forms */
-	static class Inert {
+	class Inert {
 		public String toString() { return "#inert"; }
 	};
-	public static Inert inert = new Inert();
+	public Inert inert = new Inert();
 	
 	class Nil implements Bindable {
-		public Object bind(Env e, Object rhs) { return rhs == nil ? null : "too many arguments"; /* + " NIL expected, but got: " + toString(rhs);*/ }
+		public Object bind(Env e, Object rhs) { return rhs == nil ? null : "too many arguments"; /*+ " NIL expected, but got: " + toString(rhs);*/ }
 		public String toString() { return "()"; }
 	};
 	public Nil nil = new Nil();
 	
-	static class Ignore implements Bindable {
+	class Ignore implements Bindable {
 		public Object bind(Env e, Object rhs) { return null; } 
 		public String toString() { return "#ignore"; }
 	};
-	public static Ignore ignore = new Ignore();
+	public Ignore ignore = new Ignore();
 	
 	
 	/* Evaluation Core */
@@ -191,7 +191,6 @@ public class Vm {
 		Object lookup(String name) {
 			if (!map.containsKey(name)) return parent != null ? parent.lookup(name) : error("unbound: " + name);
 			Object value = map.get(name); if (trace) print("  lookup: ", value); return value;
-			
 		}
 	}
 	Env env(Env parent) { return new Env(parent); }
@@ -253,7 +252,7 @@ public class Vm {
 			checkO(this, o, 3); // o = (pt ep x)
 			var pt = car(o);
 			var ep = car(o, 1);
-			var msg = new PTree(pt, ep).check(); if (msg != null) return error(msg + " of: " + cons(this, o));
+			var msg = checkPt(pt, ep); if (msg != null) return error(msg + " of: " + cons(this, o));
 			return new Opv(pt, ep, car(o, 2), e);
 		}
 		public String toString() { return "vm-vau"; }
@@ -264,7 +263,7 @@ public class Vm {
 			var pt = car(o);
 			if (!(pt instanceof Sym)) {
 				if (!(pt instanceof Cons)) return error("not a symbol: " + pt + " in: " + cons(this, o));
-				var msg = new PTree(pt).check(); if (msg != null) return error(msg + " of: " + cons(this, o));
+				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
 			}
 			var arg = car(o, 1);
 			var val = r != null ? resumeFrame(r) : evaluate(null, e, arg);
@@ -272,26 +271,6 @@ public class Vm {
 		}
 		public String toString() { return "vm-def"; }
 	};
-	class PTree {
-		private Object pt, ep;
-		private Set syms = new HashSet<Sym>();
-		PTree(Object pt) { this.pt = pt; }
-		PTree(Object pt, Object ep) { this(pt); this.ep = ep; }
-		Object check() { 
-			if (pt != nil && pt != ignore) {	var msg = check(pt); if (msg != null) return msg; }
-			if (ep == null) return syms.size() > 0 ? null : "no one symbol in: " + pt;
-			if (ep == ignore) return null;
-			if (!(ep instanceof Sym sym)) return "not a #ignore or symbol: " + ep;
-			return !syms.contains(sym) ? null : "not a unique symbol: " + ep;
-		}
-		private Object check(Object p) {
-			if (p == ignore) return null;
-			if (p instanceof Sym) { return syms.add(p) ? null : "not a unique symbol: " + p + (p == pt ? "" : " in: " + pt); }
-			if (!(p instanceof Cons c)) return "not a #ignore or symbol: " + p + (p == pt ? "" : " in: " + pt);
-			var msg = check(c.car); if (msg != null) return msg;
-			return c.cdr == nil ? null : check(c.cdr);
-		}
-	}
 	class Eval implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
 			checkO(this, o, 2); // o = (x eo)
@@ -321,7 +300,7 @@ public class Vm {
 			;
 		}
 		public String toString() { return "vm-begin" + (root? "*":""); }
-	};
+	}
 	class If implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
 			checkO(this, o, 3); // o = (test then else) 
@@ -362,18 +341,6 @@ public class Vm {
 			return res;
 		}
 		public String toString() { return "vm-catch"; }
-	}
-	@SuppressWarnings("preview")
-	int args(Apv apv) {
-		return switch(apv.cmb) {
-			case Opv opv-> opv.p == nil ? 0 : opv.p instanceof Cons c && c.cdr == nil && (c.car == ignore || c.car instanceof Sym) ? 1 : Integer.MAX_VALUE;
-			case JFun jFun-> jFun.jfun instanceof Supplier ? 0 : jFun.jfun instanceof Function ? 1 : Integer.MAX_VALUE;
-			default-> Integer.MAX_VALUE;
-		};
-	}
-	class Value extends RuntimeException {
-		private static final long serialVersionUID = 1L;
-		Object value; Value(Object value) { super(Vm.this.toString(value)); this.value = value; }
 	}
 	class Finally implements Combinable  {
 		@SuppressWarnings("finally")
@@ -513,6 +480,39 @@ public class Vm {
 		public Error(String message) { super(message); }
 		public Error(String message, Throwable cause) { super(message, cause); }
 	}
+	class Value extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+		Object value; Value(Object value) { super(Vm.this.toString(value)); this.value = value; }
+	}
+	class PTree {
+		private Object pt, ep;
+		private Set syms = new HashSet<Sym>();
+		PTree(Object pt, Object ep) { this.pt = pt; this.ep = ep; }
+		Object check() { 
+			if (pt != nil && pt != ignore) {	var msg = check(pt); if (msg != null) return msg; }
+			if (ep == null) return syms.size() > 0 ? null : "no one symbol in: " + pt;
+			if (ep == ignore) return null;
+			if (!(ep instanceof Sym sym)) return "not a #ignore or symbol: " + ep;
+			return !syms.contains(sym) ? null : "not a unique symbol: " + ep;
+		}
+		private Object check(Object p) {
+			if (p == ignore) return null;
+			if (p instanceof Sym) { return syms.add(p) ? null : "not a unique symbol: " + p + (p == pt ? "" : " in: " + pt); }
+			if (!(p instanceof Cons c)) return "not a #ignore or symbol: " + p + (p == pt ? "" : " in: " + pt);
+			var msg = check(c.car); if (msg != null) return msg;
+			return c.cdr == nil ? null : check(c.cdr);
+		}
+	}
+	Object checkPt(Object pt) { return checkPt(pt, null); }
+	Object checkPt(Object pt, Object ep) { return new PTree(pt, ep).check(); }
+	@SuppressWarnings("preview")
+	int args(Apv apv) {
+		return switch(apv.cmb) {
+			case Opv opv-> opv.p == nil ? 0 : opv.p instanceof Cons c && c.cdr == nil && (c.car == ignore || c.car instanceof Sym) ? 1 : Integer.MAX_VALUE;
+			case JFun jFun-> jFun.jfun instanceof Supplier ? 0 : jFun.jfun instanceof Function ? 1 : Integer.MAX_VALUE;
+			default-> Integer.MAX_VALUE;
+		};
+	}
 	int checkO(Object op, Object o, int expt, Class ... cls) {
 		var len=len(o); if (len == expt) { checkO(op, o, cls); return len; }
 		return error("not " + expt + " operands for combine: " + op + " with: " + o);
@@ -577,6 +577,10 @@ public class Vm {
 	}
 	<T> T print(Object ... os) {
 		for (var o: os) out.print(toString(o)); out.println();
+		return (T) os[os.length - 1];
+	}
+	<T> T write(Object ... os) {
+		for (var o: os) out.print(toString(true, o)); out.println();
 		return (T) os[os.length - 1];
 	}
 	<T> T log(Object ... os) {
@@ -861,6 +865,7 @@ public class Vm {
 					$("vm-def", "assert", jFun((ArgsList) o-> assertVm(listToArray(o)))),
 					$("vm-def", "toString", jWrap((Consumer) obj-> toString(obj))),
 					$("vm-def", "print", jWrap((ArgsList) o-> print(listToArray(o)))),
+					$("vm-def", "write", jWrap((ArgsList) o-> write(listToArray(o)))),
 					$("vm-def", "log", jWrap((ArgsList) o-> log(listToArray(o)))),
 					$("vm-def", "trace", jWrap((ArgsList) o-> { if (checkO("trace", o, 0, 1, Boolean.class) == 0) return trace; trace=car(o); return inert; })),
 					$("vm-def", "stack", jWrap((ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=car(o); return inert; }))
@@ -902,7 +907,6 @@ public class Vm {
 			return ois.readObject();
 		}
 	}
-	
 	@SuppressWarnings("preview")
 	public void repl() throws Exception {
 		loop: for (;;) {
@@ -919,7 +923,6 @@ public class Vm {
 		}
 		print("finito");
 	}
-	
 	public String read() throws IOException {
 		var s = new StringBuilder();
 		int open = 0, close = 0;
