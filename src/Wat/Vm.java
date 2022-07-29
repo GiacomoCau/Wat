@@ -84,7 +84,7 @@ public class Vm {
 	interface Combinable { Object combine(Resumption r, Env e, Object o); }
 	
 	
-	/* Continuations */
+	// Continuations
 	record StackFrame(Function<Resumption, Object> f, StackFrame next, Object dbg, Env e) {
 		public String toString() { return "[StackFrame %s %s %s]".formatted(f, dbg, e); }
 	}
@@ -111,7 +111,7 @@ public class Vm {
 	}
 	
 	
-	/* Forms */
+	// Forms
 	class Inert {
 		public String toString() { return "#inert"; }
 	};
@@ -130,7 +130,7 @@ public class Vm {
 	public Ignore ignore = new Ignore();
 	
 	
-	/* Evaluation Core */
+	// Evaluation Core
 	Object evaluate(Resumption r, Env e, Object o) {
 		if (trace) print("evaluate: ", o);
 		return o instanceof Evaluable x ? x.eval(r, e) : o;
@@ -179,7 +179,7 @@ public class Vm {
 	int len(Object o) { int i=0; for (; o instanceof Cons c; o=c.cdr) i+=1; return i; }
 	
 	
-	/* Environment */
+	// Environment
 	class Env {
 		Map<String,Object> map = new LinkedHashMap(); Env parent;
 		Env(Env parent) { this.parent = parent; }
@@ -196,7 +196,7 @@ public class Vm {
 	Env env(Env parent) { return new Env(parent); }
 	
 	
-	/* Bind */
+	// Bind
 	Object bind(Env e, Object lhs, Object rhs, Object exp) {
 		if (!(lhs instanceof Bindable bindable)) return error("cannot bind: " + lhs);
 		Object msg; try {
@@ -209,7 +209,7 @@ public class Vm {
 	}
 	
 	
-	/* Operative & Applicative Combiners */
+	// Operative & Applicative Combiners
 	Object combine(Resumption r, Env e, Object op, Object o) {
 		if (trace) print(" combine: ", op, " ", o);
 		if (op instanceof Combinable cmb) return cmb.combine(r, e, o);
@@ -246,7 +246,7 @@ public class Vm {
 	Object unwrap(Object arg) { return arg instanceof Apv apv ? apv.cmb : error("cannot unwrap: " + arg); } // type check
 	
 	
-	/* Built-in Combiners */
+	// Built-in Combiners
 	class Vau implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
 			checkO(this, o, 3); // o = (pt ep x)
@@ -283,7 +283,7 @@ public class Vm {
 	}
 	
 	
-	/* First-order Control */
+	// First-order Control
 	class Begin implements Combinable  {
 		boolean root;
 		Begin() { } 
@@ -366,7 +366,7 @@ public class Vm {
 	}
 	
 	
-	/* Delimited Control */
+	// Delimited Control
 	class PushPrompt implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
 			checkO(this, o, 2); // o = (prompt x)
@@ -419,7 +419,7 @@ public class Vm {
 	}
 	
 	
-	/* Dynamic Variables */
+	// Dynamic Variables
 	class DV {
 		Object val;
 		DV(Object val) { this.val = val; }
@@ -462,8 +462,8 @@ public class Vm {
 	}
 	
 	
-	/* Error handling */
-	Object rootPrompt = new Object() { public String toString() { return "rootPrompt"; } };
+	// Error handling
+	Object rootPrompt = new Object() { public String toString() { return "rootPrompt"; }};
 	Object pushRootPrompt(Object x) { return list(new PushPrompt(), rootPrompt, x); }
 	<T> T error(String msg) {
 		return error(msg, null);
@@ -531,7 +531,7 @@ public class Vm {
 	}
 	
 	
-	/* Utilities */
+	// Utilities
 	<T> Object list(T ... args) {
 		return arrayToList(true, args);
 	}
@@ -553,10 +553,10 @@ public class Vm {
 	<T> T[] listToArray(Object c, Class<T> cl) {
 		return (T[]) listToArray(c, 0, cl);
 	}
-	<T> T[] listToArray(Object c, int i, Class<T> cl) {
-		var res = new ArrayList();
-		for (; c != nil; c = cdr(c)) if (i-- <= 0) res.add(car(c));
-		return (T[]) res.toArray((T[]) Array.newInstance(cl, 0));
+	<T> T[] listToArray(Object o, int i, Class<T> cl) {
+		var res = new ArrayList<T>();
+		for (; o instanceof Cons c; o = c.cdr) if (i-- <= 0) res.add(car(c));
+		return res.toArray((T[]) Array.newInstance(cl, 0));
 	}
 	Object reverseList(Object list) {
 		Object res = nil;
@@ -622,7 +622,7 @@ public class Vm {
 	}
 	
 	
-	/* Bytecode parser */
+	// Bytecode parser
 	Object parseBytecode(Object o) {
 		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore"-> ignore; default-> sym(s); };
 		if (o instanceof Object[] a) return parseBytecode(a);
@@ -646,7 +646,7 @@ public class Vm {
 	}
 	
 	
-	/* JNI */
+	// JNI
 	interface ArgsList extends Function {}
 	class JFun implements Combinable  {
 		Object jfun;
@@ -790,7 +790,7 @@ public class Vm {
 	}
 	
 	
-	/* Stringification */
+	// Stringification
 	String toString(Object o) { return toString(false, o); }
 	@SuppressWarnings("preview")
 	String toString(boolean t, Object o) {
@@ -809,7 +809,7 @@ public class Vm {
 	}
 	
 	
-	/* Bootstrap */
+	// Bootstrap
 	Env theEnvironment = env(null); {
 		bind(theEnvironment, sym("vm-def"), new Def(), null);
 		bind(theEnvironment, sym("vm-begin"), new Begin(), null);
@@ -887,7 +887,7 @@ public class Vm {
 	}
 	
 	
-	/* API */
+	// API
 	public Object exec(Object bytecode) {
 		var wrapped = pushRootPrompt(cons(new Begin(true), parseBytecode(bytecode)));
 		var res = evaluate(null, theEnvironment, wrapped);
@@ -981,7 +981,7 @@ public class Vm {
 	}
 	
 	
-	/* Test */
+	// Test
 	public static void main(String[] args) throws Exception {
 		new Vm().main();
 	}
