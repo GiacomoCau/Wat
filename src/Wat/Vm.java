@@ -694,45 +694,43 @@ public class Vm {
 				if (!(o instanceof Cons)) return error("no operands for executing: " + name) ;  
 				Object o0 = car(o);
 				if (o0 == null) return error("receiver is null");
-				if (o0 instanceof Apv apv) o0 = apv.cmb;
-				if (o0 instanceof JFun f) o0 = f.jfun; 
 				try {
 					switch (name) {
 						case "getField": {
-							checkO(o0, o, 2 /*, Class.class, String.class*/);
-							if (!(o0 instanceof Class cl)) return error("not a Class " + toString(o0));
-							var o1 = car(o, 1);
-							if (!(o1 instanceof String fName)) return error("not a String " + toString(o1));
+							checkO(o0, o, 2, Class.class, String.class);
+							var cl = (Class) o0;
+							var fName = (String) car(o, 1);
 							return jWrap(cl.getField(fName));
 						}
 						case "getMethod": {
-							checkO(o0, o, 2, -1 /*, Class.class, String.class*/);
-							if (!(o0 instanceof Class cl)) return error("not a Class " + toString(o0));
-							var o1 = car(o, 1);
-							if (!(o1 instanceof String mName)) return error("not a String " + toString(o1));
+							checkO(o0, o, 2, -1, Class.class, String.class);
+							var cl = (Class) o0;
+							var mName = (String) car(o, 1);
 							return jWrap(cl.getMethod(mName, listToArray(o, 2, Class.class)));
 						}
 						case "invoke": {
-							//checkO(o0, o, 2, -1 /*, Method.class, Object.class*/);
+							if (o0 instanceof Apv apv) o0 = apv.cmb;
+							if (o0 instanceof JFun f) o0 = f.jfun; 
 							if (!(o0 instanceof Method mt)) return error("not a Method " + toString(o0));
 							var pc = mt.getParameterCount(); if (!mt.isVarArgs()) checkO(o0, o, 2+pc); else checkO(o0, o, 1+pc, -1); 
 							return mt.invoke(car(o, 1), listToArray(o, 2));
 						}
 						case "getConstructor": {
-							//checkO(o0, o, 1, -1 /*, Class.class*/);
-							if (!(o0 instanceof Class cl)) return error("not a Class " + toString(o0));
+							checkO(o0, o, 1, -1, Class.class);
+							var cl = (Class) o0;
 							return jWrap(cl.getConstructor(listToArray(o, 1, Class.class)));
 						}
 						case "newInstance": {
 							if (o0 == Array.class) {
-								checkO(o0, o, 2, -1 /*, Class.class*/);
-								var o1 = car(o, 1);
-								if (!(o1 instanceof Class cl)) return error("not a Class " + toString(o1));
+								checkO(o0, o, 2, -1, Class.class, Class.class);
+								var cl = (Class) car(o, 1);
 								return newInstance(cl, stream(listToArray(o, 2, Integer.class)).mapToInt(i->i).toArray() );
 							}
 							else {
-								if (!(o0 instanceof Constructor c)) return error("not a Class " + toString(o0));
-								checkO(o0, o, 1, 1+c.getParameterCount());
+								if (o0 instanceof Apv apv) o0 = apv.cmb;
+								if (o0 instanceof JFun f) o0 = f.jfun; 
+								if (!(o0 instanceof Constructor c)) return error("not a Constructor " + toString(o0));
+								var pc = c.getParameterCount(); if (!c.isVarArgs()) checkO(o0, o, 1+pc); else checkO(o0, o, pc, -1); 
 								return c.newInstance(listToArray(o, 1));
 							}
 						}
