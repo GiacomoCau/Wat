@@ -278,7 +278,7 @@ public class Vm {
 			var msg = checkPt(pt, ep); if (msg != null) return error(msg + " of: " + cons(this, o));
 			return new Opv(pt, ep, car(o, 2), e);
 		}
-		public String toString() { return "vm-vau"; }
+		public String toString() { return "vmVau"; }
 	};
 	class Def implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
@@ -292,7 +292,7 @@ public class Vm {
 			var res = r != null ? resumeFrame(r) : evaluate(null, e, arg);
 			return res instanceof Suspension s ? suspendFrame(s, rr-> combine(rr, e, o), arg, e) : bind(e, pt, res, cons(this, o));
 		}
-		public String toString() { return "vm-def"; }
+		public String toString() { return "vmDef"; }
 	};
 	class Eval implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
@@ -302,7 +302,7 @@ public class Vm {
 			if (!(o1 instanceof Env eo)) return error("not an Env: " + o1);
 			return evaluate(r, eo, x);
 		}
-		public String toString() { return "vm-eval"; }
+		public String toString() { return "vmEval"; }
 	}
 	
 	
@@ -323,7 +323,7 @@ public class Vm {
 				: ((Function) cdr-> cdr == nil ? res : begin(null, e, cdr)).apply(cdr(xs))
 			;
 		}
-		public String toString() { return "vm-begin" + eIf(!root, "*"); }
+		public String toString() { return "vmBegin" + eIf(!root, "*"); }
 	}
 	class If implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
@@ -334,7 +334,7 @@ public class Vm {
 				: evaluate(null, e, car(o, res != null && res != nil && res instanceof Boolean b && b ? 1 : 2))
 			;
 		}
-		public String toString() { return "vm-if"; }
+		public String toString() { return "vmIf"; }
 	}
 	class Loop implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
@@ -347,7 +347,7 @@ public class Vm {
 				if (res instanceof Suspension s) return suspendFrame(s, rr-> combine(rr, e, o), o0, e);
 			}
 		}
-		public String toString() { return "vm-loop"; }
+		public String toString() { return "vmLoop"; }
 	}
 	class Catch implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
@@ -366,7 +366,7 @@ public class Vm {
 			if (res instanceof Suspension s) suspendFrame(s, rr-> combine(rr, e, o), x, e);
 			return res;
 		}
-		public String toString() { return "vm-catch"; }
+		public String toString() { return "vmCatch"; }
 	}
 	class Finally implements Combinable  {
 		@SuppressWarnings("finally")
@@ -388,7 +388,7 @@ public class Vm {
 			if (fres instanceof Suspension s) suspendFrame(s, rr-> doCleanup(rr, e, cleanup, res), cleanup, e);
 			return fres;
 		}
-		public String toString() { return "vm-finaly"; }
+		public String toString() { return "vmFinaly"; }
 	}
 	
 	
@@ -403,7 +403,7 @@ public class Vm {
 			if (s.prompt != prompt) return suspendFrame(s, rr-> combine(rr, e, o), x, e);
 			return Vm.this.combine(null, e, s.handler, cons(s.k, nil));
 		}
-		public String toString() { return "vm-push-prompt"; }
+		public String toString() { return "vmPushPrompt"; }
 	}
 	class TakeSubcont implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
@@ -413,7 +413,7 @@ public class Vm {
 			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
 			return suspendFrame(new Suspension(prompt, apv1), rr-> Vm.this.combine(null, e, rr.s, nil), this, e);
 		}
-		public String toString() { return "vm-take-subcont"; }
+		public String toString() { return "vmTakeSubcont"; }
 	}
 	class PushSubcont implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
@@ -426,7 +426,7 @@ public class Vm {
 			if (res instanceof Suspension s) suspendFrame(s, rr-> combine(rr, e, o), apv0, e);
 			return res;
 		}
-		public String toString() { return "vm-push-subcont"; }
+		public String toString() { return "vmPushSubcont"; }
 	}
 	class PushPromptSubcont implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
@@ -441,7 +441,7 @@ public class Vm {
 			if (s.prompt != prompt) return suspendFrame(s, rr-> combine(rr, e, o), apv0, e);
 			return Vm.this.combine(null, e, s.handler, cons(s.k, nil));
 		}
-		public String toString() { return "vm-push-prompt-subcont"; }
+		public String toString() { return "vmPushPromptSubcont"; }
 	}
 	
 	
@@ -449,14 +449,14 @@ public class Vm {
 	class DV {
 		Object val;
 		DV(Object val) { this.val = val; }
-		public String toString() { return "[vm-dv " + val + "]"; }
+		public String toString() { return "[vmDV " + val + "]"; }
 	}
 	class DNew implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
 			checkO(this, o, 1); // o = (x)
 			return new DV(car(o));
 		}
-		public String toString() { return "vm-dnew"; }
+		public String toString() { return "vmDNew"; }
 	}
 	class DRef implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
@@ -464,7 +464,7 @@ public class Vm {
 			var x = car(o);
 			return x instanceof DV dv ? dv.val : error("not a dinamic variable: " + x);
 		}
-		public String toString() { return "vm-dref"; }
+		public String toString() { return "vmDRef"; }
 	}
 	class DLet implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
@@ -484,7 +484,7 @@ public class Vm {
 				dv.val = oldVal;
 			}
 		}
-		public String toString() { return "vm-dlet"; }
+		public String toString() { return "vmDLet"; }
 	}
 	
 	
