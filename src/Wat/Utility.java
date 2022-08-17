@@ -11,11 +11,24 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.function.Supplier;
 
 public class Utility {
 	
 	public static Object[] $(Object... objects) {
 		return objects;
+	}
+	/*
+	public static <T> T[] $(T... objects) {
+		return objects;
+	}
+	*/
+	
+	public static String eIf(boolean b, String s) {
+		return b ? "" : s;
+	}
+	public static String eIf(boolean b, Supplier<String> s) {
+		return b ? "" : s.get();
 	}
 	
 	public static List toList (Object... objects) {

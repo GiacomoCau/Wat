@@ -11,27 +11,81 @@ import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
 public class Prova {
 	
-	static Object $_(Object... objects) {
-		return objects;
-	}
-	
-	class $ {}
+	//class $ {}
 	
 	public static void main(String[] args) throws Exception {
+		varArgs();
+	}
+
+	static void varArgs() {
+		args(Integer.class, int.class); // 2
+		args((Object) new Class [] {Integer.class, int.class}); // 1
+		args((Object[]) new Class [] {Integer.class, int.class}); // 2
+		args((Object) $(Integer.class, int.class)); // 1
+		args((Object[]) $(Integer.class, int.class)); // 2
+		args($(Integer.class, int.class, (Object) $(Integer.class, int.class), ((Function) x->x))); // 3
+	}
+	
+	static <T> T[] $(T... objects) {
+		return objects;
+	}	
+	static void args(Object ... args) {
+		out.println(args.length);
+		
+		for (Object o: args) {
+			var cl = o.getClass();
+			out.println(
+				cl.getName() + "|" + cl.getSimpleName() + "|" + cl.getCanonicalName() + "|" + cl.getPackageName() + "|" + cl.getTypeName());  
+		}
+	}
+	
+	
+	
+	static void mapReversed() {
+		Map<String,Object> map = new LinkedHashMap();
+		map.put("z", 1);
+		map.put("y", 2);
+		map.put("a", 3);
+		map.put("k", 3);
+		out.println(map);
+		out.println(reverse(map));
+		out.println(reverse2(map));
+	}
+	static Map reverse(Map<String,Object> map) {
+		Map<String,Object> nMap = new LinkedHashMap();
+		var list = map.entrySet().stream().collect(Collectors.toList());
+		Collections.reverse(list);
+		for (Entry<String,Object> e: list) nMap.put(e.getKey(),e.getValue());
+		return nMap;
+	}
+	static Map reverse2(Map<String,Object> map) {
+		Map<String,Object> nMap = new LinkedHashMap();
+		var list = new ArrayList<String>(map.keySet());
+		Collections.reverse(list);
+		for (String k: list) nMap.put(k ,map.get(k));
+		return nMap;
+	}
+
+	static void escape() {
 		var s = "\"\n\t\r\b\f"; 
 		var m = of("\"", "\\\\\"", "\n", "\\\\n", "\t", "\\\\t", "\r", "\\\\r", "\b", "\\\\b", "\f", "\\\\f");
 		for (Entry<String,String> e: m.entrySet()) s = s.replaceAll(e.getKey(), e.getValue());
 		out.println("\"" + s + "\"");
 	}
 
-	private static void array() {
+	static void array() {
 		var I = new Integer[] {1,2,3};
 		out.println(I.length);
 		out.println(I.getClass());
@@ -43,7 +97,7 @@ public class Prova {
 		out.println(((int[])o).length);
 	}
 
-	private static void constructor() throws Exception {
+	static void constructor() throws Exception {
 		//out.println(Utility.classForName("int"));
 		//out.println(Class.class.getClass());
 		//out.println();
@@ -124,7 +178,7 @@ public class Prova {
 		//getConstructor.invoke(Integer.class, java.lang.String.class);
 	}
 
-	private static void method() throws Exception {
+	static void method() throws Exception {
 		
 		out.println(java.lang.Integer.class.getMethod("toOctalString", int.class));
 		out.println();
@@ -149,7 +203,7 @@ public class Prova {
 		out.println();
 	}
 
-	private static void dinamicClass() throws Exception {
+	static void dinamicClass() throws Exception {
 		String source = """
 			package test;
 			public class Test {
@@ -180,7 +234,10 @@ public class Prova {
 		System.out.println(instance); // Should print "test.Test@hashcode".
 	}
 
-	private static void prova$() {
+	static Object $_(Object... objects) {
+		return objects;
+	}	
+	static void prova$() {
 		var list = new ArrayList();
 		list.add(1);
 		list.add(2);
@@ -193,6 +250,7 @@ public class Prova {
 			case '@' -> $_("js-invoker", $_("wat-string", id.substring(1)));
 			default -> id;
 		};
+		System.out.println(o);
 	}
 	
 	public static class Box {

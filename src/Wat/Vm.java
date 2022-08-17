@@ -2,6 +2,7 @@ package Wat;
 
 import static List.Parser.parse;
 import static Wat.Utility.$;
+import static Wat.Utility.eIf;
 import static Wat.Utility.getClasses;
 import static Wat.Utility.getExecutable;
 import static Wat.Utility.getField;
@@ -180,6 +181,8 @@ public class Vm {
 	<T> T car(Object o, int i) { for (; i>0; i-=1) o=cdr(o); return car(o); }
 	<T> T cdr(Object o, int i) { for (; i>0; i-=1) o=cdr(o); return cdr(o); }
 	int len(Object o) { int i=0; for (; o instanceof Cons c; o=c.cdr) i+=1; return i; }
+	<T> T setCar(Object o, Object v) { return o instanceof Cons c ? (T) (c.car = v) : error("not a cons: " + toString(o)); }
+	<T> T setCdr(Object o, Object v) { return o instanceof Cons c ? (T) (c.cdr = v) : error("not a cons: " + toString(o)); }
 	
 	
 	// Environment
@@ -192,7 +195,7 @@ public class Vm {
 		}
 		public String toString() {
 			var isThenv = this == theEnvironment;
-			return "[" + (isThenv ? "The-" : "") + "Env" + (isThenv && !thenv ? "" : mapReverse()) + (parent == null ? "" : " " + parent) + "]";
+			return "[" + eIf(!isThenv, "The-") + "Env" + eIf(isThenv && !thenv, ()-> mapReverse()) + eIf(parent == null, ()-> " " + parent) + "]";
 		}
 		String mapReverse() {
 			var sb = new StringBuilder(); map.entrySet().forEach(e-> sb.insert(0, " " + e)); return sb.toString();
@@ -224,7 +227,7 @@ public class Vm {
 		catch (Error exc) { // only for error in car() and cdr()
 			msg = "to few arguments"; // + " because " + exc.getMessage();
 		}
-		return error(msg + " in bind: " + lhs + (exp == null ? "" : " of: " + exp) + " with: " + rhs);
+		return error(msg + " in bind: " + lhs + eIf(exp == null, ()-> " of: " + exp) + " with: " + rhs);
 	}
 	
 	
@@ -320,7 +323,7 @@ public class Vm {
 				: ((Function) cdr-> cdr == nil ? res : begin(null, e, cdr)).apply(cdr(xs))
 			;
 		}
-		public String toString() { return "vm-begin" + (root? "*":""); }
+		public String toString() { return "vm-begin" + eIf(!root, "*"); }
 	}
 	class If implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
@@ -520,8 +523,8 @@ public class Vm {
 		}
 		private Object check(Object p) {
 			if (p == ignore) return null;
-			if (p instanceof Sym) { return syms.add(p) ? null : "not a unique symbol: " + p + (p == pt ? "" : " in: " + pt); }
-			if (!(p instanceof Cons c)) return "not a #ignore or symbol: " + p + (p == pt ? "" : " in: " + pt);
+			if (p instanceof Sym) { return syms.add(p) ? null : "not a unique symbol: " + p + eIf(p == pt, ()-> " in: " + pt); }
+			if (!(p instanceof Cons c)) return "not a #ignore or symbol: " + p + eIf(p == pt, ()-> " in: " + pt);
 			var msg = check(c.car); if (msg != null) return msg;
 			return c.cdr == nil ? null : check(c.cdr);
 		}
@@ -542,7 +545,7 @@ public class Vm {
 	}
 	int checkO(Object op, Object o, int min, int max, Class ... cls) {
 		var len=len(o); if (len >= min && (max == -1 || len <= max)) { checkO(op, o, cls); return len; } 
-		return error((len < min ? "less then " + min : max == -1 ? "" : " or more then " + max) + " operands for combine: " + op + " with: " + o);
+		return error((len < min ? "less then " + min : eIf(max == -1, ()-> " or more then " + max)) + " operands for combine: " + op + " with: " + o);
 	}
 	int checkO(Object op, Object o, Class ... cls) {
 		if (o == nil) return 0;
@@ -607,7 +610,7 @@ public class Vm {
 		return (T) os[os.length - 1];
 	}
 	<T> T log(Object ... os) {
-		int i=0; for (var o: os) out.print((i++==0 ? "" : " ") + toString(o)); out.println();
+		int i=0; for (var o: os) out.print(eIf(i++ == 0, " ") + toString(o)); out.println();
 		return (T) os[0];
 	}
 	boolean equals(Object a, Object b) {
@@ -699,7 +702,7 @@ public class Vm {
 		}
 		public String toString() {
 			var intefaces = Arrays.stream(jfun.getClass().getInterfaces()).map(i-> Vm.this.toString(i)).collect(joining(" "));
-			return "[JFun" + (intefaces.isEmpty() ? "" : " " + intefaces) + " " + jfun + "]"; }
+			return "[JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "]"; }
 	}
 	boolean isjFun(Object jfun) {
 		return isInstance(jfun, Supplier.class, ArgsList.class, Function.class, BiFunction.class, Consumer.class, Executable.class, Field.class);
@@ -806,7 +809,7 @@ public class Vm {
 					field.set(o0, car(o, 1)); return inert;
 				}
 				catch (Exception e) {
-					return error("can't " + (len==1 ? "get" : "set") + " " + name + " of " + toString(o0) + (len == 1 ? "" : " with " + toString(car(o, 1))));
+					return error("can't " + (len==1 ? "get" : "set") + " " + name + " of " + toString(o0) + eIf(len == 1, ()-> " with " + toString(car(o, 1))));
 				}
 			}
 		);
@@ -824,7 +827,7 @@ public class Vm {
 			case String s-> !t ? s : '"' + Utility.toSource(s) + '"';
 			case Object[] a-> {
 				var s = new StringBuilder();
-				for (var e: a) s.append((s.isEmpty() ? "" : ", ") + toString(true, e));
+				for (var e: a) s.append(eIf(s.isEmpty(), ", ") + toString(true, e));
 				yield "[" + s.toString() + "]";
 			}
 			default-> o.toString();
@@ -948,7 +951,7 @@ public class Vm {
 	public void repl() throws Exception {
 		loop: for (;;) {
 			switch (read()) {
-				case "": break loop;
+				case "" : break loop;
 				case String exp: try {
 					print(exec(parse(exp)));
 				}

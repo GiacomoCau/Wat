@@ -67,17 +67,11 @@
 ($define! error vm-error)
 ($define! eval vm-eval)
 ($define! if vm-if)
-;($define! js-getter vm-js-getter)
-;($define! js-global vm-js-global)
-;($define! js-invoker vm-js-invoker)
-;($define! list vm-list)
 ($define! list* vm-list*)
 ($define! list->array vm-list-to-array)
 ($define! make-environment vm-make-environment)
-;($define! new vm-js-new)
 ($define! nil? vm-nil?)
 ($define! reverse-list vm-reverse-list)
-;($define! setter vm-setter)
 ($define! string->symbol vm-string-to-symbol)
 ($define! symbol-name vm-symbol-name)
 ($define! symbol? vm-symbol?)
@@ -238,11 +232,11 @@
                     (if (cons? p)
                         (let* (((name type) p)
                                (check (list the type name)))
-                          (cons (cons name names) (cons check checks)))
+                          (cons (cons name names) (cons check checks)) )
                         (cons (cons p names) checks) ))
-                  (cons ps ())))))
+                  (cons ps ()) ))))
     (let ( ((untyped-names . type-checks) (typed-params->names-and-checks params)) )
-      (list* $lambda untyped-names (list* begin type-checks) body))))
+      (list* $lambda untyped-names (list* begin type-checks) body) )))
 
 (define-macro (define lhs . rhs)
   (if (cons? lhs)
@@ -356,18 +350,26 @@
         (list* list symbols) ))
     env ))
 
+(assert (begin (provide (x) (define x 10)) x) 10)
+
 (define-operative (module exports . body) env
   (let ((menv (make-environment env)))
     (eval (list* provide exports body) menv)
     (make-environment menv) ))
 
+(assert (begin (define m (module (x) (define x 10))) (eval 'x m)) 10)
+
 (define-macro (define-module name exports . body)
   (list $define! name (list* module exports body)) )
+
+(assert (begin (define-module m (x) (define x 10)) (eval 'x m)) 10)
 
 (define-operative (import module imports) env
   (let* ((m (eval module env))
          (values (map-list ($lambda (import) (eval import m)) imports)))
     (eval (list $define! imports (list* list values)) env) ))
+
+(assert (begin (define-module m (x) (define x 10)) (import m (x)) x) 10)
 
 ;;;; JavaScript
 
@@ -553,6 +555,5 @@
       (push-subcont k) )))
 
 (define (user-break err)
-  ;(log "\nError: " err)
-  ;(print-stacktrace)
+  (when (stack) (print-stacktrace))
   (throw err) )

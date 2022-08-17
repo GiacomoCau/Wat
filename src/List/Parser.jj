@@ -49,7 +49,11 @@ public class Parser {
 			String line = in.readLine();
 			if (line.length() == 0) break;
 			try {
-				if (expr) {
+			  	if (line.equals("!expr"))
+			  		expr = true;
+			  	else if (line.equals("!token"))
+			  		expr = false;
+				else if (expr) {
 					line = line.replaceAll("\\\\n", "\n");
 					System.out.println(line);
 					//Object o = Parser.parse(line); // static=true
@@ -82,9 +86,9 @@ public class Parser {
 		if (o == null) return "null";
 		if (!(o instanceof Object[])) return o.toString();
 		StringBuffer sb = new StringBuffer();
-		sb.append("(");
+		sb.append("[");
 		for (Object e: (Object[]) o) sb.append((sb.length()==1 ? "" : " ") + toString(e) );
-		sb.append(")");
+		sb.append("]");
 		return sb.toString();
 	}
 
