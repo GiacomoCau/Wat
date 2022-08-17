@@ -78,6 +78,7 @@ public class Vm {
 	
 	boolean trace = false;
 	boolean stack = false;
+	boolean thenv = false;
 	
 	interface Bindable { Object bind(Env e, Object rhs); }
 	interface Evaluable { Object eval(Resumption r, Env e); }
@@ -187,10 +188,26 @@ public class Vm {
 		public Object bind(String name, Object rhs) {
 			if (trace) print("    bind: ", name, "=", rhs, " in: ", this); map.put(name, rhs); return null; 
 		}
-		public String toString() { return this == theEnvironment ? "[The-Env]" : "[Env " + map + " " + parent + "]"; }
+		public String toString() {
+			var isThenv = this == theEnvironment;
+			return "[" + (isThenv ? "The-" : "") + "Env" + (isThenv && !thenv ? "" : mapReverse()) + (parent == null ? "" : " " + parent) + "]";
+		}
+		String mapReverse() {
+			var sb = new StringBuilder(); map.entrySet().forEach(e-> sb.insert(0, " " + e)); return sb.toString();
+		}
 		Object lookup(String name) {
 			if (!map.containsKey(name)) return parent != null ? parent.lookup(name) : error("unbound: " + name);
 			Object value = map.get(name); if (trace) print("  lookup: ", value); return value;
+			/* TODO in alternativa al precedente
+			Object value = map.get(name);
+			if (value != null || map.containsKey(name)) { if (trace) print("  lookup: ", value); return value; }
+			return parent != null ? parent.lookup(name) : error("unbound: " + name);
+			//*/
+			/* TODO idem
+			Object value = map.get(name);
+			if (value == null && !map.containsKey(name)) return parent != null ? parent.lookup(name) : error("unbound: " + name);
+			if (trace) print("  lookup: ", value); return value;
+			//*/
 		}
 	}
 	Env env(Env parent) { return new Env(parent); }
@@ -674,7 +691,9 @@ public class Vm {
 				throw exc instanceof RuntimeException rte ? rte : new RuntimeException(exc);
 			}
 		}
-		public String toString() {return "[JFun " + Arrays.stream(jfun.getClass().getInterfaces()).map(c->Vm.this.toString(c)).collect(joining(" ")) + " " + jfun + "]"; }
+		public String toString() {
+			var intefaces = Arrays.stream(jfun.getClass().getInterfaces()).map(i-> Vm.this.toString(i)).collect(joining(" "));
+			return "[JFun" + (intefaces.isEmpty() ? "" : " " + intefaces) + " " + jfun + "]"; }
 	}
 	boolean isjFun(Object jfun) {
 		return isInstance(jfun, Supplier.class, ArgsList.class, Function.class, BiFunction.class, Consumer.class, Executable.class, Field.class);
@@ -878,7 +897,8 @@ public class Vm {
 					$("vm-def", "write", jWrap((ArgsList) o-> write(listToArray(o)))),
 					$("vm-def", "log", jWrap((ArgsList) o-> log(listToArray(o)))),
 					$("vm-def", "trace", jWrap((ArgsList) o-> { if (checkO("trace", o, 0, 1, Boolean.class) == 0) return trace; trace=car(o); return inert; })),
-					$("vm-def", "stack", jWrap((ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=car(o); return inert; }))
+					$("vm-def", "stack", jWrap((ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=car(o); return inert; })),
+					$("vm-def", "thenv", jWrap((ArgsList) o-> { if (checkO("thenv", o, 0, 1, Boolean.class) == 0) return thenv; thenv=car(o); return inert; }))
 				)
 			)
 		);
@@ -906,7 +926,8 @@ public class Vm {
 			oos.writeObject(parse(readString(fileName)));
 		}
 	}
-	public static String readString(String fileName) throws IOException {
+	public String readString(String fileName) throws IOException {
+		if (trace) print("\n--------:  " + fileName);
 		return Files.readString(Paths.get(fileName), Charset.forName("cp1252"));
 	} 
 	public Object exec(String fileName) throws Exception {
@@ -1077,11 +1098,8 @@ public class Vm {
 		//exec(parse(readString("boot.wat")));
 		//compile("boot.wat");
 		//exec(readBytecode("boot.wat"));
-		if (trace) print("\n--------:  boot.wat");
 		eval(readString("boot.wat"));
-		if (trace) print("\n--------:  test.wat");
 		eval(readString("test.wat"));
-		if (trace) print("\n--------:  testJni.wat");
 		eval(readString("testJni.wat"));
 		repl();
 	}
