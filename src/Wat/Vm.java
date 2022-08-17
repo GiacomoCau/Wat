@@ -103,9 +103,11 @@ public class Vm {
 		Suspension(Object prompt, Combinable handler) { this.prompt = prompt; this.handler = handler; }
 		public String toString() { return "[Suspension %s %s %s]".formatted(prompt, handler, k); }
 	}
+	/* TODO non più utile, eliminare
 	Suspension suspendFrame(Suspension suspension, Function<Resumption, Object> f) {
 		return suspendFrame(suspension, f, null, null);
 	}
+	*/
 	Suspension suspendFrame(Suspension suspension, Function<Resumption, Object> f, Object dbg, Env e) {
 		suspension.k = new StackFrame(f, suspension.k, dbg, e);
 		return suspension;
@@ -155,7 +157,7 @@ public class Vm {
 		Cons(Object car, Object cdr) { this.car = car; this.cdr = cdr; }
 		public Object eval(Resumption r, Env e) {
 			Object op = r != null ? resumeFrame(r) : evaluate(null, e, car);
-			return op instanceof Suspension s ? suspendFrame(s, rr-> eval(rr, e)) : combine(null, e, op, cdr);
+			return op instanceof Suspension s ? suspendFrame(s, rr-> eval(rr, e), this, e) : combine(null, e, op, cdr);
 		}
 		public Object bind(Env e, Object rhs) {
 			if (!(car instanceof Bindable car)) return "cannot bind: " + car;
@@ -250,12 +252,13 @@ public class Vm {
 		Apv(Combinable cmb) { this.cmb = cmb; }
 		public Object combine(Resumption r, Env e, Object o) {
 			var args = r != null ? resumeFrame(r) : evalArgs(null, e, o, nil);
-			return args instanceof Suspension s ? suspendFrame(s, rr-> combine(rr, e, o)) : cmb.combine(null, e, args);
+			return args instanceof Suspension s ? suspendFrame(s, rr-> combine(rr, e, o), o, e) : cmb.combine(null, e, args);
 		}
 		Object evalArgs(Resumption r, Env e, Object todo, Object done) {
 			if (todo == nil) return reverseList(done);
-			var arg = r != null ? resumeFrame(r) : evaluate(null, e, car(todo));
-			return arg instanceof Suspension s ? suspendFrame(s, rr-> evalArgs(rr, e, todo, done)) : evalArgs(null, e, cdr(todo), cons(arg, done));
+			var arg = car(todo);
+			var res = r != null ? resumeFrame(r) : evaluate(null, e, arg);
+			return res instanceof Suspension s ? suspendFrame(s, rr-> evalArgs(rr, e, todo, done), arg, e) : evalArgs(null, e, cdr(todo), cons(res, done));
 		}
 		public String toString() { return "[Apv " + Vm.this.toString(cmb) + "]"; }
 	}
@@ -283,8 +286,8 @@ public class Vm {
 				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
 			}
 			var arg = car(o, 1);
-			var val = r != null ? resumeFrame(r) : evaluate(null, e, arg);
-			return val instanceof Suspension s ? suspendFrame(s, rr-> combine(rr, e, o)) : bind(e, pt, val, cons(this, o));
+			var res = r != null ? resumeFrame(r) : evaluate(null, e, arg);
+			return res instanceof Suspension s ? suspendFrame(s, rr-> combine(rr, e, o), arg, e) : bind(e, pt, res, cons(this, o));
 		}
 		public String toString() { return "vm-def"; }
 	};
@@ -310,9 +313,10 @@ public class Vm {
 			return o == nil ? null : begin(r, e, o);
 		}
 		Object begin(Resumption r, Env e, Object xs) {
-			if (trace && root && r == null) print("\n--------: ", car(xs));
-			var res = r != null ? resumeFrame(r) : evaluate(null, e, car(xs));
-			return res instanceof Suspension s ? suspendFrame(s, rr-> begin(rr, e, xs))
+			var o0 = car(xs);
+			if (trace && root && r == null) print("\n--------: ", o0);
+			var res = r != null ? resumeFrame(r) : evaluate(null, e, o0);
+			return res instanceof Suspension s ? suspendFrame(s, rr-> begin(rr, e, xs), o0, e)
 				: ((Function) cdr-> cdr == nil ? res : begin(null, e, cdr)).apply(cdr(xs))
 			;
 		}
@@ -321,9 +325,10 @@ public class Vm {
 	class If implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
 			checkO(this, o, 3); // o = (test then else) 
-			var test = r != null ? resumeFrame(r) : evaluate(null, e, car(o));
-			return test instanceof Suspension s ? suspendFrame(s, rr-> combine(rr, e, o))
-				: evaluate(null, e, car(o, test != null && test != nil && test instanceof Boolean b && b ? 1 : 2))
+			var test = car(o);
+			var res = r != null ? resumeFrame(r) : evaluate(null, e, test);
+			return res instanceof Suspension s ? suspendFrame(s, rr-> combine(rr, e, o), test, e)
+				: evaluate(null, e, car(o, res != null && res != nil && res instanceof Boolean b && b ? 1 : 2))
 			;
 		}
 		public String toString() { return "vm-if"; }
@@ -333,9 +338,10 @@ public class Vm {
 			checkO(this, o, 1); // o = (x)
 			var first = true; // only resume once
 			while (true) {
-				var res = first && r != null ? resumeFrame(r) : evaluate(null, e, car(o));
+				var o0 = car(o);
+				var res = first && r != null ? resumeFrame(r) : evaluate(null, e, o0);
 				first = false;
-				if (res instanceof Suspension s) return suspendFrame(s, rr-> combine(rr, e, o), car(o), e);
+				if (res instanceof Suspension s) return suspendFrame(s, rr-> combine(rr, e, o), o0, e);
 			}
 		}
 		public String toString() { return "vm-loop"; }
@@ -539,10 +545,10 @@ public class Vm {
 		return error((len < min ? "less then " + min : max == -1 ? "" : " or more then " + max) + " operands for combine: " + op + " with: " + o);
 	}
 	int checkO(Object op, Object o, Class ... cls) {
-		int i=0; if (o == nil) return 0;
-		for (; i<cls.length && o instanceof Cons c; i+=1, o=c.cdr) {
+		if (o == nil) return 0;
+		int i=0; for (var oo=o; i<cls.length && o instanceof Cons c; i+=1, o=c.cdr) {
 			var o0 = c.car; var cl=cls[i]; if (cl == null || cl.isInstance(o0)) continue;
-			return error("not a " + toString(cls[i]) + ": " + o0 + " for combine: " + op + " with: " + o);
+			return error("not a " + toString(cls[i]) + ": " + o0 + " for combine: " + op + " with: " + oo);
 		}
 		return i;
 	}
