@@ -63,7 +63,7 @@ import java.util.function.Supplier;
 	r: resumption
 	f: function
 	s: supplier
-	k, next, continuation: stackframe
+	k, next: stackframe
 	exc: exception
 	id: identifier
 	num: number
@@ -99,15 +99,15 @@ public class Vm {
 	Object resumeFrame(StackFrame k, Supplier<Object> s) { 	return k.f.apply(new Resumption(k.next, s)); }
 	
 	class Suspension {
-		Object prompt; Combinable handler; StackFrame continuation;
+		Object prompt; Combinable handler; StackFrame k;
 		Suspension(Object prompt, Combinable handler) { this.prompt = prompt; this.handler = handler; }
-		public String toString() { return "[Suspension %s %s %s]".formatted(prompt, handler, continuation); }
+		public String toString() { return "[Suspension %s %s %s]".formatted(prompt, handler, k); }
 	}
 	Suspension suspendFrame(Suspension suspension, Function<Resumption, Object> f) {
 		return suspendFrame(suspension, f, null, null);
 	}
 	Suspension suspendFrame(Suspension suspension, Function<Resumption, Object> f, Object dbg, Env e) {
-		suspension.continuation = new StackFrame(f, suspension.continuation, dbg, e);
+		suspension.k = new StackFrame(f, suspension.k, dbg, e);
 		return suspension;
 	}
 	
@@ -158,9 +158,9 @@ public class Vm {
 			return op instanceof Suspension s ? suspendFrame(s, rr-> eval(rr, e)) : combine(null, e, op, cdr);
 		}
 		public Object bind(Env e, Object rhs) {
-			if (!(car instanceof Bindable mcar)) return "cannot bind: " + car;
-			if (!(cdr instanceof Bindable mcdr)) return "cannot bind: " + cdr; 
-			mcar.bind(e, car(rhs)); return mcdr.bind(e, cdr(rhs));
+			if (!(car instanceof Bindable car)) return "cannot bind: " + car;
+			if (!(cdr instanceof Bindable cdr)) return "cannot bind: " + cdr; 
+			car.bind(e, car(rhs)); return cdr.bind(e, cdr(rhs));
 		}
 		public String toString() { return "(" + toString(this) + ")"; }
 		private String toString(Cons c) {
@@ -392,7 +392,7 @@ public class Vm {
 			var res = r != null ? resumeFrame(r) : evaluate(null, e, x);
 			if (!(res instanceof Suspension s)) return res;
 			if (s.prompt != prompt) return suspendFrame(s, rr-> combine(rr, e, o), x, e);
-			return Vm.this.combine(null, e, s.handler, cons(s.continuation, nil));
+			return Vm.this.combine(null, e, s.handler, cons(s.k, nil));
 		}
 		public String toString() { return "vm-push-prompt"; }
 	}
@@ -430,7 +430,7 @@ public class Vm {
 			var res = r != null ? resumeFrame(r) : resumeFrame(k, ()-> Vm.this.combine(null, e, apv0, nil));
 			if (!(res instanceof Suspension s)) return res;
 			if (s.prompt != prompt) return suspendFrame(s, rr-> combine(rr, e, o), apv0, e);
-			return Vm.this.combine(null, e, s.handler, cons(s.continuation, nil));
+			return Vm.this.combine(null, e, s.handler, cons(s.k, nil));
 		}
 		public String toString() { return "vm-push-prompt-subcont"; }
 	}
@@ -615,11 +615,11 @@ public class Vm {
 		for (int i=0; i<a.length; i+=1) if (!equals(a[i], b[i])) return false;
 		return true;
 	}
-	Void assertVm(Object ... objs) {
+	Void vmAssert(Object ... objs) {
 		var expr = objs[0];
 		try {
 			var val = evaluate(null, env(theEnvironment), expr);
-			if (objs.length == 1) print(expr, " should be throw but is ", val);
+			if (objs.length == 1) print(expr, " should throw but is ", val);
 			else {
 				var expt = objs[1];
 				if (equals(val, expt)) return null;
@@ -633,9 +633,9 @@ public class Vm {
 		}
 		return null;
 	}
-	Void assertVm(String str, Object objs) throws Exception {
+	Void vmAssert(String str, Object objs) throws Exception {
 		var expr = cons(new Begin(), parseBytecode(parse(str)));
-		return objs instanceof Throwable ? assertVm(expr) : assertVm(expr, parseBytecode(objs)); 
+		return objs instanceof Throwable ? vmAssert(expr) : vmAssert(expr, parseBytecode(objs)); 
 	}
 	
 	
@@ -883,15 +883,15 @@ public class Vm {
 					$("vm-def", "!", jWrap((Function<Boolean,Boolean>) a-> !a)),
 					$("vm-def", "not", jWrap((Function<Boolean,Boolean>) a-> !a)),
 					$("vm-def", "<", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a < b)),
-					$("vm-def", "<=", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a <= b)),
 					$("vm-def", ">", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a > b)),
+					$("vm-def", "<=", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a <= b)),
 					$("vm-def", ">=", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a >= b)),
 					//
 					$("vm-def", "vm-quote", $("vm-vau", $("a"), ignore, "a")),
 					$("vm-def", "==", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a == b)),
 					$("vm-def", "!=", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a != b)),
 					$("vm-def", "eq?", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
-					$("vm-def", "assert", jFun((ArgsList) o-> assertVm(listToArray(o)))),
+					$("vm-def", "assert", jFun((ArgsList) o-> { checkO("assert", o, 1, 2); return vmAssert(listToArray(o)); } )),
 					$("vm-def", "toString", jWrap((Consumer) obj-> toString(obj))),
 					$("vm-def", "print", jWrap((ArgsList) o-> print(listToArray(o)))),
 					$("vm-def", "write", jWrap((ArgsList) o-> write(listToArray(o)))),
@@ -1044,49 +1044,49 @@ public class Vm {
 		//print(parseBytecode(parse("(vm-cons 1 2)"))); // -> ((vm-cons 1 2))
 		/*
 		var Throw = new Throwable();
-		assertVm("1", 1);
-		assertVm("1 2 3", 3);
-		assertVm("(vm-cons 1 2)", $(1,".",2));
-		assertVm("(vm-list 1 2 3)", $(1,2,3));
-		assertVm("(vm-list* 1 2 3 4)", $(1,2,3,".",4));
-		assertVm("(vm-array-to-list #t (vm-list-to-array (vm-list 1 2 3 4)))", $(1,2,3,4));
-		assertVm("(vm-array-to-list #f (vm-list-to-array (vm-list 1 2 3 4)))", $(1,2,3,".",4));
-		assertVm("(vm-reverse-list (vm-list 1 2 3 4))", $(4,3,2,1));
+		vmAssert("1", 1);
+		vmAssert("1 2 3", 3);
+		vmAssert("(vm-cons 1 2)", $(1,".",2));
+		vmAssert("(vm-list 1 2 3)", $(1,2,3));
+		vmAssert("(vm-list* 1 2 3 4)", $(1,2,3,".",4));
+		vmAssert("(vm-array-to-list #t (vm-list-to-array (vm-list 1 2 3 4)))", $(1,2,3,4));
+		vmAssert("(vm-array-to-list #f (vm-list-to-array (vm-list 1 2 3 4)))", $(1,2,3,".",4));
+		vmAssert("(vm-reverse-list (vm-list 1 2 3 4))", $(4,3,2,1));
 		
-		assertVm("(+ 1 2)", 3);
-		assertVm("(* 3 2)", 6);
-		assertVm("(* (* 3 2) 2)", 12);
+		vmAssert("(+ 1 2)", 3);
+		vmAssert("(* 3 2)", 6);
+		vmAssert("(* (* 3 2) 2)", 12);
 		
-		assertVm("((vm-vau a #ignore a) 1 2)", $(1,2));
-		assertVm("((vm-vau (a b) #ignore b) 1 2)", 2);
-		assertVm("((vm-vau (a . b) #ignore b) 1 2 3)", $(2,3));
-		assertVm("(vm-def x (vm-list 1)) x", $(1));
-		assertVm("(vm-def x 1)((vm-wrap(vm-vau (a) #ignore a)) x)", 1);
+		vmAssert("((vm-vau a #ignore a) 1 2)", $(1,2));
+		vmAssert("((vm-vau (a b) #ignore b) 1 2)", 2);
+		vmAssert("((vm-vau (a . b) #ignore b) 1 2 3)", $(2,3));
+		vmAssert("(vm-def x (vm-list 1)) x", $(1));
+		vmAssert("(vm-def x 1)((vm-wrap(vm-vau (a) #ignore a)) x)", 1);
 		
-		assertVm("(vm-def () 1) a", Throw);
-		assertVm("(vm-def a (vm-list 1)) a", $(1));
-		assertVm("(vm-def (a) (vm-list 1)) a", 1);
-		assertVm("(vm-def a (vm-list 1 2 3)) a", $(1,2,3));
-		assertVm("(vm-def (a) 1 2 3) a", Throw);
-		assertVm("(vm-def 2 1)", Throw);
-		assertVm("(vm-def (a) (vm-list 1)) a", 1);
-		assertVm("(vm-def (a b) (vm-list 1 2)) a b", 2);
-		assertVm("(vm-def (a . b) (vm-list 1 2 3)) a b", $(2,3)); 
+		vmAssert("(vm-def () 1) a", Throw);
+		vmAssert("(vm-def a (vm-list 1)) a", $(1));
+		vmAssert("(vm-def (a) (vm-list 1)) a", 1);
+		vmAssert("(vm-def a (vm-list 1 2 3)) a", $(1,2,3));
+		vmAssert("(vm-def (a) 1 2 3) a", Throw);
+		vmAssert("(vm-def 2 1)", Throw);
+		vmAssert("(vm-def (a) (vm-list 1)) a", 1);
+		vmAssert("(vm-def (a b) (vm-list 1 2)) a b", 2);
+		vmAssert("(vm-def (a . b) (vm-list 1 2 3)) a b", $(2,3)); 
 		
-		assertVm("(vm-vau (a . 12) #ignore 0)", Throw);
-		assertVm("(vm-def (a b 12) 1)", Throw);
+		vmAssert("(vm-vau (a . 12) #ignore 0)", Throw);
+		vmAssert("(vm-def (a b 12) 1)", Throw);
 		
-		assertVm("(vm-quote (a b c))", $("a","b","c"));
+		vmAssert("(vm-quote (a b c))", $("a","b","c"));
 
-		assertVm("(vm-def 2 1)", Throw);
-		assertVm("(vm-def a 1) a", 1);
-		assertVm("(vm-def (a . b) (vm-list 1 2 3)) a b", $(2,3));
-		assertVm("(vm-def define vm-def) (define a 1) a", 1);
-		assertVm("(vm-def $define! vm-def) ($define! a 1) a", 1);
-		assertVm("(vm-def $define! vm-def) $define!", TheEnvironment.get("vm-def"));
-		assertVm("(vm-if #t 1 2)", 1);
-		assertVm("(vm-if #f 1 2)", 2);
-		assertVm("(vm-if #null 1 2)", 2);
+		vmAssert("(vm-def 2 1)", Throw);
+		vmAssert("(vm-def a 1) a", 1);
+		vmAssert("(vm-def (a . b) (vm-list 1 2 3)) a b", $(2,3));
+		vmAssert("(vm-def define vm-def) (define a 1) a", 1);
+		vmAssert("(vm-def $define! vm-def) ($define! a 1) a", 1);
+		vmAssert("(vm-def $define! vm-def) $define!", TheEnvironment.get("vm-def"));
+		vmAssert("(vm-if #t 1 2)", 1);
+		vmAssert("(vm-if #f 1 2)", 2);
+		vmAssert("(vm-if #null 1 2)", 2);
 		//*/
 		/*
 		eval("""
