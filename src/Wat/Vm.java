@@ -49,8 +49,8 @@ import java.util.function.Supplier;
 	cmb: combiner
 	opv: operative combiner
 	apv: applicative combiner
-	apv0: applicative combiner with 0 arguments
-	apv1, handler: applicative combiner with 1 argument
+	apv0: zero args applicative combiner
+	apv1, handler: one arg applicative combiner
 	p: parameter
 	ps: parameters
 	pt: parameters tree
@@ -82,8 +82,6 @@ public class Vm {
 	boolean thenv = false;
 	boolean jfapv = false;
 	
-	interface Bindable { Object bind(Env e, Object rhs); }
-	interface Evaluable { Object eval(Resumption r, Env e); }
 	interface Combinable { Object combine(Resumption r, Env e, Object o); }
 	
 	
@@ -91,23 +89,21 @@ public class Vm {
 	class Continuation {
 		Function<Resumption, Object> f; Continuation next; Object dbg; Env e;
 		Continuation(Function<Resumption, Object> f, Continuation next, Object dbg, Env e) {
-			this.f=f; this.next=next; this.dbg=dbg; this.e=e;
+			this.f = f; this.next = next; this.dbg = dbg; this.e = e;
 		}
 		public String toString() { return "[Continuation %s %s %s]".formatted(f, dbg, e); }
 		Object apply(Env e, Apv apv0) {
 			return f.apply(new Resumption(next, ()-> combine(null, e, apv0, nil)));
 		}
 	}
-	
 	class Resumption {
 		Continuation k; Supplier<Object> s;
-		Resumption(Continuation k, Supplier<Object> s) { this.k = k; this.s = s; }
+		Resumption(Continuation k, Supplier<Object> s) { this.k=k; this.s=s; }
 		public String toString() { return "[Resumption %s %s]".formatted(s, k); }
         Object resume() {
         	var k = this.k; this.k = k.next; return k.f.apply(this);
         }
 	};
-	
 	class Suspension {
 		Object prompt; Combinable handler; Continuation k;
 		Suspension(Object prompt, Combinable handler) { this.prompt = prompt; this.handler = handler; }
@@ -119,55 +115,44 @@ public class Vm {
 	
 	
 	// Forms
-	class Inert {
-		public String toString() { return "#inert"; }
-	};
-	public Inert inert = new Inert();
-	
-	class Nil implements Bindable {
-		public Object bind(Env e, Object rhs) { return rhs == nil ? null : "too many arguments"; /*+ " NIL expected, but got: " + toString(rhs);*/ }
-		public String toString() { return "()"; }
-	};
+	class Nil { public String toString() { return "()"; }};
 	public Nil nil = new Nil();
 	
-	class Ignore implements Bindable {
-		public Object bind(Env e, Object rhs) { return null; } 
-		public String toString() { return "#ignore"; }
-	};
+	class Inert { public String toString() { return "#inert"; }};
+	public Inert inert = new Inert();
+	
+	class Ignore { public String toString() { return "#ignore"; }};
 	public Ignore ignore = new Ignore();
 	
 	
 	// Evaluation Core
+	@SuppressWarnings("preview")
 	Object evaluate(Resumption r, Env e, Object o) {
 		if (trace) print("evaluate: ", o);
-		return o instanceof Evaluable x ? x.eval(r, e) : o;
+		return switch (o) {
+			case null, default-> o;
+			case Symbol s-> e.lookup(s.name);
+			case Cons c-> {
+				Object op = r != null ? r.resume() : evaluate(null, e, c.car);
+				yield op instanceof Suspension s ? s.suspend(rr-> evaluate(rr, e, o), o, e) : combine(null, e, op, c.cdr);
+			}
+		};
 	}
 	
-	class Sym implements Evaluable, Bindable {
+	class Symbol {
 		String name;
-		Sym(String name) { this.name = name; }
-		public Object eval(Resumption r, Env e) { return e.lookup(name); }
-		public Object bind(Env e, Object rhs) { return e.bind(name, rhs); }	
+		Symbol(String name) { this.name = name; }
+		public String toString() { return name; }
 		public int hashCode() { return Objects.hashCode(name); }
 		public boolean equals(Object o) {
-			return this == o || o instanceof Sym sym && name.equals(sym.name);
+			return this == o || o instanceof Symbol sym && name.equals(sym.name);
 		}
-		public String toString() { return name; }
 	}
-	Sym sym(String name) { return new Sym(name); }
+	Symbol symbol(String name) { return new Symbol(name); }
 	
-	class Cons implements Evaluable, Bindable {
+	class Cons {
 		Object car, cdr;
 		Cons(Object car, Object cdr) { this.car = car; this.cdr = cdr; }
-		public Object eval(Resumption r, Env e) {
-			Object op = r != null ? r.resume() : evaluate(null, e, car);
-			return op instanceof Suspension s ? s.suspend(rr-> eval(rr, e), this, e) : combine(null, e, op, cdr);
-		}
-		public Object bind(Env e, Object rhs) {
-			if (!(car instanceof Bindable car)) return "cannot bind: " + car;
-			if (!(cdr instanceof Bindable cdr)) return "cannot bind: " + cdr; 
-			car.bind(e, car(rhs)); return cdr.bind(e, cdr(rhs));
-		}
 		public String toString() { return "(" + toString(this) + ")"; }
 		private String toString(Cons c) {
 			if (c.cdr == nil) return Vm.this.toString(true, c.car);
@@ -184,8 +169,8 @@ public class Vm {
 	<T> T car(Object o, int i) { for (; i>0; i-=1) o=cdr(o); return car(o); }
 	<T> T cdr(Object o, int i) { for (; i>0; i-=1) o=cdr(o); return cdr(o); }
 	int len(Object o) { int i=0; for (; o instanceof Cons c; o=c.cdr) i+=1; return i; }
-	<T> T setCar(Object o, Object v) { return o instanceof Cons c ? (T) (c.car = v) : error("not a cons: " + toString(o)); }
-	<T> T setCdr(Object o, Object v) { return o instanceof Cons c ? (T) (c.cdr = v) : error("not a cons: " + toString(o)); }
+	<T> T setCar(Object o, Object v) { return o instanceof Cons c ? (T) (c.car=v) : error("not a cons: " + toString(o)); }
+	<T> T setCdr(Object o, Object v) { return o instanceof Cons c ? (T) (c.cdr=v) : error("not a cons: " + toString(o)); }
 	
 	
 	// Environment
@@ -223,15 +208,24 @@ public class Vm {
 	
 	// Bind
 	Object bind(Env e, Object lhs, Object rhs, Object exp) {
-		if (!(lhs instanceof Bindable bindable)) return error("cannot bind: " + lhs);
-		Object msg; try {
-			msg = bindable.bind(e, rhs); if (msg == null) return inert;
-		}
-		catch (Error exc) { // only for error in car() and cdr()
-			msg = "to few arguments"; // + " because " + exc.getMessage();
-		}
-		return error(msg + " in bind: " + lhs + eIf(exp == null, ()-> " of: " + exp) + " with: " + rhs);
+		var	msg = bind2(e, lhs, rhs); if (msg == null) return inert;
+		return error(msg + " for bind: " + lhs + eIf(exp == null, ()-> " of: " + exp) + " with: " + rhs);
 	}
+	@SuppressWarnings("preview")
+	Object bind2(Env e, Object lhs, Object rhs) {
+		return switch (lhs) {
+			case Ignore i-> null;
+			case Symbol s-> e.bind(s.name, rhs);  
+			case Nil n-> rhs == nil ? null : "too many arguments";
+			case Cons lc-> {
+				if (!(rhs instanceof Cons rc)) yield "too few arguments";
+				var msg = bind2(e, lc.car, rc.car);
+				if (msg != null) yield msg;
+				yield bind2(e, lc.cdr, rc.cdr);
+			}
+			default-> error("cannot bind: " + lhs);
+		};
+    }
 	
 	
 	// Operative & Applicative Combiners
@@ -287,7 +281,7 @@ public class Vm {
 		public Object combine(Resumption r, Env e, Object o) {
 			checkO(this, o, 2); // o = (pt arg)
 			var pt = car(o);
-			if (!(pt instanceof Sym)) {
+			if (!(pt instanceof Symbol)) {
 				if (!(pt instanceof Cons)) return error("not a symbol: " + pt + " in: " + cons(this, o));
 				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
 			}
@@ -319,8 +313,8 @@ public class Vm {
 			return o == nil ? null : begin(r, e, o);
 		}
 		Object begin(Resumption r, Env e, Object xs) {
+			if (trace && root && r == null) print("\n--------");
 			var o0 = car(xs);
-			if (trace && root && r == null) print("\n--------: ", o0);
 			var res = r != null ? r.resume() : evaluate(null, e, o0);
 			return res instanceof Suspension s ? s.suspend(rr-> begin(rr, e, xs), o0, e)
 				: ((Function) cdr-> cdr == nil ? res : begin(null, e, cdr)).apply(cdr(xs))
@@ -456,7 +450,7 @@ public class Vm {
 	class DV {
 		Object val;
 		DV(Object val) { this.val = val; }
-		public String toString() { return "[vmDV " + val + "]"; }
+		public String toString() { return "[DV " + val + "]"; }
 	}
 	class DNew implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
@@ -519,18 +513,18 @@ public class Vm {
 	}
 	class PTree {
 		private Object pt, ep;
-		private Set syms = new HashSet<Sym>();
+		private Set syms = new HashSet<Symbol>();
 		PTree(Object pt, Object ep) { this.pt = pt; this.ep = ep; }
 		Object check() { 
 			if (pt != nil && pt != ignore) {	var msg = check(pt); if (msg != null) return msg; }
 			if (ep == null) return syms.size() > 0 ? null : "no one symbol in: " + pt;
 			if (ep == ignore) return null;
-			if (!(ep instanceof Sym sym)) return "not a #ignore or symbol: " + ep;
+			if (!(ep instanceof Symbol sym)) return "not a #ignore or symbol: " + ep;
 			return !syms.contains(sym) ? null : "not a unique symbol: " + ep;
 		}
 		private Object check(Object p) {
 			if (p == ignore) return null;
-			if (p instanceof Sym) { return syms.add(p) ? null : "not a unique symbol: " + p + eIf(p == pt, ()-> " in: " + pt); }
+			if (p instanceof Symbol) { return syms.add(p) ? null : "not a unique symbol: " + p + eIf(p == pt, ()-> " in: " + pt); }
 			if (!(p instanceof Cons c)) return "not a #ignore or symbol: " + p + eIf(p == pt, ()-> " in: " + pt);
 			var msg = check(c.car); if (msg != null) return msg;
 			return c.cdr == nil ? null : check(c.cdr);
@@ -541,7 +535,7 @@ public class Vm {
 	@SuppressWarnings("preview")
 	int args(Apv apv) {
 		return switch(apv.cmb) {
-			case Opv opv-> opv.p == nil ? 0 : opv.p instanceof Cons c && c.cdr == nil && (c.car == ignore || c.car instanceof Sym) ? 1 : Integer.MAX_VALUE;
+			case Opv opv-> opv.p == nil ? 0 : opv.p instanceof Cons c && c.cdr == nil && (c.car == ignore || c.car instanceof Symbol) ? 1 : Integer.MAX_VALUE;
 			case JFun jFun-> jFun.jfun instanceof Supplier ? 0 : jFun.jfun instanceof Function ? 1 : Integer.MAX_VALUE;
 			default-> Integer.MAX_VALUE;
 		};
@@ -657,7 +651,7 @@ public class Vm {
 	
 	// Bytecode parser
 	Object parseBytecode(Object o) {
-		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore"-> ignore; default-> sym(s); };
+		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore"-> ignore; default-> symbol(s); };
 		if (o instanceof Object[] a) return parseBytecode(a);
 		return o;
 	}
@@ -844,8 +838,8 @@ public class Vm {
 	
 	// Bootstrap
 	Env theEnvironment = env(null); {
-		bind(theEnvironment, sym("vm-def"), new Def(), null);
-		bind(theEnvironment, sym("vm-begin"), new Begin(), null);
+		bind(theEnvironment, symbol("vm-def"), new Def(), null);
+		bind(theEnvironment, symbol("vm-begin"), new Begin(), null);
 		evaluate(null, theEnvironment,
 			parseBytecode(
 				$("vm-begin",
@@ -859,9 +853,9 @@ public class Vm {
 					$("vm-def", "vm-cons", jWrap((BiFunction<Object, Object, Object>) this::cons)),
 					$("vm-def", "vm-cons?", jWrap((Function<Object, Boolean>) obj-> obj instanceof Cons)),
 					$("vm-def", "vm-nil?", jWrap((Function<Object, Boolean>) obj-> obj == nil)),
-					$("vm-def", "vm-string-to-symbol", jWrap((Function<String, Sym>) this::sym)),
-					$("vm-def", "vm-symbol?", jWrap((Function<Object, Boolean>) obj-> obj instanceof Sym)),
-					$("vm-def", "vm-symbol-name", jWrap((Function<Sym, String>) sym->sym.name)),
+					$("vm-def", "vm-string-to-symbol", jWrap((Function<String, Symbol>) this::symbol)),
+					$("vm-def", "vm-symbol?", jWrap((Function<Object, Boolean>) obj-> obj instanceof Symbol)),
+					$("vm-def", "vm-symbol-name", jWrap((Function<Symbol, String>) sym-> sym.name)),
 					// First-order Control
 					$("vm-def", "vm-if", new If()),
 					$("vm-def", "vm-loop", new Loop()),
@@ -929,10 +923,10 @@ public class Vm {
 		return res;
 	}
 	public Object call(String funName, Object ... args) {
-		return exec(list(sym(funName), parseBytecode(args)));
+		return exec(list(symbol(funName), parseBytecode(args)));
 	}
 	public Object get(String varName) {
-		return exec(sym(varName));
+		return exec(symbol(varName));
 	}
 	public Object eval(String exp) throws Exception {
 		return exec(parse(exp));
