@@ -547,7 +547,7 @@
 (define (print-stacktrace)
   (define (print-frame k)
     (log k)
-    (when (instanceof (.next k) &Wat.Vm$StackFrame) ;; .next di !StackFrame no buono!
+    (when (instanceof (.next k) &Wat.Vm$Continuation) ;; .next di !Continuation no buono!
     	(print-frame (.next k)) ))
   (take-subcont vm-root-prompt k
     (print-frame k)

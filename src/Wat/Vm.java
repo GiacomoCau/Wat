@@ -60,11 +60,11 @@ import java.util.function.Supplier;
 	eo: environment operand 
 	ep: environment parameter
 	xe: extended environment
+	k, next: continuation
 	s: sospension
 	r: resumption
 	f: function
 	s: supplier
-	k, next: stackframe
 	exc: exception
 	id: identifier
 	num: number
@@ -80,6 +80,7 @@ public class Vm {
 	boolean trace = false;
 	boolean stack = false;
 	boolean thenv = false;
+	boolean jfapv = false;
 	
 	interface Bindable { Object bind(Env e, Object rhs); }
 	interface Evaluable { Object eval(Resumption r, Env e); }
@@ -87,31 +88,33 @@ public class Vm {
 	
 	
 	// Continuations
-	record StackFrame(Function<Resumption, Object> f, StackFrame next, Object dbg, Env e) {
-		public String toString() { return "[StackFrame %s %s %s]".formatted(f, dbg, e); }
+	class Continuation {
+		Function<Resumption, Object> f; Continuation next; Object dbg; Env e;
+		Continuation(Function<Resumption, Object> f, Continuation next, Object dbg, Env e) {
+			this.f=f; this.next=next; this.dbg=dbg; this.e=e;
+		}
+		public String toString() { return "[Continuation %s %s %s]".formatted(f, dbg, e); }
+		Object apply(Env e, Apv apv0) {
+			return f.apply(new Resumption(next, ()-> combine(null, e, apv0, nil)));
+		}
 	}
 	
 	class Resumption {
-		StackFrame k; Supplier<Object> s;
-		Resumption(StackFrame k, Supplier<Object> s) { this.k = k; this.s = s; }
+		Continuation k; Supplier<Object> s;
+		Resumption(Continuation k, Supplier<Object> s) { this.k = k; this.s = s; }
 		public String toString() { return "[Resumption %s %s]".formatted(s, k); }
+        Object resume() {
+        	var k = this.k; this.k = k.next; return k.f.apply(this);
+        }
 	};
-	Object resumeFrame(Resumption r) { return resumeFrame(r.k, r.s); }
-	Object resumeFrame(StackFrame k, Supplier<Object> s) { 	return k.f.apply(new Resumption(k.next, s)); }
 	
 	class Suspension {
-		Object prompt; Combinable handler; StackFrame k;
+		Object prompt; Combinable handler; Continuation k;
 		Suspension(Object prompt, Combinable handler) { this.prompt = prompt; this.handler = handler; }
 		public String toString() { return "[Suspension %s %s %s]".formatted(prompt, handler, k); }
-	}
-	/* TODO non più utile, eliminare
-	Suspension suspendFrame(Suspension suspension, Function<Resumption, Object> f) {
-		return suspendFrame(suspension, f, null, null);
-	}
-	*/
-	Suspension suspendFrame(Suspension suspension, Function<Resumption, Object> f, Object dbg, Env e) {
-		suspension.k = new StackFrame(f, suspension.k, dbg, e);
-		return suspension;
+		Suspension suspend(Function<Resumption, Object> f, Object dbg, Env e) {
+			k = new Continuation(f, k, dbg, e); return this;
+		}
 	}
 	
 	
@@ -157,8 +160,8 @@ public class Vm {
 		Object car, cdr;
 		Cons(Object car, Object cdr) { this.car = car; this.cdr = cdr; }
 		public Object eval(Resumption r, Env e) {
-			Object op = r != null ? resumeFrame(r) : evaluate(null, e, car);
-			return op instanceof Suspension s ? suspendFrame(s, rr-> eval(rr, e), this, e) : combine(null, e, op, cdr);
+			Object op = r != null ? r.resume() : evaluate(null, e, car);
+			return op instanceof Suspension s ? s.suspend(rr-> eval(rr, e), this, e) : combine(null, e, op, cdr);
 		}
 		public Object bind(Env e, Object rhs) {
 			if (!(car instanceof Bindable car)) return "cannot bind: " + car;
@@ -235,10 +238,10 @@ public class Vm {
 	Object combine(Resumption r, Env e, Object op, Object o) {
 		if (trace) print(" combine: ", op, " ", o);
 		if (op instanceof Combinable cmb) return cmb.combine(r, e, o);
-		// per default le jFun non wrapped dovrebbero essere operative e non applicative
-		if (isjFun(op))
-			//return ((Combinable) jWrap(op)).combine(r, e, o); // jfun x default applicative
-			return ((Combinable) jFun(op)).combine(r, e, o); // jfun x default operative
+		// per default le jFun dovrebbero essere operative e non applicative
+		if (isjFun(op)) return jfapv
+			? ((Combinable) jWrap(op)).combine(r, e, o) // jfun x default applicative
+			: ((Combinable) jFun(op)).combine(r, e, o); // jfun x default operative
 		return error("not a combiner: " + toString(op) + " in: " + cons(op, o));
 	}
 	
@@ -254,14 +257,14 @@ public class Vm {
 		Combinable cmb;
 		Apv(Combinable cmb) { this.cmb = cmb; }
 		public Object combine(Resumption r, Env e, Object o) {
-			var args = r != null ? resumeFrame(r) : evalArgs(null, e, o, nil);
-			return args instanceof Suspension s ? suspendFrame(s, rr-> combine(rr, e, o), o, e) : cmb.combine(null, e, args);
+			var args = r != null ? r.resume() : evalArgs(null, e, o, nil);
+			return args instanceof Suspension s ? s.suspend(rr-> combine(rr, e, o), o, e) : cmb.combine(null, e, args);
 		}
 		Object evalArgs(Resumption r, Env e, Object todo, Object done) {
 			if (todo == nil) return reverseList(done);
 			var arg = car(todo);
-			var res = r != null ? resumeFrame(r) : evaluate(null, e, arg);
-			return res instanceof Suspension s ? suspendFrame(s, rr-> evalArgs(rr, e, todo, done), arg, e) : evalArgs(null, e, cdr(todo), cons(res, done));
+			var res = r != null ? r.resume() : evaluate(null, e, arg);
+			return res instanceof Suspension s ? s.suspend(rr-> evalArgs(rr, e, todo, done), arg, e) : evalArgs(null, e, cdr(todo), cons(res, done));
 		}
 		public String toString() { return "[Apv " + Vm.this.toString(cmb) + "]"; }
 	}
@@ -289,8 +292,8 @@ public class Vm {
 				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
 			}
 			var arg = car(o, 1);
-			var res = r != null ? resumeFrame(r) : evaluate(null, e, arg);
-			return res instanceof Suspension s ? suspendFrame(s, rr-> combine(rr, e, o), arg, e) : bind(e, pt, res, cons(this, o));
+			var res = r != null ? r.resume() : evaluate(null, e, arg);
+			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, o), arg, e) : bind(e, pt, res, cons(this, o));
 		}
 		public String toString() { return "vmDef"; }
 	};
@@ -318,8 +321,8 @@ public class Vm {
 		Object begin(Resumption r, Env e, Object xs) {
 			var o0 = car(xs);
 			if (trace && root && r == null) print("\n--------: ", o0);
-			var res = r != null ? resumeFrame(r) : evaluate(null, e, o0);
-			return res instanceof Suspension s ? suspendFrame(s, rr-> begin(rr, e, xs), o0, e)
+			var res = r != null ? r.resume() : evaluate(null, e, o0);
+			return res instanceof Suspension s ? s.suspend(rr-> begin(rr, e, xs), o0, e)
 				: ((Function) cdr-> cdr == nil ? res : begin(null, e, cdr)).apply(cdr(xs))
 			;
 		}
@@ -329,8 +332,8 @@ public class Vm {
 		public Object combine(Resumption r, Env e, Object o) {
 			checkO(this, o, 3); // o = (test then else) 
 			var test = car(o);
-			var res = r != null ? resumeFrame(r) : evaluate(null, e, test);
-			return res instanceof Suspension s ? suspendFrame(s, rr-> combine(rr, e, o), test, e)
+			var res = r != null ? r.resume() : evaluate(null, e, test);
+			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, o), test, e)
 				: evaluate(null, e, car(o, res != null && res != nil && res instanceof Boolean b && b ? 1 : 2))
 			;
 		}
@@ -342,9 +345,9 @@ public class Vm {
 			var first = true; // only resume once
 			while (true) {
 				var o0 = car(o);
-				var res = first && r != null ? resumeFrame(r) : evaluate(null, e, o0);
+				var res = first && r != null ? r.resume() : evaluate(null, e, o0);
 				first = false;
-				if (res instanceof Suspension s) return suspendFrame(s, rr-> combine(rr, e, o), o0, e);
+				if (res instanceof Suspension s) return s.suspend(rr-> combine(rr, e, o), o0, e);
 			}
 		}
 		public String toString() { return "vmLoop"; }
@@ -357,13 +360,13 @@ public class Vm {
 			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
 			Object res = null;
 			try {
-				res = r != null ? resumeFrame(r) : evaluate(null, e, x);
+				res = r != null ? r.resume() : evaluate(null, e, x);
 			}
 			catch (Error | Value exc) {
 				// unwrap handler to prevent eval if exc is sym or cons
 				res = Vm.this.combine(null, e, unwrap(apv1), list(exc instanceof Value v ? v.value : exc));
 			}
-			if (res instanceof Suspension s) suspendFrame(s, rr-> combine(rr, e, o), x, e);
+			if (res instanceof Suspension s) s.suspend(rr-> combine(rr, e, o), x, e);
 			return res;
 		}
 		public String toString() { return "vmCatch"; }
@@ -376,16 +379,16 @@ public class Vm {
 			var cleanup = car(o, 1);
 			Object res = null;
 			try {
-				res = r != null ? resumeFrame(r) : evaluate(null, e, prot);
-				if (res instanceof Suspension s) suspendFrame(s, rr-> combine(rr, e, o), prot, e);
+				res = r != null ? r.resume() : evaluate(null, e, prot);
+				if (res instanceof Suspension s) s.suspend(rr-> combine(rr, e, o), prot, e);
 			}
 			finally {
 				return res instanceof Suspension s ? s : doCleanup(null, e, cleanup, res);
 			}
 		}
 		Object doCleanup(Resumption r, Env e, Object cleanup, Object res) {
-			var fres = r != null ? resumeFrame(r) : evaluate(null, e, cleanup);
-			if (fres instanceof Suspension s) suspendFrame(s, rr-> doCleanup(rr, e, cleanup, res), cleanup, e);
+			var fres = r != null ? r.resume() : evaluate(null, e, cleanup);
+			if (fres instanceof Suspension s) s.suspend(rr-> doCleanup(rr, e, cleanup, res), cleanup, e);
 			return fres;
 		}
 		public String toString() { return "vmFinaly"; }
@@ -398,9 +401,9 @@ public class Vm {
 			checkO(this, o, 2); // o = (prompt x)
 			var prompt = car(o);
 			var x = car(o, 1);
-			var res = r != null ? resumeFrame(r) : evaluate(null, e, x);
+			var res = r != null ? r.resume() : evaluate(null, e, x);
 			if (!(res instanceof Suspension s)) return res;
-			if (s.prompt != prompt) return suspendFrame(s, rr-> combine(rr, e, o), x, e);
+			if (s.prompt != prompt) return s.suspend(rr-> combine(rr, e, o), x, e);
 			return Vm.this.combine(null, e, s.handler, cons(s.k, nil));
 		}
 		public String toString() { return "vmPushPrompt"; }
@@ -411,7 +414,7 @@ public class Vm {
 			var prompt = car(o);
 			var handler = car(o, 1);
 			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
-			return suspendFrame(new Suspension(prompt, apv1), rr-> Vm.this.combine(null, e, rr.s, nil), this, e);
+			return new Suspension(prompt, apv1).suspend(rr-> Vm.this.combine(null, e, rr.s, nil), this, e);
 		}
 		public String toString() { return "vmTakeSubcont"; }
 	}
@@ -419,11 +422,13 @@ public class Vm {
 		public Object combine(Resumption r, Env e, Object o) {
 			checkO(this, o, 2); // o = (k apv0)
 			var o0 = car(o);
-			if (!(o0 instanceof StackFrame k)) return error("not a stackframe: " + o0); 
+			if (!(o0 instanceof Continuation k)) return error("not a continuation: " + o0); 
 			var o1 = car(o, 1);
 			if (!(o1 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o1);
-			var res = r != null ? resumeFrame(r) : resumeFrame(k, ()-> Vm.this.combine(null, e, apv0, nil));
-			if (res instanceof Suspension s) suspendFrame(s, rr-> combine(rr, e, o), apv0, e);
+			//var res = r != null ? r.resume() : new Resumption(k, ()-> Vm.this.combine(null, e, apv0, nil)).resume(); 
+			//var res = r != null ? r.resume() : k.f.apply(new Resumption(k.next, ()-> Vm.this.combine(null, e, apv0, nil)));
+			var res = r != null ? r.resume() : k.apply(e, apv0);
+			if (res instanceof Suspension s) s.suspend(rr-> combine(rr, e, o), apv0, e);
 			return res;
 		}
 		public String toString() { return "vmPushSubcont"; }
@@ -433,12 +438,14 @@ public class Vm {
 			checkO(this, o, 2); // o = (prompt k apv0)
 			var prompt = car(o);
 			var o1 = car(o, 1);
-			if (!(o1 instanceof StackFrame k)) return error("not a stackframe: " + o1); 
+			if (!(o1 instanceof Continuation k)) return error("not a continuation: " + o1); 
 			var o2 = car(o, 2);
-			if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2); 
-			var res = r != null ? resumeFrame(r) : resumeFrame(k, ()-> Vm.this.combine(null, e, apv0, nil));
+			if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2);
+			//var res = r != null ? r.resume() : new Resumption(k, ()-> Vm.this.combine(null, e, apv0, nil)).resume();
+			//var res = r != null ? r.resume() : k.f.apply(new Resumption(k.next, ()-> Vm.this.combine(null, e, apv0, nil)));
+			var res = r != null ? r.resume() : k.apply(e, apv0);
 			if (!(res instanceof Suspension s)) return res;
-			if (s.prompt != prompt) return suspendFrame(s, rr-> combine(rr, e, o), apv0, e);
+			if (s.prompt != prompt) return s.suspend(rr-> combine(rr, e, o), apv0, e);
 			return Vm.this.combine(null, e, s.handler, cons(s.k, nil));
 		}
 		public String toString() { return "vmPushPromptSubcont"; }
@@ -476,8 +483,8 @@ public class Vm {
 			var oldVal = dv.val;
 			try {
 				dv.val = val;
-				var res = r != null ? resumeFrame(r) : evaluate(null, e, x);
-				if (res instanceof Suspension s) suspendFrame(s, rr-> combine(rr, e, o), x, e);
+				var res = r != null ? r.resume() : evaluate(null, e, x);
+				if (res instanceof Suspension s) s.suspend(rr-> combine(rr, e, o), x, e);
 				return res;
 			}
 			finally {
