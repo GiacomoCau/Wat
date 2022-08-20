@@ -49,6 +49,11 @@
 (define (abort-prompt p e)
   (take-subcont p #ignore e))
 
+(test-check 'test1
+  (let ((p (new-prompt)))
+    (push-prompt p 1))
+  1)
+  
 (test-check 'test2
   (let ((p (new-prompt)))
     (+ (push-prompt p (push-prompt p 5))
@@ -76,16 +81,16 @@
       (+ v 20)))
   27)
 
-'(test-check 'test3-3
+'(test-check 'test3-3t
   (let ((p (new-prompt)))
     (let ((v (push-prompt p (let*
-	    ((v1 (push-prompt p (+ (abort-prompt p 5) 6)))
+	    ((v1 (push-prompt p (+ 6 (abort-prompt p 5))))
 		 (v1 (abort-prompt p 7)) )
 		(+ v1 10) ))))
       (abort-prompt p 9)
       (+ v 20) ))
   'must-be-error )
-; give prompt not found: ([object Null])
+; gives prompt not found: (#null)
 
 ;; (test-check 'test3-3-1
 ;;   (let ((p (new-prompt)))

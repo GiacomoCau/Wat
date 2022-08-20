@@ -15,20 +15,46 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
+import Wat.Vm.Error;
+
 public class Prova {
 	
 	//class $ {}
 	
 	public static void main(String[] args) throws Exception {
-		varArgs();
+		BinaryOperator<Number> plus = makeNumOp("+");
+		out.println(plus.apply(1, 2));
 	}
-
+	
+	@SuppressWarnings("preview")
+	static BinaryOperator<Number> makeNumOp(String op) {
+		return (BinaryOperator<Number>) (a, b) -> switch (a) {
+			case Integer i-> numOp(op, i, b.intValue());
+			case Double d-> numOp(op, d, b.doubleValue());
+			default-> throw new RuntimeException("unknown type");
+		};
+	}
+	static Integer numOp(String op, Integer a, Integer b) {
+		return switch (op) {
+			case "+"-> a + b;
+			case "-"-> a - b;
+			default-> throw new RuntimeException("unknown op"); };
+	}
+	static Double numOp(String op, Double a, Double b) {
+		return switch (op) {
+			case "+"-> a + b;
+			case "-"-> a - b;
+			default-> throw new RuntimeException("unknown op"); };
+	}
+	
 	static void varArgs() {
 		args(Integer.class, int.class); // 2
 		args((Object) new Class [] {Integer.class, int.class}); // 1

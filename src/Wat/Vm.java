@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -395,10 +396,13 @@ public class Vm {
 			checkO(this, o, 2); // o = (prompt x)
 			var prompt = car(o);
 			var x = car(o, 1);
+			/* TODO sostituito dal seguente
 			var res = r != null ? r.resume() : evaluate(null, e, x);
 			if (!(res instanceof Suspension s)) return res;
 			if (s.prompt != prompt) return s.suspend(rr-> combine(rr, e, o), x, e);
 			return Vm.this.combine(null, e, s.handler, cons(s.k, nil));
+			*/
+			return pushPrompt(r, e, cons(this, o), prompt, ()-> evaluate(null, e, x));
 		}
 		public String toString() { return "vmPushPrompt"; }
 	}
@@ -406,9 +410,9 @@ public class Vm {
 		public Object combine(Resumption r, Env e, Object o) {
 			checkO(this, o, 2); // o = (prompt handler)
 			var prompt = car(o);
-			var handler = car(o, 1);
+			var handler = car(o, 1); 
 			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
-			return new Suspension(prompt, apv1).suspend(rr-> Vm.this.combine(null, e, rr.s, nil), this, e);
+			return new Suspension(prompt, apv1).suspend(rr-> Vm.this.combine(null, e, rr.s, nil), cons(this, o), e);
 		}
 		public String toString() { return "vmTakeSubcont"; }
 	}
@@ -419,11 +423,17 @@ public class Vm {
 			if (!(o0 instanceof Continuation k)) return error("not a continuation: " + o0); 
 			var o1 = car(o, 1);
 			if (!(o1 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o1);
-			//var res = r != null ? r.resume() : new Resumption(k, ()-> Vm.this.combine(null, e, apv0, nil)).resume(); 
+			/* TODO sostituito dal seguente
+			//var res = r != null ? r.resume() : new Resumption(k, ()-> Vm.this.combine(null, e, apv0, nil)).resume();
 			//var res = r != null ? r.resume() : k.f.apply(new Resumption(k.next, ()-> Vm.this.combine(null, e, apv0, nil)));
 			var res = r != null ? r.resume() : k.apply(e, apv0);
+			/* TODO sostituito dal seguente
 			if (res instanceof Suspension s) s.suspend(rr-> combine(rr, e, o), apv0, e);
 			return res;
+			* /
+			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, o), cons(this, o), e) : res;
+			*/
+			return pushSubcontBarrier(r, e, cons(this, o), ()-> k.apply(e, apv0));
 		}
 		public String toString() { return "vmPushSubcont"; }
 	}
@@ -435,16 +445,34 @@ public class Vm {
 			if (!(o1 instanceof Continuation k)) return error("not a continuation: " + o1); 
 			var o2 = car(o, 2);
 			if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2);
+			/* TODO sostituito dal seguente
 			//var res = r != null ? r.resume() : new Resumption(k, ()-> Vm.this.combine(null, e, apv0, nil)).resume();
 			//var res = r != null ? r.resume() : k.f.apply(new Resumption(k.next, ()-> Vm.this.combine(null, e, apv0, nil)));
 			var res = r != null ? r.resume() : k.apply(e, apv0);
 			if (!(res instanceof Suspension s)) return res;
 			if (s.prompt != prompt) return s.suspend(rr-> combine(rr, e, o), apv0, e);
 			return Vm.this.combine(null, e, s.handler, cons(s.k, nil));
+			*/
+			/* TODO sostituito dal seguente
+			return pushPrompt(r, e, cons(this, o), prompt, ()-> new Resumption(k, ()-> Vm.this.combine(null, e, apv0, nil)).resume());
+			*/
+			return pushPrompt(r, e, cons(this, o), prompt, ()-> k.apply(e, apv0));
 		}
 		public String toString() { return "vmPushPromptSubcont"; }
 	}
-	
+	Object pushPrompt(Resumption r, Env e, Object x, Object prompt, Supplier action) {
+		var res = r != null ? r.resume() : action.get();
+		if (!(res instanceof Suspension s)) return res;
+		if (!equals(s.prompt, prompt)) return s.suspend(rr-> pushPrompt(rr, e, x, prompt, action), x, e);
+		return Vm.this.combine(null, e, s.handler, cons(s.k, nil));
+	}
+	Object pushSubcontBarrier(Resumption r, Env e, Object x, Supplier action) {
+		var res = r != null ? r.resume() : action.get();
+		if (!(res instanceof Suspension s)) return res;
+		s.suspend(rr-> pushSubcontBarrier(rr, e, x, action), x, e);
+		return new Resumption(s.k, ()-> error("prompt not found: " + s.prompt)).resume();
+		//return s.k.apply(e, (Apv) jWrap((Supplier) ()-> error("prompt not found: " + s.prompt)));
+	}
 	
 	// Dynamic Variables
 	class DV {
@@ -628,7 +656,11 @@ public class Vm {
 	Void vmAssert(Object ... objs) {
 		var expr = objs[0];
 		try {
+			/* TODO sostituito dal seguente
 			var val = evaluate(null, env(theEnvironment), expr);
+			*/
+			var env = env(theEnvironment);
+			var val = pushSubcontBarrier(null, env, expr, ()-> evaluate(null, env, expr));
 			if (objs.length == 1) print(expr, " should throw but is ", val);
 			else {
 				var expt = objs[1];
@@ -861,7 +893,7 @@ public class Vm {
 					$("vm-def", "vm-loop", new Loop()),
 					$("vm-def", "vm-throw", jWrap((Consumer<Object>) obj-> { if (obj instanceof Error e) throw e; else throw new Value(obj); })),
 					$("vm-def", "vm-catch", new Catch()),
-					$("vm-def", "vm-finally", new Finally()), //,
+					$("vm-def", "vm-finally", new Finally()),
 					// Delimited Control
 					$("vm-def", "vm-push-prompt", new PushPrompt()),
 					$("vm-def", "vm-take-subcont", wrap(new TakeSubcont())),
@@ -885,10 +917,10 @@ public class Vm {
 					$("vm-def", "vm-array-to-list", jWrap((BiFunction<Boolean,Object[],Object>) this::arrayToList)),
 					$("vm-def", "vm-reverse-list", jWrap((Function) this::reverseList)),
 					// 
-					$("vm-def", "+", jWrap((BiFunction<Integer,Integer,Integer>) (a,b)-> a + b)),
-					$("vm-def", "*", jWrap((BiFunction<Integer,Integer,Integer>) (a,b)-> a * b)),
-					$("vm-def", "-", jWrap((BiFunction<Integer,Integer,Integer>) (a,b)-> a - b)),
-					$("vm-def", "/", jWrap((BiFunction<Integer,Integer,Integer>) (a,b)-> a / b)),
+					$("vm-def", "+", jWrap((BinaryOperator<Object>) (a,b)-> a instanceof Integer && b instanceof Integer ? ((Integer)a) + ((Integer)b) : a.toString() + b.toString())),
+					$("vm-def", "*", jWrap((BinaryOperator<Integer>) (a,b)-> a * b)),
+					$("vm-def", "-", jWrap((BinaryOperator<Integer>) (a,b)-> a - b)),
+					$("vm-def", "/", jWrap((BinaryOperator<Integer>) (a,b)-> a / b)),
 					//
 					$("vm-def", "!", jWrap((Function<Boolean,Boolean>) a-> !a)),
 					$("vm-def", "not", jWrap((Function<Boolean,Boolean>) a-> !a)),
@@ -903,9 +935,9 @@ public class Vm {
 					$("vm-def", "eq?", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
 					$("vm-def", "assert", jFun((ArgsList) o-> { checkO("assert", o, 1, 2); return vmAssert(listToArray(o)); } )),
 					$("vm-def", "toString", jWrap((Consumer) obj-> toString(obj))),
+					$("vm-def", "log", jWrap((ArgsList) o-> log(listToArray(o)))),
 					$("vm-def", "print", jWrap((ArgsList) o-> print(listToArray(o)))),
 					$("vm-def", "write", jWrap((ArgsList) o-> write(listToArray(o)))),
-					$("vm-def", "log", jWrap((ArgsList) o-> log(listToArray(o)))),
 					$("vm-def", "trace", jWrap((ArgsList) o-> { if (checkO("trace", o, 0, 1, Boolean.class) == 0) return trace; trace=car(o); return inert; })),
 					$("vm-def", "stack", jWrap((ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=car(o); return inert; })),
 					$("vm-def", "thenv", jWrap((ArgsList) o-> { if (checkO("thenv", o, 0, 1, Boolean.class) == 0) return thenv; thenv=car(o); return inert; }))
@@ -913,14 +945,19 @@ public class Vm {
 			)
 		);
 	}
+
+
 	
 	
 	// API
 	public Object exec(Object bytecode) {
 		var wrapped = pushRootPrompt(cons(new Begin(true), parseBytecode(bytecode)));
+		/* TODO sostituito dal seguente
 		var res = evaluate(null, theEnvironment, wrapped);
 		if (res instanceof Suspension s) throw new Error("prompt not found: " + s.prompt);
 		return res;
+		*/
+		return pushSubcontBarrier(null, theEnvironment, wrapped, ()-> evaluate(null, theEnvironment, wrapped));
 	}
 	public Object call(String funName, Object ... args) {
 		return exec(list(symbol(funName), parseBytecode(args)));
@@ -944,6 +981,7 @@ public class Vm {
 		return exec(readBytecode(fileName));
 	}
 	public Object readBytecode(String fileName) throws Exception {
+		if (trace) print("\n--------:  " + fileName);
 		try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("build/" + fileName))) {
 			return ois.readObject();
 		}
@@ -1093,7 +1131,7 @@ public class Vm {
 		vmAssert("(vm-def (a . b) (vm-list 1 2 3)) a b", $(2,3));
 		vmAssert("(vm-def define vm-def) (define a 1) a", 1);
 		vmAssert("(vm-def $define! vm-def) ($define! a 1) a", 1);
-		vmAssert("(vm-def $define! vm-def) $define!", TheEnvironment.get("vm-def"));
+		vmAssert("(vm-def $define! vm-def) $define!", theEnvironment.get("vm-def"));
 		vmAssert("(vm-if #t 1 2)", 1);
 		vmAssert("(vm-if #f 1 2)", 2);
 		vmAssert("(vm-if #null 1 2)", 2);
