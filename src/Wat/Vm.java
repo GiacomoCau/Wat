@@ -396,12 +396,6 @@ public class Vm {
 			checkO(this, o, 2); // o = (prompt x)
 			var prompt = car(o);
 			var x = car(o, 1);
-			/* TODO sostituito dal seguente
-			var res = r != null ? r.resume() : evaluate(null, e, x);
-			if (!(res instanceof Suspension s)) return res;
-			if (s.prompt != prompt) return s.suspend(rr-> combine(rr, e, o), x, e);
-			return Vm.this.combine(null, e, s.handler, cons(s.k, nil));
-			*/
 			return pushPrompt(r, e, cons(this, o), prompt, ()-> evaluate(null, e, x));
 		}
 		public String toString() { return "vmPushPrompt"; }
@@ -419,20 +413,8 @@ public class Vm {
 	class PushSubcont implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
 			checkO(this, o, 2); // o = (k apv0)
-			var o0 = car(o);
-			if (!(o0 instanceof Continuation k)) return error("not a continuation: " + o0); 
-			var o1 = car(o, 1);
-			if (!(o1 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o1);
-			/* TODO sostituito dal seguente
-			//var res = r != null ? r.resume() : new Resumption(k, ()-> Vm.this.combine(null, e, apv0, nil)).resume();
-			//var res = r != null ? r.resume() : k.f.apply(new Resumption(k.next, ()-> Vm.this.combine(null, e, apv0, nil)));
-			var res = r != null ? r.resume() : k.apply(e, apv0);
-			/* TODO sostituito dal seguente
-			if (res instanceof Suspension s) s.suspend(rr-> combine(rr, e, o), apv0, e);
-			return res;
-			* /
-			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, o), cons(this, o), e) : res;
-			*/
+			var o0 = car(o); if (!(o0 instanceof Continuation k)) return error("not a continuation: " + o0); 
+			var o1 = car(o, 1); if (!(o1 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o1);
 			return pushSubcontBarrier(r, e, cons(this, o), ()-> k.apply(e, apv0));
 		}
 		public String toString() { return "vmPushSubcont"; }
@@ -441,21 +423,8 @@ public class Vm {
 		public Object combine(Resumption r, Env e, Object o) {
 			checkO(this, o, 2); // o = (prompt k apv0)
 			var prompt = car(o);
-			var o1 = car(o, 1);
-			if (!(o1 instanceof Continuation k)) return error("not a continuation: " + o1); 
-			var o2 = car(o, 2);
-			if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2);
-			/* TODO sostituito dal seguente
-			//var res = r != null ? r.resume() : new Resumption(k, ()-> Vm.this.combine(null, e, apv0, nil)).resume();
-			//var res = r != null ? r.resume() : k.f.apply(new Resumption(k.next, ()-> Vm.this.combine(null, e, apv0, nil)));
-			var res = r != null ? r.resume() : k.apply(e, apv0);
-			if (!(res instanceof Suspension s)) return res;
-			if (s.prompt != prompt) return s.suspend(rr-> combine(rr, e, o), apv0, e);
-			return Vm.this.combine(null, e, s.handler, cons(s.k, nil));
-			*/
-			/* TODO sostituito dal seguente
-			return pushPrompt(r, e, cons(this, o), prompt, ()-> new Resumption(k, ()-> Vm.this.combine(null, e, apv0, nil)).resume());
-			*/
+			var o1 = car(o, 1); if (!(o1 instanceof Continuation k)) return error("not a continuation: " + o1); 
+			var o2 = car(o, 2); if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2);
 			return pushPrompt(r, e, cons(this, o), prompt, ()-> k.apply(e, apv0));
 		}
 		public String toString() { return "vmPushPromptSubcont"; }
@@ -656,9 +625,6 @@ public class Vm {
 	Void vmAssert(Object ... objs) {
 		var expr = objs[0];
 		try {
-			/* TODO sostituito dal seguente
-			var val = evaluate(null, env(theEnvironment), expr);
-			*/
 			var env = env(theEnvironment);
 			var val = pushSubcontBarrier(null, env, expr, ()-> evaluate(null, env, expr));
 			if (objs.length == 1) print(expr, " should throw but is ", val);
@@ -952,11 +918,6 @@ public class Vm {
 	// API
 	public Object exec(Object bytecode) {
 		var wrapped = pushRootPrompt(cons(new Begin(true), parseBytecode(bytecode)));
-		/* TODO sostituito dal seguente
-		var res = evaluate(null, theEnvironment, wrapped);
-		if (res instanceof Suspension s) throw new Error("prompt not found: " + s.prompt);
-		return res;
-		*/
 		return pushSubcontBarrier(null, theEnvironment, wrapped, ()-> evaluate(null, theEnvironment, wrapped));
 	}
 	public Object call(String funName, Object ... args) {
