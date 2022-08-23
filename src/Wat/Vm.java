@@ -8,6 +8,7 @@ import static Wat.Utility.getExecutable;
 import static Wat.Utility.getField;
 import static Wat.Utility.isInstance;
 import static Wat.Utility.reorg;
+import static Wat.Utility.uncked;
 import static java.lang.System.in;
 import static java.lang.System.out;
 import static java.lang.reflect.Array.newInstance;
@@ -92,24 +93,21 @@ public class Vm {
 		Continuation(Function<Resumption, Object> f, Continuation next, Object dbg, Env e) {
 			this.f = f; this.next = next; this.dbg = dbg; this.e = e;
 		}
-		public String toString() { return "[Continuation %s %s %s]".formatted(f, dbg, e); }
-		Object apply(Env e, Apv apv0) {
-			return f.apply(new Resumption(next, ()-> combine(null, e, apv0, nil)));
-		}
+		public String toString() { return "[Continuation %s %s]".formatted(dbg, e); }
+		Object apply(Env e, Apv apv0) { return apply(e, ()-> combine(null, e, apv0, nil)); }
+		Object apply(Env e, Supplier s) { return f.apply(new Resumption(next, s));}
 	}
 	class Resumption {
 		Continuation k; Supplier<Object> s;
 		Resumption(Continuation k, Supplier<Object> s) { this.k=k; this.s=s; }
 		public String toString() { return "[Resumption %s %s]".formatted(s, k); }
-        Object resume() {
-        	var k = this.k; this.k = k.next; return k.f.apply(this);
-        }
+        Object resume() { var k = this.k; this.k = k.next; return k.f.apply(this); }
 	};
 	class Suspension {
 		Object prompt; Combinable handler; Continuation k;
 		Suspension(Object prompt, Combinable handler) { this.prompt = prompt; this.handler = handler; }
 		public String toString() { return "[Suspension %s %s %s]".formatted(prompt, handler, k); }
-		Suspension suspend(Function<Resumption, Object> f, Object dbg, Env e) {
+		Suspension suspend(Function<Resumption, Object> f, Object dbg, Env e) { 
 			k = new Continuation(f, k, dbg, e); return this;
 		}
 	}
@@ -413,15 +411,16 @@ public class Vm {
 	class PushSubcont implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
 			checkO(this, o, 2); // o = (k apv0)
-			var o0 = car(o); if (!(o0 instanceof Continuation k)) return error("not a continuation: " + o0); 
+			var o0 = car(o, 0); if (!(o0 instanceof Continuation k)) return error("not a continuation: " + o0); 
 			var o1 = car(o, 1); if (!(o1 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o1);
-			return pushSubcontBarrier(r, e, cons(this, o), ()-> k.apply(e, apv0));
+			//return pushSubcontBarrier(r, e, cons(this, o), ()-> k.apply(e, apv0));
+			return pushPrompt(r, e, cons(this, o), ignore, ()-> k.apply(e, apv0));
 		}
 		public String toString() { return "vmPushSubcont"; }
 	}
 	class PushPromptSubcont implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkO(this, o, 2); // o = (prompt k apv0)
+			checkO(this, o, 3); // o = (prompt k apv0)
 			var prompt = car(o);
 			var o1 = car(o, 1); if (!(o1 instanceof Continuation k)) return error("not a continuation: " + o1); 
 			var o2 = car(o, 2); if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2);
@@ -432,15 +431,16 @@ public class Vm {
 	Object pushPrompt(Resumption r, Env e, Object x, Object prompt, Supplier action) {
 		var res = r != null ? r.resume() : action.get();
 		if (!(res instanceof Suspension s)) return res;
-		if (!equals(s.prompt, prompt)) return s.suspend(rr-> pushPrompt(rr, e, x, prompt, action), x, e);
-		return Vm.this.combine(null, e, s.handler, cons(s.k, nil));
+		return prompt == ignore || !equals(s.prompt, prompt)
+			? s.suspend(rr-> pushPrompt(rr, e, x, prompt, action), x, e)
+			: combine(null, e, s.handler, cons(s.k, nil))
+		;
 	}
 	Object pushSubcontBarrier(Resumption r, Env e, Object x, Supplier action) {
 		var res = r != null ? r.resume() : action.get();
 		if (!(res instanceof Suspension s)) return res;
 		s.suspend(rr-> pushSubcontBarrier(rr, e, x, action), x, e);
-		return new Resumption(s.k, ()-> error("prompt not found: " + s.prompt)).resume();
-		//return s.k.apply(e, (Apv) jWrap((Supplier) ()-> error("prompt not found: " + s.prompt)));
+		return s.k.apply(e, ()-> error("prompt not found: " + s.prompt));
 	}
 	
 	// Dynamic Variables
@@ -543,7 +543,7 @@ public class Vm {
 	}
 	int checkO(Object op, Object o, int min, int max, Class ... cls) {
 		var len=len(o); if (len >= min && (max == -1 || len <= max)) { checkO(op, o, cls); return len; } 
-		return error((len < min ? "less then " + min : eIf(max == -1, ()-> " or more then " + max)) + " operands for combine: " + op + " with: " + o);
+		return error((len < min ? "less then " + min : eIf(max == -1, ()-> "more then " + max)) + " operands for combine: " + op + " with: " + o);
 	}
 	int checkO(Object op, Object o, Class ... cls) {
 		if (o == nil) return 0;
@@ -673,7 +673,7 @@ public class Vm {
 	
 	// JNI
 	interface ArgsList extends Function {}
-	class JFun implements Combinable  {
+	class JFun implements Combinable {
 		Object jfun;
 		JFun(Object jfun) { this.jfun = jfun; };
 		@SuppressWarnings("preview")
@@ -904,6 +904,7 @@ public class Vm {
 					$("vm-def", "log", jWrap((ArgsList) o-> log(listToArray(o)))),
 					$("vm-def", "print", jWrap((ArgsList) o-> print(listToArray(o)))),
 					$("vm-def", "write", jWrap((ArgsList) o-> write(listToArray(o)))),
+					$("vm-def", "load", jWrap((Function<String, Object>) nf-> uncked(()-> eval(readString(nf))))),
 					$("vm-def", "trace", jWrap((ArgsList) o-> { if (checkO("trace", o, 0, 1, Boolean.class) == 0) return trace; trace=car(o); return inert; })),
 					$("vm-def", "stack", jWrap((ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=car(o); return inert; })),
 					$("vm-def", "thenv", jWrap((ArgsList) o-> { if (checkO("thenv", o, 0, 1, Boolean.class) == 0) return thenv; thenv=car(o); return inert; }))

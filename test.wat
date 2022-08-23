@@ -5,6 +5,7 @@
 (define (exit v)
   (take-subcont vm-root-prompt #ignore v) )
 
+
 ;;;; Utilities
 
 (define-operative (assert-true expr) env
@@ -108,6 +109,106 @@
 	        10) )
        20) )
   35 )
+
+(define (shift p f) 
+  (take-subcont p sk
+    (push-prompt p
+      (f (lambda (c)
+           (push-prompt-subcont p sk (c)) )))))
+
+(test-check 'test5
+  (+ (push-prompt 'p0
+       (+ (shift 'p0 (lambda (sk)
+                       (+ 100 (sk (lambda () (sk (lambda () 3))))) ))
+          2))
+     10)
+  117)
+
+(test-check 'test5-1
+  (+ 10 (push-prompt 'p0
+          (+ 2 (shift 'p0 (lambda (sk)
+                            (sk (lambda () (+ 3 100))))))))
+  115)
+
+(define (abort-subcont prompt value)
+  (take-subcont prompt #ignore value))
+
+(test-check 'test5-2
+  (+ (push-prompt 'p0
+       (+ (shift 'p0 (lambda (sk)
+                       (+ (sk (lambda ()
+                                (push-prompt 'p1
+                                  (+ 9 (sk (lambda ()
+                                             (abort-subcont 'p1 3)))))))
+                          100)))
+          2))
+     10)
+  115)
+
+(test-check 'test5-3
+  (+ (push-prompt 'p0
+       (let ((v (shift 'p0 (lambda (sk)
+                             (+ (sk (lambda ()
+                                      (push-prompt 'p1
+                                        (+ 9 (sk (lambda ()
+                                                   (abort-subcont 'p1 3)))))))
+                                100)))))
+         (+ v 2)))
+     10)
+  115)
+
+(assert ;'test5-4
+  (+ (push-prompt 'p0
+       (let ((v (shift 'p0 (lambda (sk)
+                             (+ (sk (lambda ()
+                                      (push-prompt 'p1
+                                        (+ 9 (sk (lambda ()
+                                                   (abort-subcont 'p0 3)))))))
+                                100)))))
+         (+ v 2)))
+     10)
+  124)
+
+(test-check 'test6
+  (+ (let ((push-twice (lambda (sk)
+              (push-subcont sk (push-subcont sk 3)))))
+       (push-prompt 'p1
+         (push-prompt 'p2
+           (+ (take-subcont 'p1 sk
+                (push-twice sk))
+              1))))
+     10)
+  15)
+
+(test-check 'test7
+  (+ (let ((push-twice (lambda (sk)
+              (push-subcont sk
+                (push-subcont sk
+                  (take-subcont 'p2 sk2
+                    (push-subcont sk2
+                      (push-subcont sk2 3))))))))
+       (push-prompt 'p1
+         (+ (push-prompt 'p2
+              (+ 10 (push-prompt 'p3
+                      (take-subcont 'p1 sk (push-twice sk)))))
+            1)))
+     100)
+  135)
+
+(test-check test7-1
+  (+ (let ((push-twice (lambda (sk)
+              (sk (lambda ()
+                    (sk (lambda ()
+                          (shift 'p2 (lambda (sk2)
+                                       (sk2 (lambda ()
+                                              (sk2 (lambda () 3)))))))))))))
+       (push-prompt 'p1
+         (+ (push-prompt 'p2
+              (+ 10 (push-prompt 'p3
+                      (shift 'p1 (lambda (sk) (push-twice sk))))))
+            1)))
+     100)
+  135)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

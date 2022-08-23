@@ -11,6 +11,7 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
 public class Utility {
@@ -29,6 +30,15 @@ public class Utility {
 	}
 	public static String eIf(boolean b, Supplier<String> s) {
 		return b ? "" : s.get();
+	}
+	
+	public static <T> T uncked(Callable<T> t) {
+		try {
+			return t.call();
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 	
 	public static List toList (Object... objects) {
