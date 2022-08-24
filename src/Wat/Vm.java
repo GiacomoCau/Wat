@@ -408,16 +408,6 @@ public class Vm {
 		}
 		public String toString() { return "vmTakeSubcont"; }
 	}
-	class PushSubcont implements Combinable  {
-		public Object combine(Resumption r, Env e, Object o) {
-			checkO(this, o, 2); // o = (k apv0)
-			var o0 = car(o, 0); if (!(o0 instanceof Continuation k)) return error("not a continuation: " + o0); 
-			var o1 = car(o, 1); if (!(o1 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o1);
-			//return pushSubcontBarrier(r, e, cons(this, o), ()-> k.apply(e, apv0));
-			return pushPrompt(r, e, cons(this, o), ignore, ()-> k.apply(e, apv0));
-		}
-		public String toString() { return "vmPushSubcont"; }
-	}
 	class PushPromptSubcont implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
 			checkO(this, o, 3); // o = (prompt k apv0)
@@ -863,7 +853,6 @@ public class Vm {
 					// Delimited Control
 					$("vm-def", "vm-push-prompt", new PushPrompt()),
 					$("vm-def", "vm-take-subcont", wrap(new TakeSubcont())),
-					$("vm-def", "vm-push-subcont", wrap(new PushSubcont())),
 					$("vm-def", "vm-push-prompt-subcont", wrap(new PushPromptSubcont())),
 					// Dynamically-scoped Variables
 					$("vm-def", "vm-dnew", wrap(new DNew())),

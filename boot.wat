@@ -144,7 +144,7 @@
   (list vm-take-subcont prompt (list* $lambda (list k) body)) )
 
 (define-macro (push-subcont k . body)
-  (list vm-push-subcont k (list* $lambda () body)) )
+  (list vm-push-prompt-subcont #ignore k (list* $lambda () body)) )
 
 (define-macro (push-prompt-subcont p k . body)
   (list vm-push-prompt-subcont p k (list* $lambda () body)) )
