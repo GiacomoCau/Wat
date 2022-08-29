@@ -11,6 +11,7 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
@@ -45,9 +46,22 @@ public class Utility {
 		return Arrays.stream(objects).toList();
 	}
 	
+	public static void main(String[] args) throws Exception {
+		out.println(toSource("a\nb"));
+		out.println(toString("a\\nb"));
+		out.println(toSource(toString("a\\nb")));
+		out.println(toString(toSource("a\nb")));
+	}
+	
+	private static Set<Entry<String,String>> control = of("\"", "\\\\\"", "\n", "\\\\n", "\t", "\\\\t", "\r", "\\\\r", "\b", "\\\\b", "\f", "\\\\f").entrySet();
+	
 	public static String toSource(String s) {
-		var m = of("\"", "\\\\\"", "\n", "\\\\n", "\t", "\\\\t", "\r", "\\\\r", "\b", "\\\\b", "\f", "\\\\f");
-		for (Entry<String,String> e: m.entrySet()) s = s.replaceAll(e.getKey(), e.getValue());
+		for (Entry<String,String> e: control) s = s.replaceAll(e.getKey(), e.getValue());
+		return s;
+	}
+	
+	public static String toString(String s) {
+		for (Entry<String,String> e: control) s = s.replaceAll(e.getValue(), e.getKey());
 		return s;
 	}
 	
@@ -165,11 +179,7 @@ public class Utility {
 		return null;
 	}
 	
-	public static void main(String[] args) throws Exception {
-		getConstructor();
-	}
-
-	private static void getConstructor() throws IllegalAccessException, InvocationTargetException {
+	public static void getConstructor() throws IllegalAccessException, InvocationTargetException {
 		//Class c = Integer.class;
 		//out.println(getField(Integer.class, "MAX_VALUE"));
 		//out.println();

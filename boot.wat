@@ -76,6 +76,8 @@
 ($define! symbol-name vm-symbol-name)
 ($define! symbol? vm-symbol?)
 ($define! throw vm-throw)
+($define! catch-tag vm-catch-tag)
+($define! throw-tag vm-throw-tag)
 ($define! unwrap vm-unwrap)
 ($define! wrap vm-wrap)
 
@@ -136,6 +138,9 @@
 
 (define-operative (catch protected handler) env
   (eval (list vm-catch protected (eval handler env)) env) )
+
+(define-operative (finally protected . cleanup) env
+  (eval (list vm-finally protected (list* begin cleanup)) env) )
 
 (define-operative (push-prompt prompt . body) env
   (eval (list vm-push-prompt (eval prompt env) (list* begin body)) env) )
@@ -555,5 +560,5 @@
       (push-subcont k) )))
 
 (define (user-break err)
-  (when (stack) (print-stacktrace))
+  (when (stack) (print) (print err) (print-stacktrace))
   (throw err) )

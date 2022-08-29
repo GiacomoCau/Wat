@@ -210,6 +210,31 @@
      100)
   135)
 
+|#
+(define-operative (block block-name . forms) env
+  (let ((tag (list #null))) ; cons up a fresh object as tag
+    (let ((escape (lambda (value) (throw-tag tag value))))
+      (catch-tag tag
+        (eval (list (list* lambda (list block-name) forms)
+                    escape)
+              env)))))
+
+(define (return-from block-name . value?)
+    (block-name (optional value?)))
+
+(define optional (lambda value? (if (== value? ()) () (car value?))))
+(assert (optional) ())
+(assert (optional 1) 1)
+
+(define unwind-protect finally)
+#|
+
+(assert (finally (== 1 1)) #t)
+(assert (begin (+ (finally 1 2 3 (define x 10)) x)) 11)
+(assert (+ (catch-tag a (finally (throw-tag a 1) 2 3 (define x 10))) x) 11)
+(assert (catch-tag a (finally 1 2 3 (throw-tag a 4))) 4)
+(assert (catch-tag a (finally (throw-tag a 1) 2 3 (throw-tag a (+ 2 2)))) 4)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (combine cmb ops) (apply (wrap cmb) ops))

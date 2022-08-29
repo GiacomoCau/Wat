@@ -51,7 +51,7 @@ import java.util.function.Supplier;
 	cmb: combiner
 	opv: operative combiner
 	apv: applicative combiner
-	apv0: zero args applicative combiner
+	apv0, thunk: zero args applicative combiner
 	apv1, handler: one arg applicative combiner
 	p: parameter
 	ps: parameters
@@ -75,7 +75,7 @@ import java.util.function.Supplier;
 	sym: symbol
 	cmt: comment
 	dbg: debugging information
-*/
+ */
 
 public class Vm {
 	
@@ -94,14 +94,14 @@ public class Vm {
 			this.f = f; this.next = next; this.dbg = dbg; this.e = e;
 		}
 		public String toString() { return "[Continuation %s %s]".formatted(dbg, e); }
-		Object apply(Env e, Apv apv0) { return apply(e, ()-> combine(null, e, apv0, nil)); }
-		Object apply(Env e, Supplier s) { return f.apply(new Resumption(next, s));}
+		Object apply(Env e, Apv apv0) { return apply(()-> combine(null, e, apv0, nil)); }
+		Object apply(Supplier s) { return f.apply(new Resumption(next, s));}
 	}
 	class Resumption {
 		Continuation k; Supplier<Object> s;
 		Resumption(Continuation k, Supplier<Object> s) { this.k=k; this.s=s; }
 		public String toString() { return "[Resumption %s %s]".formatted(s, k); }
-        Object resume() { var k = this.k; this.k = k.next; return k.f.apply(this); }
+		Object resume() { var k = this.k; this.k = k.next; return k.f.apply(this); }
 	};
 	class Suspension {
 		Object prompt; Combinable handler; Continuation k;
@@ -207,24 +207,23 @@ public class Vm {
 	
 	// Bind
 	Object bind(Env e, Object lhs, Object rhs, Object exp) {
-		var	msg = bind2(e, lhs, rhs); if (msg == null) return inert;
+		var msg = bind(e, lhs, rhs); if (msg == null) return inert;
 		return error(msg + " for bind: " + lhs + eIf(exp == null, ()-> " of: " + exp) + " with: " + rhs);
 	}
 	@SuppressWarnings("preview")
-	Object bind2(Env e, Object lhs, Object rhs) {
+	Object bind(Env e, Object lhs, Object rhs) {
 		return switch (lhs) {
 			case Ignore i-> null;
 			case Symbol s-> e.bind(s.name, rhs);  
-			case Nil n-> rhs == nil ? null : "too many arguments";
+			case Nil n-> rhs == nil ? null : "too many arguments" /*+ ", nil expected, but got: " + toString(rhs)*/;
 			case Cons lc-> {
-				if (!(rhs instanceof Cons rc)) yield "too few arguments";
-				var msg = bind2(e, lc.car, rc.car);
-				if (msg != null) yield msg;
-				yield bind2(e, lc.cdr, rc.cdr);
+				if (!(rhs instanceof Cons rc)) yield "too few arguments" /*+ ", cons expected, but got: " + toString(rhs)*/;
+				var msg = bind(e, lc.car, rc.car); if (msg != null) yield msg;
+				yield bind(e, lc.cdr, rc.cdr);
 			}
 			default-> error("cannot bind: " + lhs);
 		};
-    }
+	}
 	
 	
 	// Operative & Applicative Combiners
@@ -234,7 +233,8 @@ public class Vm {
 		// per default le jFun dovrebbero essere operative e non applicative
 		if (isjFun(op)) return jfapv
 			? ((Combinable) jWrap(op)).combine(r, e, o) // jfun x default applicative
-			: ((Combinable) jFun(op)).combine(r, e, o); // jfun x default operative
+			: ((Combinable) jFun(op)).combine(r, e, o) // jfun x default operative
+		;
 		return error("not a combiner: " + toString(op) + " in: " + cons(op, o));
 	}
 	
@@ -261,8 +261,8 @@ public class Vm {
 		}
 		public String toString() { return "[Apv " + Vm.this.toString(cmb) + "]"; }
 	}
-	Object wrap(Object arg) { return arg instanceof Combinable cmb ? new Apv(cmb) : error("cannot wrap: " + arg); } // type check
-	Object unwrap(Object arg) { return arg instanceof Apv apv ? apv.cmb : error("cannot unwrap: " + arg); } // type check
+	Apv wrap(Object arg) { return /*arg instanceof Apv apv ? apv :*/ arg instanceof Combinable cmb ? new Apv(cmb) : error("cannot wrap: " + arg); }
+	Combinable unwrap(Object arg) { return arg instanceof Apv apv ? apv.cmb : error("cannot unwrap: " + arg); }
 	
 	
 	// Built-in Combiners
@@ -305,8 +305,7 @@ public class Vm {
 	// First-order Control
 	class Begin implements Combinable  {
 		boolean root;
-		Begin() { } 
-		Begin(boolean root) { this.root = root; } 
+		Begin() {}; Begin(boolean root) { this.root = root; } 
 		public Object combine(Resumption r, Env e, Object o) {
 			// o = (... xs)
 			return o == nil ? null : begin(r, e, o);
@@ -335,12 +334,12 @@ public class Vm {
 	class Loop implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
 			checkO(this, o, 1); // o = (x)
+			var x = car(o);
 			var first = true; // only resume once
 			while (true) {
-				var o0 = car(o);
-				var res = first && r != null ? r.resume() : evaluate(null, e, o0);
+				var res = first && r != null ? r.resume() : evaluate(null, e, x);
 				first = false;
-				if (res instanceof Suspension s) return s.suspend(rr-> combine(rr, e, o), o0, e);
+				if (res instanceof Suspension s) return s.suspend(rr-> combine(rr, e, o), x, e);
 			}
 		}
 		public String toString() { return "vmLoop"; }
@@ -359,32 +358,66 @@ public class Vm {
 				// unwrap handler to prevent eval if exc is sym or cons
 				res = Vm.this.combine(null, e, unwrap(apv1), list(exc instanceof Value v ? v.value : exc));
 			}
-			if (res instanceof Suspension s) s.suspend(rr-> combine(rr, e, o), x, e);
-			return res;
+			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, o), x, e) : res;
 		}
 		public String toString() { return "vmCatch"; }
 	}
-	class Finally implements Combinable  {
-		@SuppressWarnings("finally")
+	class Finally implements Combinable {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkO(this, o, 2); // o = (prot cleanup)
-			var prot = car(o);
+			checkO(this, o, 2); // o = (x cleanup)
+			var x = car(o);
 			var cleanup = car(o, 1);
-			Object res = null;
 			try {
-				res = r != null ? r.resume() : evaluate(null, e, prot);
-				if (res instanceof Suspension s) s.suspend(rr-> combine(rr, e, o), prot, e);
+				var res = r != null ? r.resume() : evaluate(null, e, x);
+				return res instanceof Suspension s
+					? s.suspend(rr-> combine(rr, e, o), x, e)
+					: doCleanup(r, cleanup, res, null, e)
+				;
 			}
-			finally {
-				return res instanceof Suspension s ? s : doCleanup(null, e, cleanup, res);
+			catch (Throwable t) {
+				return doCleanup(r, cleanup, null, t, e);
 			}
 		}
-		Object doCleanup(Resumption r, Env e, Object cleanup, Object res) {
-			var fres = r != null ? r.resume() : evaluate(null, e, cleanup);
-			if (fres instanceof Suspension s) s.suspend(rr-> doCleanup(rr, e, cleanup, res), cleanup, e);
-			return fres;
+		Object doCleanup(Resumption r, Object cleanup, Object value, Throwable t, Env e) {
+			var res = r != null ? r.resume() : evaluate(null, e, cleanup);
+			if (res instanceof Suspension s) return s.suspend(rr-> doCleanup(rr, cleanup, value, t, e), cleanup, e);
+			if (t == null) return value;
+			throw t instanceof RuntimeException rte ? rte : new Error(t);
 		}
-		public String toString() { return "vmFinaly"; }
+		public String toString() { return "vmFinally"; }
+	}
+	class CatchTag implements Combinable {
+		public Object combine(Resumption r, Env e, Object o) {
+			checkO(this, o, 2); // o = (tag x)
+			var tag = car(o);
+			var x = car(o, 1);
+			try {
+				var res = r != null ? r.resume() : evaluate(null, e, x);
+				return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, o), tag, e) : res;
+			}
+			catch (ValueTag exc) {
+				if (Vm.this.equals(exc.tag, tag)) return exc.value;
+				throw exc;
+			}
+		}
+		public String toString() { return "vmCatchTag"; }
+	}
+	class ThrowTag implements Combinable {
+		public Object combine(Resumption r, Env e, Object o) {
+			checkO(this, o, 2); // o = (tag value)
+			var tag = car(o);
+			var value = car(o, 1);
+			var res = r != null ? r.resume() : evaluate(null, e, value);
+			if (res instanceof Suspension s) return s.suspend(rr-> combine(rr, e, o), tag, e);
+			throw new ValueTag(tag, res);
+		}
+		public String toString() { return "vmThrowTag"; }
+	}
+	class ValueTag extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+		Object tag, value;
+		ValueTag(Object tag, Object value) {
+			super(Vm.this.toString(tag) + " " + Vm.this.toString(value));  this.tag = tag; this.value = value; }
 	}
 	
 	
@@ -414,6 +447,7 @@ public class Vm {
 			var prompt = car(o);
 			var o1 = car(o, 1); if (!(o1 instanceof Continuation k)) return error("not a continuation: " + o1); 
 			var o2 = car(o, 2); if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2);
+			//return pushPrompt(r, e, cons(this, o), prompt, ()-> k.apply(e, ()-> Vm.this.combine(null, e, apv0, nil)));
 			return pushPrompt(r, e, cons(this, o), prompt, ()-> k.apply(e, apv0));
 		}
 		public String toString() { return "vmPushPromptSubcont"; }
@@ -430,8 +464,9 @@ public class Vm {
 		var res = r != null ? r.resume() : action.get();
 		if (!(res instanceof Suspension s)) return res;
 		s.suspend(rr-> pushSubcontBarrier(rr, e, x, action), x, e);
-		return s.k.apply(e, ()-> error("prompt not found: " + s.prompt));
+		return s.k.apply(()-> error("prompt not found: " + s.prompt));
 	}
+	
 	
 	// Dynamic Variables
 	class DV {
@@ -484,13 +519,14 @@ public class Vm {
 	}
 	<T> T error(String msg, Throwable cause) {
 		var userBreak = theEnvironment.get("user-break");
-		// var exc = t == null ? new Error(msg) : new Error(msg, t); // this throw
+		// var exc = cause == null ? new Error(msg) : new Error(msg, cause); // this throw
 		var exc = new Error(msg, cause); 
 		if (userBreak == null) throw exc;
 		return (T) combine(null, theEnvironment, userBreak, list(exc));
 	}
 	class Error extends RuntimeException {
 		private static final long serialVersionUID = 1L;
+		public Error(Throwable cause) { super(cause); }
 		public Error(String message) { super(message); }
 		public Error(String message, Throwable cause) { super(message, cause); }
 	}
@@ -591,7 +627,7 @@ public class Vm {
 	}
 	<T> T print(Object ... os) {
 		for (var o: os) out.print(toString(o)); out.println();
-		return (T) os[os.length - 1];
+		return (T)(os.length == 0 ? inert : os[os.length - 1]);
 	}
 	<T> T write(Object ... os) {
 		for (var o: os) out.print(toString(true, o)); out.println();
@@ -612,7 +648,7 @@ public class Vm {
 		for (int i=0; i<a.length; i+=1) if (!equals(a[i], b[i])) return false;
 		return true;
 	}
-	Void vmAssert(Object ... objs) {
+	boolean vmAssert(Object ... objs) {
 		var expr = objs[0];
 		try {
 			var env = env(theEnvironment);
@@ -620,18 +656,18 @@ public class Vm {
 			if (objs.length == 1) print(expr, " should throw but is ", val);
 			else {
 				var expt = objs[1];
-				if (equals(val, expt)) return null;
+				if (equals(val, expt)) return true;
 				print(expr, " should be ", expt, " but is ", val);
 			}
 		}
 		catch (Throwable t) {
-			if (objs.length == 1) return null;
+			if (objs.length == 1) return true;
 			if (stack) t.printStackTrace(out);
 			else print(expr, " throw ", t);
 		}
-		return null;
+		return false;
 	}
-	Void vmAssert(String str, Object objs) throws Exception {
+	boolean vmAssert(String str, Object objs) throws Exception {
 		var expr = cons(new Begin(), parseBytecode(parse(str)));
 		return objs instanceof Throwable ? vmAssert(expr) : vmAssert(expr, parseBytecode(objs)); 
 	}
@@ -696,10 +732,10 @@ public class Vm {
 	boolean isjFun(Object jfun) {
 		return isInstance(jfun, Supplier.class, ArgsList.class, Function.class, BiFunction.class, Consumer.class, Executable.class, Field.class);
 	}
-	Object jFun(Object jFun) {
+	JFun jFun(Object jFun) {
 		return /*jfun instanceof JFun ? jfun :*/ isjFun(jFun) ? new JFun(jFun) : error("no a jFun: " + jFun);
 	}
-	Object jWrap(Object jfun) {
+	Apv jWrap(Object jfun) {
 		return wrap(jFun(jfun));
 	}
 	
@@ -847,9 +883,11 @@ public class Vm {
 					// First-order Control
 					$("vm-def", "vm-if", new If()),
 					$("vm-def", "vm-loop", new Loop()),
-					$("vm-def", "vm-throw", jWrap((Consumer<Object>) obj-> { if (obj instanceof Error e) throw e; else throw new Value(obj); })),
 					$("vm-def", "vm-catch", new Catch()),
+					$("vm-def", "vm-throw", jWrap((Function) obj-> { throw obj instanceof Error err ? err : new Value(obj); })),
 					$("vm-def", "vm-finally", new Finally()),
+					$("vm-def", "vm-catch-tag", new CatchTag()),
+					$("vm-def", "vm-throw-tag", new ThrowTag()),
 					// Delimited Control
 					$("vm-def", "vm-push-prompt", new PushPrompt()),
 					$("vm-def", "vm-take-subcont", wrap(new TakeSubcont())),
@@ -901,8 +939,8 @@ public class Vm {
 			)
 		);
 	}
-
-
+	
+	
 	
 	
 	// API
@@ -1076,7 +1114,7 @@ public class Vm {
 		vmAssert("(vm-def (a b 12) 1)", Throw);
 		
 		vmAssert("(vm-quote (a b c))", $("a","b","c"));
-
+		
 		vmAssert("(vm-def 2 1)", Throw);
 		vmAssert("(vm-def a 1) a", 1);
 		vmAssert("(vm-def (a . b) (vm-list 1 2 3)) a b", $(2,3));

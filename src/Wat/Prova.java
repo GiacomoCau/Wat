@@ -1,9 +1,16 @@
 package Wat;
 
 import static java.lang.System.out;
+import static java.nio.charset.Charset.forName;
+import static java.nio.file.Files.readString;
+import static java.nio.file.Paths.get;
 import static java.util.Map.of;
+import static java.util.regex.Pattern.compile;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -15,7 +22,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -23,13 +29,27 @@ import java.util.stream.Collectors;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
-import Wat.Vm.Error;
-
 public class Prova {
 	
 	//class $ {}
 	
 	public static void main(String[] args) throws Exception {
+		camelize();
+		out.println("finito");
+	}
+
+	static void camelize() throws IOException, FileNotFoundException {
+		for (var s: $("test", "boot")) {
+			try (var pw = new PrintWriter(s + ".out")) {
+				pw.print(replace(readString(get(s + ".wat"), forName("cp1252"))));
+			}
+		}
+	}
+	static String replace(String s) {
+		return compile("-\\w").matcher(s).replaceAll(mr-> mr.group().substring(1).toUpperCase());
+	}
+	
+	static void binop() {
 		BinaryOperator<Number> plus = makeNumOp("+");
 		out.println(plus.apply(1, 2));
 	}
@@ -54,6 +74,16 @@ public class Prova {
 			case "-"-> a - b;
 			default-> throw new RuntimeException("unknown op"); };
 	}
+	/*
+	static class NumOp <T extends Number> {
+		T numOp(String op, T a, T b) {
+			return switch (op) {
+				case "+"-> a + b;
+				case "-"-> a - b;
+				default-> throw new RuntimeException("unknown op"); };
+		}
+	}
+	*/
 	
 	static void varArgs() {
 		args(Integer.class, int.class); // 2
@@ -76,8 +106,6 @@ public class Prova {
 				cl.getName() + "|" + cl.getSimpleName() + "|" + cl.getCanonicalName() + "|" + cl.getPackageName() + "|" + cl.getTypeName());  
 		}
 	}
-	
-	
 	
 	static void mapReversed() {
 		Map<String,Object> map = new LinkedHashMap();

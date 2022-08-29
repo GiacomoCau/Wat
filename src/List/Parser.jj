@@ -1,6 +1,6 @@
 
 options {
-	JDK_VERSION = "17";
+	JDK_VERSION = "1.8";
 	static = false;
 	debug_parser = false;
 }
@@ -12,13 +12,14 @@ package List;
 
 import static Wat.Utility.$;
 import static Wat.Utility.classForName;
-import static Wat.Utility.toSource;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
+
+import Wat.Utility;
 
 @SuppressWarnings("all")
 public class Parser {
@@ -54,7 +55,6 @@ public class Parser {
 			  	else if (line.equals("!token"))
 			  		expr = false;
 				else if (expr) {
-					line = line.replaceAll("\\\\n", "\n");
 					System.out.println(line);
 					//Object o = Parser.parse(line); // static=true
 					Object o = parse(line); // static=false
@@ -84,12 +84,13 @@ public class Parser {
 	
 	public static String toString(Object o) {
 		if (o == null) return "null";
-		if (!(o instanceof Object[])) return o.toString();
-		StringBuffer sb = new StringBuffer();
-		sb.append("[");
-		for (Object e: (Object[]) o) sb.append((sb.length()==1 ? "" : " ") + toString(e) );
-		sb.append("]");
-		return sb.toString();
+		if (o instanceof String) return "\"" + Utility.toSource((String) o) + "\"";
+		if (o instanceof Object[]) {  
+			StringBuffer sb = new StringBuffer();
+			for (Object e: (Object[]) o) sb.append((sb.length()==0 ? "" : " ") + toString(e) );
+			return "[" + sb.toString() + "]";
+		}
+		return o.toString();
 	}
 
 	public boolean isNil(Object o) {
@@ -97,7 +98,7 @@ public class Parser {
 	}
 	
 	public static String toStringTokenImage(String s) {
-		return toSource(s.substring(1, s.length()-1));
+		return Utility.toString(s.substring(1, s.length()-1));
 	}
 	
 	public static TokenMgrError redoTokenMgrError(TokenMgrError e, String msg) {
@@ -147,7 +148,7 @@ TOKEN:	// literals
 |	< String:	"\"" ( <sChr> )* "\"" >
 |	< # sChr: ~["\"","\n","\r","\f","\b","\t"] | "\\" ["\"","n","r","f","b","t"] >
 //|	< # escape: ["\"","\n","\r","\f","\b","\t"]
-//|	< # sChr: ~<escape> | "\\" <escape >
+//|	< # sChr: ~<escape> | "\\" <escape>
 }
 
 TOKEN:	// identifiers
