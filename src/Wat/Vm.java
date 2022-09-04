@@ -2,6 +2,7 @@ package Wat;
 
 import static List.Parser.parse;
 import static Wat.Utility.$;
+import static Wat.Utility.apply;
 import static Wat.Utility.eIf;
 import static Wat.Utility.getClasses;
 import static Wat.Utility.getExecutable;
@@ -314,7 +315,7 @@ public class Vm {
 			var o0 = car(xs);
 			var res = r != null ? r.resume() : evaluate(null, e, o0);
 			return res instanceof Suspension s ? s.suspend(rr-> begin(rr, e, xs), o0, e)
-				: ((Function) cdr-> cdr == nil ? res : begin(null, e, cdr)).apply(cdr(xs))
+				: apply(cdr-> cdr == nil ? res : begin(null, e, cdr), cdr(xs))
 			;
 		}
 		public String toString() { return "vmBegin" + eIf(!root, "*"); }
@@ -336,8 +337,7 @@ public class Vm {
 			var x = car(o);
 			var first = true; // only resume once
 			while (true) {
-				var res = first && r != null ? r.resume() : evaluate(null, e, x);
-				first = false;
+				var res = first && r != null && !(first=false) ? r.resume() : evaluate(null, e, x);
 				if (res instanceof Suspension s) return s.suspend(rr-> combine(rr, e, o), x, e);
 			}
 		}
@@ -345,17 +345,20 @@ public class Vm {
 	}
 	class Catch implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkO(this, o, 2); // o = (x handler)
+			var l = checkO(this, o, 1, 2); // o = (x handler)
 			var x = car(o);
-			var handler = car(o, 1);
-			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
+			var handler = l == 1 ? null : car(o, 1);
 			Object res = null;
 			try {
 				res = r != null ? r.resume() : evaluate(null, e, x);
 			}
 			catch (Error | Value exc) {
-				// unwrap handler to prevent eval if exc is sym or cons
-				res = Vm.this.combine(null, e, unwrap(apv1), list(exc instanceof Value v ? v.value : exc));
+				res = exc instanceof Value v ? v.value : exc;
+				if (handler != null) {
+					if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
+					// unwrap handler to prevent eval if exc is sym or cons
+					res = Vm.this.combine(null, e, unwrap(apv1), list(res));
+				}
 			}
 			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, o), x, e) : res;
 		}
@@ -564,17 +567,17 @@ public class Vm {
 	}
 	int checkO(Object op, Object o, int expt, Class ... cls) {
 		var len=len(o); if (len == expt) { checkO(op, o, cls); return len; }
-		return error("not " + expt + " operands for combine: " + op + " with: " + o);
+		return error((len < expt ? "less" : "more") + " then " + expt + " operands to combine: " + op + " with: " + o);
 	}
 	int checkO(Object op, Object o, int min, int max, Class ... cls) {
 		var len=len(o); if (len >= min && (max == -1 || len <= max)) { checkO(op, o, cls); return len; } 
-		return error((len < min ? "less then " + min : eIf(max == -1, ()-> "more then " + max)) + " operands for combine: " + op + " with: " + o);
+		return error((len < min ? "less then " + min : "more then " + max) + " operands to combine: " + op + " with: " + o);
 	}
 	int checkO(Object op, Object o, Class ... cls) {
 		if (o == nil) return 0;
 		int i=0; for (var oo=o; i<cls.length && o instanceof Cons c; i+=1, o=c.cdr) {
 			var o0 = c.car; var cl=cls[i]; if (cl == null || cl.isInstance(o0)) continue;
-			return error("not a " + toString(cls[i]) + ": " + o0 + " for combine: " + op + " with: " + oo);
+			return error("not a " + toString(cls[i]) + ": " + o0 + " to combine: " + op + " with: " + oo);
 		}
 		return i;
 	}
@@ -882,7 +885,7 @@ public class Vm {
 					$("vm-def", "vm-if", new If()),
 					$("vm-def", "vm-loop", new Loop()),
 					$("vm-def", "vm-catch", new Catch()),
-					$("vm-def", "vm-throw", jWrap((Function) obj-> { throw obj instanceof Error err ? err : new Value(obj); })),
+					$("vm-def", "vm-throw", jWrap((ArgsList) o-> { throw checkO("throw", o, 0, 1) == 0 ? new Value(inert) : apply(v-> v instanceof Error err ? err : new Value(v), car(o)); })),
 					$("vm-def", "vm-finally", new Finally()),
 					$("vm-def", "vm-catch-tag", new CatchTag()),
 					$("vm-def", "vm-throw-tag", new ThrowTag()),
@@ -921,6 +924,8 @@ public class Vm {
 					$("vm-def", ">=", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a >= b)),
 					//
 					$("vm-def", "vm-quote", $("vm-vau", $("a"), ignore, "a")),
+					$("vm-def", "vm-lambda", $("vm-vau", $("formals", ".", "body"), "env",
+						$("vm-wrap", $("vm-eval", $("vm-list*", "vm-vau", "formals", "#ignore", "body"), "env")))),
 					$("vm-def", "==", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a == b)),
 					$("vm-def", "!=", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a != b)),
 					$("vm-def", "eq?", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),

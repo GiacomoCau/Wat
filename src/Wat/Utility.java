@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class Utility {
@@ -25,6 +26,10 @@ public class Utility {
 		return objects;
 	}
 	*/
+	
+	static <T,R> R apply(Function<T,R> f, T a) {
+		return f.apply(a);
+	}
 	
 	public static String eIf(boolean b, String s) {
 		return b ? "" : s;

@@ -17,8 +17,8 @@
 
 (assert (vm-def (a))           ) ; throw
 (assert (vm-def (a) 1)         ) ; throw
-(assert (vm-def (a b) 1 2)     ) ; throw
 (assert (vm-def (a) 1 2)       ) ; throw
+(assert (vm-def (a b) 1 2)     ) ; throw
 (assert (vm-def (a . b) 1 2)   ) ; throw       
 (assert (vm-def (a . b) 1 2 3) ) ; throw
 (assert (vm-def (a . a) 1 2 3) ) ; throw
@@ -54,6 +54,9 @@
 (assert ((vm-vau a a 1))         ) ;throw
 (assert ((vm-vau (a . a) e 1))   ) ;throw
 
+(assert ((vm-lambda x x) 1) (1))
+(assert (vm-catch (vm-begin (vm-def x 0) (vm-loop (vm-begin (vm-if (== x 10) (vm-throw) (vm-def x (+ x 1))))))) #inert)
+
 ;; Rename ur-def
 (vm-def $define! vm-def)
 
@@ -83,6 +86,8 @@
 
 ;; Important utilities
 ($define! $vau vm-vau)
+($define! $lambda vm-lambda)
+($define! $lambda ($vau (formals . body) env (wrap (eval (list* $vau formals #ignore body) env))))
 ($define! quote ($vau (x) #ignore x))
 ($define! list (wrap ($vau elts #ignore elts)))
 ($define! the-environment ($vau () e e))
