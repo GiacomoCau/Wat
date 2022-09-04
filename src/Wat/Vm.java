@@ -37,7 +37,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -709,7 +708,6 @@ public class Vm {
 					case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
 					case ArgsList a-> a.apply(o);  
 					case Function f-> { checkO(jfun, o, 1); yield f.apply(car(o)); }  
-					case Consumer c-> { checkO(jfun, o, 1); c.accept(car(o)); yield inert; }
 					case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(car(o), car(o, 1)); }
 					case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(car(o)); f.set(car(o), car(o, 1)); yield inert; }
 					case Method mt-> {
@@ -730,7 +728,7 @@ public class Vm {
 			return "[JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "]"; }
 	}
 	boolean isjFun(Object jfun) {
-		return isInstance(jfun, Supplier.class, ArgsList.class, Function.class, BiFunction.class, Consumer.class, Executable.class, Field.class);
+		return isInstance(jfun, Supplier.class, ArgsList.class, Function.class, BiFunction.class, Executable.class, Field.class);
 	}
 	JFun jFun(Object jFun) {
 		return /*jfun instanceof JFun ? jfun :*/ isjFun(jFun) ? new JFun(jFun) : error("no a jFun: " + jFun);
@@ -927,7 +925,7 @@ public class Vm {
 					$("vm-def", "!=", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a != b)),
 					$("vm-def", "eq?", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
 					$("vm-def", "assert", jFun((ArgsList) o-> { checkO("assert", o, 1, 2); return vmAssert(listToArray(o)); } )),
-					$("vm-def", "toString", jWrap((Consumer) obj-> toString(obj))),
+					$("vm-def", "toString", jWrap((Function<Object,String>) obj-> toString(obj))),
 					$("vm-def", "log", jWrap((ArgsList) o-> log(listToArray(o)))),
 					$("vm-def", "print", jWrap((ArgsList) o-> print(listToArray(o)))),
 					$("vm-def", "write", jWrap((ArgsList) o-> write(listToArray(o)))),
