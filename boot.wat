@@ -32,10 +32,10 @@
 
 (assert (vm-if)           ) ;throw
 (assert (vm-if #t)        ) ;throw
-(assert (vm-if #t 1)      ) ;throw
-(assert (vm-if #f 1)      ) ;throw
-(assert (vm-if #t 1 2)    1)
-(assert (vm-if #f 1 2)    2)
+(assert (vm-if #t 1)     1)
+(assert (vm-if #f 1)     #inert)
+(assert (vm-if #t 1 2)   1)
+(assert (vm-if #f 1 2)   2)
 (assert (vm-if #f 1 2 3)  ) ;throw
 
 (assert ((vm-vau))                 ) ;throw
@@ -56,6 +56,7 @@
 
 (assert ((vm-lambda x x) 1) (1))
 (assert (vm-catch (vm-begin (vm-def x 0) (vm-loop (vm-begin (vm-if (== x 10) (vm-throw) (vm-def x (+ x 1))))))) #inert)
+(assert (vm-catch (vm-begin (vm-def x 0) (vm-loop (vm-begin (vm-if (== x 10) (vm-throw x) (vm-def x (+ x 1))))))) 10)
 
 ;; Rename ur-def
 (vm-def $define! vm-def)

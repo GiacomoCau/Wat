@@ -322,12 +322,17 @@ public class Vm {
 	}
 	class If implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkO(this, o, 3); // o = (test then else) 
+			checkO(this, o, 2, 3); // o = (test then else) 
 			var test = car(o);
 			var res = r != null ? r.resume() : evaluate(null, e, test);
 			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, o), test, e)
-				: evaluate(null, e, car(o, res != null && res != nil && res instanceof Boolean b && b ? 1 : 2))
+				: istrue(res) ? evaluate(null, e, car(o, 1))
+				: cdr(o, 1) instanceof Cons c ? evaluate(null, e, c.car)
+				: inert
 			;
+		}
+		private boolean istrue(Object res) {
+			return res != null && res != nil && res instanceof Boolean b && b;
 		}
 		public String toString() { return "vmIf"; }
 	}
@@ -406,9 +411,9 @@ public class Vm {
 	}
 	class ThrowTag implements Combinable {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkO(this, o, 2); // o = (tag value)
+			var l = checkO(this, o, 1, 2); // o = (tag value)
 			var tag = car(o);
-			var value = car(o, 1);
+			var value = l == 2 ? car(o, 1) : inert;
 			var res = r != null ? r.resume() : evaluate(null, e, value);
 			if (res instanceof Suspension s) return s.suspend(rr-> combine(rr, e, o), tag, e);
 			throw new ValueTag(tag, res);

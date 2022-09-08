@@ -229,6 +229,9 @@
 (define unwind-protect finally)
 #|
 
+(assert (catch-tag a (throw-tag a)) #inert)
+(assert (catch-tag a (throw-tag a 2)) 2)
+
 (assert (finally (== 1 1)) #t)
 (assert (begin (+ (finally 1 2 3 (define x 10)) x)) 11)
 (assert (+ (catch-tag a (finally (throw-tag a 1) 2 3 (define x 10))) x) 11)
