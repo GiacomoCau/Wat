@@ -10,6 +10,7 @@ import static Wat.Utility.getField;
 import static Wat.Utility.isInstance;
 import static Wat.Utility.reorg;
 import static Wat.Utility.uncked;
+import static java.lang.System.currentTimeMillis;
 import static java.lang.System.in;
 import static java.lang.System.out;
 import static java.lang.reflect.Array.newInstance;
@@ -242,7 +243,7 @@ public class Vm {
 		Object p, ep, x; Env e;
 		Opv(Object p, Object ep, Object x, Env e) { this.p = p; this.ep = ep; this.x = x; this.e = e; }
 		public Object combine(Resumption r, Env e, Object o) {
-			var xe = env(this.e); bind(xe, p, o, this); bind(xe, ep, e, this); return evaluate(null, xe, x);
+			var xe = env(this.e); bind(xe, p, o, this); bind(xe, ep, e, this); return begin.combine(null, xe, x);
 		}
 		public String toString() { return "[Opv " + Vm.this.toString(p) + " " + Vm.this.toString(ep) + " " + Vm.this.toString(x) + "]"; }
 	}
@@ -268,11 +269,11 @@ public class Vm {
 	// Built-in Combiners
 	class Vau implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkO(this, o, 3); // o = (pt ep x)
+			checkO(this, o, 3, -1); // o = (pt ep x ...)
 			var pt = car(o);
 			var ep = car(o, 1);
 			var msg = checkPt(pt, ep); if (msg != null) return error(msg + " of: " + cons(this, o));
-			return new Opv(pt, ep, car(o, 2), e);
+			return new Opv(pt, ep, cdr(o, 1), e);
 		}
 		public String toString() { return "vmVau"; }
 	};
@@ -310,16 +311,17 @@ public class Vm {
 			// o = (... xs)
 			return o == nil ? null : begin(r, e, o);
 		}
-		Object begin(Resumption r, Env e, Object xs) {
+		Object begin(Resumption r, Env e, Object o) {
 			if (trace && root && r == null) print("\n--------");
-			var o0 = car(xs);
+			var o0 = car(o);
 			var res = r != null ? r.resume() : evaluate(null, e, o0);
-			return res instanceof Suspension s ? s.suspend(rr-> begin(rr, e, xs), o0, e)
-				: apply(cdr-> cdr == nil ? res : begin(null, e, cdr), cdr(xs))
+			return res instanceof Suspension s ? s.suspend(rr-> begin(rr, e, o), o0, e)
+				: apply(cdr-> cdr == nil ? res : begin(null, e, cdr), cdr(o))
 			;
 		}
 		public String toString() { return "vmBegin" + eIf(!root, "*"); }
 	}
+	Begin begin = new Begin();
 	class If implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
 			checkO(this, o, 2, 3); // o = (test then else) 
@@ -338,12 +340,11 @@ public class Vm {
 	}
 	class Loop implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
-			checkO(this, o, 1); // o = (x)
-			var x = car(o);
+			checkO(this, o, 1, -1); // o = (x ...)
 			var first = true; // only resume once
 			while (true) {
-				var res = first && r != null && !(first=false) ? r.resume() : evaluate(null, e, x);
-				if (res instanceof Suspension s) return s.suspend(rr-> combine(rr, e, o), x, e);
+				var res = first && r != null && !(first=false) ? r.resume() : begin.combine(null, e, o);
+				if (res instanceof Suspension s) return s.suspend(rr-> combine(rr, e, o), o, e);
 			}
 		}
 		public String toString() { return "vmLoop"; }
@@ -360,6 +361,7 @@ public class Vm {
 			catch (Error | Value exc) {
 				res = exc instanceof Value v ? v.value : exc;
 				if (handler != null) {
+					handler = evaluate(null, e, handler);
 					if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
 					// unwrap handler to prevent eval if exc is sym or cons
 					res = Vm.this.combine(null, e, unwrap(apv1), list(res));
@@ -424,9 +426,46 @@ public class Vm {
 		private static final long serialVersionUID = 1L;
 		Object tag, value;
 		ValueTag(Object tag, Object value) {
-			super(Vm.this.toString(tag) + " " + Vm.this.toString(value));  this.tag = tag; this.value = value; }
+			super(Vm.this.toString(tag) + " " + Vm.this.toString(value)); this.tag = tag; this.value = value; }
 	}
 	
+	// TODO valutare
+	class CatchAll implements Combinable {
+		public Object combine(Resumption r, Env e, Object o) {
+			var l = checkO(this, o, 1, 3); // o = (tag x handler)
+			var tag = l < 2 ? null : car(o);
+			var x = car(o, l == 1 ? 0 : 1);
+			var handler = l == 3 ? car(o, 2) : null;
+			Object res = null;
+			try {
+				res = r != null ? r.resume() : evaluate(null, e, x);
+			}
+			catch (ValueTag exc) {
+				if (tag != null && !Vm.this.equals(exc.tag, tag)) throw exc; 
+				res = getValue(exc, e, handler);
+			}
+			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, o), tag, e) : res;
+		}		
+		private Object getValue(ValueTag exc, Env e, Object handler) {
+			if (handler == null) return exc.value;
+			handler = evaluate(null, e, handler);
+			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
+			// unwrap handler to prevent eval if exc is sym or cons
+			return Vm.this.combine(null, e, unwrap(apv1), list(exc.value));
+		}
+		public String toString() { return "CatchAll"; }
+	}
+	class ThrowAll implements Combinable {
+		public Object combine(Resumption r, Env e, Object o) {
+			var l = checkO(this, o, 1, 2); // o = (tag value)
+			var tag = l == 2 ? car(o) : null;
+			var value = l > 0 ? car(o, l-1) : null;
+			var res = r != null ? r.resume() : evaluate(null, e, value);
+			if (res instanceof Suspension s) return s.suspend(rr-> combine(rr, e, o), tag, e);
+			throw new ValueTag(tag, res);
+		}
+		public String toString() { return "ThrowAll"; }
+	}
 	
 	// Delimited Control
 	class PushPrompt implements Combinable  {
@@ -869,7 +908,7 @@ public class Vm {
 	// Bootstrap
 	Env theEnvironment = env(null); {
 		bind(theEnvironment, symbol("vm-def"), new Def(), null);
-		bind(theEnvironment, symbol("vm-begin"), new Begin(), null);
+		bind(theEnvironment, symbol("vm-begin"), begin, null);
 		evaluate(null, theEnvironment,
 			parseBytecode(
 				$("vm-begin",
@@ -894,6 +933,8 @@ public class Vm {
 					$("vm-def", "vm-finally", new Finally()),
 					$("vm-def", "vm-catch-tag", new CatchTag()),
 					$("vm-def", "vm-throw-tag", new ThrowTag()),
+					$("vm-def", "catchAll", new CatchAll()),
+					$("vm-def", "throwAll", new ThrowAll()),
 					// Delimited Control
 					$("vm-def", "vm-push-prompt", new PushPrompt()),
 					$("vm-def", "vm-take-subcont", wrap(new TakeSubcont())),
@@ -1143,9 +1184,11 @@ public class Vm {
 		//exec(parse(readString("boot.wat")));
 		//compile("boot.wat");
 		//exec(readBytecode("boot.wat"));
+		var milli = currentTimeMillis();
 		eval(readString("boot.wat"));
 		eval(readString("test.wat"));
 		eval(readString("testJni.wat"));
+		print("start time: " + (currentTimeMillis() - milli)); 
 		repl();
 	}
 }

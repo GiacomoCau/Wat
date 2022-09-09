@@ -47,16 +47,24 @@
 (assert ((vm-vau a #ignore a) 1 2) (1 2))
 (assert ((vm-vau a #ignore b))     ) ;throw
 (assert ((vm-vau (a) #ignore a) 1) 1)
-(assert ((vm-vau a #ignore 1 a) 1) ) ;throw
+(assert ((vm-vau a #ignore 1 a) 1) (1))
 
 (assert ((vm-vau 1 #ignore 1))   ) ;throw
 (assert ((vm-vau "a" #ignore 1)) ) ;throw
 (assert ((vm-vau a a 1))         ) ;throw
 (assert ((vm-vau (a . a) e 1))   ) ;throw
+(assert ((vm-vau a #ignore 1 2 3 4 5 a) 6) (6))
+(assert ((vm-vau (a) #ignore 1 2 3 4 5 a) 6) 6)
 
-(assert ((vm-lambda x x) 1) (1))
+(assert ((vm-lambda (m)  ) 1) ) ;throw
+(assert ((vm-lambda (m) m) 1) 1)
+(assert ((vm-lambda x x) 1)   (1))
+
 (assert (vm-catch (vm-begin (vm-def x 0) (vm-loop (vm-begin (vm-if (== x 10) (vm-throw) (vm-def x (+ x 1))))))) #inert)
 (assert (vm-catch (vm-begin (vm-def x 0) (vm-loop (vm-begin (vm-if (== x 10) (vm-throw x) (vm-def x (+ x 1))))))) 10)
+(assert (vm-catch (vm-begin (vm-def x 0) (vm-loop (vm-if (== x 10) (vm-throw x) (vm-def x (+ x 1)))))) 10)
+(assert (vm-catch (vm-begin (vm-def x 0) (vm-loop (vm-if (== x 10) (vm-throw x)) (vm-def x (+ x 1))))) 10)
+
 
 ;; Rename ur-def
 (vm-def $define! vm-def)
@@ -64,6 +72,7 @@
 ;; Rename bindings that will be used as provided by VM
 ($define! array->list vm-array-to-list)
 ($define! begin vm-begin)
+($define! catch vm-catch)
 ($define! cons vm-cons)
 ($define! cons? vm-cons?)
 ($define! dnew vm-dnew)
@@ -73,6 +82,7 @@
 ($define! if vm-if)
 ($define! list* vm-list*)
 ($define! list->array vm-list-to-array)
+($define! loop vm-loop)
 ($define! make-environment vm-make-environment)
 ($define! nil? vm-nil?)
 ($define! reverse-list vm-reverse-list)
@@ -87,37 +97,20 @@
 
 ;; Important utilities
 ($define! $vau vm-vau)
-($define! $lambda vm-lambda)
 ($define! $lambda ($vau (formals . body) env (wrap (eval (list* $vau formals #ignore body) env))))
+($define! $lambda vm-lambda)
 ($define! quote ($vau (x) #ignore x))
 ($define! list (wrap ($vau elts #ignore elts)))
 ($define! the-environment ($vau () e e))
 ($define! get-current-environment (wrap ($vau () e e)))
 
-;;;; Macro and vau
-
-; derivazione Shutt!
-;($define! $vau
-; ((wrap
-;     ($vau ($vau) #ignore
-;       ($vau (formals eformal . body) env
-;         (eval (list $vau formals eformal (cons begin body)) env) )))
-;   $vau ))
+;;;; Macro
 
 ($define! make-macro-expander
   (wrap
     ($vau (expander) #ignore
       ($vau operands env
         (eval (eval (cons expander operands) (make-environment)) env) ))))
-
-; derivazione Simoni!
-($define! $vau
-  (make-macro-expander
-    ($vau (params env-param . body) #ignore
-      (list vm-vau params env-param (list* begin body)) )))
-
-(assert (($vau a #ignore 1 2 3 4 5 a) 6) (6))
-(assert (($vau (a) #ignore 1 2 3 4 5 a) 6) 6)
 
 ($define! macro
   (make-macro-expander
@@ -128,22 +121,10 @@
   (macro ((name . params) . body)
     (list $define! name (list* macro params body)) ))
 
-(define-macro ($lambda params . body)
-  (list wrap (list* $vau params #ignore body)) )
-
-(assert (($lambda (m)  ) 1) #null) 
-(assert (($lambda (m) m) 1) 1)
-
 (define-macro (define-operative (name . params) envparam . body)
   (list $define! name (list* $vau params envparam body)) )
 
 ;;;; Wrap incomplete VM forms
-
-(define-macro (loop . body)
-  (list vm-loop (list* begin body)))
-
-(define-operative (catch protected handler) env
-  (eval (list vm-catch protected (eval handler env)) env) )
 
 (define-operative (finally protected . cleanup) env
   (eval (list vm-finally protected (list* begin cleanup)) env) )
