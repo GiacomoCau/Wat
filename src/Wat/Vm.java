@@ -84,6 +84,7 @@ public class Vm {
 	boolean stack = false;
 	boolean thenv = false;
 	boolean jfapv = false;
+	boolean tco = true;
 	
 	interface Combinable { Object combine(Resumption r, Env e, Object o); }
 	
@@ -126,17 +127,26 @@ public class Vm {
 	
 	
 	// Evaluation Core
+	record Tco (Env e, Object o) {}
+	Object tco (Env e, Object o) { return tco ? new Tco(e, o) : evaluate(null, e, o); }
+	
 	@SuppressWarnings("preview")
 	Object evaluate(Resumption r, Env e, Object o) {
 		if (trace) print("evaluate: ", o);
-		return switch (o) {
-			case null, default-> o;
-			case Symbol s-> e.lookup(s.name);
-			case Cons c-> {
-				Object op = r != null ? r.resume() : evaluate(null, e, c.car);
-				yield op instanceof Suspension s ? s.suspend(rr-> evaluate(rr, e, o), o, e) : combine(null, e, op, c.cdr);
-			}
-		};
+		var first = true;
+		for (;;) {
+			Object v = switch (o) {
+				case null, default-> o;
+				case Symbol s-> e.lookup(s.name);
+				case Cons c-> {
+					Object op = first && r != null && !(first=false) ? r.resume() : evaluate(null, e, c.car);
+					var ee = e; var oo = o; 
+					yield op instanceof Suspension s ? s.suspend(rr-> evaluate(rr, ee, oo), o, e) : combine(null, e, op, c.cdr);
+				}
+			};
+			if (!(v instanceof Tco tco)) return v;
+			e = tco.e; o = tco.o;
+		}
 	}
 	
 	class Symbol {
@@ -313,11 +323,16 @@ public class Vm {
 		}
 		Object begin(Resumption r, Env e, Object o) {
 			if (trace && root && r == null) print("\n--------");
-			var o0 = car(o);
-			var res = r != null ? r.resume() : evaluate(null, e, o0);
-			return res instanceof Suspension s ? s.suspend(rr-> begin(rr, e, o), o0, e)
-				: apply(cdr-> cdr == nil ? res : begin(null, e, cdr), cdr(o))
-			;
+			var first = true;
+			for (;;) {
+				var car = car(o);
+				var cdr = cdr(o);
+				if (cdr == nil) return tco(e, car); 
+				var res = first && r != null && !(first = false) ? r.resume() : evaluate(null, e, car);
+				var oo = o;
+				if (res instanceof Suspension s) return s.suspend(rr-> begin(rr, e, oo), car, e);
+				o = cdr;
+			}
 		}
 		public String toString() { return "vmBegin" + eIf(!root, "*"); }
 	}
@@ -328,8 +343,8 @@ public class Vm {
 			var test = car(o);
 			var res = r != null ? r.resume() : evaluate(null, e, test);
 			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, o), test, e)
-				: istrue(res) ? evaluate(null, e, car(o, 1))
-				: cdr(o, 1) instanceof Cons c ? evaluate(null, e, c.car)
+				: istrue(res) ? tco(e, car(o, 1))
+				: cdr(o, 1) instanceof Cons c ? tco(e, c.car)
 				: inert
 			;
 		}
@@ -341,11 +356,7 @@ public class Vm {
 	class Loop implements Combinable  {
 		public Object combine(Resumption r, Env e, Object o) {
 			checkO(this, o, 1, -1); // o = (x ...)
-			var first = true; // only resume once
-			while (true) {
-				var res = first && r != null && !(first=false) ? r.resume() : begin.combine(null, e, o);
-				if (res instanceof Suspension s) return s.suspend(rr-> combine(rr, e, o), o, e);
-			}
+			for (;;) evaluate(null, e, begin.combine(null, e, o));
 		}
 		public String toString() { return "vmLoop"; }
 	}
@@ -483,7 +494,7 @@ public class Vm {
 			var prompt = car(o);
 			var handler = car(o, 1); 
 			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
-			return new Suspension(prompt, apv1).suspend(rr-> Vm.this.combine(null, e, rr.s, nil), cons(this, o), e);
+			return new Suspension(prompt, apv1).suspend(rr-> evaluate(null, e, cons(rr.s, nil)), cons(this, o), e);
 		}
 		public String toString() { return "vmTakeSubcont"; }
 	}
@@ -983,7 +994,8 @@ public class Vm {
 					$("vm-def", "load", jWrap((Function<String, Object>) nf-> uncked(()-> eval(readString(nf))))),
 					$("vm-def", "trace", jWrap((ArgsList) o-> { if (checkO("trace", o, 0, 1, Boolean.class) == 0) return trace; trace=car(o); return inert; })),
 					$("vm-def", "stack", jWrap((ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=car(o); return inert; })),
-					$("vm-def", "thenv", jWrap((ArgsList) o-> { if (checkO("thenv", o, 0, 1, Boolean.class) == 0) return thenv; thenv=car(o); return inert; }))
+					$("vm-def", "thenv", jWrap((ArgsList) o-> { if (checkO("thenv", o, 0, 1, Boolean.class) == 0) return thenv; thenv=car(o); return inert; })),
+					$("vm-def", "tco", jWrap((ArgsList) o-> { if (checkO("tco", o, 0, 1, Boolean.class) == 0) return tco; tco=car(o); return inert; }))
 				)
 			)
 		);

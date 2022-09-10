@@ -65,7 +65,6 @@
 (assert (vm-catch (vm-begin (vm-def x 0) (vm-loop (vm-if (== x 10) (vm-throw x) (vm-def x (+ x 1)))))) 10)
 (assert (vm-catch (vm-begin (vm-def x 0) (vm-loop (vm-if (== x 10) (vm-throw x)) (vm-def x (+ x 1))))) 10)
 
-
 ;; Rename ur-def
 (vm-def $define! vm-def)
 
