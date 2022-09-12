@@ -80,13 +80,13 @@ import java.util.function.Supplier;
 
 public class Vm {
 	
+	boolean tco = true;
 	boolean trace = false;
 	boolean stack = false;
 	boolean thenv = false;
 	boolean jfapv = false;
-	boolean tco = true;
 	
-	interface Combinable { Object combine(Resumption r, Env e, Object o); }
+	interface Combinable { Object combine(Env e, Object o); }
 	
 	
 	// Continuations
@@ -96,14 +96,14 @@ public class Vm {
 			this.f = f; this.next = next; this.dbg = dbg; this.e = e;
 		}
 		public String toString() { return "[Continuation %s %s]".formatted(dbg, e); }
-		Object apply(Env e, Apv apv0) { return apply(()-> combine(null, e, apv0, nil)); }
+		Object apply(Env e, Apv apv0) { return apply(()-> combine(e, apv0, nil)); }
 		Object apply(Supplier s) { return f.apply(new Resumption(next, s));}
 	}
 	class Resumption {
 		Continuation k; Supplier<Object> s;
 		Resumption(Continuation k, Supplier<Object> s) { this.k=k; this.s=s; }
 		public String toString() { return "[Resumption %s %s]".formatted(s, k); }
-		Object resume() { var k = this.k; this.k = k.next; return k.f.apply(this); }
+		<T> T resume() { var k = this.k; this.k = k.next; return (T) k.f.apply(this); }
 	};
 	class Suspension {
 		Object prompt; Combinable handler; Continuation k;
@@ -113,9 +113,20 @@ public class Vm {
 			k = new Continuation(f, k, dbg, e); return this;
 		}
 	}
+	<T, R> Object pipe(Supplier<T> before, Function<T, R> after, Object dbg, Env e) {
+		return pipe(null, before, after, dbg, e);
+	}
+	<T, R> Object pipe(Resumption r, Supplier<T> before, Function<T, R> after, Object dbg, Env e) {
+		T ris = r != null ? r.resume() : before.get();
+		return ris instanceof Suspension s ? s.suspend(rr-> pipe(rr, before, after, dbg, e), dbg, e) : after.apply(ris);
+	}
+	<T, R> Object pipe1(Resumption r, boolean first, Supplier<T> before, Function<T, R> after, Object dbg, Env e) {
+		T ris = first && r != null && !(first=false) ? r.resume() : before.get();
+		var ff = first; return ris instanceof Suspension s ? s.suspend(rr-> pipe1(rr, ff, before, after, dbg, e), dbg, e) : after.apply(ris);
+	}
 	
 	
-	// Forms
+	// Basic Forms
 	class Nil { public String toString() { return "()"; }};
 	public Nil nil = new Nil();
 	
@@ -126,22 +137,21 @@ public class Vm {
 	public Ignore ignore = new Ignore();
 	
 	
-	// Evaluation Core
+	// Tail Call Optimization
 	record Tco (Env e, Object o) {}
-	Object tco (Env e, Object o) { return tco ? new Tco(e, o) : evaluate(null, e, o); }
+	Object tco (Env e, Object o) { return tco ? new Tco(e, o) : evaluate(e, o); }
 	
+	
+	// Evaluation Core
 	@SuppressWarnings("preview")
-	Object evaluate(Resumption r, Env e, Object o) {
+	Object evaluate(Env e, Object o) {
 		if (trace) print("evaluate: ", o);
-		var first = true;
 		for (;;) {
 			Object v = switch (o) {
 				case null, default-> o;
 				case Symbol s-> e.lookup(s.name);
 				case Cons c-> {
-					Object op = first && r != null && !(first=false) ? r.resume() : evaluate(null, e, c.car);
-					var ee = e; var oo = o; 
-					yield op instanceof Suspension s ? s.suspend(rr-> evaluate(rr, ee, oo), o, e) : combine(null, e, op, c.cdr);
+					var ee=e; yield pipe1(null, true,  ()-> evaluate(ee, c.car), op-> combine(ee, op, c.cdr), o, e);
 				}
 			};
 			if (!(v instanceof Tco tco)) return v;
@@ -226,9 +236,9 @@ public class Vm {
 		return switch (lhs) {
 			case Ignore i-> null;
 			case Symbol s-> e.bind(s.name, rhs);  
-			case Nil n-> rhs == nil ? null : "too many arguments" /*+ ", nil expected, but got: " + toString(rhs)*/;
+			case Nil n-> rhs == nil ? null : "too many arguments" /*+ ", none expected, but got: " + toString(rhs)*/;
 			case Cons lc-> {
-				if (!(rhs instanceof Cons rc)) yield "too few arguments" /*+ ", cons expected, but got: " + toString(rhs)*/;
+				if (!(rhs instanceof Cons rc)) yield "too few arguments" /*+ ", more expected, but got: " + toString(rhs)*/;
 				var msg = bind(e, lc.car, rc.car); if (msg != null) yield msg;
 				yield bind(e, lc.cdr, rc.cdr);
 			}
@@ -238,13 +248,13 @@ public class Vm {
 	
 	
 	// Operative & Applicative Combiners
-	Object combine(Resumption r, Env e, Object op, Object o) {
+	Object combine(Env e, Object op, Object o) {
 		if (trace) print(" combine: ", op, " ", o);
-		if (op instanceof Combinable cmb) return cmb.combine(r, e, o);
+		if (op instanceof Combinable cmb) return cmb.combine(e, o);
 		// per default le jFun dovrebbero essere operative e non applicative
 		if (isjFun(op)) return jfapv
-			? ((Combinable) jWrap(op)).combine(r, e, o) // jfun x default applicative
-			: ((Combinable) jFun(op)).combine(r, e, o) // jfun x default operative
+			? ((Combinable) jWrap(op)).combine(e, o) // jfun x default applicative
+			: ((Combinable) jFun(op)).combine(e, o) // jfun x default operative
 		;
 		return error("not a combiner: " + toString(op) + " in: " + cons(op, o));
 	}
@@ -252,33 +262,32 @@ public class Vm {
 	class Opv implements Combinable  {
 		Object p, ep, x; Env e;
 		Opv(Object p, Object ep, Object x, Env e) { this.p = p; this.ep = ep; this.x = x; this.e = e; }
-		public Object combine(Resumption r, Env e, Object o) {
-			var xe = env(this.e); bind(xe, p, o, this); bind(xe, ep, e, this); return begin.combine(null, xe, x);
+		public Object combine(Env e, Object o) {
+			var xe = env(this.e); bind(xe, p, o, this); bind(xe, ep, e, this); return begin.combine(xe, x);
 		}
 		public String toString() { return "[Opv " + Vm.this.toString(p) + " " + Vm.this.toString(ep) + " " + Vm.this.toString(x) + "]"; }
 	}
 	class Apv implements Combinable  {
 		Combinable cmb;
 		Apv(Combinable cmb) { this.cmb = cmb; }
-		public Object combine(Resumption r, Env e, Object o) {
-			var args = r != null ? r.resume() : evalArgs(null, e, o, nil);
-			return args instanceof Suspension s ? s.suspend(rr-> combine(rr, e, o), o, e) : cmb.combine(null, e, args);
+		public Object combine(Env e, Object o) {
+			return pipe(()-> evalArgs(null, e, o, nil), args-> cmb.combine(e, args), o, e);
 		}
 		Object evalArgs(Resumption r, Env e, Object todo, Object done) {
 			if (todo == nil) return reverseList(done);
 			var arg = car(todo);
-			var res = r != null ? r.resume() : evaluate(null, e, arg);
-			return res instanceof Suspension s ? s.suspend(rr-> evalArgs(rr, e, todo, done), arg, e) : evalArgs(null, e, cdr(todo), cons(res, done));
+			return pipe(()-> evaluate(e, arg), res-> evalArgs(null, e, cdr(todo), cons(res, done)), arg, e);  
 		}
 		public String toString() { return "[Apv " + Vm.this.toString(cmb) + "]"; }
 	}
 	Apv wrap(Object arg) { return /*arg instanceof Apv apv ? apv :*/ arg instanceof Combinable cmb ? new Apv(cmb) : error("cannot wrap: " + arg); }
 	Combinable unwrap(Object arg) { return arg instanceof Apv apv ? apv.cmb : error("cannot unwrap: " + arg); }
+	Apv lambda(Object p, Object e, Object b) { return new Apv(new Opv(p, ignore, b, (Env) evaluate(theEnvironment, e))); }
 	
 	
 	// Built-in Combiners
 	class Vau implements Combinable  {
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			checkO(this, o, 3, -1); // o = (pt ep x ...)
 			var pt = car(o);
 			var ep = car(o, 1);
@@ -288,7 +297,7 @@ public class Vm {
 		public String toString() { return "vmVau"; }
 	};
 	class Def implements Combinable  {
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			checkO(this, o, 2); // o = (pt arg)
 			var pt = car(o);
 			if (!(pt instanceof Symbol)) {
@@ -296,18 +305,17 @@ public class Vm {
 				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
 			}
 			var arg = car(o, 1);
-			var res = r != null ? r.resume() : evaluate(null, e, arg);
-			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, o), arg, e) : bind(e, pt, res, cons(this, o));
+			return pipe(()-> evaluate(e, arg), res-> bind(e, pt, res, cons(this, o)), arg, e);
 		}
 		public String toString() { return "vmDef"; }
 	};
 	class Eval implements Combinable  {
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			checkO(this, o, 2); // o = (x eo)
 			var x = car(o);
 			var o1 = car(o, 1);
 			if (!(o1 instanceof Env eo)) return error("not an Env: " + o1);
-			return evaluate(r, eo, x);
+			return evaluate(eo, x);
 		}
 		public String toString() { return "vmEval"; }
 	}
@@ -317,7 +325,7 @@ public class Vm {
 	class Begin implements Combinable  {
 		boolean root;
 		Begin() {}; Begin(boolean root) { this.root = root; } 
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			// o = (... xs)
 			return o instanceof Cons c ? begin(null, e, c) : null;
 		}
@@ -325,8 +333,8 @@ public class Vm {
 			if (trace && root && r == null) print("\n--------");
 			var first = true;
 			for (;;) {
-				if (! (c.cdr instanceof Cons cc)) return tco(e, c.car); 
-				var res = first && r != null && !(first = false) ? r.resume() : evaluate(null, e, c.car);
+				if (!(c.cdr instanceof Cons cc)) return tco(e, c.car); 
+				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, c.car);
 				var ccc = c; if (res instanceof Suspension s) return s.suspend(rr-> begin(rr, e, ccc), c.car, e);
 				c = cc;
 			}
@@ -335,15 +343,10 @@ public class Vm {
 	}
 	Begin begin = new Begin();
 	class If implements Combinable  {
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			checkO(this, o, 2, 3); // o = (test then else) 
 			var test = car(o);
-			var res = r != null ? r.resume() : evaluate(null, e, test);
-			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, o), test, e)
-				: istrue(res) ? tco(e, car(o, 1))
-				: cdr(o, 1) instanceof Cons c ? tco(e, c.car)
-				: inert
-			;
+			return pipe(()-> evaluate(e, test), res-> istrue(res) ? tco(e, car(o, 1)) : cdr(o, 1) instanceof Cons c ? tco(e, c.car) : inert, test, e);
 		}
 		private boolean istrue(Object res) {
 			return res != null && res != nil && res instanceof Boolean b && b;
@@ -351,66 +354,68 @@ public class Vm {
 		public String toString() { return "vmIf"; }
 	}
 	class Loop implements Combinable  {
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			checkO(this, o, 1, -1); // o = (x ...)
-			for (;;) evaluate(null, e, begin.combine(null, e, o));
+			for (;;) evaluate(e, begin.combine(e, o));
 		}
 		public String toString() { return "vmLoop"; }
 	}
 	class Catch implements Combinable  {
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			var l = checkO(this, o, 1, 2); // o = (x handler)
 			var x = car(o);
 			var handler = l == 1 ? null : car(o, 1);
+			return combine(null, e, x, handler);
+		}
+		private Object combine(Resumption r, Env e, Object x, Object handler) {
 			Object res = null;
 			try {
-				res = r != null ? r.resume() : evaluate(null, e, x);
+				res = r != null ? r.resume() : evaluate(e, x);
 			}
 			catch (Error | Value exc) {
 				res = exc instanceof Value v ? v.value : exc;
 				if (handler != null) {
-					handler = evaluate(null, e, handler);
+					handler = evaluate(e, handler);
 					if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
 					// unwrap handler to prevent eval if exc is sym or cons
-					res = Vm.this.combine(null, e, unwrap(apv1), list(res));
+					res = Vm.this.combine(e, unwrap(apv1), list(res));
 				}
 			}
-			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, o), x, e) : res;
+			var hh = handler;
+			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, x, hh), x, e) : res;
 		}
 		public String toString() { return "vmCatch"; }
 	}
 	class Finally implements Combinable {
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			checkO(this, o, 2); // o = (x cleanup)
 			var x = car(o);
 			var cleanup = car(o, 1);
 			try {
-				var res = r != null ? r.resume() : evaluate(null, e, x);
-				return res instanceof Suspension s
-					? s.suspend(rr-> combine(rr, e, o), x, e)
-					: doCleanup(r, cleanup, res, null, e)
-				;
+				return pipe(()-> evaluate(e, x), res-> doCleanup(null, cleanup, res, e), x, e);
 			}
 			catch (Throwable t) {
-				return doCleanup(r, cleanup, null, t, e);
+				return doCleanup(null, cleanup, t, e);
 			}
 		}
-		Object doCleanup(Resumption r, Object cleanup, Object value, Throwable t, Env e) {
-			var res = r != null ? r.resume() : evaluate(null, e, cleanup);
-			if (res instanceof Suspension s) return s.suspend(rr-> doCleanup(rr, cleanup, value, t, e), cleanup, e);
-			if (t == null) return value;
-			throw t instanceof RuntimeException rte ? rte : new Error(t);
+		Object doCleanup(Resumption r, Object cleanup, Object value, Env e) {
+			return pipe(()-> evaluate(e, cleanup),
+				res->{
+					if (!(value instanceof Throwable t)) return value;
+					throw t instanceof RuntimeException rte ? rte : new Error(t);
+				},
+				value, e
+			);
 		}
 		public String toString() { return "vmFinally"; }
 	}
 	class CatchTag implements Combinable {
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			checkO(this, o, 2); // o = (tag x)
 			var tag = car(o);
 			var x = car(o, 1);
 			try {
-				var res = r != null ? r.resume() : evaluate(null, e, x);
-				return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, o), tag, e) : res;
+				return pipe(()-> evaluate(e, x), res-> res, tag, e);
 			}
 			catch (ValueTag exc) {
 				if (Vm.this.equals(exc.tag, tag)) return exc.value;
@@ -420,13 +425,11 @@ public class Vm {
 		public String toString() { return "vmCatchTag"; }
 	}
 	class ThrowTag implements Combinable {
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			var l = checkO(this, o, 1, 2); // o = (tag value)
 			var tag = car(o);
 			var value = l == 2 ? car(o, 1) : inert;
-			var res = r != null ? r.resume() : evaluate(null, e, value);
-			if (res instanceof Suspension s) return s.suspend(rr-> combine(rr, e, o), tag, e);
-			throw new ValueTag(tag, res);
+			return pipe(()-> evaluate(e, value), res->{ throw new ValueTag(tag, res); }, tag, e);
 		}
 		public String toString() { return "vmThrowTag"; }
 	}
@@ -434,75 +437,77 @@ public class Vm {
 		private static final long serialVersionUID = 1L;
 		Object tag, value;
 		ValueTag(Object tag, Object value) {
-			super(Vm.this.toString(tag) + " " + Vm.this.toString(value)); this.tag = tag; this.value = value; }
+			super(Vm.this.toString(tag) + " " + Vm.this.toString(value)); this.tag = tag; this.value = value;
+		}
 	}
 	
 	// TODO valutare
 	class CatchAll implements Combinable {
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			var l = checkO(this, o, 1, 3); // o = (tag x handler)
 			var tag = l < 2 ? null : car(o);
 			var x = car(o, l == 1 ? 0 : 1);
 			var handler = l == 3 ? car(o, 2) : null;
+			return combine(null, e, tag, x, handler);
+		}
+		private Object combine(Resumption r, Env e, Object tag, Object x, Object handler) {
 			Object res = null;
 			try {
-				res = r != null ? r.resume() : evaluate(null, e, x);
+				res = r != null ? r.resume() : evaluate(e, x);
 			}
 			catch (ValueTag exc) {
 				if (tag != null && !Vm.this.equals(exc.tag, tag)) throw exc; 
 				res = getValue(exc, e, handler);
 			}
-			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, o), tag, e) : res;
+			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, tag, x, handler), tag, e) : res;
 		}		
 		private Object getValue(ValueTag exc, Env e, Object handler) {
 			if (handler == null) return exc.value;
-			handler = evaluate(null, e, handler);
+			handler = evaluate(e, handler);
 			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
 			// unwrap handler to prevent eval if exc is sym or cons
-			return Vm.this.combine(null, e, unwrap(apv1), list(exc.value));
+			return Vm.this.combine(e, unwrap(apv1), list(exc.value));
 		}
 		public String toString() { return "CatchAll"; }
 	}
 	class ThrowAll implements Combinable {
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			var l = checkO(this, o, 1, 2); // o = (tag value)
 			var tag = l == 2 ? car(o) : null;
 			var value = l > 0 ? car(o, l-1) : null;
-			var res = r != null ? r.resume() : evaluate(null, e, value);
-			if (res instanceof Suspension s) return s.suspend(rr-> combine(rr, e, o), tag, e);
-			throw new ValueTag(tag, res);
+			return pipe(()-> evaluate(e, value), res->{ throw new ValueTag(tag, res); }, tag, e);
 		}
 		public String toString() { return "ThrowAll"; }
 	}
 	
 	// Delimited Control
 	class PushPrompt implements Combinable  {
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			checkO(this, o, 2); // o = (prompt x)
 			var prompt = car(o);
 			var x = car(o, 1);
-			return pushPrompt(r, e, cons(this, o), prompt, ()-> evaluate(null, e, x));
+			return pushPrompt(null, e, cons(this, o), prompt, ()-> evaluate(e, x));
 		}
 		public String toString() { return "vmPushPrompt"; }
 	}
 	class TakeSubcont implements Combinable  {
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			checkO(this, o, 2); // o = (prompt handler)
 			var prompt = car(o);
 			var handler = car(o, 1); 
 			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
-			return new Suspension(prompt, apv1).suspend(rr-> evaluate(null, e, cons(rr.s, nil)), cons(this, o), e);
+			return new Suspension(prompt, apv1).suspend(rr-> evaluate(e, cons(rr.s, nil)), cons(this, o), e);
 		}
 		public String toString() { return "vmTakeSubcont"; }
 	}
 	class PushPromptSubcont implements Combinable  {
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			checkO(this, o, 3); // o = (prompt k apv0)
 			var prompt = car(o);
 			var o1 = car(o, 1); if (!(o1 instanceof Continuation k)) return error("not a continuation: " + o1); 
 			var o2 = car(o, 2); if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2);
 			//return pushPrompt(r, e, cons(this, o), prompt, ()-> k.apply(e, ()-> Vm.this.combine(null, e, apv0, nil)));
-			return pushPrompt(r, e, cons(this, o), prompt, ()-> k.apply(e, apv0));
+			return pushPrompt(null, e, cons(this, o), prompt, ()-> k.apply(e, apv0));
 		}
 		public String toString() { return "vmPushPromptSubcont"; }
 	}
@@ -511,7 +516,7 @@ public class Vm {
 		if (!(res instanceof Suspension s)) return res;
 		return prompt == ignore || !equals(s.prompt, prompt)
 			? s.suspend(rr-> pushPrompt(rr, e, x, prompt, action), x, e)
-			: combine(null, e, s.handler, cons(s.k, nil))
+			: combine(e, s.handler, cons(s.k, nil))
 		;
 	}
 	Object pushSubcontBarrier(Resumption r, Env e, Object x, Supplier action) {
@@ -529,14 +534,14 @@ public class Vm {
 		public String toString() { return "[DV " + val + "]"; }
 	}
 	class DNew implements Combinable  {
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			checkO(this, o, 1); // o = (x)
 			return new DV(car(o));
 		}
 		public String toString() { return "vmDNew"; }
 	}
 	class DRef implements Combinable  {
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			checkO(this, o, 1); // o = (x)
 			var x = car(o);
 			return x instanceof DV dv ? dv.val : error("not a dinamic variable: " + x);
@@ -544,7 +549,7 @@ public class Vm {
 		public String toString() { return "vmDRef"; }
 	}
 	class DLet implements Combinable  {
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			checkO(this, o, 3); // o = (dv val x)
 			var o0 = car(o);
 			if (!(o0 instanceof DV dv)) return error("not a dinamic variable: " + o0);
@@ -553,9 +558,7 @@ public class Vm {
 			var oldVal = dv.val;
 			try {
 				dv.val = val;
-				var res = r != null ? r.resume() : evaluate(null, e, x);
-				if (res instanceof Suspension s) s.suspend(rr-> combine(rr, e, o), x, e);
-				return res;
+				return pipe(()-> evaluate(e, x), res->res, x, e);
 			}
 			finally {
 				dv.val = oldVal;
@@ -573,10 +576,9 @@ public class Vm {
 	}
 	<T> T error(String msg, Throwable cause) {
 		var userBreak = theEnvironment.get("user-break");
-		// var exc = cause == null ? new Error(msg) : new Error(msg, cause); // this throw
 		var exc = new Error(msg, cause); 
 		if (userBreak == null) throw exc;
-		return (T) evaluate(null, theEnvironment, cons(userBreak, list(exc)));
+		return (T) evaluate(theEnvironment, cons(userBreak, list(exc)));
 	}
 	class Error extends RuntimeException {
 		private static final long serialVersionUID = 1L;
@@ -706,7 +708,7 @@ public class Vm {
 		var expr = objs[0];
 		try {
 			var env = env(theEnvironment);
-			var val = pushSubcontBarrier(null, env, expr, ()-> evaluate(null, env, expr));
+			var val = pushSubcontBarrier(null, env, expr, ()-> evaluate(env, expr));
 			if (objs.length == 1) print(expr, " should throw but is ", val);
 			else {
 				var expt = objs[1];
@@ -757,7 +759,7 @@ public class Vm {
 		Object jfun;
 		JFun(Object jfun) { this.jfun = jfun; };
 		@SuppressWarnings("preview")
-		public Object combine(Resumption r, Env e, Object o) {
+		public Object combine(Env e, Object o) {
 			try {
 				return switch (jfun) {
 					case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
@@ -917,7 +919,7 @@ public class Vm {
 	Env theEnvironment = env(null); {
 		bind(theEnvironment, symbol("vm-def"), new Def(), null);
 		bind(theEnvironment, symbol("vm-begin"), begin, null);
-		evaluate(null, theEnvironment,
+		evaluate(theEnvironment,
 			parseBytecode(
 				$("vm-begin",
 					// Basics
@@ -980,6 +982,8 @@ public class Vm {
 					$("vm-def", "vm-quote", $("vm-vau", $("a"), ignore, "a")),
 					$("vm-def", "vm-lambda", $("vm-vau", $("formals", ".", "body"), "env",
 						$("vm-wrap", $("vm-eval", $("vm-list*", "vm-vau", "formals", "#ignore", "body"), "env")))),
+					$("vm-def", "vm-jambda", jFun((ArgsList) o-> lambda(car(o), car(o,1), cdr(o,1)))),
+					
 					$("vm-def", "==", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a == b)),
 					$("vm-def", "!=", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a != b)),
 					$("vm-def", "eq?", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
@@ -999,12 +1003,10 @@ public class Vm {
 	}
 	
 	
-	
-	
 	// API
 	public Object exec(Object bytecode) {
 		var wrapped = pushRootPrompt(cons(new Begin(true), parseBytecode(bytecode)));
-		return pushSubcontBarrier(null, theEnvironment, wrapped, ()-> evaluate(null, theEnvironment, wrapped));
+		return pushSubcontBarrier(null, theEnvironment, wrapped, ()-> evaluate(theEnvironment, wrapped));
 	}
 	public Object call(String funName, Object ... args) {
 		return exec(list(symbol(funName), parseBytecode(args)));
