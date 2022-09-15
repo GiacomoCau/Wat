@@ -247,9 +247,7 @@
 
 (assert-equal 2 (apply (lambda x x) 2))
 
-;TODO verificare perché la assert-throws throws
-;(assert-throws (unwrap ($vau () #ignore)))
-(assert (unwrap ($vau () #ignore)))
+(assert-throws (unwrap ($vau () #ignore)))
 
 |#
 (let ((obj (object ("x" 1))))

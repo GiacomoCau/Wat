@@ -319,19 +319,16 @@ public class Vm {
 		Begin() {}; Begin(boolean root) { this.root = root; } 
 		public Object combine(Resumption r, Env e, Object o) {
 			// o = (... xs)
-			return o == nil ? null : begin(r, e, o);
+			return o instanceof Cons c ? begin(null, e, c) : null;
 		}
-		Object begin(Resumption r, Env e, Object o) {
+		Object begin(Resumption r, Env e, Cons c) {
 			if (trace && root && r == null) print("\n--------");
 			var first = true;
 			for (;;) {
-				var car = car(o);
-				var cdr = cdr(o);
-				if (cdr == nil) return tco(e, car); 
-				var res = first && r != null && !(first = false) ? r.resume() : evaluate(null, e, car);
-				var oo = o;
-				if (res instanceof Suspension s) return s.suspend(rr-> begin(rr, e, oo), car, e);
-				o = cdr;
+				if (! (c.cdr instanceof Cons cc)) return tco(e, c.car); 
+				var res = first && r != null && !(first = false) ? r.resume() : evaluate(null, e, c.car);
+				var ccc = c; if (res instanceof Suspension s) return s.suspend(rr-> begin(rr, e, ccc), c.car, e);
+				c = cc;
 			}
 		}
 		public String toString() { return "vmBegin" + eIf(!root, "*"); }
@@ -579,7 +576,7 @@ public class Vm {
 		// var exc = cause == null ? new Error(msg) : new Error(msg, cause); // this throw
 		var exc = new Error(msg, cause); 
 		if (userBreak == null) throw exc;
-		return (T) combine(null, theEnvironment, userBreak, list(exc));
+		return (T) evaluate(null, theEnvironment, cons(userBreak, list(exc)));
 	}
 	class Error extends RuntimeException {
 		private static final long serialVersionUID = 1L;
