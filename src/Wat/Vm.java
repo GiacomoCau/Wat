@@ -96,20 +96,20 @@ public class Vm {
 		Continuation(Function<Resumption, Object> f, Continuation next, Object dbg, Env e) {
 			this.f = f; this.next = next; this.dbg = dbg; this.e = e;
 		}
-		public String toString() { return "[Continuation %s %s]".formatted(dbg, e); }
+		public String toString() { return "{Continuation %s %s}".formatted(dbg, e); }
 		Object apply(Env e, Apv apv0) { return apply(()-> combine(e, apv0, nil)); }
 		Object apply(Supplier s) { return f.apply(new Resumption(next, s));}
 	}
 	class Resumption {
 		Continuation k; Supplier<Object> s;
 		Resumption(Continuation k, Supplier<Object> s) { this.k=k; this.s=s; }
-		public String toString() { return "[Resumption %s %s]".formatted(s, k); }
+		public String toString() { return "{Resumption %s %s}".formatted(s, k); }
 		<T> T resume() { var k = this.k; this.k = k.next; return (T) k.f.apply(this); }
 	};
 	class Suspension {
 		Object prompt; Combinable handler; Continuation k;
 		Suspension(Object prompt, Combinable handler) { this.prompt = prompt; this.handler = handler; }
-		public String toString() { return "[Suspension %s %s %s]".formatted(prompt, handler, k); }
+		public String toString() { return "{Suspension %s %s %s}".formatted(prompt, handler, k); }
 		Suspension suspend(Function<Resumption, Object> f, Object dbg, Env e) { 
 			k = new Continuation(f, k, dbg, e); return this;
 		}
@@ -266,7 +266,7 @@ public class Vm {
 		public Object combine(Env e, Object o) {
 			var xe = env(this.e); bind(xe, p, o, this); bind(xe, ep, e, this); return begin.combine(xe, x);
 		}
-		public String toString() { return "[Opv " + Vm.this.toString(p) + " " + Vm.this.toString(ep) + " " + Vm.this.toString(x) + "]"; }
+		public String toString() { return "{Opv " + Vm.this.toString(p) + " " + Vm.this.toString(ep) + " " + Vm.this.toString(x) + "}"; }
 	}
 	class Apv implements Combinable  {
 		Combinable cmb;
@@ -279,7 +279,7 @@ public class Vm {
 			var arg = car(todo);
 			return pipe(()-> evaluate(e, arg), res-> evalArgs(null, e, cdr(todo), cons(res, done)), arg, e);  
 		}
-		public String toString() { return "[Apv " + Vm.this.toString(cmb) + "]"; }
+		public String toString() { return "{Apv " + Vm.this.toString(cmb) + "}"; }
 	}
 	Apv wrap(Object arg) { return /*arg instanceof Apv apv ? apv :*/ arg instanceof Combinable cmb ? new Apv(cmb) : error("cannot wrap: " + arg); }
 	Combinable unwrap(Object arg) { return arg instanceof Apv apv ? apv.cmb : error("cannot unwrap: " + arg); }
@@ -328,7 +328,7 @@ public class Vm {
 		Begin() {}; Begin(boolean root) { this.root = root; } 
 		public Object combine(Env e, Object o) {
 			// o = (... xs)
-			return o instanceof Cons c ? begin(null, e, c) : null;
+			return o instanceof Cons c ? begin(null, e, c) : inert;
 		}
 		Object begin(Resumption r, Env e, Cons c) {
 			if (trace && root && r == null) print("\n--------");
@@ -688,11 +688,11 @@ public class Vm {
 	}
 	<T> T write(Object ... os) {
 		for (var o: os) out.print(toString(true, o)); out.println();
-		return (T) os[os.length - 1];
+		return (T)(os.length == 0 ? inert : os[os.length - 1]);
 	}
 	<T> T log(Object ... os) {
 		int i=0; for (var o: os) out.print(eIf(i++ == 0, " ") + toString(o)); out.println();
-		return (T) os[0];
+		return (T)(os.length == 0 ? inert : os[0]);
 	}
 	boolean equals(Object a, Object b) {
 		if (a instanceof Object[] aa) return equals(aa, b);
@@ -716,11 +716,11 @@ public class Vm {
 		try {
 			var env = env(theEnvironment);
 			var val = pushSubcontBarrier(null, env, expr, ()-> evaluate(env, expr));
-			if (objs.length == 0) print(eIfnull("test "+ name + ": "), " ", expr, " should throw but is ", val);
+			if (objs.length == 0) print(eIfnull(name, ()-> "test "+ name + ": "), " ", expr, " should throw but is ", val);
 			else {
 				var expt = objs[0];
 				if (equals(val, expt)) return true;
-				print(eIfnull("test "+ name + ": "), expr, " should be ", expt, " but is ", val);
+				print(eIfnull(name, ()-> "test "+ name + ": "), expr, " should be ", expt, " but is ", val);
 			}
 		}
 		catch (Throwable t) {
@@ -785,7 +785,7 @@ public class Vm {
 		}
 		public String toString() {
 			var intefaces = Arrays.stream(jfun.getClass().getInterfaces()).map(i-> Vm.this.toString(i)).collect(joining(" "));
-			return "[JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "]"; }
+			return "{JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "}"; }
 	}
 	boolean isjFun(Object jfun) {
 		return isInstance(jfun, Supplier.class, ArgsList.class, Function.class, BiFunction.class, Executable.class, Field.class);
@@ -970,7 +970,7 @@ public class Vm {
 					$("vm-def", "vm-array-to-list", jWrap((BiFunction<Boolean,Object[],Object>) this::arrayToList)),
 					$("vm-def", "vm-reverse-list", jWrap((Function) this::reverseList)),
 					// 
-					$("vm-def", "+", jWrap((BinaryOperator<Object>) (a,b)-> a instanceof Integer && b instanceof Integer ? ((Integer)a) + ((Integer)b) : a.toString() + b.toString())),
+					$("vm-def", "+", jWrap((BinaryOperator<Object>)	(a,b)->	a instanceof Integer && b instanceof Integer ? ((Integer)a) + ((Integer)b) : toString(a) + toString(b))),
 					$("vm-def", "*", jWrap((BinaryOperator<Integer>) (a,b)-> a * b)),
 					$("vm-def", "-", jWrap((BinaryOperator<Integer>) (a,b)-> a - b)),
 					$("vm-def", "/", jWrap((BinaryOperator<Integer>) (a,b)-> a / b)),

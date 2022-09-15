@@ -34,7 +34,7 @@
 (assert-throws (define 12))
 (assert-throws (define 12 12))
 
-(assert-equal #null (begin))
+(assert-equal #inert (begin))
 (assert-equal 1 (begin 1))
 (assert-equal 2 (begin 1 2))
 

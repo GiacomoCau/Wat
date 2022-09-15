@@ -26,7 +26,7 @@
 (assert (vm-def 1 1)) ; throw
 (assert (vm-def "a" 1)) ; throw
 
-(assert (vm-begin)     #null)
+(assert (vm-begin)     #inert)
 (assert (vm-begin 1)   1)
 (assert (vm-begin 1 2) 2)
 
