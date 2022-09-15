@@ -37,6 +37,9 @@ public class Utility {
 	public static String eIf(boolean b, Supplier<String> s) {
 		return b ? "" : s.get();
 	}
+	public static String eIfnull(String s) {
+		return s==null ? "" : s;
+	}
 	
 	public static <T> T uncked(Callable<T> t) {
 		try {

@@ -4,6 +4,7 @@ import static List.Parser.parse;
 import static Wat.Utility.$;
 import static Wat.Utility.apply;
 import static Wat.Utility.eIf;
+import static Wat.Utility.eIfnull;
 import static Wat.Utility.getClasses;
 import static Wat.Utility.getExecutable;
 import static Wat.Utility.getField;
@@ -704,28 +705,30 @@ public class Vm {
 		for (int i=0; i<a.length; i+=1) if (!equals(a[i], b[i])) return false;
 		return true;
 	}
+	boolean vmAssert(String str, Object objs) throws Exception {
+		var expr = cons(begin, parseBytecode(parse(str)));
+		return objs instanceof Throwable ? vmAssert(expr) : vmAssert(expr, parseBytecode(objs)); 
+	}
 	boolean vmAssert(Object ... objs) {
-		var expr = objs[0];
+		return vmAssert((String) null, objs[0], objs.length == 1 ? new Object[] {} : new Object[] { objs[1] }); 
+	}
+	boolean vmAssert(String name, Object expr, Object ... objs) {
 		try {
 			var env = env(theEnvironment);
 			var val = pushSubcontBarrier(null, env, expr, ()-> evaluate(env, expr));
-			if (objs.length == 1) print(expr, " should throw but is ", val);
+			if (objs.length == 0) print(eIfnull("test "+ name + ": "), " ", expr, " should throw but is ", val);
 			else {
-				var expt = objs[1];
+				var expt = objs[0];
 				if (equals(val, expt)) return true;
-				print(expr, " should be ", expt, " but is ", val);
+				print(eIfnull("test "+ name + ": "), expr, " should be ", expt, " but is ", val);
 			}
 		}
 		catch (Throwable t) {
-			if (objs.length == 1) return true;
+			if (objs.length == 0) return true;
 			if (stack) t.printStackTrace(out);
 			else print(expr, " throw ", t);
 		}
 		return false;
-	}
-	boolean vmAssert(String str, Object objs) throws Exception {
-		var expr = cons(new Begin(), parseBytecode(parse(str)));
-		return objs instanceof Throwable ? vmAssert(expr) : vmAssert(expr, parseBytecode(objs)); 
 	}
 	
 	
@@ -988,6 +991,7 @@ public class Vm {
 					$("vm-def", "!=", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a != b)),
 					$("vm-def", "eq?", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
 					$("vm-def", "assert", jFun((ArgsList) o-> { checkO("assert", o, 1, 2); return vmAssert(listToArray(o)); } )),
+					$("vm-def", "test", jFun((ArgsList) o-> { checkO("test", o, 2, 3); return vmAssert(toString(car(o)), car(o,1), listToArray(cdr(o,1))); } )),
 					$("vm-def", "toString", jWrap((Function<Object,String>) obj-> toString(obj))),
 					$("vm-def", "log", jWrap((ArgsList) o-> log(listToArray(o)))),
 					$("vm-def", "print", jWrap((ArgsList) o-> print(listToArray(o)))),
