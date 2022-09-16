@@ -82,10 +82,11 @@ import java.util.function.Supplier;
 public class Vm {
 	
 	boolean tco = true;
+	boolean jfopv = true;
+	
 	boolean trace = false;
 	boolean stack = false;
 	boolean thenv = false;
-	boolean jfapv = false;
 	
 	interface Combinable { Object combine(Env e, Object o); }
 	
@@ -253,9 +254,9 @@ public class Vm {
 		if (trace) print(" combine: ", op, " ", o);
 		if (op instanceof Combinable cmb) return cmb.combine(e, o);
 		// per default le jFun dovrebbero essere operative e non applicative
-		if (isjFun(op)) return jfapv
-			? ((Combinable) jWrap(op)).combine(e, o) // jfun x default applicative
-			: ((Combinable) jFun(op)).combine(e, o) // jfun x default operative
+		if (isjFun(op)) return jfopv
+			? ((Combinable) jFun(op)).combine(e, o) // jfun x default operative
+			: ((Combinable) jWrap(op)).combine(e, o) // jfun x default applicative
 		;
 		return error("not a combiner: " + toString(op) + " in: " + cons(op, o));
 	}
@@ -791,7 +792,7 @@ public class Vm {
 		return isInstance(jfun, Supplier.class, ArgsList.class, Function.class, BiFunction.class, Executable.class, Field.class);
 	}
 	JFun jFun(Object jFun) {
-		return /*jfun instanceof JFun ? jfun :*/ isjFun(jFun) ? new JFun(jFun) : error("no a jFun: " + jFun);
+		return jFun instanceof JFun jfun ? jfun : isjFun(jFun) ? new JFun(jFun) : error("no a jFun: " + jFun);
 	}
 	Apv jWrap(Object jfun) {
 		return wrap(jFun(jfun));
@@ -997,10 +998,10 @@ public class Vm {
 					$("vm-def", "print", jWrap((ArgsList) o-> print(listToArray(o)))),
 					$("vm-def", "write", jWrap((ArgsList) o-> write(listToArray(o)))),
 					$("vm-def", "load", jWrap((Function<String, Object>) nf-> uncked(()-> eval(readString(nf))))),
+					$("vm-def", "tco", jWrap((ArgsList) o-> { if (checkO("tco", o, 0, 1, Boolean.class) == 0) return tco; tco=car(o); return inert; })),
 					$("vm-def", "trace", jWrap((ArgsList) o-> { if (checkO("trace", o, 0, 1, Boolean.class) == 0) return trace; trace=car(o); return inert; })),
 					$("vm-def", "stack", jWrap((ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=car(o); return inert; })),
-					$("vm-def", "thenv", jWrap((ArgsList) o-> { if (checkO("thenv", o, 0, 1, Boolean.class) == 0) return thenv; thenv=car(o); return inert; })),
-					$("vm-def", "tco", jWrap((ArgsList) o-> { if (checkO("tco", o, 0, 1, Boolean.class) == 0) return tco; tco=car(o); return inert; }))
+					$("vm-def", "thenv", jWrap((ArgsList) o-> { if (checkO("thenv", o, 0, 1, Boolean.class) == 0) return thenv; thenv=car(o); return inert; }))
 				)
 			)
 		);
