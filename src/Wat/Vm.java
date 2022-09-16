@@ -2,7 +2,6 @@ package Wat;
 
 import static List.Parser.parse;
 import static Wat.Utility.$;
-import static Wat.Utility.apply;
 import static Wat.Utility.eIf;
 import static Wat.Utility.eIfnull;
 import static Wat.Utility.getClasses;
@@ -282,7 +281,7 @@ public class Vm {
 		}
 		public String toString() { return "{Apv " + Vm.this.toString(cmb) + "}"; }
 	}
-	Apv wrap(Object arg) { return /*arg instanceof Apv apv ? apv :*/ arg instanceof Combinable cmb ? new Apv(cmb) : error("cannot wrap: " + arg); }
+	Apv wrap(Object arg) { return arg instanceof Apv apv ? apv : arg instanceof Combinable cmb ? new Apv(cmb) : error("cannot wrap: " + arg); }
 	Combinable unwrap(Object arg) { return arg instanceof Apv apv ? apv.cmb : error("cannot unwrap: " + arg); }
 	Apv lambda(Object p, Object e, Object b) { return new Apv(new Opv(p, ignore, b, (Env) evaluate(theEnvironment, e))); }
 	
@@ -362,6 +361,7 @@ public class Vm {
 		}
 		public String toString() { return "vmLoop"; }
 	}
+	/* TODO eliminare
 	class Catch implements Combinable  {
 		public Object combine(Env e, Object o) {
 			var l = checkO(this, o, 1, 2); // o = (x handler)
@@ -388,6 +388,7 @@ public class Vm {
 		}
 		public String toString() { return "vmCatch"; }
 	}
+	*/
 	class Finally implements Combinable {
 		public Object combine(Env e, Object o) {
 			checkO(this, o, 2); // o = (x cleanup)
@@ -411,6 +412,7 @@ public class Vm {
 		}
 		public String toString() { return "vmFinally"; }
 	}
+	/* TODO eliminare
 	class CatchTag implements Combinable {
 		public Object combine(Env e, Object o) {
 			checkO(this, o, 2); // o = (tag x)
@@ -435,20 +437,12 @@ public class Vm {
 		}
 		public String toString() { return "vmThrowTag"; }
 	}
-	class ValueTag extends RuntimeException {
-		private static final long serialVersionUID = 1L;
-		Object tag, value;
-		ValueTag(Object tag, Object value) {
-			super(Vm.this.toString(tag) + " " + Vm.this.toString(value)); this.tag = tag; this.value = value;
-		}
-	}
-	
-	// TODO valutare
-	class CatchAll implements Combinable {
+	*/
+	class CatchTag implements Combinable {
 		public Object combine(Env e, Object o) {
-			var l = checkO(this, o, 1, 3); // o = (tag x handler)
-			var tag = l < 2 ? null : car(o);
-			var x = car(o, l == 1 ? 0 : 1);
+			var l = checkO(this, o, 2, 3); // o = (tag x) (tag x handler)
+			var tag = car(o);
+			var x = car(o, 1);
 			var handler = l == 3 ? car(o, 2) : null;
 			return combine(null, e, tag, x, handler);
 		}
@@ -457,29 +451,29 @@ public class Vm {
 			try {
 				res = r != null ? r.resume() : evaluate(e, x);
 			}
-			catch (ValueTag exc) {
-				if (tag != null && !Vm.this.equals(exc.tag, tag)) throw exc; 
+			catch (Value exc) {
+				if (tag != ignore && !Vm.this.equals(exc.tag, tag)) throw exc; 
 				res = getValue(exc, e, handler);
 			}
 			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, tag, x, handler), tag, e) : res;
 		}		
-		private Object getValue(ValueTag exc, Env e, Object handler) {
+		private Object getValue(Value exc, Env e, Object handler) {
 			if (handler == null) return exc.value;
 			handler = evaluate(e, handler);
 			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
 			// unwrap handler to prevent eval if exc is sym or cons
 			return Vm.this.combine(e, unwrap(apv1), list(exc.value));
 		}
-		public String toString() { return "CatchAll"; }
+		public String toString() { return "CatchTag"; }
 	}
-	class ThrowAll implements Combinable {
+	class ThrowTag implements Combinable {
 		public Object combine(Env e, Object o) {
-			var l = checkO(this, o, 1, 2); // o = (tag value)
-			var tag = l == 2 ? car(o) : null;
-			var value = l > 0 ? car(o, l-1) : null;
-			return pipe(()-> evaluate(e, value), res->{ throw new ValueTag(tag, res); }, tag, e);
+			var l = checkO(this, o, 1, 2); // o = (tag) (tag value)
+			var tag = car(o);
+			var value = l > 1 ? car(o, 1) : inert;
+			return pipe(()-> evaluate(e, value), res->{ throw new Value(tag, res); }, tag, e);
 		}
-		public String toString() { return "ThrowAll"; }
+		public String toString() { return "ThrowTag"; }
 	}
 	
 	// Delimited Control
@@ -588,9 +582,18 @@ public class Vm {
 		public Error(String message) { super(message); }
 		public Error(String message, Throwable cause) { super(message, cause); }
 	}
+	/*
 	class Value extends RuntimeException {
 		private static final long serialVersionUID = 1L;
 		Object value; Value(Object value) { super(Vm.this.toString(value)); this.value = value; }
+	}
+	*/
+	class Value extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+		Object tag, value;
+		Value(Object tag, Object value) {
+			super(Vm.this.toString(tag) + " " + Vm.this.toString(value)); this.tag = tag; this.value = value;
+		}
 	}
 	class PTree {
 		private Object pt, ep;
@@ -942,13 +945,13 @@ public class Vm {
 					// First-order Control
 					$("vm-def", "vm-if", new If()),
 					$("vm-def", "vm-loop", new Loop()),
-					$("vm-def", "vm-catch", new Catch()),
-					$("vm-def", "vm-throw", jWrap((ArgsList) o-> { throw checkO("throw", o, 0, 1) == 0 ? new Value(inert) : apply(v-> v instanceof Error err ? err : new Value(v), car(o)); })),
+					//$("vm-def", "vm-catch", new Catch()),
+					//$("vm-def", "vm-throw", jWrap((ArgsList) o-> { throw checkO("throw", o, 0, 1) == 0 ? new Value(inert) : apply(v-> v instanceof Error err ? err : new Value(v), car(o)); })),
 					$("vm-def", "vm-finally", new Finally()),
 					$("vm-def", "vm-catch-tag", new CatchTag()),
 					$("vm-def", "vm-throw-tag", new ThrowTag()),
-					$("vm-def", "catchAll", new CatchAll()),
-					$("vm-def", "throwAll", new ThrowAll()),
+					//$("vm-def", "catchAll", new CatchAll()),
+					//$("vm-def", "throwAll", new ThrowAll()),
 					// Delimited Control
 					$("vm-def", "vm-push-prompt", new PushPrompt()),
 					$("vm-def", "vm-take-subcont", wrap(new TakeSubcont())),

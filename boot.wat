@@ -60,10 +60,25 @@
 (assert ((vm-lambda (m) m) 1) 1)
 (assert ((vm-lambda x x) 1)   (1))
 
-(assert (vm-catch (vm-begin (vm-def x 0) (vm-loop (vm-begin (vm-if (== x 10) (vm-throw) (vm-def x (+ x 1))))))) #inert)
-(assert (vm-catch (vm-begin (vm-def x 0) (vm-loop (vm-begin (vm-if (== x 10) (vm-throw x) (vm-def x (+ x 1))))))) 10)
-(assert (vm-catch (vm-begin (vm-def x 0) (vm-loop (vm-if (== x 10) (vm-throw x) (vm-def x (+ x 1)))))) 10)
-(assert (vm-catch (vm-begin (vm-def x 0) (vm-loop (vm-if (== x 10) (vm-throw x)) (vm-def x (+ x 1))))) 10)
+(assert (vm-catch-tag))
+(assert (vm-catch-tag #null))
+(assert (vm-catch-tag #null 1) 1)
+(assert (vm-catch-tag #null 1 (vm-lambda a 2)) 1)
+
+(assert (vm-catch-tag #ignore (vm-throw-tag #ignore)) #inert)
+(assert (vm-catch-tag #ignore (vm-throw-tag a)) #inert)
+(assert (vm-catch-tag a (vm-throw-tag a)) #inert)
+(assert (vm-catch-tag #ignore (vm-throw-tag #ignore 1)) 1)
+(assert (vm-catch-tag #ignore (vm-throw-tag a 1)) 1)
+(assert (vm-catch-tag a (vm-throw-tag a 1)) 1)
+(assert (vm-catch-tag #ignore (vm-throw-tag #ignore 1) (vm-lambda (x) 2)) 2)
+(assert (vm-catch-tag #ignore (vm-throw-tag a 1) (vm-lambda (x) 2)) 2)
+(assert (vm-catch-tag a (vm-throw-tag a 1) (vm-lambda (x) 2)) 2)
+
+(assert (vm-catch-tag #ignore (vm-begin (vm-def x 0) (vm-loop (vm-begin (vm-if (== x 10) (vm-throw-tag #ignore) (vm-def x (+ x 1))))))) #inert)
+(assert (vm-catch-tag #ignore (vm-begin (vm-def x 0) (vm-loop (vm-begin (vm-if (== x 10) (vm-throw-tag #ignore x) (vm-def x (+ x 1))))))) 10)
+(assert (vm-catch-tag #ignore (vm-begin (vm-def x 0) (vm-loop (vm-if (== x 10) (vm-throw-tag #ignore x) (vm-def x (+ x 1)))))) 10)
+(assert (vm-catch-tag #ignore (vm-begin (vm-def x 0) (vm-loop (vm-if (== x 10) (vm-throw-tag #ignore x)) (vm-def x (+ x 1))))) 10)
 
 ;; Rename ur-def
 (vm-def $define! vm-def)
@@ -71,7 +86,7 @@
 ;; Rename bindings that will be used as provided by VM
 ($define! array->list vm-array-to-list)
 ($define! begin vm-begin)
-($define! catch vm-catch)
+;($define! catch vm-catch)
 ($define! cons vm-cons)
 ($define! cons? vm-cons?)
 ($define! dnew vm-dnew)
@@ -88,7 +103,7 @@
 ($define! string->symbol vm-string-to-symbol)
 ($define! symbol-name vm-symbol-name)
 ($define! symbol? vm-symbol?)
-($define! throw vm-throw)
+;($define! throw vm-throw)
 ($define! catch-tag vm-catch-tag)
 ($define! throw-tag vm-throw-tag)
 ($define! unwrap vm-unwrap)
@@ -96,10 +111,10 @@
 
 ;; Important utilities
 ($define! $vau vm-vau)
-($define! $lambda ($vau (formals . body) env (wrap (eval (list* $vau formals #ignore body) env))))
-($define! $lambda vm-lambda)
 ($define! quote ($vau (x) #ignore x))
 ($define! list (wrap ($vau elts #ignore elts)))
+($define! $lambda ($vau (formals . body) env (wrap (eval (list* $vau formals #ignore body) env))))
+($define! $lambda vm-lambda)
 ($define! the-environment ($vau () e e))
 ($define! get-current-environment (wrap ($vau () e e)))
 
@@ -124,6 +139,13 @@
   (list $define! name (list* $vau params envparam body)) )
 
 ;;;; Wrap incomplete VM forms
+
+(define-macro (catch x . handler) (list* vm-catch-tag #ignore x handler))
+(define-macro (throw . x) (list* vm-throw-tag #ignore x))
+
+(assert (catch (throw)) #inert)
+(assert (catch (throw 1)) 1)
+(assert (catch (throw 1) (vm-lambda (x) 2)) 2)
 
 (define-operative (finally protected . cleanup) env
   (eval (list vm-finally protected (list* begin cleanup)) env) )
