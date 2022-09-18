@@ -3,118 +3,118 @@
 ;; ``72. An adequate bootstrap is a contradiction in terms.''
 
 ;; Assert vm
-(assert (vm-quote (a b)) (a b))
+(assert (%quote (a b)) (a b))
 
-(assert (vm-def)             ) ; throw
-(assert (vm-def a)           ) ; throw 
-(assert (vm-def a 1)   #inert) ; a=1
-(assert (vm-def a 1 2)       ) ; throw
+(assert (%def)             ) ; throw
+(assert (%def a)           ) ; throw 
+(assert (%def a 1)   #inert) ; a=1
+(assert (%def a 1 2)       ) ; throw
  
-(assert (vm-begin (vm-def (a) (vm-list 1)) a)         1)
-(assert (vm-begin (vm-def (a b) (vm-list 1 2)) b)     2)
-(assert (vm-begin (vm-def (a . b) (vm-list 1 2)) b)   (2))
-(assert (vm-begin (vm-def (a . b) (vm-list 1 2 3)) b) (2 3))
+(assert (%begin (%def (a) (%list 1)) a)         1)
+(assert (%begin (%def (a b) (%list 1 2)) b)     2)
+(assert (%begin (%def (a . b) (%list 1 2)) b)   (2))
+(assert (%begin (%def (a . b) (%list 1 2 3)) b) (2 3))
 
-(assert (vm-def (a))           ) ; throw
-(assert (vm-def (a) 1)         ) ; throw
-(assert (vm-def (a) 1 2)       ) ; throw
-(assert (vm-def (a b) 1 2)     ) ; throw
-(assert (vm-def (a . b) 1 2)   ) ; throw       
-(assert (vm-def (a . b) 1 2 3) ) ; throw
-(assert (vm-def (a . a) 1 2 3) ) ; throw
+(assert (%def (a))           ) ; throw
+(assert (%def (a) 1)         ) ; throw
+(assert (%def (a) 1 2)       ) ; throw
+(assert (%def (a b) 1 2)     ) ; throw
+(assert (%def (a . b) 1 2)   ) ; throw       
+(assert (%def (a . b) 1 2 3) ) ; throw
+(assert (%def (a . a) 1 2 3) ) ; throw
 
-(assert (vm-def 1 1)) ; throw
-(assert (vm-def "a" 1)) ; throw
+(assert (%def 1 1)) ; throw
+(assert (%def "a" 1)) ; throw
 
-(assert (vm-begin)     #inert)
-(assert (vm-begin 1)   1)
-(assert (vm-begin 1 2) 2)
+(assert (%begin)     #inert)
+(assert (%begin 1)   1)
+(assert (%begin 1 2) 2)
 
-(assert (vm-if)           ) ;throw
-(assert (vm-if #t)        ) ;throw
-(assert (vm-if #t 1)     1)
-(assert (vm-if #f 1)     #inert)
-(assert (vm-if #t 1 2)   1)
-(assert (vm-if #f 1 2)   2)
-(assert (vm-if #f 1 2 3)  ) ;throw
+(assert (%if)           ) ;throw
+(assert (%if #t)        ) ;throw
+(assert (%if #t 1)     1)
+(assert (%if #f 1)     #inert)
+(assert (%if #t 1 2)   1)
+(assert (%if #f 1 2)   2)
+(assert (%if #f 1 2 3)  ) ;throw
 
-(assert ((vm-vau))                 ) ;throw
-(assert ((vm-vau a))               ) ;throw
-(assert ((vm-vau a #ignore))       ) ;throw
+(assert ((%vau))                 ) ;throw
+(assert ((%vau a))               ) ;throw
+(assert ((%vau a #ignore))       ) ;throw
 
-(assert ((vm-vau a #ignore a))     ())
-(assert ((vm-vau a #ignore a) 1)   (1))
-(assert ((vm-vau a #ignore a) 1 2) (1 2))
-(assert ((vm-vau a #ignore b))     ) ;throw
-(assert ((vm-vau (a) #ignore a) 1) 1)
-(assert ((vm-vau a #ignore 1 a) 1) (1))
+(assert ((%vau a #ignore a))     ())
+(assert ((%vau a #ignore a) 1)   (1))
+(assert ((%vau a #ignore a) 1 2) (1 2))
+(assert ((%vau a #ignore b))     ) ;throw
+(assert ((%vau (a) #ignore a) 1) 1)
+(assert ((%vau a #ignore 1 a) 1) (1))
 
-(assert ((vm-vau 1 #ignore 1))   ) ;throw
-(assert ((vm-vau "a" #ignore 1)) ) ;throw
-(assert ((vm-vau a a 1))         ) ;throw
-(assert ((vm-vau (a . a) e 1))   ) ;throw
-(assert ((vm-vau a #ignore 1 2 3 4 5 a) 6) (6))
-(assert ((vm-vau (a) #ignore 1 2 3 4 5 a) 6) 6)
+(assert ((%vau 1 #ignore 1))   ) ;throw
+(assert ((%vau "a" #ignore 1)) ) ;throw
+(assert ((%vau a a 1))         ) ;throw
+(assert ((%vau (a . a) e 1))   ) ;throw
+(assert ((%vau a #ignore 1 2 3 4 5 a) 6) (6))
+(assert ((%vau (a) #ignore 1 2 3 4 5 a) 6) 6)
 
-(assert ((vm-lambda (m)  ) 1) ) ;throw
-(assert ((vm-lambda (m) m) 1) 1)
-(assert ((vm-lambda x x) 1)   (1))
+(assert ((%lambda (m)  ) 1) ) ;throw
+(assert ((%lambda (m) m) 1) 1)
+(assert ((%lambda x x) 1)   (1))
 
-(assert (vm-catch-tag))
-(assert (vm-catch-tag #null))
-(assert (vm-catch-tag #null 1) 1)
-(assert (vm-catch-tag #null 1 (vm-lambda a 2)) 1)
+(assert (%catch-tag))
+(assert (%catch-tag #null))
+(assert (%catch-tag #null 1) 1)
+(assert (%catch-tag #null 1 (%lambda a 2)) 1)
 
-(assert (vm-catch-tag #ignore (vm-throw-tag #ignore)) #inert)
-(assert (vm-catch-tag #ignore (vm-throw-tag a)) #inert)
-(assert (vm-catch-tag a (vm-throw-tag a)) #inert)
-(assert (vm-catch-tag #ignore (vm-throw-tag #ignore 1)) 1)
-(assert (vm-catch-tag #ignore (vm-throw-tag a 1)) 1)
-(assert (vm-catch-tag a (vm-throw-tag a 1)) 1)
-(assert (vm-catch-tag #ignore (vm-throw-tag #ignore 1) (vm-lambda (x) 2)) 2)
-(assert (vm-catch-tag #ignore (vm-throw-tag a 1) (vm-lambda (x) 2)) 2)
-(assert (vm-catch-tag a (vm-throw-tag a 1) (vm-lambda (x) 2)) 2)
+(assert (%catch-tag #ignore (%throw-tag #ignore)) #inert)
+(assert (%catch-tag #ignore (%throw-tag a)) #inert)
+(assert (%catch-tag a (%throw-tag a)) #inert)
+(assert (%catch-tag #ignore (%throw-tag #ignore 1)) 1)
+(assert (%catch-tag #ignore (%throw-tag a 1)) 1)
+(assert (%catch-tag a (%throw-tag a 1)) 1)
+(assert (%catch-tag #ignore (%throw-tag #ignore 1) (%lambda (x) 2)) 2)
+(assert (%catch-tag #ignore (%throw-tag a 1) (%lambda (x) 2)) 2)
+(assert (%catch-tag a (%throw-tag a 1) (%lambda (x) 2)) 2)
 
-(assert (vm-catch-tag #ignore (vm-begin (vm-def x 0) (vm-loop (vm-begin (vm-if (== x 10) (vm-throw-tag #ignore) (vm-def x (+ x 1))))))) #inert)
-(assert (vm-catch-tag #ignore (vm-begin (vm-def x 0) (vm-loop (vm-begin (vm-if (== x 10) (vm-throw-tag #ignore x) (vm-def x (+ x 1))))))) 10)
-(assert (vm-catch-tag #ignore (vm-begin (vm-def x 0) (vm-loop (vm-if (== x 10) (vm-throw-tag #ignore x) (vm-def x (+ x 1)))))) 10)
-(assert (vm-catch-tag #ignore (vm-begin (vm-def x 0) (vm-loop (vm-if (== x 10) (vm-throw-tag #ignore x)) (vm-def x (+ x 1))))) 10)
+(assert (%catch-tag #ignore (%begin (%def x 0) (%loop (%begin (%if (== x 10) (%throw-tag #ignore) (%def x (+ x 1))))))) #inert)
+(assert (%catch-tag #ignore (%begin (%def x 0) (%loop (%begin (%if (== x 10) (%throw-tag #ignore x) (%def x (+ x 1))))))) 10)
+(assert (%catch-tag #ignore (%begin (%def x 0) (%loop (%if (== x 10) (%throw-tag #ignore x) (%def x (+ x 1)))))) 10)
+(assert (%catch-tag #ignore (%begin (%def x 0) (%loop (%if (== x 10) (%throw-tag #ignore x)) (%def x (+ x 1))))) 10)
 
 ;; Rename ur-def
-(vm-def $define! vm-def)
+(%def $define! %def)
 
 ;; Rename bindings that will be used as provided by VM
-($define! array->list vm-array-to-list)
-($define! begin vm-begin)
-;($define! catch vm-catch)
-($define! cons vm-cons)
-($define! cons? vm-cons?)
-($define! dnew vm-dnew)
-($define! dref vm-dref)
-($define! error vm-error)
-($define! eval vm-eval)
-($define! if vm-if)
-($define! list* vm-list*)
-($define! list->array vm-list-to-array)
-($define! loop vm-loop)
-($define! make-environment vm-make-environment)
-($define! nil? vm-nil?)
-($define! reverse-list vm-reverse-list)
-($define! string->symbol vm-string-to-symbol)
-($define! symbol-name vm-symbol-name)
-($define! symbol? vm-symbol?)
-;($define! throw vm-throw)
-($define! catch-tag vm-catch-tag)
-($define! throw-tag vm-throw-tag)
-($define! unwrap vm-unwrap)
-($define! wrap vm-wrap)
+($define! array->list %array-to-list)
+($define! begin %begin)
+;($define! catch %catch)
+($define! cons %cons)
+($define! cons? %cons?)
+($define! dnew %dnew)
+($define! dref %dref)
+($define! error %error)
+($define! eval %eval)
+($define! if %if)
+($define! list* %list*)
+($define! list->array %list-to-array)
+($define! loop %loop)
+($define! make-environment %make-environment)
+($define! nil? %nil?)
+($define! reverse-list %reverse-list)
+($define! string->symbol %string-to-symbol)
+($define! symbol-name %symbol-name)
+($define! symbol? %symbol?)
+;($define! throw %throw)
+($define! catch-tag %catch-tag)
+($define! throw-tag %throw-tag)
+($define! unwrap %unwrap)
+($define! wrap %wrap)
 
 ;; Important utilities
-($define! $vau vm-vau)
+($define! $vau %vau)
 ($define! quote ($vau (x) #ignore x))
 ($define! list (wrap ($vau elts #ignore elts)))
 ($define! $lambda ($vau (formals . body) env (wrap (eval (list* $vau formals #ignore body) env))))
-($define! $lambda vm-lambda)
+($define! $lambda %lambda)
 ($define! the-environment ($vau () e e))
 ($define! get-current-environment (wrap ($vau () e e)))
 
@@ -140,27 +140,27 @@
 
 ;;;; Wrap incomplete VM forms
 
-(define-macro (catch x . handler) (list* vm-catch-tag #ignore x handler))
-(define-macro (throw . x) (list* vm-throw-tag #ignore x))
+(define-macro (catch x . handler) (list* %catch-tag #ignore x handler))
+(define-macro (throw . x) (list* %throw-tag #ignore x))
 
 (assert (catch (throw)) #inert)
 (assert (catch (throw 1)) 1)
-(assert (catch (throw 1) (vm-lambda (x) 2)) 2)
+(assert (catch (throw 1) (%lambda (x) 2)) 2)
 
 (define-operative (finally protected . cleanup) env
-  (eval (list vm-finally protected (list* begin cleanup)) env) )
+  (eval (list %finally protected (list* begin cleanup)) env) )
 
 (define-operative (push-prompt prompt . body) env
-  (eval (list vm-push-prompt (eval prompt env) (list* begin body)) env) )
+  (eval (list %push-prompt (eval prompt env) (list* begin body)) env) )
 
 (define-macro (take-subcont prompt k . body)
-  (list vm-take-subcont prompt (list* $lambda (list k) body)) )
+  (list %take-subcont prompt (list* $lambda (list k) body)) )
 
 (define-macro (push-subcont k . body)
-  (list vm-push-prompt-subcont #ignore k (list* $lambda () body)) )
+  (list %push-prompt-subcont #ignore k (list* $lambda () body)) )
 
 (define-macro (push-prompt-subcont p k . body)
-  (list vm-push-prompt-subcont p k (list* $lambda () body)) )
+  (list %push-prompt-subcont p k (list* $lambda () body)) )
 
 ;;;; List utilities
 
@@ -327,7 +327,7 @@
            (list* begin body)
            (let* ( (((name expr) . rest-bs) bs)
                    (value (eval expr env)) )
-             (list vm-dlet name value (process-bindings rest-bs)) )))
+             (list %dlet name value (process-bindings rest-bs)) )))
     env ))
 
 |#
@@ -337,7 +337,7 @@
   (eval (list $define! name (make-prototype name super-name prop-names env)) env))
 
 (define (make-prototype name super-name prop-names env)
-  (let ((p (apply vm-js-make-prototype (list* (symbol-name name) (map-list symbol-name prop-names))))
+  (let ((p (apply %js-make-prototype (list* (symbol-name name) (map-list symbol-name prop-names))))
         (super (eval super-name env)))
     (set (.prototype p) (@create &Object (.prototype super)))
     (set (.constructor (.prototype p)) super)
@@ -386,8 +386,8 @@
 
 ;;;; JavaScript
 
-(define (relational-op vm-binop)
-  (let ((binop vm-binop))
+(define (relational-op %binop)
+  (let ((binop %binop))
     (letrec ((op (lambda (arg1 arg2 . rest)
                    (if (binop arg1 arg2)
                        (if (nil? rest) #t
@@ -403,7 +403,7 @@
 (define >= (relational-op >=))
 
 (define (!= . args) (not (apply == args)))
-(define (!== . args) (not (apply === args)))
+;(define (!== . args) (not (apply === args)))
 
 (define *
   (let ((vm* *))
@@ -429,22 +429,22 @@
 (define / (negative-op / 1))
 
 |#
-(define % (vm-js-binop "%"))
-(define not (vm-js-unop "!"))
-(define typeof (vm-js-unop "typeof"))
-(define in (vm-js-binop "in"))
-(define instanceof (vm-js-binop "instanceof"))
+(define % (%js-binop "%"))
+(define not (%js-unop "!"))
+(define typeof (%js-unop "typeof"))
+(define in (%js-binop "in"))
+(define instanceof (%js-binop "instanceof"))
 
-(define bitand (vm-js-binop "&"))
-(define bitor (vm-js-binop "|"))
-(define bitxor (vm-js-binop "^"))
-(define bitnot (vm-js-unop "~"))
-(define bitshiftl (vm-js-binop "<<"))
-(define bitshiftr (vm-js-binop ">>"))
-(define bitshiftr0 (vm-js-binop ">>>"))
+(define bitand (%js-binop "&"))
+(define bitor (%js-binop "|"))
+(define bitxor (%js-binop "^"))
+(define bitnot (%js-unop "~"))
+(define bitshiftl (%js-binop "<<"))
+(define bitshiftr (%js-binop ">>"))
+(define bitshiftr0 (%js-binop ">>>"))
 
 (define-operative (object . pairs) env
-  (let ((obj (vm-js-make-object)))
+  (let ((obj (%js-make-object)))
     (map-list ($lambda ((name value))
                 (set ((js-getter (eval name env)) obj) (eval value env)))
               pairs)
@@ -460,13 +460,13 @@
 (define (array . args) (list->array args))
 
 (define (js-callback fun)
-  (vm-js-function ($lambda args (push-prompt vm-root-prompt (apply fun args)))) )
+  (%js-function ($lambda args (push-prompt %root-prompt (apply fun args)))) )
 
 (define-macro (js-lambda params . body)
   (list js-callback (list* lambda params body)))
 
 (define-macro (type? obj type)
-  (list vm-type? obj type (symbol-name type)))
+  (list %type? obj type (symbol-name type)))
 
 (define-macro (the type obj)
   (list if (list type? obj type) obj (list error (list + obj " is not a: " type))) )
@@ -559,12 +559,13 @@
 
 (define (print-stacktrace)
   (define (print-frame k)
-    (log k)
-    (when (instanceof (.next k) &Wat.Vm$Continuation) ;; .next di !Continuation no buono!
+    (log -- k)
+    ;(when (instanceof (.next k) &Wat.Vm$Continuation) ;; .next di !Continuation no buono!
+    (unless (== (.next k) #null)
     	(print-frame (.next k)) ))
-  (take-subcont vm-root-prompt k
+  (take-subcont %root-prompt k
     (print-frame k)
-    (push-prompt vm-root-prompt
+    (push-prompt %root-prompt
       (push-subcont k) )))
 
 (define (user-break err)

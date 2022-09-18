@@ -3,7 +3,7 @@
 ;;;;; Wat Test Suite
 
 (define (exit v)
-  (take-subcont vm-root-prompt #ignore v) )
+  (take-subcont %root-prompt #ignore v) )
 
 
 ;;;; Utilities

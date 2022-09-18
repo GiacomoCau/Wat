@@ -295,7 +295,7 @@ public class Vm {
 			var msg = checkPt(pt, ep); if (msg != null) return error(msg + " of: " + cons(this, o));
 			return new Opv(pt, ep, cdr(o, 1), e);
 		}
-		public String toString() { return "vmVau"; }
+		public String toString() { return "%Vau"; }
 	};
 	class Def implements Combinable  {
 		public Object combine(Env e, Object o) {
@@ -308,7 +308,7 @@ public class Vm {
 			var arg = car(o, 1);
 			return pipe(()-> evaluate(e, arg), res-> bind(e, pt, res, cons(this, o)), arg, e);
 		}
-		public String toString() { return "vmDef"; }
+		public String toString() { return "%Def"; }
 	};
 	class Eval implements Combinable  {
 		public Object combine(Env e, Object o) {
@@ -318,7 +318,7 @@ public class Vm {
 			if (!(o1 instanceof Env eo)) return error("not an Env: " + o1);
 			return evaluate(eo, x);
 		}
-		public String toString() { return "vmEval"; }
+		public String toString() { return "%Eval"; }
 	}
 	
 	
@@ -340,26 +340,29 @@ public class Vm {
 				c = cc;
 			}
 		}
-		public String toString() { return "vmBegin" + eIf(!root, "*"); }
+		public String toString() { return "%Begin" + eIf(!root, "*"); }
 	}
 	Begin begin = new Begin();
 	class If implements Combinable  {
 		public Object combine(Env e, Object o) {
 			checkO(this, o, 2, 3); // o = (test then else) 
 			var test = car(o);
-			return pipe(()-> evaluate(e, test), res-> istrue(res) ? tco(e, car(o, 1)) : cdr(o, 1) instanceof Cons c ? tco(e, c.car) : inert, test, e);
+			return pipe(()-> evaluate(e, test), res-> istrue(res)
+				? tco(e, car(o, 1))
+				: cdr(o, 1) instanceof Cons c ? tco(e, c.car) : inert, test, e)
+			;
 		}
 		private boolean istrue(Object res) {
 			return res != null && res != nil && res instanceof Boolean b && b;
 		}
-		public String toString() { return "vmIf"; }
+		public String toString() { return "%If"; }
 	}
 	class Loop implements Combinable  {
 		public Object combine(Env e, Object o) {
 			checkO(this, o, 1, -1); // o = (x ...)
 			for (;;) evaluate(e, begin.combine(e, o));
 		}
-		public String toString() { return "vmLoop"; }
+		public String toString() { return "%Loop"; }
 	}
 	/* TODO eliminare
 	class Catch implements Combinable  {
@@ -380,7 +383,7 @@ public class Vm {
 					handler = evaluate(e, handler);
 					if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
 					// unwrap handler to prevent eval if exc is sym or cons
-					res = Vm.this.combine(e, unwrap(apv1), list(res));
+					res = %.this.combine(e, unwrap(apv1), list(res));
 				}
 			}
 			var hh = handler;
@@ -410,7 +413,7 @@ public class Vm {
 				value, e
 			);
 		}
-		public String toString() { return "vmFinally"; }
+		public String toString() { return "%Finally"; }
 	}
 	/* TODO eliminare
 	class CatchTag implements Combinable {
@@ -464,7 +467,7 @@ public class Vm {
 			// unwrap handler to prevent eval if exc is sym or cons
 			return Vm.this.combine(e, unwrap(apv1), list(exc.value));
 		}
-		public String toString() { return "CatchTag"; }
+		public String toString() { return "%CatchTag"; }
 	}
 	class ThrowTag implements Combinable {
 		public Object combine(Env e, Object o) {
@@ -473,7 +476,7 @@ public class Vm {
 			var value = l > 1 ? car(o, 1) : inert;
 			return pipe(()-> evaluate(e, value), res->{ throw new Value(tag, res); }, tag, e);
 		}
-		public String toString() { return "ThrowTag"; }
+		public String toString() { return "%ThrowTag"; }
 	}
 	
 	// Delimited Control
@@ -484,7 +487,7 @@ public class Vm {
 			var x = car(o, 1);
 			return pushPrompt(null, e, cons(this, o), prompt, ()-> evaluate(e, x));
 		}
-		public String toString() { return "vmPushPrompt"; }
+		public String toString() { return "%PushPrompt"; }
 	}
 	class TakeSubcont implements Combinable  {
 		public Object combine(Env e, Object o) {
@@ -494,7 +497,7 @@ public class Vm {
 			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
 			return new Suspension(prompt, apv1).suspend(rr-> evaluate(e, cons(rr.s, nil)), cons(this, o), e);
 		}
-		public String toString() { return "vmTakeSubcont"; }
+		public String toString() { return "%TakeSubcont"; }
 	}
 	class PushPromptSubcont implements Combinable  {
 		public Object combine(Env e, Object o) {
@@ -505,7 +508,7 @@ public class Vm {
 			//return pushPrompt(r, e, cons(this, o), prompt, ()-> k.apply(e, ()-> Vm.this.combine(null, e, apv0, nil)));
 			return pushPrompt(null, e, cons(this, o), prompt, ()-> k.apply(e, apv0));
 		}
-		public String toString() { return "vmPushPromptSubcont"; }
+		public String toString() { return "%PushPromptSubcont"; }
 	}
 	Object pushPrompt(Resumption r, Env e, Object x, Object prompt, Supplier action) {
 		var res = r != null ? r.resume() : action.get();
@@ -534,7 +537,7 @@ public class Vm {
 			checkO(this, o, 1); // o = (x)
 			return new DV(car(o));
 		}
-		public String toString() { return "vmDNew"; }
+		public String toString() { return "%DNew"; }
 	}
 	class DRef implements Combinable  {
 		public Object combine(Env e, Object o) {
@@ -542,7 +545,7 @@ public class Vm {
 			var x = car(o);
 			return x instanceof DV dv ? dv.val : error("not a dinamic variable: " + x);
 		}
-		public String toString() { return "vmDRef"; }
+		public String toString() { return "%DRef"; }
 	}
 	class DLet implements Combinable  {
 		public Object combine(Env e, Object o) {
@@ -560,7 +563,7 @@ public class Vm {
 				dv.val = oldVal;
 			}
 		}
-		public String toString() { return "vmDLet"; }
+		public String toString() { return "%DLet"; }
 	}
 	
 	
@@ -924,87 +927,87 @@ public class Vm {
 	
 	// Bootstrap
 	Env theEnvironment = env(null); {
-		bind(theEnvironment, symbol("vm-def"), new Def(), null);
-		bind(theEnvironment, symbol("vm-begin"), begin, null);
+		bind(theEnvironment, symbol("%def"), new Def(), null);
+		bind(theEnvironment, symbol("%begin"), begin, null);
 		evaluate(theEnvironment,
 			parseBytecode(
-				$("vm-begin",
+				$("%begin",
 					// Basics
-					$("vm-def", "vm-vau", new Vau()),
-					$("vm-def", "vm-eval", wrap(new Eval())),
-					$("vm-def", "vm-make-environment", jWrap((ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : car(o)))),
-					$("vm-def", "vm-wrap", jWrap((Function<Object, Object>) this::wrap)),
-					$("vm-def", "vm-unwrap", jWrap((Function<Object, Object>) this::unwrap)),
+					$("%def", "%vau", new Vau()),
+					$("%def", "%eval", wrap(new Eval())),
+					$("%def", "%make-environment", jWrap((ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : car(o)))),
+					$("%def", "%wrap", jWrap((Function<Object, Object>) this::wrap)),
+					$("%def", "%unwrap", jWrap((Function<Object, Object>) this::unwrap)),
 					// Values
-					$("vm-def", "vm-cons", jWrap((BiFunction<Object, Object, Object>) this::cons)),
-					$("vm-def", "vm-cons?", jWrap((Function<Object, Boolean>) obj-> obj instanceof Cons)),
-					$("vm-def", "vm-nil?", jWrap((Function<Object, Boolean>) obj-> obj == nil)),
-					$("vm-def", "vm-string-to-symbol", jWrap((Function<String, Symbol>) this::symbol)),
-					$("vm-def", "vm-symbol?", jWrap((Function<Object, Boolean>) obj-> obj instanceof Symbol)),
-					$("vm-def", "vm-symbol-name", jWrap((Function<Symbol, String>) sym-> sym.name)),
+					$("%def", "%cons", jWrap((BiFunction<Object, Object, Object>) this::cons)),
+					$("%def", "%cons?", jWrap((Function<Object, Boolean>) obj-> obj instanceof Cons)),
+					$("%def", "%nil?", jWrap((Function<Object, Boolean>) obj-> obj == nil)),
+					$("%def", "%string-to-symbol", jWrap((Function<String, Symbol>) this::symbol)),
+					$("%def", "%symbol?", jWrap((Function<Object, Boolean>) obj-> obj instanceof Symbol)),
+					$("%def", "%symbol-name", jWrap((Function<Symbol, String>) sym-> sym.name)),
 					// First-order Control
-					$("vm-def", "vm-if", new If()),
-					$("vm-def", "vm-loop", new Loop()),
-					//$("vm-def", "vm-catch", new Catch()),
-					//$("vm-def", "vm-throw", jWrap((ArgsList) o-> { throw checkO("throw", o, 0, 1) == 0 ? new Value(inert) : apply(v-> v instanceof Error err ? err : new Value(v), car(o)); })),
-					$("vm-def", "vm-finally", new Finally()),
-					$("vm-def", "vm-catch-tag", new CatchTag()),
-					$("vm-def", "vm-throw-tag", new ThrowTag()),
-					//$("vm-def", "catchAll", new CatchAll()),
-					//$("vm-def", "throwAll", new ThrowAll()),
+					$("%def", "%if", new If()),
+					$("%def", "%loop", new Loop()),
+					//$("%def", "%catch", new Catch()),
+					//$("%def", "%throw", jWrap((ArgsList) o-> { throw checkO("throw", o, 0, 1) == 0 ? new Value(inert) : apply(v-> v instanceof Error err ? err : new Value(v), car(o)); })),
+					$("%def", "%finally", new Finally()),
+					$("%def", "%catch-tag", new CatchTag()),
+					$("%def", "%throw-tag", new ThrowTag()),
+					//$("%def", "catchAll", new CatchAll()),
+					//$("%def", "throwAll", new ThrowAll()),
 					// Delimited Control
-					$("vm-def", "vm-push-prompt", new PushPrompt()),
-					$("vm-def", "vm-take-subcont", wrap(new TakeSubcont())),
-					$("vm-def", "vm-push-prompt-subcont", wrap(new PushPromptSubcont())),
+					$("%def", "%push-prompt", new PushPrompt()),
+					$("%def", "%take-subcont", wrap(new TakeSubcont())),
+					$("%def", "%push-prompt-subcont", wrap(new PushPromptSubcont())),
 					// Dynamically-scoped Variables
-					$("vm-def", "vm-dnew", wrap(new DNew())),
-					$("vm-def", "vm-dlet", new DLet()),
-					$("vm-def", "vm-dref", wrap(new DRef())),
+					$("%def", "%dnew", wrap(new DNew())),
+					$("%def", "%dlet", new DLet()),
+					$("%def", "%dref", wrap(new DRef())),
 					// Errors
-					$("vm-def", "vm-root-prompt", rootPrompt),
-					$("vm-def", "vm-error", jWrap((Function<String, Object>) this::error)),
+					$("%def", "%root-prompt", rootPrompt),
+					$("%def", "%error", jWrap((Function<String, Object>) this::error)),
 					// JS Interface
-					$("vm-def", "vm-jinvoke", jWrap((Function<String,Object>) this::jInvoke)),
-					$("vm-def", "vm-jgetset", jWrap((Function<String,Object>) this::jGetSet)),
-					$("vm-def", "instanceof", jWrap((BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o))),
+					$("%def", "%jinvoke", jWrap((Function<String,Object>) this::jInvoke)),
+					$("%def", "%jgetset", jWrap((Function<String,Object>) this::jGetSet)),
+					$("%def", "instanceof", jWrap((BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o))),
 					// Utilities
-					$("vm-def", "vm-list", jWrap((ArgsList) o-> o)),
-					$("vm-def", "vm-list*", jWrap((ArgsList) this::listToListStar)),
-					$("vm-def", "vm-list-to-array", jWrap((Function<Object,Object[]>) this::listToArray)),
-					$("vm-def", "vm-array-to-list", jWrap((BiFunction<Boolean,Object[],Object>) this::arrayToList)),
-					$("vm-def", "vm-reverse-list", jWrap((Function) this::reverseList)),
+					$("%def", "%list", jWrap((ArgsList) o-> o)),
+					$("%def", "%list*", jWrap((ArgsList) this::listToListStar)),
+					$("%def", "%list-to-array", jWrap((Function<Object,Object[]>) this::listToArray)),
+					$("%def", "%array-to-list", jWrap((BiFunction<Boolean,Object[],Object>) this::arrayToList)),
+					$("%def", "%reverse-list", jWrap((Function) this::reverseList)),
 					// 
-					$("vm-def", "+", jWrap((BinaryOperator<Object>)	(a,b)->	a instanceof Integer && b instanceof Integer ? ((Integer)a) + ((Integer)b) : toString(a) + toString(b))),
-					$("vm-def", "*", jWrap((BinaryOperator<Integer>) (a,b)-> a * b)),
-					$("vm-def", "-", jWrap((BinaryOperator<Integer>) (a,b)-> a - b)),
-					$("vm-def", "/", jWrap((BinaryOperator<Integer>) (a,b)-> a / b)),
+					$("%def", "+", jWrap((BinaryOperator<Object>) (a,b)-> a instanceof Integer && b instanceof Integer ? ((Integer)a) + ((Integer)b) : toString(a) + toString(b))),
+					$("%def", "*", jWrap((BinaryOperator<Integer>) (a,b)-> a * b)),
+					$("%def", "-", jWrap((BinaryOperator<Integer>) (a,b)-> a - b)),
+					$("%def", "/", jWrap((BinaryOperator<Integer>) (a,b)-> a / b)),
 					//
-					$("vm-def", "!", jWrap((Function<Boolean,Boolean>) a-> !a)),
-					$("vm-def", "not", jWrap((Function<Boolean,Boolean>) a-> !a)),
-					$("vm-def", "<", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a < b)),
-					$("vm-def", ">", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a > b)),
-					$("vm-def", "<=", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a <= b)),
-					$("vm-def", ">=", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a >= b)),
+					$("%def", "!", jWrap((Function<Boolean,Boolean>) a-> !a)),
+					$("%def", "not", jWrap((Function<Boolean,Boolean>) a-> !a)),
+					$("%def", "<", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a < b)),
+					$("%def", ">", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a > b)),
+					$("%def", "<=", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a <= b)),
+					$("%def", ">=", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a >= b)),
 					//
-					$("vm-def", "vm-quote", $("vm-vau", $("a"), ignore, "a")),
-					$("vm-def", "vm-lambda", $("vm-vau", $("formals", ".", "body"), "env",
-						$("vm-wrap", $("vm-eval", $("vm-list*", "vm-vau", "formals", "#ignore", "body"), "env")))),
-					$("vm-def", "vm-jambda", jFun((ArgsList) o-> lambda(car(o), car(o,1), cdr(o,1)))),
+					$("%def", "%quote", $("%vau", $("a"), ignore, "a")),
+					$("%def", "%lambda", $("%vau", $("formals", ".", "body"), "env",
+						$("%wrap", $("%eval", $("%list*", "%vau", "formals", "#ignore", "body"), "env")))),
+					$("%def", "%jambda", jFun((ArgsList) o-> lambda(car(o), car(o,1), cdr(o,1)))),
 					
-					$("vm-def", "==", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a == b)),
-					$("vm-def", "!=", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a != b)),
-					$("vm-def", "eq?", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
-					$("vm-def", "assert", jFun((ArgsList) o-> { checkO("assert", o, 1, 2); return vmAssert(listToArray(o)); } )),
-					$("vm-def", "test", jFun((ArgsList) o-> { checkO("test", o, 2, 3); return vmAssert(toString(car(o)), car(o,1), listToArray(cdr(o,1))); } )),
-					$("vm-def", "toString", jWrap((Function<Object,String>) obj-> toString(obj))),
-					$("vm-def", "log", jWrap((ArgsList) o-> log(listToArray(o)))),
-					$("vm-def", "print", jWrap((ArgsList) o-> print(listToArray(o)))),
-					$("vm-def", "write", jWrap((ArgsList) o-> write(listToArray(o)))),
-					$("vm-def", "load", jWrap((Function<String, Object>) nf-> uncked(()-> eval(readString(nf))))),
-					$("vm-def", "tco", jWrap((ArgsList) o-> { if (checkO("tco", o, 0, 1, Boolean.class) == 0) return tco; tco=car(o); return inert; })),
-					$("vm-def", "trace", jWrap((ArgsList) o-> { if (checkO("trace", o, 0, 1, Boolean.class) == 0) return trace; trace=car(o); return inert; })),
-					$("vm-def", "stack", jWrap((ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=car(o); return inert; })),
-					$("vm-def", "thenv", jWrap((ArgsList) o-> { if (checkO("thenv", o, 0, 1, Boolean.class) == 0) return thenv; thenv=car(o); return inert; }))
+					$("%def", "==", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a == b)),
+					$("%def", "!=", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a != b)),
+					$("%def", "eq?", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
+					$("%def", "assert", jFun((ArgsList) o-> { checkO("assert", o, 1, 2); return vmAssert(listToArray(o)); } )),
+					$("%def", "test", jFun((ArgsList) o-> { checkO("test", o, 2, 3); return vmAssert(toString(car(o)), car(o,1), listToArray(cdr(o,1))); } )),
+					$("%def", "toString", jWrap((Function<Object,String>) obj-> toString(obj))),
+					$("%def", "log", jWrap((ArgsList) o-> log(listToArray(o)))),
+					$("%def", "print", jWrap((ArgsList) o-> print(listToArray(o)))),
+					$("%def", "write", jWrap((ArgsList) o-> write(listToArray(o)))),
+					$("%def", "load", jWrap((Function<String, Object>) nf-> uncked(()-> eval(readString(nf))))),
+					$("%def", "tco", jWrap((ArgsList) o-> { if (checkO("tco", o, 0, 1, Boolean.class) == 0) return tco; tco=car(o); return inert; })),
+					$("%def", "trace", jWrap((ArgsList) o-> { if (checkO("trace", o, 0, 1, Boolean.class) == 0) return trace; trace=car(o); return inert; })),
+					$("%def", "stack", jWrap((ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=car(o); return inert; })),
+					$("%def", "thenv", jWrap((ArgsList) o-> { if (checkO("thenv", o, 0, 1, Boolean.class) == 0) return thenv; thenv=car(o); return inert; }))
 				)
 			)
 		);
@@ -1026,7 +1029,7 @@ public class Vm {
 		return exec(parse(exp));
 	}
 	public void compile(String fileName) throws Exception {
-		try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("build/" + fileName))) {
+		try (var oos = new ObjectOutputStream(new FileOutputStream("build/" + fileName))) {
 			oos.writeObject(parse(readString(fileName)));
 		}
 	}
@@ -1039,7 +1042,7 @@ public class Vm {
 	}
 	public Object readBytecode(String fileName) throws Exception {
 		if (trace) print("\n--------:  " + fileName);
-		try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("build/" + fileName))) {
+		try (var ois = new ObjectInputStream(new FileInputStream("build/" + fileName))) {
 			return ois.readObject();
 		}
 	}
@@ -1052,7 +1055,9 @@ public class Vm {
 					print(exec(parse(exp)));
 				}
 				catch (Throwable t) {
-					if (stack) t.printStackTrace(out);
+					if (stack) {
+						t.printStackTrace(out);
+					}
 					else out.println(t.getClass().getSimpleName() + ": " + t.getMessage());
 				}
 			}
@@ -1146,57 +1151,57 @@ public class Vm {
 		//print(listToListStar(listStar(1, 2, 3, 4))); // -> not a proper list
 		//*/
 		//print(equals(listToArray(list(1,2,3,4)), new Object[] {1,2,3,4})); // -> true
-		//print(parseBytecode(parse("(vm-cons 1 2)"))); // -> ((vm-cons 1 2))
+		//print(parseBytecode(parse("(%cons 1 2)"))); // -> ((%cons 1 2))
 		/*
 		var Throw = new Throwable();
 		vmAssert("1", 1);
 		vmAssert("1 2 3", 3);
-		vmAssert("(vm-cons 1 2)", $(1,".",2));
-		vmAssert("(vm-list 1 2 3)", $(1,2,3));
-		vmAssert("(vm-list* 1 2 3 4)", $(1,2,3,".",4));
-		vmAssert("(vm-array-to-list #t (vm-list-to-array (vm-list 1 2 3 4)))", $(1,2,3,4));
-		vmAssert("(vm-array-to-list #f (vm-list-to-array (vm-list 1 2 3 4)))", $(1,2,3,".",4));
-		vmAssert("(vm-reverse-list (vm-list 1 2 3 4))", $(4,3,2,1));
+		vmAssert("(%cons 1 2)", $(1,".",2));
+		vmAssert("(%list 1 2 3)", $(1,2,3));
+		vmAssert("(%list* 1 2 3 4)", $(1,2,3,".",4));
+		vmAssert("(%array-to-list #t (%list-to-array (%list 1 2 3 4)))", $(1,2,3,4));
+		vmAssert("(%array-to-list #f (%list-to-array (%list 1 2 3 4)))", $(1,2,3,".",4));
+		vmAssert("(%reverse-list (%list 1 2 3 4))", $(4,3,2,1));
 		
 		vmAssert("(+ 1 2)", 3);
 		vmAssert("(* 3 2)", 6);
 		vmAssert("(* (* 3 2) 2)", 12);
 		
-		vmAssert("((vm-vau a #ignore a) 1 2)", $(1,2));
-		vmAssert("((vm-vau (a b) #ignore b) 1 2)", 2);
-		vmAssert("((vm-vau (a . b) #ignore b) 1 2 3)", $(2,3));
-		vmAssert("(vm-def x (vm-list 1)) x", $(1));
-		vmAssert("(vm-def x 1)((vm-wrap(vm-vau (a) #ignore a)) x)", 1);
+		vmAssert("((%vau a #ignore a) 1 2)", $(1,2));
+		vmAssert("((%vau (a b) #ignore b) 1 2)", 2);
+		vmAssert("((%vau (a . b) #ignore b) 1 2 3)", $(2,3));
+		vmAssert("(%def x (%list 1)) x", $(1));
+		vmAssert("(%def x 1)((%wrap(%vau (a) #ignore a)) x)", 1);
 		
-		vmAssert("(vm-def () 1) a", Throw);
-		vmAssert("(vm-def a (vm-list 1)) a", $(1));
-		vmAssert("(vm-def (a) (vm-list 1)) a", 1);
-		vmAssert("(vm-def a (vm-list 1 2 3)) a", $(1,2,3));
-		vmAssert("(vm-def (a) 1 2 3) a", Throw);
-		vmAssert("(vm-def 2 1)", Throw);
-		vmAssert("(vm-def (a) (vm-list 1)) a", 1);
-		vmAssert("(vm-def (a b) (vm-list 1 2)) a b", 2);
-		vmAssert("(vm-def (a . b) (vm-list 1 2 3)) a b", $(2,3)); 
+		vmAssert("(%def () 1) a", Throw);
+		vmAssert("(%def a (%list 1)) a", $(1));
+		vmAssert("(%def (a) (%list 1)) a", 1);
+		vmAssert("(%def a (%list 1 2 3)) a", $(1,2,3));
+		vmAssert("(%def (a) 1 2 3) a", Throw);
+		vmAssert("(%def 2 1)", Throw);
+		vmAssert("(%def (a) (%list 1)) a", 1);
+		vmAssert("(%def (a b) (%list 1 2)) a b", 2);
+		vmAssert("(%def (a . b) (%list 1 2 3)) a b", $(2,3)); 
 		
-		vmAssert("(vm-vau (a . 12) #ignore 0)", Throw);
-		vmAssert("(vm-def (a b 12) 1)", Throw);
+		vmAssert("(%vau (a . 12) #ignore 0)", Throw);
+		vmAssert("(%def (a b 12) 1)", Throw);
 		
-		vmAssert("(vm-quote (a b c))", $("a","b","c"));
+		vmAssert("(%quote (a b c))", $("a","b","c"));
 		
-		vmAssert("(vm-def 2 1)", Throw);
-		vmAssert("(vm-def a 1) a", 1);
-		vmAssert("(vm-def (a . b) (vm-list 1 2 3)) a b", $(2,3));
-		vmAssert("(vm-def define vm-def) (define a 1) a", 1);
-		vmAssert("(vm-def $define! vm-def) ($define! a 1) a", 1);
-		vmAssert("(vm-def $define! vm-def) $define!", theEnvironment.get("vm-def"));
-		vmAssert("(vm-if #t 1 2)", 1);
-		vmAssert("(vm-if #f 1 2)", 2);
-		vmAssert("(vm-if #null 1 2)", 2);
+		vmAssert("(%def 2 1)", Throw);
+		vmAssert("(%def a 1) a", 1);
+		vmAssert("(%def (a . b) (%list 1 2 3)) a b", $(2,3));
+		vmAssert("(%def define %def) (define a 1) a", 1);
+		vmAssert("(%def $define! %def) ($define! a 1) a", 1);
+		vmAssert("(%def $define! %def) $define!", theEnvironment.get("%def"));
+		vmAssert("(%if #t 1 2)", 1);
+		vmAssert("(%if #f 1 2)", 2);
+		vmAssert("(%if #null 1 2)", 2);
 		//*/
 		/*
 		eval("""
-			(assert (vm-def a 1) #inert)
-			(assert (vm-def a)         ) ;throw
+			(assert (%def a 1) #inert)
+			(assert (%def a)         ) ;throw
 		""");
 		//*/
 		

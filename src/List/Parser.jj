@@ -185,8 +185,8 @@ Object Elt() throws Exception: {
   		var id = t.image;
   		if (id.length() == 1) return id;
   		switch (id.charAt(0)) {
-  			case '.': return $("vm-jgetset", $("wat-string", id.substring(1)));
-  			case '@': return $("vm-jinvoke", $("wat-string", id.substring(1)));
+  			case '.': return $("%jgetset", $("wat-string", id.substring(1)));
+  			case '@': return $("%jinvoke", $("wat-string", id.substring(1)));
   			default: return id;
   		}  	
 	}
