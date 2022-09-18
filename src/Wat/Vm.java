@@ -275,9 +275,13 @@ public class Vm {
 			return pipe(()-> evalArgs(null, e, o, nil), args-> cmb.combine(e, args), o, e);
 		}
 		Object evalArgs(Resumption r, Env e, Object todo, Object done) {
-			if (todo == nil) return reverseList(done);
-			var arg = car(todo);
-			return pipe(()-> evaluate(e, arg), res-> evalArgs(null, e, cdr(todo), cons(res, done)), arg, e);  
+			var first = true;
+			for (;;) {
+				if (todo == nil) return reverseList(done); 
+				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, car(todo));
+				if (res instanceof Suspension s) { Object t= todo, d=done; return s.suspend(rr-> evalArgs(rr, e, t, d), car(todo), e); }
+				todo = cdr(todo); done = cons(res, done);
+			}
 		}
 		public String toString() { return "{Apv " + Vm.this.toString(cmb) + "}"; }
 	}
@@ -328,16 +332,16 @@ public class Vm {
 		Begin() {}; Begin(boolean root) { this.root = root; } 
 		public Object combine(Env e, Object o) {
 			// o = (... xs)
-			return o instanceof Cons c ? begin(null, e, c) : inert;
+			return o instanceof Cons cons ? begin(null, e, cons) : inert;
 		}
-		Object begin(Resumption r, Env e, Cons c) {
+		Object begin(Resumption r, Env e, Cons cons) {
 			if (trace && root && r == null) print("\n--------");
 			var first = true;
 			for (;;) {
-				if (!(c.cdr instanceof Cons cc)) return tco(e, c.car); 
-				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, c.car);
-				var ccc = c; if (res instanceof Suspension s) return s.suspend(rr-> begin(rr, e, ccc), c.car, e);
-				c = cc;
+				if (!(cons.cdr instanceof Cons cdr)) return tco(e, cons.car); 
+				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, cons.car);
+				if (res instanceof Suspension s) { var c = cons; return s.suspend(rr-> begin(rr, e, c), cons.car, e); }
+				cons = cdr;
 			}
 		}
 		public String toString() { return "%Begin" + eIf(!root, "*"); }
