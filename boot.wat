@@ -60,25 +60,25 @@
 (assert ((%lambda (m) m) 1) 1)
 (assert ((%lambda x x) 1)   (1))
 
-(assert (%catch-tag))
-(assert (%catch-tag #null))
-(assert (%catch-tag #null 1) 1)
-(assert (%catch-tag #null 1 (%lambda a 2)) 1)
+(assert (%catch))
+(assert (%catch #null))
+(assert (%catch #null 1) 1)
+(assert (%catch #null 1 (%lambda a 2)) 1)
 
-(assert (%catch-tag #ignore (%throw-tag #ignore)) #inert)
-(assert (%catch-tag #ignore (%throw-tag a)) #inert)
-(assert (%catch-tag a (%throw-tag a)) #inert)
-(assert (%catch-tag #ignore (%throw-tag #ignore 1)) 1)
-(assert (%catch-tag #ignore (%throw-tag a 1)) 1)
-(assert (%catch-tag a (%throw-tag a 1)) 1)
-(assert (%catch-tag #ignore (%throw-tag #ignore 1) (%lambda (x) 2)) 2)
-(assert (%catch-tag #ignore (%throw-tag a 1) (%lambda (x) 2)) 2)
-(assert (%catch-tag a (%throw-tag a 1) (%lambda (x) 2)) 2)
+(assert (%catch #ignore (%throw #ignore)) #inert)
+(assert (%catch #ignore (%throw a)) #inert)
+(assert (%catch a (%throw a)) #inert)
+(assert (%catch #ignore (%throw #ignore 1)) 1)
+(assert (%catch #ignore (%throw a 1)) 1)
+(assert (%catch a (%throw a 1)) 1)
+(assert (%catch #ignore (%throw #ignore 1) (%lambda (x) 2)) 2)
+(assert (%catch #ignore (%throw a 1) (%lambda (x) 2)) 2)
+(assert (%catch a (%throw a 1) (%lambda (x) 2)) 2)
 
-(assert (%catch-tag #ignore (%begin (%def x 0) (%loop (%begin (%if (== x 10) (%throw-tag #ignore) (%def x (+ x 1))))))) #inert)
-(assert (%catch-tag #ignore (%begin (%def x 0) (%loop (%begin (%if (== x 10) (%throw-tag #ignore x) (%def x (+ x 1))))))) 10)
-(assert (%catch-tag #ignore (%begin (%def x 0) (%loop (%if (== x 10) (%throw-tag #ignore x) (%def x (+ x 1)))))) 10)
-(assert (%catch-tag #ignore (%begin (%def x 0) (%loop (%if (== x 10) (%throw-tag #ignore x)) (%def x (+ x 1))))) 10)
+(assert (%catch #ignore (%begin (%def x 0) (%loop (%begin (%if (== x 10) (%throw #ignore) (%def x (+ x 1))))))) #inert)
+(assert (%catch #ignore (%begin (%def x 0) (%loop (%begin (%if (== x 10) (%throw #ignore x) (%def x (+ x 1))))))) 10)
+(assert (%catch #ignore (%begin (%def x 0) (%loop (%if (== x 10) (%throw #ignore x) (%def x (+ x 1)))))) 10)
+(assert (%catch #ignore (%begin (%def x 0) (%loop (%if (== x 10) (%throw #ignore x)) (%def x (+ x 1))))) 10)
 
 ;; Rename ur-def
 (%def $define! %def)
@@ -86,7 +86,6 @@
 ;; Rename bindings that will be used as provided by VM
 ($define! array->list %array-to-list)
 ($define! begin %begin)
-;($define! catch %catch)
 ($define! cons %cons)
 ($define! cons? %cons?)
 ($define! dnew %dnew)
@@ -103,9 +102,6 @@
 ($define! string->symbol %string-to-symbol)
 ($define! symbol-name %symbol-name)
 ($define! symbol? %symbol?)
-;($define! throw %throw)
-($define! catch-tag %catch-tag)
-($define! throw-tag %throw-tag)
 ($define! unwrap %unwrap)
 ($define! wrap %wrap)
 
@@ -140,8 +136,11 @@
 
 ;;;; Wrap incomplete VM forms
 
-(define-macro (catch x . handler) (list* %catch-tag #ignore x handler))
-(define-macro (throw . x) (list* %throw-tag #ignore x))
+($define! catch-tag %catch)
+(define-macro (catch x . handler) (list* %catch #ignore x handler))
+
+($define! throw-tag %throw)
+(define-macro (throw . x) (list* %throw #ignore x))
 
 (assert (catch (throw)) #inert)
 (assert (catch (throw 1)) 1)

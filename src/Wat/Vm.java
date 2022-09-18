@@ -364,84 +364,7 @@ public class Vm {
 		}
 		public String toString() { return "%Loop"; }
 	}
-	/* TODO eliminare
-	class Catch implements Combinable  {
-		public Object combine(Env e, Object o) {
-			var l = checkO(this, o, 1, 2); // o = (x handler)
-			var x = car(o);
-			var handler = l == 1 ? null : car(o, 1);
-			return combine(null, e, x, handler);
-		}
-		private Object combine(Resumption r, Env e, Object x, Object handler) {
-			Object res = null;
-			try {
-				res = r != null ? r.resume() : evaluate(e, x);
-			}
-			catch (Error | Value exc) {
-				res = exc instanceof Value v ? v.value : exc;
-				if (handler != null) {
-					handler = evaluate(e, handler);
-					if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
-					// unwrap handler to prevent eval if exc is sym or cons
-					res = %.this.combine(e, unwrap(apv1), list(res));
-				}
-			}
-			var hh = handler;
-			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, x, hh), x, e) : res;
-		}
-		public String toString() { return "vmCatch"; }
-	}
-	*/
-	class Finally implements Combinable {
-		public Object combine(Env e, Object o) {
-			checkO(this, o, 2); // o = (x cleanup)
-			var x = car(o);
-			var cleanup = car(o, 1);
-			try {
-				return pipe(()-> evaluate(e, x), res-> doCleanup(null, cleanup, res, e), x, e);
-			}
-			catch (Throwable t) {
-				return doCleanup(null, cleanup, t, e);
-			}
-		}
-		Object doCleanup(Resumption r, Object cleanup, Object value, Env e) {
-			return pipe(()-> evaluate(e, cleanup),
-				res->{
-					if (!(value instanceof Throwable t)) return value;
-					throw t instanceof RuntimeException rte ? rte : new Error(t);
-				},
-				value, e
-			);
-		}
-		public String toString() { return "%Finally"; }
-	}
-	/* TODO eliminare
-	class CatchTag implements Combinable {
-		public Object combine(Env e, Object o) {
-			checkO(this, o, 2); // o = (tag x)
-			var tag = car(o);
-			var x = car(o, 1);
-			try {
-				return pipe(()-> evaluate(e, x), res-> res, tag, e);
-			}
-			catch (ValueTag exc) {
-				if (Vm.this.equals(exc.tag, tag)) return exc.value;
-				throw exc;
-			}
-		}
-		public String toString() { return "vmCatchTag"; }
-	}
-	class ThrowTag implements Combinable {
-		public Object combine(Env e, Object o) {
-			var l = checkO(this, o, 1, 2); // o = (tag value)
-			var tag = car(o);
-			var value = l == 2 ? car(o, 1) : inert;
-			return pipe(()-> evaluate(e, value), res->{ throw new ValueTag(tag, res); }, tag, e);
-		}
-		public String toString() { return "vmThrowTag"; }
-	}
-	*/
-	class CatchTag implements Combinable {
+	class Catch implements Combinable {
 		public Object combine(Env e, Object o) {
 			var l = checkO(this, o, 2, 3); // o = (tag x) (tag x handler)
 			var tag = car(o);
@@ -467,16 +390,39 @@ public class Vm {
 			// unwrap handler to prevent eval if exc is sym or cons
 			return Vm.this.combine(e, unwrap(apv1), list(exc.value));
 		}
-		public String toString() { return "%CatchTag"; }
+		public String toString() { return "%Catch"; }
 	}
-	class ThrowTag implements Combinable {
+	class Throw implements Combinable {
 		public Object combine(Env e, Object o) {
 			var l = checkO(this, o, 1, 2); // o = (tag) (tag value)
 			var tag = car(o);
 			var value = l > 1 ? car(o, 1) : inert;
 			return pipe(()-> evaluate(e, value), res->{ throw new Value(tag, res); }, tag, e);
 		}
-		public String toString() { return "%ThrowTag"; }
+		public String toString() { return "%Throw"; }
+	}
+	class Finally implements Combinable {
+		public Object combine(Env e, Object o) {
+			checkO(this, o, 2); // o = (x cleanup)
+			var x = car(o);
+			var cleanup = car(o, 1);
+			try {
+				return pipe(()-> evaluate(e, x), res-> doCleanup(null, cleanup, res, e), x, e);
+			}
+			catch (Throwable t) {
+				return doCleanup(null, cleanup, t, e);
+			}
+		}
+		Object doCleanup(Resumption r, Object cleanup, Object value, Env e) {
+			return pipe(()-> evaluate(e, cleanup),
+				res->{
+					if (!(value instanceof Throwable t)) return value;
+					throw t instanceof RuntimeException rte ? rte : new Error(t);
+				},
+				value, e
+			);
+		}
+		public String toString() { return "%Finally"; }
 	}
 	
 	// Delimited Control
@@ -585,12 +531,6 @@ public class Vm {
 		public Error(String message) { super(message); }
 		public Error(String message, Throwable cause) { super(message, cause); }
 	}
-	/*
-	class Value extends RuntimeException {
-		private static final long serialVersionUID = 1L;
-		Object value; Value(Object value) { super(Vm.this.toString(value)); this.value = value; }
-	}
-	*/
 	class Value extends RuntimeException {
 		private static final long serialVersionUID = 1L;
 		Object tag, value;
@@ -948,13 +888,9 @@ public class Vm {
 					// First-order Control
 					$("%def", "%if", new If()),
 					$("%def", "%loop", new Loop()),
-					//$("%def", "%catch", new Catch()),
-					//$("%def", "%throw", jWrap((ArgsList) o-> { throw checkO("throw", o, 0, 1) == 0 ? new Value(inert) : apply(v-> v instanceof Error err ? err : new Value(v), car(o)); })),
+					$("%def", "%catch", new Catch()),
+					$("%def", "%throw", new Throw()),
 					$("%def", "%finally", new Finally()),
-					$("%def", "%catch-tag", new CatchTag()),
-					$("%def", "%throw-tag", new ThrowTag()),
-					//$("%def", "catchAll", new CatchAll()),
-					//$("%def", "throwAll", new ThrowAll()),
 					// Delimited Control
 					$("%def", "%push-prompt", new PushPrompt()),
 					$("%def", "%take-subcont", wrap(new TakeSubcont())),
