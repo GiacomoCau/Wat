@@ -128,9 +128,22 @@ public class Vm {
 	
 	
 	// Basic Forms
-	interface List {}
+	interface List {
+		<T> T cdr();
+		<T> T cdr(int i);
+		<T> T car();
+		<T> T car(int i);
+		int len();
+	}
 	
-	class Nil implements List { public String toString() { return "()"; }};
+	class Nil implements List {
+		public String toString() { return "()"; }
+		public <T> T cdr() { return error("not a cons: " + this); };
+		public <T> T cdr(int i) { return error("not a cons: " + this); };
+		public <T> T car() { return error("not a cons: " + this); };
+		public <T> T car(int i) { return error("not a cons: " + this); };
+		public int len() { return 0; };
+	};
 	public Nil nil = new Nil();
 	
 	class Inert { public String toString() { return "#inert"; }};
@@ -185,21 +198,22 @@ public class Vm {
 		public boolean equals(Object o) {
 			return this == o || o instanceof Cons c && Vm.this.equals(this.car,  c.car) && Vm.this.equals(this.cdr,  c.cdr);
 		}
+		public <T> T car() { return (T) car; }
+		public <T> T cdr() { return (T) cdr; }
+		public <T> T car(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? (T) o.car : error("not a cons: " + o); }
+		public <T> T cdr(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? (T) o.cdr : error("not a cons: " + o); }
+		public int len() { int i=1; Cons o=this; for (; o.cdr instanceof Cons c; o=c) i+=1; return i; }
+		Object setCar(Object v) { return car=v; }
+		Object setCdr(Object v) { return cdr=v; }
 	}
 	class Lons extends Cons implements List {
 		Lons(Object car, List cdr) { super(car, cdr); }
-		List cdr(){ return (List) cdr; }   
+		public List cdr(){ return (List) cdr; }
+		Object setCdr(Object v) { return error("not a cons: " + this); }
 	}
 	<T> T cons(Object car, Object cdr) {
 		return (T)(cdr instanceof Nil nil ? new Lons(car, nil) : cdr instanceof Lons list ? new Lons(car, list) : new Cons(car, cdr));
 	}
-	<T> T car(Object o) { return o instanceof Cons c ? (T) c.car : error("not a cons: " + toString(o)); }
-	<T> T cdr(Object o) { return o instanceof Cons c ? (T) c.cdr : error("not a cons: " + toString(o)); }
-	<T> T car(Object o, int i) { for (; i>0; i-=1) o=cdr(o); return car(o); }
-	<T> T cdr(Object o, int i) { for (; i>0; i-=1) o=cdr(o); return cdr(o); }
-	int len(Object o) { int i=0; for (; o instanceof Cons c; o=c.cdr) i+=1; return i; }
-	<T> T setCar(Object o, Object v) { return o instanceof Cons c ? (T) (c.car=v) : error("not a cons: " + toString(o)); }
-	<T> T setCdr(Object o, Object v) { return o instanceof Cons c ? (T) (c.cdr=v) : error("not a cons: " + toString(o)); }
 	
 	
 	// Environment
@@ -286,9 +300,9 @@ public class Vm {
 			var first = true;
 			for (;;) {
 				if (todo == nil) return reverseList(done); 
-				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, car(todo));
-				if (res instanceof Suspension s) { List t=todo, d=done; return s.suspend(rr-> evalArgs(rr, e, t, d), car(todo), e); }
-				todo = cdr(todo); done = cons(res, done);
+				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, todo.car());
+				if (res instanceof Suspension s) { List t=todo, d=done; return s.suspend(rr-> evalArgs(rr, e, t, d), todo.car(), e); }
+				todo = todo.cdr(); done = cons(res, done);
 			}
 		}
 		public String toString() { return "{Apv " + Vm.this.toString(cmb) + "}"; }
@@ -302,22 +316,22 @@ public class Vm {
 	class Vau implements Combinable  {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 3, -1); // o = (pt ep x ...)
-			var pt = car(o);
-			var ep = car(o, 1);
+			var pt = o.car();
+			var ep = o.car(1);
 			var msg = checkPt(pt, ep); if (msg != null) return error(msg + " of: " + cons(this, o));
-			return new Opv(pt, ep, cdr(o, 1), e);
+			return new Opv(pt, ep, o.cdr(1), e);
 		}
 		public String toString() { return "%Vau"; }
 	};
 	class Def implements Combinable  {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 2); // o = (pt arg)
-			var pt = car(o);
+			var pt = o.car();
 			if (!(pt instanceof Symbol)) {
 				if (!(pt instanceof Cons)) return error("not a symbol: " + pt + " in: " + cons(this, o));
 				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
 			}
-			var arg = car(o, 1);
+			var arg = o.car(1);
 			return pipe(()-> evaluate(e, arg), res-> bind(e, pt, res, cons(this, o)), arg, e);
 		}
 		public String toString() { return "%Def"; }
@@ -325,8 +339,8 @@ public class Vm {
 	class Eval implements Combinable  {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 2); // o = (x eo)
-			var x = car(o);
-			var o1 = car(o, 1);
+			var x = o.car();
+			var o1 = o.car(1);
 			if (!(o1 instanceof Env eo)) return error("not an Env: " + o1);
 			return evaluate(eo, x);
 		}
@@ -358,10 +372,10 @@ public class Vm {
 	class If implements Combinable  {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 2, 3); // o = (test then else) 
-			var test = car(o);
+			var test = o.car();
 			return pipe(()-> evaluate(e, test), res-> istrue(res)
-				? tco(e, car(o, 1))
-				: cdr(o, 1) instanceof Lons c ? tco(e, c.car) : inert, test, e)
+				? tco(e, o.car(1))
+				: o.cdr(1) instanceof Lons lons ? tco(e, lons.car) : inert, test, e)
 			;
 		}
 		private boolean istrue(Object res) {
@@ -379,9 +393,9 @@ public class Vm {
 	class Catch implements Combinable {
 		public Object combine(Env e, List o) {
 			var l = checkO(this, o, 2, 3); // o = (tag x) (tag x handler)
-			var tag = car(o);
-			var x = car(o, 1);
-			var handler = l == 3 ? car(o, 2) : null;
+			var tag = o.car();
+			var x = o.car(1);
+			var handler = l == 3 ? o.car(2) : null;
 			return combine(null, e, tag, x, handler);
 		}
 		private Object combine(Resumption r, Env e, Object tag, Object x, Object handler) {
@@ -407,8 +421,8 @@ public class Vm {
 	class Throw implements Combinable {
 		public Object combine(Env e, List o) {
 			var l = checkO(this, o, 1, 2); // o = (tag) (tag value)
-			var tag = car(o);
-			var value = l > 1 ? car(o, 1) : inert;
+			var tag = o.car();
+			var value = l > 1 ? o.car(1) : inert;
 			return pipe(()-> evaluate(e, value), res->{ throw new Value(tag, res); }, tag, e);
 		}
 		public String toString() { return "%Throw"; }
@@ -416,8 +430,8 @@ public class Vm {
 	class Finally implements Combinable {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 2); // o = (x cleanup)
-			var x = car(o);
-			var cleanup = car(o, 1);
+			var x = o.car();
+			var cleanup = o.car(1);
 			try {
 				return pipe(()-> evaluate(e, x), res-> doCleanup(null, cleanup, res, e), x, e);
 			}
@@ -441,8 +455,8 @@ public class Vm {
 	class PushPrompt implements Combinable  {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 2); // o = (prompt x)
-			var prompt = car(o);
-			var x = car(o, 1);
+			var prompt = o.car();
+			var x = o.car(1);
 			return pushPrompt(null, e, cons(this, o), prompt, ()-> evaluate(e, x));
 		}
 		public String toString() { return "%PushPrompt"; }
@@ -450,8 +464,8 @@ public class Vm {
 	class TakeSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 2); // o = (prompt handler)
-			var prompt = car(o);
-			var handler = car(o, 1); 
+			var prompt = o.car();
+			var handler = o.car(1); 
 			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
 			return new Suspension(prompt, apv1).suspend(rr-> evaluate(e, cons(rr.s, nil)), cons(this, o), e);
 		}
@@ -460,9 +474,9 @@ public class Vm {
 	class PushPromptSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 3); // o = (prompt k apv0)
-			var prompt = car(o);
-			var o1 = car(o, 1); if (!(o1 instanceof Continuation k)) return error("not a continuation: " + o1); 
-			var o2 = car(o, 2); if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2);
+			var prompt = o.car();
+			var o1 = o.car(1); if (!(o1 instanceof Continuation k)) return error("not a continuation: " + o1); 
+			var o2 = o.car(2); if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2);
 			//return pushPrompt(r, e, cons(this, o), prompt, ()-> k.apply(e, ()-> Vm.this.combine(null, e, apv0, nil)));
 			return pushPrompt(null, e, cons(this, o), prompt, ()-> k.apply(e, apv0));
 		}
@@ -493,14 +507,14 @@ public class Vm {
 	class DNew implements Combinable  {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 1); // o = (x)
-			return new DV(car(o));
+			return new DV(o.car());
 		}
 		public String toString() { return "%DNew"; }
 	}
 	class DRef implements Combinable  {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 1); // o = (x)
-			var x = car(o);
+			var x = o.car();
 			return x instanceof DV dv ? dv.val : error("not a dinamic variable: " + x);
 		}
 		public String toString() { return "%DRef"; }
@@ -508,10 +522,10 @@ public class Vm {
 	class DLet implements Combinable  {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 3); // o = (dv val x)
-			var o0 = car(o);
+			var o0 = o.car();
 			if (!(o0 instanceof DV dv)) return error("not a dinamic variable: " + o0);
-			var val = car(o, 1);
-			var x = car(o, 2);
+			var val = o.car(1);
+			var x = o.car(2);
 			var oldVal = dv.val;
 			try {
 				dv.val = val;
@@ -574,21 +588,21 @@ public class Vm {
 	@SuppressWarnings("preview")
 	int args(Apv apv) {
 		return switch(apv.cmb) {
-			case Opv opv-> opv.p == nil ? 0 : opv.p instanceof Cons c && c.cdr == nil && (c.car == ignore || c.car instanceof Symbol) ? 1 : Integer.MAX_VALUE;
+			case Opv opv-> opv.p == null ? 0 : opv.p instanceof Cons c && c.cdr == null && (c.car == ignore || c.car instanceof Symbol) ? 1 : Integer.MAX_VALUE;
 			case JFun jFun-> jFun.jfun instanceof Supplier ? 0 : jFun.jfun instanceof Function ? 1 : Integer.MAX_VALUE;
 			default-> Integer.MAX_VALUE;
 		};
 	}
 	int checkO(Object op, List o, int expt, Class ... cls) {
-		var len=len(o); if (len == expt) { checkO(op, o, cls); return len; }
+		var len= o==null ? 0 : o.len(); if (len == expt) { checkO(op, o, cls); return len; }
 		return error((len < expt ? "less" : "more") + " then " + expt + " operands to combine: " + op + " with: " + o);
 	}
 	int checkO(Object op, List o, int min, int max, Class ... cls) {
-		var len=len(o); if (len >= min && (max == -1 || len <= max)) { checkO(op, o, cls); return len; } 
+		var len = o==null ? 0 : o.len(); if (len >= min && (max == -1 || len <= max)) { checkO(op, o, cls); return len; } 
 		return error((len < min ? "less then " + min : "more then " + max) + " operands to combine: " + op + " with: " + o);
 	}
 	int checkO(Object op, List o, Class ... cls) {
-		if (o == nil) return 0;
+		if (o == null) return 0;
 		int i=0; for (var oo=o; i<cls.length && o instanceof Lons c; i+=1, o=c.cdr()) {
 			var o0 = c.car; var cl=cls[i]; if (cl == null || cl.isInstance(o0)) continue;
 			return error("not a " + toString(cls[i]) + ": " + o0 + " to combine: " + op + " with: " + oo);
@@ -606,7 +620,7 @@ public class Vm {
 	}
 	<T extends Cons> T arrayToList(boolean b, Object ... args) {
 		var len = args.length-1;
-		var c = b || len < 0 ? nil : args[len];
+		var c = b || len < 0 ? null : args[len];
 		for (var i=len-(b?0:1); i>=0; i-=1) c = cons(args[i], c);
 		return (T) c;
 	}
@@ -621,22 +635,22 @@ public class Vm {
 	}
 	<T> T[] listToArray(List o, int i, Class<T> cl) {
 		var res = new ArrayList<T>();
-		for (; o instanceof Lons c; o = c.cdr()) if (i-- <= 0) res.add(car(o));
+		for (; o instanceof Lons c; o = c.cdr()) if (i-- <= 0) res.add(o.car());
 		return res.toArray((T[]) Array.newInstance(cl, 0));
 	}
 	List reverseList(List list) {
-		List res = nil;
+		List res = null;
 		for (; list instanceof Lons lons; list = lons.cdr()) res = cons(lons.car, res);
 		return res;
 	}
 	Object listToListStar(List h) {
 		if (!(h instanceof Cons hc)) return h;
-		if (hc.cdr == nil) return hc.car;
+		if (hc.cdr == null) return hc.car;
 		if (hc.cdr instanceof Cons c1) {
-			if (c1.cdr == nil) { hc.cdr = c1.car; return hc; }
+			if (c1.cdr == null) { hc.cdr = c1.car; return hc; }
 			if (c1.cdr instanceof Cons c2) {
-				while (c2.cdr != nil && c2.cdr instanceof Cons c3) { c1=c2; c2=c3; }
-				if (c2.cdr == nil) { c1.cdr = c2.car;  return hc; }
+				while (c2.cdr != null && c2.cdr instanceof Cons c3) { c1=c2; c2=c3; }
+				if (c2.cdr == null) { c1.cdr = c2.car;  return hc; }
 			}
 		}
 		return error("not a proper list: " + toString(hc));
@@ -698,13 +712,13 @@ public class Vm {
 		return o;
 	}
 	Object parseBytecode(Object ... objs) {
-		if (objs.length == 0) return nil;
+		if (objs.length == 0) return null;
 		if (objs.length == 2 && objs[0].equals("wat-string")) return objs[1];
-		Object head = cons(parseBytecode(objs[0]), nil), cons = head;
+		Object head = cons(parseBytecode(objs[0]), null), cons = head;
 		for (int i=1; i<objs.length; i+=1) {
 			var obj = objs[i];
 			if (obj == null || !obj.equals(".")) {
-				cons = ((Cons) cons).cdr = cons(parseBytecode(objs[i]), nil);
+				cons = ((Cons) cons).cdr = cons(parseBytecode(objs[i]), null);
 				continue;
 			}
 			if (i != objs.length-2) throw new Error(". not is the penultimate element in " + objs);
@@ -726,13 +740,13 @@ public class Vm {
 				return switch (jfun) {
 					case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
 					case ArgsList a-> a.apply(o);  
-					case Function f-> { checkO(jfun, o, 1); yield f.apply(car(o)); }  
-					case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(car(o), car(o, 1)); }
-					case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(car(o)); f.set(car(o), car(o, 1)); yield inert; }
+					case Function f-> { checkO(jfun, o, 1); yield f.apply(o.car()); }  
+					case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(o.car(), o.car(1)); }
+					case Field f-> { checkO(jfun, o, 1, 2); if (o.len() <= 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; }
 					case Method mt-> {
 						var pc = mt.getParameterCount();
 						if (!mt.isVarArgs()) checkO(jfun, o, 1+pc); else checkO(jfun, o, pc, -1);
-						yield mt.invoke(car(o), listToArray(cdr(o)));
+						yield mt.invoke(o.car(), listToArray(o.cdr()));
 					}
 					case Constructor c-> { checkO(jfun, o, c.getParameterCount()); yield c.newInstance(listToArray(o)); }
 					default -> error("not a combine " + jfun);
@@ -762,20 +776,20 @@ public class Vm {
 		return jWrap(
 			(ArgsList) o-> {
 				if (!(o instanceof Lons)) return error("no operands for executing: " + name) ;  
-				Object o0 = car(o);
+				Object o0 = o.car();
 				if (o0 == null) return error("receiver is null");
 				try {
 					switch (name) {
 						case "getField": {
 							checkO(o0, o, 2, Class.class, String.class);
 							var cl = (Class) o0;
-							var fName = (String) car(o, 1);
+							String fName = o.car(1);
 							return jWrap(cl.getField(fName));
 						}
 						case "getMethod": {
 							checkO(o0, o, 2, -1, Class.class, String.class);
 							var cl = (Class) o0;
-							var mName = (String) car(o, 1);
+							String mName = o.car(1);
 							return jWrap(cl.getMethod(mName, listToArray(o, 2, Class.class)));
 						}
 						case "invoke": {
@@ -783,7 +797,7 @@ public class Vm {
 							if (o0 instanceof JFun f) o0 = f.jfun; 
 							if (!(o0 instanceof Method mt)) return error("not a Method " + toString(o0));
 							var pc = mt.getParameterCount(); if (!mt.isVarArgs()) checkO(o0, o, 2+pc); else checkO(o0, o, 1+pc, -1); 
-							return mt.invoke(car(o, 1), listToArray(o, 2));
+							return mt.invoke(o.car(1), listToArray(o, 2));
 						}
 						case "getConstructor": {
 							checkO(o0, o, 1, -1, Class.class);
@@ -793,7 +807,7 @@ public class Vm {
 						case "newInstance": {
 							if (o0 == Array.class) {
 								checkO(o0, o, 2, -1, Class.class, Class.class);
-								var cl = (Class) car(o, 1);
+								Class cl = o.car(1);
 								return newInstance(cl, stream(listToArray(o, 2, Integer.class)).mapToInt(i->i).toArray() );
 							}
 							else {
@@ -839,7 +853,7 @@ public class Vm {
 		return jWrap(
 			(ArgsList) o-> {
 				var len = checkO("jGetSet", o, 1, 2); 
-				var o0 = car(o);
+				var o0 = o.car();
 				// (.name class)        -> class.getField(name) -> field
 				// (.name object)       -> object.getclass().getField(name).get(object) -> field.get(object) 
 				// (.name object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
@@ -848,10 +862,10 @@ public class Vm {
 				if (o0 instanceof Class) return jWrap(field);
 				try {
 					if (len == 1) return field.get(o0);
-					field.set(o0, car(o, 1)); return inert;
+					field.set(o0, o.car(1)); return inert;
 				}
 				catch (Exception e) {
-					return error("can't " + (len==1 ? "get" : "set") + " " + name + " of " + toString(o0) + eIf(len == 1, ()-> " with " + toString(car(o, 1))));
+					return error("can't " + (len==1 ? "get" : "set") + " " + name + " of " + toString(o0) + eIf(len == 1, ()-> " with " + toString(o.car(1))));
 				}
 			}
 		);
@@ -887,7 +901,7 @@ public class Vm {
 					// Basics
 					$("%def", "%vau", new Vau()),
 					$("%def", "%eval", wrap(new Eval())),
-					$("%def", "%make-environment", jWrap((ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : car(o)))),
+					$("%def", "%make-environment", jWrap((ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car()))),
 					$("%def", "%wrap", jWrap((Function<Object, Object>) this::wrap)),
 					$("%def", "%unwrap", jWrap((Function<Object, Object>) this::unwrap)),
 					// Values
@@ -940,22 +954,22 @@ public class Vm {
 					$("%def", "%quote", $("%vau", $("a"), ignore, "a")),
 					$("%def", "%lambda", $("%vau", $("formals", ".", "body"), "env",
 						$("%wrap", $("%eval", $("%list*", "%vau", "formals", "#ignore", "body"), "env")))),
-					$("%def", "%jambda", jFun((ArgsList) o-> lambda(car(o), car(o,1), cdr(o,1)))),
+					$("%def", "%jambda", jFun((ArgsList) o-> lambda(o.car(), o.car(1), o.cdr(1)))),
 					
 					$("%def", "==", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a == b)),
 					$("%def", "!=", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a != b)),
 					$("%def", "eq?", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
 					$("%def", "assert", jFun((ArgsList) o-> { checkO("assert", o, 1, 2); return vmAssert(listToArray(o)); } )),
-					$("%def", "test", jFun((ArgsList) o-> { checkO("test", o, 2, 3); return vmAssert(toString(car(o)), car(o,1), listToArray(cdr(o,1))); } )),
+					$("%def", "test", jFun((ArgsList) o-> { checkO("test", o, 2, 3); return vmAssert(toString(o.car()), o.car(1), listToArray(o.cdr(1))); } )),
 					$("%def", "toString", jWrap((Function<Object,String>) obj-> toString(obj))),
 					$("%def", "log", jWrap((ArgsList) o-> log(listToArray(o)))),
 					$("%def", "print", jWrap((ArgsList) o-> print(listToArray(o)))),
 					$("%def", "write", jWrap((ArgsList) o-> write(listToArray(o)))),
 					$("%def", "load", jWrap((Function<String, Object>) nf-> uncked(()-> eval(readString(nf))))),
-					$("%def", "tco", jWrap((ArgsList) o-> { if (checkO("tco", o, 0, 1, Boolean.class) == 0) return tco; tco=car(o); return inert; })),
-					$("%def", "trace", jWrap((ArgsList) o-> { if (checkO("trace", o, 0, 1, Boolean.class) == 0) return trace; trace=car(o); return inert; })),
-					$("%def", "stack", jWrap((ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=car(o); return inert; })),
-					$("%def", "thenv", jWrap((ArgsList) o-> { if (checkO("thenv", o, 0, 1, Boolean.class) == 0) return thenv; thenv=car(o); return inert; }))
+					$("%def", "tco", jWrap((ArgsList) o-> { if (checkO("tco", o, 0, 1, Boolean.class) == 0) return tco; tco=o.car(); return inert; })),
+					$("%def", "trace", jWrap((ArgsList) o-> { if (checkO("trace", o, 0, 1, Boolean.class) == 0) return trace; trace=o.car(); return inert; })),
+					$("%def", "stack", jWrap((ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=o.car(); return inert; })),
+					$("%def", "thenv", jWrap((ArgsList) o-> { if (checkO("thenv", o, 0, 1, Boolean.class) == 0) return thenv; thenv=o.car(); return inert; }))
 				)
 			)
 		);

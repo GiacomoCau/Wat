@@ -290,7 +290,7 @@
 (assert-false (< 1 1 2 3 4 5 5))
 
 (define (ttco n) (if (<= n 0) n (ttco (- n 1))))
-(assert (ttco 100000) 0)
+(assert (ttco 1000) 0)
 
 (exit "finito")
 
