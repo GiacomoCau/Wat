@@ -33,11 +33,39 @@ public class Prova {
 	
 	//class $ {}
 	
+	interface List {}
+	static class Nil implements List {}
+	static Nil nil = new Nil();
+	static class Lons extends Cons implements List {
+		Lons (Object car, List cdr) { super(car, cdr); }
+	}
+	static class Cons {
+		Object car, cdr;
+		Cons(Object car, Object cdr) { this.car=car; this.cdr=cdr;}
+	}
+	static <T> T cons(Object car, Object cdr) {
+		return (T)(cdr instanceof Nil nil ? new Lons(car, nil) : cdr instanceof Lons list ? new Lons(car, list) : new Cons(car, cdr));
+	}
+	Cons cons2(Object car, Object cdr) {
+		return switch (cdr) {
+			default-> new Cons(car, cdr); 
+			case Nil nil-> new Lons(car, nil);
+			case Lons lons-> new Lons(car, lons);
+		};
+	}
+	
 	public static void main(String[] args) throws Exception {
-		camelize();
+		Cons x = cons(1, cons( 2, nil));
+		System.out.println(x instanceof Lons);
+		System.out.println(x instanceof List);
+		System.out.println(x instanceof Cons);
+		List y = cons(1, cons(2, 3));
+		System.out.println(y instanceof Lons);
+		System.out.println(y instanceof List);
+		System.out.println(y instanceof Cons);
 		out.println("finito");
 	}
-
+	
 	static void camelize() throws IOException, FileNotFoundException {
 		for (var s: $("test", "boot")) {
 			try (var pw = new PrintWriter(s + ".out")) {
