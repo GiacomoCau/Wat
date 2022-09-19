@@ -128,14 +128,6 @@ public class Vm {
 	
 	
 	// Basic Forms
-	interface List {
-		<T> T cdr();
-		<T> T cdr(int i);
-		<T> T car();
-		<T> T car(int i);
-		int len();
-	}
-	
 	class Inert { public String toString() { return "#inert"; }};
 	public Inert inert = new Inert();
 	
@@ -156,7 +148,7 @@ public class Vm {
 			Object v = switch (o) {
 				case null, default-> o;
 				case Symbol s-> e.lookup(s.name);
-				case Lons c-> {
+				case List c-> {
 					var ee=e; yield pipe1(null, true,  ()-> evaluate(ee, c.car), op-> combine(ee, op, (List) c.cdr), o, e);
 				}
 			};
@@ -196,13 +188,13 @@ public class Vm {
 		Object setCar(Object v) { return car=v; }
 		Object setCdr(Object v) { return cdr=v; }
 	}
-	class Lons extends Cons implements List {
-		Lons(Object car, List cdr) { super(car, cdr); }
+	class List extends Cons {
+		List(Object car, List cdr) { super(car, cdr); }
 		public List cdr(){ return (List) cdr; }
-		Object setCdr(Object v) { return error("not a cons: " + this); }
+		Object setCdr(List v) { return cdr=v; }
 	}
 	<T> T cons(Object car, Object cdr) {
-		return (T)(cdr == null ? new Lons(car, null) : cdr instanceof Lons list ? new Lons(car, list) : new Cons(car, cdr));
+		return (T)(cdr == null ? new List(car, null) : cdr instanceof List list ? new List(car, list) : new Cons(car, cdr));
 	}
 	
 	
@@ -344,13 +336,13 @@ public class Vm {
 		Begin() {}; Begin(boolean root) { this.root = root; } 
 		public Object combine(Env e, List o) {
 			// o = (... xs)
-			return o instanceof Lons cons ? begin(null, e, cons) : inert;
+			return o != null ? begin(null, e, o) : inert;
 		}
-		Object begin(Resumption r, Env e, Lons lons) {
+		Object begin(Resumption r, Env e, List lons) {
 			if (trace && root && r == null) print("\n--------");
 			var first = true;
 			for (;;) {
-				if (!(lons.cdr instanceof Lons cdr)) return tco(e, lons.car); 
+				if (!(lons.cdr instanceof List cdr)) return tco(e, lons.car); 
 				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, lons.car);
 				if (res instanceof Suspension s) { var l = lons; return s.suspend(rr-> begin(rr, e, l), lons.car, e); }
 				lons = cdr;
@@ -365,7 +357,7 @@ public class Vm {
 			var test = o.car();
 			return pipe(()-> evaluate(e, test), res-> istrue(res)
 				? tco(e, o.car(1))
-				: o.cdr(1) instanceof Lons lons ? tco(e, lons.car) : inert, test, e)
+				: o.cdr(1) instanceof List lons ? tco(e, lons.car) : inert, test, e)
 			;
 		}
 		private boolean istrue(Object res) {
@@ -593,8 +585,8 @@ public class Vm {
 	}
 	int checkO(Object op, List o, Class ... cls) {
 		if (o == null) return 0;
-		int i=0; for (var oo=o; i<cls.length && o instanceof Lons c; i+=1, o=c.cdr()) {
-			var o0 = c.car; var cl=cls[i]; if (cl == null || cl.isInstance(o0)) continue;
+		int i=0; for (var oo=o; i<cls.length && o != null; i+=1, o=o.cdr()) {
+			var o0 = o.car; var cl=cls[i]; if (cl == null || cl.isInstance(o0)) continue;
 			return error("not a " + toString(cls[i]) + ": " + o0 + " to combine: " + op + " with: " + oo);
 		}
 		return i;
@@ -625,16 +617,17 @@ public class Vm {
 	}
 	<T> T[] listToArray(List o, int i, Class<T> cl) {
 		var res = new ArrayList<T>();
-		for (; o instanceof Lons c; o = c.cdr()) if (i-- <= 0) res.add(o.car());
+		for (; o != null; o = o.cdr()) if (i-- <= 0) res.add(o.car());
 		return res.toArray((T[]) Array.newInstance(cl, 0));
 	}
 	List reverseList(List list) {
 		List res = null;
-		for (; list instanceof Lons lons; list = lons.cdr()) res = cons(lons.car, res);
+		for (; list != null; list = list.cdr()) res = cons(list.car, res);
 		return res;
 	}
 	Object listToListStar(List h) {
-		if (!(h instanceof Cons hc)) return h;
+		if (!(h instanceof Cons)) return h;
+		var hc = h;
 		if (hc.cdr == null) return hc.car;
 		if (hc.cdr instanceof Cons c1) {
 			if (c1.cdr == null) { hc.cdr = c1.car; return hc; }
@@ -765,7 +758,7 @@ public class Vm {
 		if (name == null) return error("method name is null");
 		return jWrap(
 			(ArgsList) o-> {
-				if (!(o instanceof Lons)) return error("no operands for executing: " + name) ;  
+				if (!(o instanceof List)) return error("no operands for executing: " + name) ;  
 				Object o0 = o.car();
 				if (o0 == null) return error("receiver is null");
 				try {
