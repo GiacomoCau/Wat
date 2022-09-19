@@ -173,25 +173,26 @@ public class Vm {
 		Cons(Object car, Object cdr) { this.car = car; this.cdr = cdr; }
 		public String toString() { return "(" + toString(this) + ")"; }
 		private String toString(Cons c) {
-			if (c.cdr == null) return Vm.this.toString(true, c.car);
-			if (c.cdr instanceof Cons cc) return Vm.this.toString(true, c.car) + " " + toString(cc);
-			return Vm.this.toString(true, c.car) + " . " + Vm.this.toString(true, c.cdr);
+			if (c.cdr == null) return null2brkt(c.car);
+			if (c.cdr instanceof Cons cc) return null2brkt(c.car) + " " + toString(cc);
+			return null2brkt(c.car) + " . " + Vm.this.toString(true, c.cdr);
 		}
+		private String null2brkt(Object o) { return o == null ? "()" : Vm.this.toString(true, o); }
 		public boolean equals(Object o) {
 			return this == o || o instanceof Cons c && Vm.this.equals(this.car,  c.car) && Vm.this.equals(this.cdr,  c.cdr);
 		}
 		public <T> T car() { return (T) car; }
 		public <T> T cdr() { return (T) cdr; }
-		public <T> T car(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? (T) o.car : error("not a cons: " + o); }
-		public <T> T cdr(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? (T) o.cdr : error("not a cons: " + o); }
-		public int len() { int i=1; Cons o=this; for (; o.cdr instanceof Cons c; o=c) i+=1; return i; }
+		public <T> T car(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? o.car() : error("not a cons: " + o); }
+		public <T> T cdr(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? o.cdr() : error("not a cons: " + o); }
+		public int len() { int i=1; for (Cons o=this; o.cdr instanceof Cons c; i+=1, o=c); return i; }
 		Object setCar(Object v) { return car=v; }
 		Object setCdr(Object v) { return cdr=v; }
 	}
 	class List extends Cons {
 		List(Object car, List cdr) { super(car, cdr); }
 		public List cdr(){ return (List) cdr; }
-		Object setCdr(List v) { return cdr=v; }
+		List setCdr(List v) { return (List)(cdr=v); }
 	}
 	<T> T cons(Object car, Object cdr) {
 		return (T)(cdr == null ? new List(car, null) : cdr instanceof List list ? new List(car, list) : new Cons(car, cdr));
@@ -625,18 +626,24 @@ public class Vm {
 		for (; list != null; list = list.cdr()) res = cons(list.car, res);
 		return res;
 	}
+	/*
 	Object listToListStar(List h) {
 		if (!(h instanceof Cons)) return h;
-		var hc = h;
+		List hc = h;
 		if (hc.cdr == null) return hc.car;
 		if (hc.cdr instanceof Cons c1) {
-			if (c1.cdr == null) { hc.cdr = c1.car; return hc; }
+			if (c1.cdr == null) { hc.setCdr(c1.car); return hc; }
 			if (c1.cdr instanceof Cons c2) {
 				while (c2.cdr != null && c2.cdr instanceof Cons c3) { c1=c2; c2=c3; }
-				if (c2.cdr == null) { c1.cdr = c2.car;  return hc; }
+				if (c2.cdr == null) { c1.setCdr(c2.car);  return hc; }
 			}
 		}
 		return error("not a proper list: " + toString(hc));
+	}
+	*/
+	Object listToListStar(List h) {
+		if (h.cdr == null) return h.car;
+		return cons(h.car(), listToListStar(h.cdr()));
 	}
 	<T> T print(Object ... os) {
 		for (var o: os) out.print(toString(o)); out.println();
@@ -694,21 +701,37 @@ public class Vm {
 		if (o instanceof Object[] a) return parseBytecode(a);
 		return o;
 	}
+	/*
 	Object parseBytecode(Object ... objs) {
 		if (objs.length == 0) return null;
 		if (objs.length == 2 && objs[0].equals("wat-string")) return objs[1];
-		Object head = cons(parseBytecode(objs[0]), null), cons = head;
+		List head = cons(parseBytecode(objs[0]), null), cons = head;
 		for (int i=1; i<objs.length; i+=1) {
 			var obj = objs[i];
 			if (obj == null || !obj.equals(".")) {
-				cons = ((Cons) cons).cdr = cons(parseBytecode(objs[i]), null);
+				cons = cons.setCdr(cons(parseBytecode(objs[i]), null));
 				continue;
 			}
 			if (i != objs.length-2) throw new Error(". not is the penultimate element in " + objs);
-			((Cons) cons).cdr = parseBytecode(objs[i+1]);
-			return head;
+			cons.setCdr(parseBytecode(objs[i+1]));
+			break;
 		}
 		return head;
+	}
+	*/
+	Object parseBytecode(Object ... objs) {
+		if (objs.length == 0) return null;
+		if (objs.length == 2 && objs[0].equals("wat-string")) return objs[1];
+		int i = objs.length - 1;
+		Object tail = null; 
+		if (i > 1 && objs[i-1] != null && objs[i-1].equals(".")) { tail = parseBytecode(objs[i]); i-=2; }
+		for (; i>=0; i-=1) {
+			var obj = objs[i];
+			if (obj != null && obj.equals("."))
+				throw new Error(". not is the penultimate element in " + objs);
+			tail = cons(parseBytecode(obj), tail);
+		}
+		return tail;
 	}
 	
 	
@@ -1153,11 +1176,13 @@ public class Vm {
 		//exec(parse(readString("boot.wat")));
 		//compile("boot.wat");
 		//exec(readBytecode("boot.wat"));
+		//*
 		var milli = currentTimeMillis();
 		eval(readString("boot.wat"));
 		eval(readString("test.wat"));
 		eval(readString("testJni.wat"));
 		print("start time: " + (currentTimeMillis() - milli)); 
 		repl();
+		//*/
 	}
 }
