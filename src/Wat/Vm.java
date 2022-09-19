@@ -97,7 +97,7 @@ public class Vm {
 			this.f = f; this.next = next; this.dbg = dbg; this.e = e;
 		}
 		public String toString() { return "{Continuation %s %s}".formatted(dbg, e); }
-		Object apply(Env e, Apv apv0) { return apply(()-> combine(e, apv0, nil)); }
+		Object apply(Env e, Apv apv0) { return apply(()-> combine(e, apv0, null)); }
 		Object apply(Supplier s) { return f.apply(new Resumption(next, s));}
 	}
 	class Resumption {
@@ -135,16 +135,6 @@ public class Vm {
 		<T> T car(int i);
 		int len();
 	}
-	
-	class Nil implements List {
-		public String toString() { return "()"; }
-		public <T> T cdr() { return error("not a cons: " + this); };
-		public <T> T cdr(int i) { return error("not a cons: " + this); };
-		public <T> T car() { return error("not a cons: " + this); };
-		public <T> T car(int i) { return error("not a cons: " + this); };
-		public int len() { return 0; };
-	};
-	public Nil nil = new Nil();
 	
 	class Inert { public String toString() { return "#inert"; }};
 	public Inert inert = new Inert();
@@ -191,7 +181,7 @@ public class Vm {
 		Cons(Object car, Object cdr) { this.car = car; this.cdr = cdr; }
 		public String toString() { return "(" + toString(this) + ")"; }
 		private String toString(Cons c) {
-			if (c.cdr == nil) return Vm.this.toString(true, c.car);
+			if (c.cdr == null) return Vm.this.toString(true, c.car);
 			if (c.cdr instanceof Cons cc) return Vm.this.toString(true, c.car) + " " + toString(cc);
 			return Vm.this.toString(true, c.car) + " . " + Vm.this.toString(true, c.cdr);
 		}
@@ -212,7 +202,7 @@ public class Vm {
 		Object setCdr(Object v) { return error("not a cons: " + this); }
 	}
 	<T> T cons(Object car, Object cdr) {
-		return (T)(cdr instanceof Nil nil ? new Lons(car, nil) : cdr instanceof Lons list ? new Lons(car, list) : new Cons(car, cdr));
+		return (T)(cdr == null ? new Lons(car, null) : cdr instanceof Lons list ? new Lons(car, list) : new Cons(car, cdr));
 	}
 	
 	
@@ -259,7 +249,7 @@ public class Vm {
 		return switch (lhs) {
 			case Ignore i-> null;
 			case Symbol s-> e.bind(s.name, rhs);  
-			case Nil n-> rhs == nil ? null : "too many arguments" /*+ ", none expected, but got: " + toString(rhs)*/;
+			case null-> rhs == null ? null : "too many arguments" /*+ ", none expected, but got: " + toString(rhs)*/;
 			case Cons lc-> {
 				if (!(rhs instanceof Cons rc)) yield "too few arguments" /*+ ", more expected, but got: " + toString(rhs)*/;
 				var msg = bind(e, lc.car, rc.car); if (msg != null) yield msg;
@@ -294,12 +284,12 @@ public class Vm {
 		Combinable cmb;
 		Apv(Combinable cmb) { this.cmb = cmb; }
 		public Object combine(Env e, List o) {
-			return pipe(()-> evalArgs(null, e, o, nil), args-> cmb.combine(e, (List) args), o, e);
+			return pipe(()-> evalArgs(null, e, o, null), args-> cmb.combine(e, (List) args), o, e);
 		}
 		Object evalArgs(Resumption r, Env e, List todo, List done) {
 			var first = true;
 			for (;;) {
-				if (todo == nil) return reverseList(done); 
+				if (todo == null) return reverseList(done); 
 				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, todo.car());
 				if (res instanceof Suspension s) { List t=todo, d=done; return s.suspend(rr-> evalArgs(rr, e, t, d), todo.car(), e); }
 				todo = todo.cdr(); done = cons(res, done);
@@ -379,7 +369,7 @@ public class Vm {
 			;
 		}
 		private boolean istrue(Object res) {
-			return res != null && res != nil && res instanceof Boolean b && b;
+			return res != null && res instanceof Boolean b && b;
 		}
 		public String toString() { return "%If"; }
 	}
@@ -467,7 +457,7 @@ public class Vm {
 			var prompt = o.car();
 			var handler = o.car(1); 
 			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
-			return new Suspension(prompt, apv1).suspend(rr-> evaluate(e, cons(rr.s, nil)), cons(this, o), e);
+			return new Suspension(prompt, apv1).suspend(rr-> evaluate(e, cons(rr.s, null)), cons(this, o), e);
 		}
 		public String toString() { return "%TakeSubcont"; }
 	}
@@ -487,7 +477,7 @@ public class Vm {
 		if (!(res instanceof Suspension s)) return res;
 		return prompt == ignore || !equals(s.prompt, prompt)
 			? s.suspend(rr-> pushPrompt(rr, e, x, prompt, action), x, e)
-			: combine(e, s.handler, cons(s.k, nil))
+			: combine(e, s.handler, cons(s.k, null))
 		;
 	}
 	Object pushSubcontBarrier(Resumption r, Env e, Object x, Supplier action) {
@@ -569,7 +559,7 @@ public class Vm {
 		private Set syms = new HashSet<Symbol>();
 		PTree(Object pt, Object ep) { this.pt = pt; this.ep = ep; }
 		Object check() { 
-			if (pt != nil && pt != ignore) {	var msg = check(pt); if (msg != null) return msg; }
+			if (pt != null && pt != ignore) { var msg = check(pt); if (msg != null) return msg; }
 			if (ep == null) return syms.size() > 0 ? null : "no one symbol in: " + pt;
 			if (ep == ignore) return null;
 			if (!(ep instanceof Symbol sym)) return "not a #ignore or symbol: " + ep;
@@ -580,7 +570,7 @@ public class Vm {
 			if (p instanceof Symbol) { return syms.add(p) ? null : "not a unique symbol: " + p + eIf(p == pt, ()-> " in: " + pt); }
 			if (!(p instanceof Cons c)) return "not a #ignore or symbol: " + p + eIf(p == pt, ()-> " in: " + pt);
 			var msg = check(c.car); if (msg != null) return msg;
-			return c.cdr == nil ? null : check(c.cdr);
+			return c.cdr == null ? null : check(c.cdr);
 		}
 	}
 	Object checkPt(Object pt) { return checkPt(pt, null); }
@@ -846,7 +836,7 @@ public class Vm {
 		);
 	}
 	private String executable(String name, Object[] args) {
-		return (name.equals("new") ? "constructor" : "method: " + name) + toString(list(getClasses(args)));
+		return (name.equals("new") ? "constructor" : "method: " + name) + toString(list((Object[])getClasses(args)));
 	}
 	Object jGetSet(String name) {
 		if (name == null) return error("field name is null");
@@ -907,7 +897,7 @@ public class Vm {
 					// Values
 					$("%def", "%cons", jWrap((BiFunction<Object, Object, Object>) this::cons)),
 					$("%def", "%cons?", jWrap((Function<Object, Boolean>) obj-> obj instanceof Cons)),
-					$("%def", "%nil?", jWrap((Function<Object, Boolean>) obj-> obj == nil)),
+					$("%def", "%nil?", jWrap((Function<Object, Boolean>) obj-> obj == null)),
 					$("%def", "%string-to-symbol", jWrap((Function<String, Symbol>) this::symbol)),
 					$("%def", "%symbol?", jWrap((Function<Object, Boolean>) obj-> obj instanceof Symbol)),
 					$("%def", "%symbol-name", jWrap((Function<Symbol, String>) sym-> sym.name)),
