@@ -185,7 +185,6 @@ public class Vm {
 		public <T> T cdr() { return (T) cdr; }
 		public <T> T car(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? o.car() : error("not a cons: " + o); }
 		public <T> T cdr(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? o.cdr() : error("not a cons: " + o); }
-		public int len() { int i=1; for (Cons o=this; o.cdr instanceof Cons c; i+=1, o=c); return i; }
 		Object setCar(Object v) { return car=v; }
 		Object setCdr(Object v) { return cdr=v; }
 	}
@@ -193,7 +192,9 @@ public class Vm {
 		List(Object car, List cdr) { super(car, cdr); }
 		public List cdr(){ return (List) cdr; }
 		List setCdr(List v) { return (List)(cdr=v); }
+		Object setCdr(Object v) { return error("not a cons but a list"); }
 	}
+	public int len(List o) { int i=0; for (; o != null; i+=1, o=o.cdr()); return i; }
 	<T> T cons(Object car, Object cdr) {
 		return (T)(cdr == null ? new List(car, null) : cdr instanceof List list ? new List(car, list) : new Cons(car, cdr));
 	}
@@ -504,15 +505,14 @@ public class Vm {
 	}
 	class DLet implements Combinable  {
 		public Object combine(Env e, List o) {
-			checkO(this, o, 3); // o = (dv val x)
+			checkO(this, o, 3); // o = (var val x)
 			var o0 = o.car();
 			if (!(o0 instanceof DV dv)) return error("not a dinamic variable: " + o0);
 			var val = o.car(1);
 			var x = o.car(2);
 			var oldVal = dv.val;
 			try {
-				dv.val = val;
-				return pipe(()-> evaluate(e, x), res->res, x, e);
+				dv.val = val; return pipe(()-> evaluate(e, x), res->res, x, e);
 			}
 			finally {
 				dv.val = oldVal;
@@ -520,6 +520,26 @@ public class Vm {
 		}
 		public String toString() { return "%DLet"; }
 	}
+    class DLets implements Combinable {
+		public Object combine(Env e, List o) {
+	    	checkO(this, o, 3); // o = (vars vals x)
+	    	var vars = listToArray(o.car());
+	    	var vals = listToArray(o.car(1));
+	    	if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
+	        var olds = new Object[vals.length];
+	        for (int i=0; i<vars.length; i+=1) {
+	            if (!(vars[i] instanceof DV dv)) return error("not a dinamic variable: " + vars[i]);
+	            olds[i] = dv.val;
+	            dv.val = vals[i];
+	        }
+	        try {
+		    	var x = o.car(2); return pipe(()-> evaluate(e, x), res-> res, x, e);
+	        }
+	        finally {
+	            for (int i=0; i<vars.length; i+=1) ((DV) vars[i]).val = olds[i];
+	        }
+	    }
+    }
 	
 	
 	// Error handling
@@ -577,17 +597,18 @@ public class Vm {
 		};
 	}
 	int checkO(Object op, List o, int expt, Class ... cls) {
-		var len= o==null ? 0 : o.len(); if (len == expt) { checkO(op, o, cls); return len; }
-		return error((len < expt ? "less" : "more") + " then " + expt + " operands to combine: " + op + " with: " + o);
+		return checkO(op, o, expt, expt, cls);
 	}
 	int checkO(Object op, List o, int min, int max, Class ... cls) {
-		var len = o==null ? 0 : o.len(); if (len >= min && (max == -1 || len <= max)) { checkO(op, o, cls); return len; } 
+		var len = len(o); if (len >= min && (max == -1 || len <= max)) return cls.length == 0 ? len : checkO(op, o, cls); 
 		return error((len < min ? "less then " + min : "more then " + max) + " operands to combine: " + op + " with: " + o);
 	}
 	int checkO(Object op, List o, Class ... cls) {
 		if (o == null) return 0;
-		int i=0; for (var oo=o; i<cls.length && o != null; i+=1, o=o.cdr()) {
-			var o0 = o.car; var cl=cls[i]; if (cl == null || cl.isInstance(o0)) continue;
+		int len=cls.length-1, i=0; for (var oo=o; o != null; i+=1, o=o.cdr()) {
+			if (len == -1) continue;
+			var cl = cls[i<=len ? i : len];
+			var o0 = o.car; if (cl == null || cl.isInstance(o0)) continue;
 			return error("not a " + toString(cls[i]) + ": " + o0 + " to combine: " + op + " with: " + oo);
 		}
 		return i;
@@ -748,7 +769,7 @@ public class Vm {
 					case ArgsList a-> a.apply(o);  
 					case Function f-> { checkO(jfun, o, 1); yield f.apply(o.car()); }  
 					case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(o.car(), o.car(1)); }
-					case Field f-> { checkO(jfun, o, 1, 2); if (o.len() <= 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; }
+					case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; }
 					case Method mt-> {
 						var pc = mt.getParameterCount();
 						if (!mt.isVarArgs()) checkO(jfun, o, 1+pc); else checkO(jfun, o, pc, -1);
@@ -793,7 +814,7 @@ public class Vm {
 							return jWrap(cl.getField(fName));
 						}
 						case "getMethod": {
-							checkO(o0, o, 2, -1, Class.class, String.class);
+							checkO(o0, o, 2, -1, Class.class, String.class, Class.class);
 							var cl = (Class) o0;
 							String mName = o.car(1);
 							return jWrap(cl.getMethod(mName, listToArray(o, 2, Class.class)));
@@ -812,7 +833,7 @@ public class Vm {
 						}
 						case "newInstance": {
 							if (o0 == Array.class) {
-								checkO(o0, o, 2, -1, Class.class, Class.class);
+								checkO(o0, o, 2, -1, Class.class, Class.class, Integer.class);
 								Class cl = o.car(1);
 								return newInstance(cl, stream(listToArray(o, 2, Integer.class)).mapToInt(i->i).toArray() );
 							}
@@ -929,8 +950,9 @@ public class Vm {
 					$("%def", "%push-prompt-subcont", wrap(new PushPromptSubcont())),
 					// Dynamically-scoped Variables
 					$("%def", "%dnew", wrap(new DNew())),
-					$("%def", "%dlet", new DLet()),
 					$("%def", "%dref", wrap(new DRef())),
+					$("%def", "%dlet", new DLet()),
+					$("%def", "%dlets", new DLets()),
 					// Errors
 					$("%def", "%root-prompt", rootPrompt),
 					$("%def", "%error", jWrap((Function<String, Object>) this::error)),
