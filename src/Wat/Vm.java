@@ -914,7 +914,7 @@ public class Vm {
 					$("%def", "%cons", jWrap((BiFunction<Object, Object, Object>) this::cons)),
 					$("%def", "%cons?", jWrap((Function<Object, Boolean>) obj-> obj instanceof Cons)),
 					$("%def", "%nil?", jWrap((Function<Object, Boolean>) obj-> obj == null)),
-					$("%def", "%string-to-symbol", jWrap((Function<String, Symbol>) this::symbol)),
+					$("%def", "%string->symbol", jWrap((Function<String, Symbol>) this::symbol)),
 					$("%def", "%symbol?", jWrap((Function<Object, Boolean>) obj-> obj instanceof Symbol)),
 					$("%def", "%symbol-name", jWrap((Function<Symbol, String>) sym-> sym.name)),
 					// First-order Control
@@ -941,8 +941,8 @@ public class Vm {
 					// Utilities
 					$("%def", "%list", jWrap((ArgsList) o-> o)),
 					$("%def", "%list*", jWrap((ArgsList) this::listToListStar)),
-					$("%def", "%list-to-array", jWrap((Function<List,Object[]>) this::listToArray)),
-					$("%def", "%array-to-list", jWrap((BiFunction<Boolean,Object[],Object>) this::arrayToList)),
+					$("%def", "%list->array", jWrap((Function<List,Object[]>) this::listToArray)),
+					$("%def", "%array->list", jWrap((BiFunction<Boolean,Object[],Object>) this::arrayToList)),
 					$("%def", "%reverse-list", jWrap((Function<List,List>) this::reverseList)),
 					// 
 					$("%def", "+", jWrap((BinaryOperator<Object>) (a,b)-> a instanceof Integer && b instanceof Integer ? ((Integer)a) + ((Integer)b) : toString(a) + toString(b))),
@@ -1127,8 +1127,8 @@ public class Vm {
 		vmAssert("(%cons 1 2)", $(1,".",2));
 		vmAssert("(%list 1 2 3)", $(1,2,3));
 		vmAssert("(%list* 1 2 3 4)", $(1,2,3,".",4));
-		vmAssert("(%array-to-list #t (%list-to-array (%list 1 2 3 4)))", $(1,2,3,4));
-		vmAssert("(%array-to-list #f (%list-to-array (%list 1 2 3 4)))", $(1,2,3,".",4));
+		vmAssert("(%array->list #t (%list->array (%list 1 2 3 4)))", $(1,2,3,4));
+		vmAssert("(%array->list #f (%list->array (%list 1 2 3 4)))", $(1,2,3,".",4));
 		vmAssert("(%reverse-list (%list 1 2 3 4))", $(4,3,2,1));
 		
 		vmAssert("(+ 1 2)", 3);

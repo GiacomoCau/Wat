@@ -84,7 +84,7 @@
 (%def $define! %def)
 
 ;; Rename bindings that will be used as provided by VM
-($define! array->list %array-to-list)
+($define! array->list %array->list)
 ($define! begin %begin)
 ($define! cons %cons)
 ($define! cons? %cons?)
@@ -94,12 +94,12 @@
 ($define! eval %eval)
 ($define! if %if)
 ($define! list* %list*)
-($define! list->array %list-to-array)
+($define! list->array %list->array)
 ($define! loop %loop)
 ($define! make-environment %make-environment)
 ($define! nil? %nil?)
 ($define! reverse-list %reverse-list)
-($define! string->symbol %string-to-symbol)
+($define! string->symbol %string->symbol)
 ($define! symbol-name %symbol-name)
 ($define! symbol? %symbol?)
 ($define! unwrap %unwrap)
