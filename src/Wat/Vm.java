@@ -190,9 +190,9 @@ public class Vm {
 	}
 	class List extends Cons {
 		List(Object car, List cdr) { super(car, cdr); }
-		public List cdr(){ return (List) cdr; }
+		public List cdr() { return (List) cdr; }
 		List setCdr(List v) { return (List)(cdr=v); }
-		Object setCdr(Object v) { return error("not a cons but a list"); }
+		Object setCdr(Object v) { return error("not setCdr on list"); }
 	}
 	public int len(List o) { int i=0; for (; o != null; i+=1, o=o.cdr()); return i; }
 	<T> T cons(Object car, Object cdr) {
@@ -340,14 +340,14 @@ public class Vm {
 			// o = (... xs)
 			return o != null ? begin(null, e, o) : inert;
 		}
-		Object begin(Resumption r, Env e, List lons) {
+		Object begin(Resumption r, Env e, List list) {
 			if (trace && root && r == null) print("\n--------");
 			var first = true;
 			for (;;) {
-				if (!(lons.cdr instanceof List cdr)) return tco(e, lons.car); 
-				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, lons.car);
-				if (res instanceof Suspension s) { var l = lons; return s.suspend(rr-> begin(rr, e, l), lons.car, e); }
-				lons = cdr;
+				if (!(list.cdr instanceof List cdr)) return tco(e, list.car); 
+				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, list.car);
+				if (res instanceof Suspension s) { var l = list; return s.suspend(rr-> begin(rr, e, l), list.car, e); }
+				list = cdr;
 			}
 		}
 		public String toString() { return "%Begin" + eIf(!root, "*"); }
@@ -359,7 +359,7 @@ public class Vm {
 			var test = o.car();
 			return pipe(()-> evaluate(e, test), res-> istrue(res)
 				? tco(e, o.car(1))
-				: o.cdr(1) instanceof List lons ? tco(e, lons.car) : inert, test, e)
+				: o.cdr(1) instanceof List list ? tco(e, list.car) : inert, test, e)
 			;
 		}
 		private boolean istrue(Object res) {
@@ -389,16 +389,16 @@ public class Vm {
 			}
 			catch (Value exc) {
 				if (tag != ignore && !Vm.this.equals(exc.tag, tag)) throw exc; 
-				res = getValue(exc, e, handler);
+				res = getValue(e, handler, exc);
 			}
 			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, tag, x, handler), tag, e) : res;
 		}		
-		private Object getValue(Value exc, Env e, Object handler) {
+		private Object getValue(Env e, Object handler, Value exc) {
 			if (handler == null) return exc.value;
 			handler = evaluate(e, handler);
 			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
 			// unwrap handler to prevent eval if exc is sym or cons
-			return Vm.this.combine(e, unwrap(apv1), list(exc.value));
+			return evaluate(e, list(unwrap(apv1), exc.value));
 		}
 		public String toString() { return "%Catch"; }
 	}
@@ -407,7 +407,7 @@ public class Vm {
 			var l = checkO(this, o, 1, 2); // o = (tag) (tag value)
 			var tag = o.car();
 			var value = l > 1 ? o.car(1) : inert;
-			return pipe(()-> evaluate(e, value), res->{ throw new Value(tag, res); }, tag, e);
+			return pipe(()-> evaluate(e, value), res-> { throw new Value(tag, res); }, tag, e);
 		}
 		public String toString() { return "%Throw"; }
 	}
@@ -425,7 +425,7 @@ public class Vm {
 		}
 		Object doCleanup(Resumption r, Object cleanup, Object value, Env e) {
 			return pipe(()-> evaluate(e, cleanup),
-				res->{
+				res-> {
 					if (!(value instanceof Throwable t)) return value;
 					throw t instanceof RuntimeException rte ? rte : new Error(t);
 				},
@@ -512,7 +512,7 @@ public class Vm {
 			var x = o.car(2);
 			var oldVal = dv.val;
 			try {
-				dv.val = val; return pipe(()-> evaluate(e, x), res->res, x, e);
+				dv.val = val; return pipe(()-> evaluate(e, x), res-> res, x, e);
 			}
 			finally {
 				dv.val = oldVal;
@@ -835,7 +835,7 @@ public class Vm {
 							if (o0 == Array.class) {
 								checkO(o0, o, 2, -1, Class.class, Class.class, Integer.class);
 								Class cl = o.car(1);
-								return newInstance(cl, stream(listToArray(o, 2, Integer.class)).mapToInt(i->i).toArray() );
+								return newInstance(cl, stream(listToArray(o, 2, Integer.class)).mapToInt(i-> i).toArray() );
 							}
 							else {
 								if (o0 instanceof Apv apv) o0 = apv.cmb;
