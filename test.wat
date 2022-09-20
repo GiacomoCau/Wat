@@ -82,7 +82,7 @@
       (+ v 20)))
   27)
 
-'(test-check 'test3-3t
+'(test-check 'test3-3
   (let ((p (new-prompt)))
     (let ((v (push-prompt p (let*
 	    ((v1 (push-prompt p (+ 6 (abort-prompt p 5))))

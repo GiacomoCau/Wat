@@ -40,7 +40,7 @@
 
 (assert ((%vau))                 ) ;throw
 (assert ((%vau a))               ) ;throw
-(assert ((%vau a #ignore))       ) ;throw
+(assert ((%vau a #ignore)) #inert)
 
 (assert ((%vau a #ignore a))     ())
 (assert ((%vau a #ignore a) 1)   (1))
@@ -56,7 +56,7 @@
 (assert ((%vau a #ignore 1 2 3 4 5 a) 6) (6))
 (assert ((%vau (a) #ignore 1 2 3 4 5 a) 6) 6)
 
-(assert ((%lambda (m)  ) 1) ) ;throw
+(assert ((%lambda (m)  ) 1) #inert)
 (assert ((%lambda (m) m) 1) 1)
 (assert ((%lambda x x) 1)   (1))
 
@@ -558,15 +558,14 @@
 
 (define (print-stacktrace)
   (define (print-frame k)
-    (log -- k)
-    ;(when (instanceof (.next k) &Wat.Vm$Continuation) ;; .next di !Continuation no buono!
-    (unless (== (.next k) #null)
-    	(print-frame (.next k)) ))
+    (log k)
+    (when (!= (.next k) #null)
+      (print-frame (.next k)) ))
   (take-subcont %root-prompt k
     (print-frame k)
     (push-prompt %root-prompt
       (push-subcont k) )))
 
 (define (user-break err)
-  (when (stack) (print) (print err) (print-stacktrace))
+  (when (stack) (print "\n" err) (print-stacktrace))
   (throw err) )

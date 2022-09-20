@@ -98,6 +98,7 @@ public class Vm {
 		}
 		public String toString() { return "{Continuation %s %s}".formatted(dbg, e); }
 		Object apply(Env e, Apv apv0) { return apply(()-> combine(e, apv0, null)); }
+		//Object apply(Env e, Apv apv0) { return apply(()-> evaluate(e, cons(apv0, null))); } // for tco?
 		Object apply(Supplier s) { return f.apply(new Resumption(next, s));}
 	}
 	class Resumption {
@@ -136,7 +137,9 @@ public class Vm {
 	
 	
 	// Tail Call Optimization
-	record Tco (Env e, Object o) {}
+	record Tco (Env e, Object o) {
+		public String toString() { return "{Tco " + o + " " + e + "}"; }
+	}
 	Object tco (Env e, Object o) { return tco ? new Tco(e, o) : evaluate(e, o); }
 	
 	
@@ -236,7 +239,7 @@ public class Vm {
 	// Bind
 	Object bind(Env e, Object lhs, Object rhs, Object exp) {
 		var msg = bind(e, lhs, rhs); if (msg == null) return inert;
-		return error(msg + " for bind: " + lhs + eIf(exp == null, ()-> " of: " + exp) + " with: " + rhs);
+		return error(msg + " for bind: " + toString(lhs) + eIfnull(exp, ()-> " of: " + exp) + " with: " + rhs);
 	}
 	@SuppressWarnings("preview")
 	Object bind(Env e, Object lhs, Object rhs) {
@@ -299,7 +302,7 @@ public class Vm {
 	// Built-in Combiners
 	class Vau implements Combinable  {
 		public Object combine(Env e, List o) {
-			checkO(this, o, 3, -1); // o = (pt ep x ...)
+			checkO(this, o, 2, -1); // o = (pt ep x ...)
 			var pt = o.car();
 			var ep = o.car(1);
 			var msg = checkPt(pt, ep); if (msg != null) return error(msg + " of: " + cons(this, o));
@@ -461,7 +464,8 @@ public class Vm {
 			var prompt = o.car();
 			var o1 = o.car(1); if (!(o1 instanceof Continuation k)) return error("not a continuation: " + o1); 
 			var o2 = o.car(2); if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2);
-			//return pushPrompt(r, e, cons(this, o), prompt, ()-> k.apply(e, ()-> Vm.this.combine(null, e, apv0, nil)));
+			//return pushPrompt(null, e, cons(this, o), prompt, ()-> k.apply(()-> Vm.this.combine(e, apv0, null)));
+			//return pushPrompt(null, e, cons(this, o), prompt, ()-> k.apply(()-> evaluate(e, cons(apv0, null)))); // for tco?
 			return pushPrompt(null, e, cons(this, o), prompt, ()-> k.apply(e, apv0));
 		}
 		public String toString() { return "%PushPromptSubcont"; }
@@ -543,7 +547,7 @@ public class Vm {
 	
 	
 	// Error handling
-	Object rootPrompt = new Object() { public String toString() { return "rootPrompt"; }};
+	Object rootPrompt = new Object() { public String toString() { return "%rootPrompt"; }};
 	Object pushRootPrompt(Object x) { return list(new PushPrompt(), rootPrompt, x); }
 	<T> T error(String msg) {
 		return error(msg, null);
@@ -967,7 +971,7 @@ public class Vm {
 					$("%def", "%array->list", jWrap((BiFunction<Boolean,Object[],Object>) this::arrayToList)),
 					$("%def", "%reverse-list", jWrap((Function<List,List>) this::reverseList)),
 					// 
-					$("%def", "+", jWrap((BinaryOperator<Object>) (a,b)-> a instanceof Integer && b instanceof Integer ? ((Integer)a) + ((Integer)b) : toString(a) + toString(b))),
+					$("%def", "+", jWrap((BinaryOperator) (a,b)-> a instanceof Integer && b instanceof Integer ? ((Integer)a) + ((Integer)b) : toString(a) + toString(b))),
 					$("%def", "*", jWrap((BinaryOperator<Integer>) (a,b)-> a * b)),
 					$("%def", "-", jWrap((BinaryOperator<Integer>) (a,b)-> a - b)),
 					$("%def", "/", jWrap((BinaryOperator<Integer>) (a,b)-> a / b)),
@@ -1045,9 +1049,7 @@ public class Vm {
 					print(exec(parse(exp)));
 				}
 				catch (Throwable t) {
-					if (stack) {
-						t.printStackTrace(out);
-					}
+					if (stack) t.printStackTrace(out);
 					else out.println(t.getClass().getSimpleName() + ": " + t.getMessage());
 				}
 			}
@@ -1203,7 +1205,8 @@ public class Vm {
 		eval(readString("boot.wat"));
 		eval(readString("test.wat"));
 		eval(readString("testJni.wat"));
-		print("start time: " + (currentTimeMillis() - milli)); 
+		print("start time: " + (currentTimeMillis() - milli));
+		stack = true;
 		repl();
 		//*/
 	}
