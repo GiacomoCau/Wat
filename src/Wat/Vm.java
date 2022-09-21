@@ -105,7 +105,7 @@ public class Vm {
 		Continuation k; Supplier<Object> s;
 		Resumption(Continuation k, Supplier<Object> s) { this.k=k; this.s=s; }
 		public String toString() { return "{Resumption %s %s}".formatted(s, k); }
-		<T> T resume() { var k = this.k; this.k = k.next; return (T) k.f.apply(this); }
+		<T> T resume() { var k = this.k; this.k = k.next; var res = k.f.apply(this); return res instanceof Tco tco ? evaluate(tco.e, tco.o) : (T) res; }
 	};
 	class Suspension {
 		Object prompt; Combinable handler; Continuation k;
@@ -119,12 +119,12 @@ public class Vm {
 		return pipe(null, before, after, dbg, e);
 	}
 	<T, R> Object pipe(Resumption r, Supplier<T> before, Function<T, R> after, Object dbg, Env e) {
-		T ris = r != null ? r.resume() : before.get();
-		return ris instanceof Suspension s ? s.suspend(rr-> pipe(rr, before, after, dbg, e), dbg, e) : after.apply(ris);
+		T res = r != null ? r.resume() : before.get();
+		return res instanceof Suspension s ? s.suspend(rr-> pipe(rr, before, after, dbg, e), dbg, e) : after.apply(res);
 	}
 	<T, R> Object pipe1(Resumption r, boolean first, Supplier<T> before, Function<T, R> after, Object dbg, Env e) {
-		T ris = first && r != null && !(first=false) ? r.resume() : before.get();
-		var ff = first; return ris instanceof Suspension s ? s.suspend(rr-> pipe1(rr, ff, before, after, dbg, e), dbg, e) : after.apply(ris);
+		T res = first && r != null && !(first=false) ? r.resume() : before.get();
+		var ff = first; return res instanceof Suspension s ? s.suspend(rr-> pipe1(rr, ff, before, after, dbg, e), dbg, e) : after.apply(res);
 	}
 	
 	
@@ -145,7 +145,7 @@ public class Vm {
 	
 	// Evaluation Core
 	@SuppressWarnings("preview")
-	Object evaluate(Env e, Object o) {
+	<T> T evaluate(Env e, Object o) {
 		if (trace) print("evaluate: ", o);
 		for (;;) {
 			Object v = switch (o) {
@@ -155,7 +155,7 @@ public class Vm {
 					var ee=e; yield pipe1(null, true,  ()-> evaluate(ee, c.car), op-> combine(ee, op, (List) c.cdr), o, e);
 				}
 			};
-			if (!(v instanceof Tco tco)) return v;
+			if (!(v instanceof Tco tco)) return (T) v;
 			e = tco.e; o = tco.o;
 		}
 	}
@@ -296,7 +296,7 @@ public class Vm {
 	}
 	Apv wrap(Object arg) { return arg instanceof Apv apv ? apv : arg instanceof Combinable cmb ? new Apv(cmb) : error("cannot wrap: " + arg); }
 	Combinable unwrap(Object arg) { return arg instanceof Apv apv ? apv.cmb : error("cannot unwrap: " + arg); }
-	Apv lambda(Object p, Object e, List b) { return new Apv(new Opv(p, ignore, b, (Env) evaluate(theEnvironment, e))); }
+	Apv lambda(Object p, Object e, List b) { return new Apv(new Opv(p, ignore, b, evaluate(theEnvironment, e))); }
 	
 	
 	// Built-in Combiners
