@@ -87,7 +87,7 @@ public class Vm {
 	boolean stack = false;
 	boolean thenv = false;
 	
-	interface Combinable { Object combine(Env e, List o); }
+	interface Combinable { <T> T combine(Env e, List o); }
 	
 	
 	// Continuations
@@ -152,7 +152,7 @@ public class Vm {
 				case null, default-> o;
 				case Symbol s-> e.lookup(s.name);
 				case List c-> {
-					var ee=e; yield pipe1(null, true,  ()-> evaluate(ee, c.car), op-> combine(ee, op, (List) c.cdr), o, e);
+					var ee=e; yield pipe1(null, true, ()-> evaluate(ee, c.car), op-> combine(ee, op, (List) c.cdr), o, e );
 				}
 			};
 			if (!(v instanceof Tco tco)) return (T) v;
@@ -258,7 +258,7 @@ public class Vm {
 	
 	
 	// Operative & Applicative Combiners
-	Object combine(Env e, Object op, List o) {
+	<T> T combine(Env e, Object op, List o) {
 		if (trace) print(" combine: ", op, " ", o);
 		if (op instanceof Combinable cmb) return cmb.combine(e, o);
 		// per default le jFun dovrebbero essere operative e non applicative
@@ -273,7 +273,8 @@ public class Vm {
 		Object p, ep; List x; Env e;
 		Opv(Object p, Object ep, List x, Env e) { this.p = p; this.ep = ep; this.x = x; this.e = e; }
 		public Object combine(Env e, List o) {
-			var xe = env(this.e); bind(xe, p, o, this); bind(xe, ep, e, this); return begin.combine(xe, x);
+			var xe = env(this.e);
+			return pipe(()-> bind(xe, p, o, this), $-> pipe(()-> bind(xe, ep, e, this), $$-> begin.combine(xe, x), cons(this, x), e), cons(this, x), e);
 		}
 		public String toString() { return "{Opv " + Vm.this.toString(p) + " " + Vm.this.toString(ep) + " " + Vm.this.toString(x) + "}"; }
 	}
@@ -395,7 +396,7 @@ public class Vm {
 				res = getValue(e, handler, exc);
 			}
 			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, tag, x, handler), tag, e) : res;
-		}		
+		}
 		private Object getValue(Env e, Object handler, Value exc) {
 			if (handler == null) return exc.value;
 			handler = evaluate(e, handler);
@@ -441,7 +442,7 @@ public class Vm {
 	// Delimited Control
 	class PushPrompt implements Combinable  {
 		public Object combine(Env e, List o) {
-			checkO(this, o, 2); // o = (prompt x)
+			checkO(this, o, 2); // o = (prompt x) (prompt (begin ...))
 			var prompt = o.car();
 			var x = o.car(1);
 			return pushPrompt(null, e, cons(this, o), prompt, ()-> evaluate(e, x));
@@ -450,7 +451,7 @@ public class Vm {
 	}
 	class TakeSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
-			checkO(this, o, 2); // o = (prompt handler)
+			checkO(this, o, 2); // o = (prompt handler) ((prompt (lambda (k) ...))
 			var prompt = o.car();
 			var handler = o.car(1); 
 			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
@@ -460,7 +461,7 @@ public class Vm {
 	}
 	class PushPromptSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
-			checkO(this, o, 3); // o = (prompt k apv0)
+			checkO(this, o, 3); // o = (prompt k apv0) (prompt k (lambda () ...)
 			var prompt = o.car();
 			var o1 = o.car(1); if (!(o1 instanceof Continuation k)) return error("not a continuation: " + o1); 
 			var o2 = o.car(2); if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2);
@@ -478,10 +479,10 @@ public class Vm {
 			: combine(e, s.handler, cons(s.k, null))
 		;
 	}
-	Object pushSubcontBarrier(Resumption r, Env e, Object x, Supplier action) {
-		var res = r != null ? r.resume() : action.get();
+	Object pushSubcontBarrier(Resumption r, Env e, Object x) {
+		var res = r != null ? r.resume() : evaluate(e, x);
 		if (!(res instanceof Suspension s)) return res;
-		s.suspend(rr-> pushSubcontBarrier(rr, e, x, action), x, e);
+		s.suspend(rr-> pushSubcontBarrier(rr, e, x), x, e);
 		return s.k.apply(()-> error("prompt not found: " + s.prompt));
 	}
 	
@@ -524,26 +525,26 @@ public class Vm {
 		}
 		public String toString() { return "%DLet"; }
 	}
-    class DLets implements Combinable {
+	class DLets implements Combinable {
 		public Object combine(Env e, List o) {
-	    	checkO(this, o, 3); // o = (vars vals x)
-	    	var vars = listToArray(o.car());
-	    	var vals = listToArray(o.car(1));
-	    	if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
-	        var olds = new Object[vals.length];
-	        for (int i=0; i<vars.length; i+=1) {
-	            if (!(vars[i] instanceof DV dv)) return error("not a dinamic variable: " + vars[i]);
-	            olds[i] = dv.val;
-	            dv.val = vals[i];
-	        }
-	        try {
-		    	var x = o.car(2); return pipe(()-> evaluate(e, x), res-> res, x, e);
-	        }
-	        finally {
-	            for (int i=0; i<vars.length; i+=1) ((DV) vars[i]).val = olds[i];
-	        }
-	    }
-    }
+			checkO(this, o, 3); // o = (vars vals x)
+			var vars = listToArray(o.car());
+			var vals = listToArray(o.car(1));
+			if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
+			var olds = new Object[vals.length];
+			for (int i=0; i<vars.length; i+=1) {
+				if (!(vars[i] instanceof DV dv)) return error("not a dinamic variable: " + vars[i]);
+				olds[i] = dv.val;
+				dv.val = vals[i];
+			}
+			try {
+				var x = o.car(2); return pipe(()-> evaluate(e, x), res-> res, x, e);
+			}
+			finally {
+				for (int i=0; i<vars.length; i+=1) ((DV) vars[i]).val = olds[i];
+			}
+		}
+	}
 	
 	
 	// Error handling
@@ -556,7 +557,8 @@ public class Vm {
 		var userBreak = theEnvironment.get("user-break");
 		var exc = new Error(msg, cause); 
 		if (userBreak == null) throw exc;
-		return (T) evaluate(theEnvironment, cons(userBreak, list(exc)));
+		//return evaluate(theEnvironment, cons(userBreak, list(exc))); for tco?
+		return combine(theEnvironment, userBreak, list(exc));
 	}
 	class Error extends RuntimeException {
 		private static final long serialVersionUID = 1L;
@@ -703,7 +705,7 @@ public class Vm {
 	boolean vmAssert(String name, Object expr, Object ... objs) {
 		try {
 			var env = env(theEnvironment);
-			var val = pushSubcontBarrier(null, env, expr, ()-> evaluate(env, expr));
+			var val = pushSubcontBarrier(null, env, pushRootPrompt(expr));
 			if (objs.length == 0) print(eIfnull(name, ()-> "test "+ name + ": "), " ", expr, " should throw but is ", val);
 			else {
 				var expt = objs[0];
@@ -1011,7 +1013,7 @@ public class Vm {
 	// API
 	public Object exec(Object bytecode) {
 		var wrapped = pushRootPrompt(cons(new Begin(true), parseBytecode(bytecode)));
-		return pushSubcontBarrier(null, theEnvironment, wrapped, ()-> evaluate(theEnvironment, wrapped));
+		return pushSubcontBarrier(null, theEnvironment, wrapped);
 	}
 	public Object call(String funName, Object ... args) {
 		return exec(list(symbol(funName), parseBytecode(args)));
@@ -1202,6 +1204,7 @@ public class Vm {
 		//exec(readBytecode("boot.wat"));
 		//*
 		var milli = currentTimeMillis();
+		eval(readString("testVm.wat"));
 		eval(readString("boot.wat"));
 		eval(readString("test.wat"));
 		eval(readString("testJni.wat"));

@@ -289,8 +289,8 @@
 (assert-true (<= 1 1 2 3 4 5 5))
 (assert-false (< 1 1 2 3 4 5 5))
 
-(define (ttco n) (if (<= n 0) n (ttco (- n 1))))
-(assert (ttco 1000) 0)
+(define (test-tco n) (if (<= n 0) n (test-tco (- n 1))))
+(assert (test-tco 400) 0)
 
 (exit "finito")
 

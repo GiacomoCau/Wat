@@ -2,84 +2,6 @@
 
 ;; ``72. An adequate bootstrap is a contradiction in terms.''
 
-;; Assert vm
-(assert (%quote (a b)) (a b))
-
-(assert (%def)             ) ; throw
-(assert (%def a)           ) ; throw 
-(assert (%def a 1)   #inert) ; a=1
-(assert (%def a 1 2)       ) ; throw
- 
-(assert (%begin (%def (a) (%list 1)) a)         1)
-(assert (%begin (%def (a b) (%list 1 2)) b)     2)
-(assert (%begin (%def (a . b) (%list 1 2)) b)   (2))
-(assert (%begin (%def (a . b) (%list 1 2 3)) b) (2 3))
-
-(assert (%def (a))           ) ; throw
-(assert (%def (a) 1)         ) ; throw
-(assert (%def (a) 1 2)       ) ; throw
-(assert (%def (a b) 1 2)     ) ; throw
-(assert (%def (a . b) 1 2)   ) ; throw       
-(assert (%def (a . b) 1 2 3) ) ; throw
-(assert (%def (a . a) 1 2 3) ) ; throw
-
-(assert (%def 1 1)) ; throw
-(assert (%def "a" 1)) ; throw
-
-(assert (%begin)     #inert)
-(assert (%begin 1)   1)
-(assert (%begin 1 2) 2)
-
-(assert (%if)           ) ;throw
-(assert (%if #t)        ) ;throw
-(assert (%if #t 1)     1)
-(assert (%if #f 1)     #inert)
-(assert (%if #t 1 2)   1)
-(assert (%if #f 1 2)   2)
-(assert (%if #f 1 2 3)  ) ;throw
-
-(assert ((%vau))                 ) ;throw
-(assert ((%vau a))               ) ;throw
-(assert ((%vau a #ignore)) #inert)
-
-(assert ((%vau a #ignore a))     ())
-(assert ((%vau a #ignore a) 1)   (1))
-(assert ((%vau a #ignore a) 1 2) (1 2))
-(assert ((%vau a #ignore b))     ) ;throw
-(assert ((%vau (a) #ignore a) 1) 1)
-(assert ((%vau a #ignore 1 a) 1) (1))
-
-(assert ((%vau 1 #ignore 1))   ) ;throw
-(assert ((%vau "a" #ignore 1)) ) ;throw
-(assert ((%vau a a 1))         ) ;throw
-(assert ((%vau (a . a) e 1))   ) ;throw
-(assert ((%vau a #ignore 1 2 3 4 5 a) 6) (6))
-(assert ((%vau (a) #ignore 1 2 3 4 5 a) 6) 6)
-
-(assert ((%lambda (m)  ) 1) #inert)
-(assert ((%lambda (m) m) 1) 1)
-(assert ((%lambda x x) 1)   (1))
-
-(assert (%catch))
-(assert (%catch #null))
-(assert (%catch #null 1) 1)
-(assert (%catch #null 1 (%lambda a 2)) 1)
-
-(assert (%catch #ignore (%throw #ignore)) #inert)
-(assert (%catch #ignore (%throw a)) #inert)
-(assert (%catch a (%throw a)) #inert)
-(assert (%catch #ignore (%throw #ignore 1)) 1)
-(assert (%catch #ignore (%throw a 1)) 1)
-(assert (%catch a (%throw a 1)) 1)
-(assert (%catch #ignore (%throw #ignore 1) (%lambda (x) 2)) 2)
-(assert (%catch #ignore (%throw a 1) (%lambda (x) 2)) 2)
-(assert (%catch a (%throw a 1) (%lambda (x) 2)) 2)
-
-(assert (%catch #ignore (%begin (%def x 0) (%loop (%begin (%if (== x 10) (%throw #ignore) (%def x (+ x 1))))))) #inert)
-(assert (%catch #ignore (%begin (%def x 0) (%loop (%begin (%if (== x 10) (%throw #ignore x) (%def x (+ x 1))))))) 10)
-(assert (%catch #ignore (%begin (%def x 0) (%loop (%if (== x 10) (%throw #ignore x) (%def x (+ x 1)))))) 10)
-(assert (%catch #ignore (%begin (%def x 0) (%loop (%if (== x 10) (%throw #ignore x)) (%def x (+ x 1))))) 10)
-
 ;; Rename ur-def
 (%def $define! %def)
 
@@ -108,11 +30,12 @@
 ;; Important utilities
 ($define! $vau %vau)
 ($define! quote ($vau (x) #ignore x))
+($define! quote %quote)
 ($define! list (wrap ($vau elts #ignore elts)))
+($define! list %list)
 ($define! $lambda ($vau (formals . body) env (wrap (eval (list* $vau formals #ignore body) env))))
 ($define! $lambda %lambda)
 ($define! the-environment ($vau () e e))
-($define! get-current-environment (wrap ($vau () e e)))
 
 ;;;; Macro
 
@@ -511,6 +434,7 @@
     result ))
 #|
 
+|#
 (define-operative (assert-true expr) env
   (unless (== #t (eval expr env))
     (error (+ "Should be true: " expr)) ))
@@ -519,13 +443,11 @@
   (unless (== #f (eval expr env))
      (error (+ "Should be false: " expr)) ))
 
-|#
 (define-operative (assert-=== expected expr2) env
   (let ((res (eval expr2 env))
         (exp (eval expected env)))
     (unless (=== exp res)
       (error (+ expr2 " should be " exp " but is " res) ))))
-#|
 
 (define-operative (assert-== expected expr2) env
   (let ((res (eval expr2 env))
@@ -538,6 +460,7 @@
     (catch (eval expr env)
       (lambda (exc) (return)))
     (error (+ "Should throw: " expr)) ))
+#|
 
 |#
 ;;;; Options
@@ -558,14 +481,13 @@
 
 (define (print-stacktrace)
   (define (print-frame k)
-    (log k)
-    (when (!= (.next k) #null)
+    (log "--" k)
+    (if (!= (.next k) #null)
       (print-frame (.next k)) ))
-  (take-subcont %root-prompt k
-    (print-frame k)
-    (push-prompt %root-prompt
-      (push-subcont k) )))
+  (take-subcont %root-prompt k (print-frame k) (push-prompt %root-prompt (push-subcont k) )) ;old need 2+ vau args 
+  ;(take-subcont %root-prompt k (push-prompt %root-prompt (push-subcont k (print-frame k) ))) ;ok with 3+ vau args
+)
 
 (define (user-break err)
-  (when (stack) (print "\n" err) (print-stacktrace))
+  (when (stack) (log "++" err) (print-stacktrace))
   (throw err) )
