@@ -111,20 +111,20 @@ public class Vm {
 		Object prompt; Combinable handler; Continuation k;
 		Suspension(Object prompt, Combinable handler) { this.prompt = prompt; this.handler = handler; }
 		public String toString() { return "{Suspension %s %s %s}".formatted(prompt, handler, k); }
-		Suspension suspend(Function<Resumption, Object> f, Object dbg, Env e) { 
+		Suspension suspend(Function<Resumption, Object> f, Env e, Object dbg) { 
 			k = new Continuation(f, k, dbg, e); return this;
 		}
 	}
-	<T, R> Object pipe(Supplier<T> before, Function<T, R> after, Object dbg, Env e) {
-		return pipe(null, before, after, dbg, e);
+	<T, R> Object pipe(Supplier<T> before, Function<T, R> after, Env e, Object dbg) {
+		return pipe(null, before, after, e, dbg);
 	}
-	<T, R> Object pipe(Resumption r, Supplier<T> before, Function<T, R> after, Object dbg, Env e) {
+	<T, R> Object pipe(Resumption r, Supplier<T> before, Function<T, R> after, Env e, Object dbg) {
 		T res = r != null ? r.resume() : before.get();
-		return res instanceof Suspension s ? s.suspend(rr-> pipe(rr, before, after, dbg, e), dbg, e) : after.apply(res);
+		return res instanceof Suspension s ? s.suspend(rr-> pipe(rr, before, after, e, dbg), e, dbg) : after.apply(res);
 	}
-	<T, R> Object pipe1(Resumption r, boolean first, Supplier<T> before, Function<T, R> after, Object dbg, Env e) {
+	<T, R> Object pipe1(Resumption r, boolean first, Supplier<T> before, Function<T, R> after, Env e, Object dbg) {
 		T res = first && r != null && !(first=false) ? r.resume() : before.get();
-		var ff = first; return res instanceof Suspension s ? s.suspend(rr-> pipe1(rr, ff, before, after, dbg, e), dbg, e) : after.apply(res);
+		var ff = first; return res instanceof Suspension s ? s.suspend(rr-> pipe1(rr, ff, before, after, e, dbg), e, dbg) : after.apply(res);
 	}
 	
 	
@@ -152,7 +152,7 @@ public class Vm {
 				case null, default-> o;
 				case Symbol s-> e.lookup(s.name);
 				case List c-> {
-					var ee=e; yield pipe1(null, true, ()-> evaluate(ee, c.car), op-> combine(ee, op, (List) c.cdr), o, e );
+					var ee=e; yield pipe1(null, true, ()-> evaluate(ee, c.car), op-> combine(ee, op, (List) c.cdr), e, o);
 				}
 			};
 			if (!(v instanceof Tco tco)) return (T) v;
@@ -274,7 +274,7 @@ public class Vm {
 		Opv(Object p, Object ep, List x, Env e) { this.p = p; this.ep = ep; this.x = x; this.e = e; }
 		public Object combine(Env e, List o) {
 			var xe = env(this.e);
-			return pipe(()-> bind(xe, p, o, this), $-> pipe(()-> bind(xe, ep, e, this), $$-> begin.combine(xe, x), cons(this, x), e), cons(this, x), e);
+			return pipe(()-> bind(xe, p, o, this), $-> pipe(()-> bind(xe, ep, e, this), $$-> begin.combine(xe, x), e, cons(this, x)), e, cons(this, x));
 		}
 		public String toString() { return "{Opv " + Vm.this.toString(p) + " " + Vm.this.toString(ep) + " " + Vm.this.toString(x) + "}"; }
 	}
@@ -282,14 +282,14 @@ public class Vm {
 		Combinable cmb;
 		Apv(Combinable cmb) { this.cmb = cmb; }
 		public Object combine(Env e, List o) {
-			return pipe(()-> evalArgs(null, e, o, null), args-> cmb.combine(e, (List) args), o, e);
+			return pipe(()-> evalArgs(null, e, o, null), args-> cmb.combine(e, (List) args), e, o);
 		}
 		Object evalArgs(Resumption r, Env e, List todo, List done) {
 			var first = true;
 			for (;;) {
 				if (todo == null) return reverseList(done); 
 				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, todo.car());
-				if (res instanceof Suspension s) { List t=todo, d=done; return s.suspend(rr-> evalArgs(rr, e, t, d), todo.car(), e); }
+				if (res instanceof Suspension s) { List t=todo, d=done; return s.suspend(rr-> evalArgs(rr, e, t, d), e, todo.car()); }
 				todo = todo.cdr(); done = cons(res, done);
 			}
 		}
@@ -321,7 +321,7 @@ public class Vm {
 				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
 			}
 			var arg = o.car(1);
-			return pipe(()-> evaluate(e, arg), res-> bind(e, pt, res, cons(this, o)), arg, e);
+			return pipe(()-> evaluate(e, arg), res-> bind(e, pt, res, cons(this, o)), e, arg);
 		}
 		public String toString() { return "%Def"; }
 	};
@@ -351,7 +351,7 @@ public class Vm {
 			for (;;) {
 				if (!(list.cdr instanceof List cdr)) return tco(e, list.car); 
 				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, list.car);
-				if (res instanceof Suspension s) { var l = list; return s.suspend(rr-> begin(rr, e, l), list.car, e); }
+				if (res instanceof Suspension s) { var l = list; return s.suspend(rr-> begin(rr, e, l), e, list.car); }
 				list = cdr;
 			}
 		}
@@ -364,7 +364,7 @@ public class Vm {
 			var test = o.car();
 			return pipe(()-> evaluate(e, test), res-> istrue(res)
 				? tco(e, o.car(1))
-				: o.cdr(1) instanceof List list ? tco(e, list.car) : inert, test, e)
+				: o.cdr(1) instanceof List list ? tco(e, list.car) : inert, e, test)
 			;
 		}
 		private boolean istrue(Object res) {
@@ -396,7 +396,7 @@ public class Vm {
 				if (tag != ignore && !Vm.this.equals(exc.tag, tag)) throw exc; 
 				res = getValue(e, handler, exc);
 			}
-			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, tag, x, handler), tag, e) : res;
+			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, tag, x, handler), e, tag) : res;
 		}
 		private Object getValue(Env e, Object handler, Value exc) {
 			if (handler == null) return exc.value;
@@ -412,7 +412,7 @@ public class Vm {
 			var l = checkO(this, o, 1, 2); // o = (tag) (tag value)
 			var tag = o.car();
 			var value = l > 1 ? o.car(1) : inert;
-			return pipe(()-> evaluate(e, value), res-> { throw new Value(tag, res); }, tag, e);
+			return pipe(()-> evaluate(e, value), res-> { throw new Value(tag, res); }, e, tag);
 		}
 		public String toString() { return "%Throw"; }
 	}
@@ -422,25 +422,35 @@ public class Vm {
 			var x = o.car();
 			var cleanup = o.car(1);
 			try {
-				return pipe(()-> evaluate(e, x), res-> doCleanup(null, cleanup, res, e), x, e);
+				return pipe(()-> evaluate(e, x), res-> cleanup(null, cleanup, e, res), e, x);
 			}
 			catch (Throwable t) {
-				return doCleanup(null, cleanup, t, e);
+				return cleanup(null, cleanup, e, t);
 			}
 		}
-		Object doCleanup(Resumption r, Object cleanup, Object value, Env e) {
+		Object cleanup(Resumption r, Object cleanup, Env e, Object value) {
 			return pipe(()-> evaluate(e, cleanup),
 				res-> {
 					if (!(value instanceof Throwable t)) return value;
-					throw t instanceof RuntimeException rte ? rte : new Error(t);
+					throw t instanceof Value v ? v : t instanceof Error err ? err : new Error(t);
 				},
-				value, e
+				e, value
 			);
 		}
 		public String toString() { return "%Finally"; }
 	}
 	
 	// Delimited Control
+	class TakeSubcont implements Combinable  {
+		public Object combine(Env e, List o) {
+			checkO(this, o, 2); // o = (prompt handler) ((prompt (lambda (k) ...))
+			var prompt = o.car();
+			var handler = o.car(1); 
+			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
+			return new Suspension(prompt, apv1).suspend(rr-> evaluate(e, cons(rr.s, null)), e, cons(this, o));
+		}
+		public String toString() { return "%TakeSubcont"; }
+	}
 	class PushPrompt implements Combinable  {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 2); // o = (prompt x) (prompt (begin ...))
@@ -449,16 +459,6 @@ public class Vm {
 			return pushPrompt(null, e, cons(this, o), prompt, ()-> evaluate(e, x));
 		}
 		public String toString() { return "%PushPrompt"; }
-	}
-	class TakeSubcont implements Combinable  {
-		public Object combine(Env e, List o) {
-			checkO(this, o, 2); // o = (prompt handler) ((prompt (lambda (k) ...))
-			var prompt = o.car();
-			var handler = o.car(1); 
-			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
-			return new Suspension(prompt, apv1).suspend(rr-> evaluate(e, cons(rr.s, null)), cons(this, o), e);
-		}
-		public String toString() { return "%TakeSubcont"; }
 	}
 	class PushPromptSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
@@ -476,14 +476,14 @@ public class Vm {
 		var res = r != null ? r.resume() : action.get();
 		if (!(res instanceof Suspension s)) return res;
 		return prompt == ignore || !equals(s.prompt, prompt)
-			? s.suspend(rr-> pushPrompt(rr, e, x, prompt, action), x, e)
+			? s.suspend(rr-> pushPrompt(rr, e, x, prompt, action), e, x)
 			: combine(e, s.handler, cons(s.k, null))
 		;
 	}
 	Object pushSubcontBarrier(Resumption r, Env e, Object x) {
 		var res = r != null ? r.resume() : evaluate(e, x);
 		if (!(res instanceof Suspension s)) return res;
-		return s.suspend(rr-> pushSubcontBarrier(rr, e, x), x, e).k.apply(()-> error("prompt not found: " + s.prompt));
+		return s.suspend(rr-> pushSubcontBarrier(rr, e, x), e, x).k.apply(()-> error("prompt not found: " + s.prompt));
 	}
 	
 	
@@ -517,7 +517,7 @@ public class Vm {
 			var x = o.car(2);
 			var oldVal = dv.val;
 			try {
-				dv.val = val; return pipe(()-> evaluate(e, x), res-> res, x, e);
+				dv.val = val; return pipe(()-> evaluate(e, x), res-> res, e, x);
 			}
 			finally {
 				dv.val = oldVal;
@@ -538,7 +538,7 @@ public class Vm {
 				dv.val = vals[i];
 			}
 			try {
-				var x = o.car(2); return pipe(()-> evaluate(e, x), res-> res, x, e);
+				var x = o.car(2); return pipe(()-> evaluate(e, x), res-> res, e, x);
 			}
 			finally {
 				for (int i=0; i<vars.length; i+=1) ((DV) vars[i]).val = olds[i];
@@ -554,11 +554,15 @@ public class Vm {
 		return error(msg, null);
 	}
 	<T> T error(String msg, Throwable cause) {
-		var userBreak = theEnvironment.get("user-break");
 		var exc = new Error(msg, cause); 
-		if (userBreak == null) throw exc;
-		// con l'attuale user-break se stack viene tornata una sospension per il takeSubcont o un tco
-		return evaluate(theEnvironment, cons(userBreak, list(exc)));
+		var userBreak = theEnvironment.get("user-break");
+		if (userBreak != null) {
+			// con l'attuale user-break se stack viene tornata una sospension per il takeSubcont (o un tco)
+			var res = evaluate(theEnvironment, cons(userBreak, list(exc)));
+			if (res instanceof Suspension) return (T) res;
+			// ignoro il valore ritornato per garantire la throw
+		}
+		throw exc;
 	}
 	class Error extends RuntimeException {
 		private static final long serialVersionUID = 1L;
@@ -786,11 +790,14 @@ public class Vm {
 							default -> error("not a combine " + jfun);
 						};
 					}
-					catch (Exception exc) {
-						throw exc instanceof RuntimeException rte ? rte : new RuntimeException(exc);
+					catch (Value | Error exc) {
+						throw exc;
+					}
+					catch (Throwable exc) {
+						return error("jfun error: ", exc);
 					}
 				},
-				ris-> ris, o, e
+				ris-> ris, e, o
 			);
 		}
 		public String toString() {
@@ -955,8 +962,8 @@ public class Vm {
 					$("%def", "%throw", new Throw()),
 					$("%def", "%finally", new Finally()),
 					// Delimited Control
-					$("%def", "%push-prompt", new PushPrompt()),
 					$("%def", "%take-subcont", wrap(new TakeSubcont())),
+					$("%def", "%push-prompt", new PushPrompt()),
 					$("%def", "%push-prompt-subcont", wrap(new PushPromptSubcont())),
 					// Dynamically-scoped Variables
 					$("%def", "%dnew", wrap(new DNew())),
