@@ -294,9 +294,10 @@ public class Vm {
 			}
 		}
 		public String toString() { return "{Apv " + Vm.this.toString(cmb) + "}"; }
+		Combinable unwrap() { return cmb; }
 	}
 	Apv wrap(Object arg) { return arg instanceof Apv apv ? apv : arg instanceof Combinable cmb ? new Apv(cmb) : error("cannot wrap: " + arg); }
-	Combinable unwrap(Object arg) { return arg instanceof Apv apv ? apv.cmb : error("cannot unwrap: " + arg); }
+	<T> T unwrap(Object arg) { return arg instanceof Apv apv ? (T) apv.cmb : error("cannot unwrap: " + arg); }
 	Apv lambda(Object p, Object e, List b) { return new Apv(new Opv(p, ignore, b, evaluate(theEnvironment, e))); }
 	
 	
@@ -482,8 +483,7 @@ public class Vm {
 	Object pushSubcontBarrier(Resumption r, Env e, Object x) {
 		var res = r != null ? r.resume() : evaluate(e, x);
 		if (!(res instanceof Suspension s)) return res;
-		s.suspend(rr-> pushSubcontBarrier(rr, e, x), x, e);
-		return s.k.apply(()-> error("prompt not found: " + s.prompt));
+		return s.suspend(rr-> pushSubcontBarrier(rr, e, x), x, e).k.apply(()-> error("prompt not found: " + s.prompt));
 	}
 	
 	
@@ -557,8 +557,8 @@ public class Vm {
 		var userBreak = theEnvironment.get("user-break");
 		var exc = new Error(msg, cause); 
 		if (userBreak == null) throw exc;
-		//return evaluate(theEnvironment, cons(userBreak, list(exc))); for tco?
-		return combine(theEnvironment, userBreak, list(exc));
+		// con l'attuale user-break se stack viene tornata una sospension per il takeSubcont o un tco
+		return evaluate(theEnvironment, cons(userBreak, list(exc)));
 	}
 	class Error extends RuntimeException {
 		private static final long serialVersionUID = 1L;
@@ -769,25 +769,29 @@ public class Vm {
 		JFun(Object jfun) { this.jfun = jfun; };
 		@SuppressWarnings("preview")
 		public Object combine(Env e, List o) {
-			try {
-				return switch (jfun) {
-					case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
-					case ArgsList a-> a.apply(o);  
-					case Function f-> { checkO(jfun, o, 1); yield f.apply(o.car()); }  
-					case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(o.car(), o.car(1)); }
-					case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; }
-					case Method mt-> {
-						var pc = mt.getParameterCount();
-						if (!mt.isVarArgs()) checkO(jfun, o, 1+pc); else checkO(jfun, o, pc, -1);
-						yield mt.invoke(o.car(), listToArray(o.cdr()));
+			return pipe(()-> {
+					try {
+						return switch (jfun) {
+							case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
+							case ArgsList a-> a.apply(o);  
+							case Function f-> { checkO(jfun, o, 1); yield f.apply(o.car()); }  
+							case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(o.car(), o.car(1)); }
+							case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; }
+							case Method mt-> {
+								var pc = mt.getParameterCount();
+								if (!mt.isVarArgs()) checkO(jfun, o, 1+pc); else checkO(jfun, o, pc, -1);
+								yield mt.invoke(o.car(), listToArray(o.cdr()));
+							}
+							case Constructor c-> { checkO(jfun, o, c.getParameterCount()); yield c.newInstance(listToArray(o)); }
+							default -> error("not a combine " + jfun);
+						};
 					}
-					case Constructor c-> { checkO(jfun, o, c.getParameterCount()); yield c.newInstance(listToArray(o)); }
-					default -> error("not a combine " + jfun);
-				};
-			}
-			catch (Exception exc) {
-				throw exc instanceof RuntimeException rte ? rte : new RuntimeException(exc);
-			}
+					catch (Exception exc) {
+						throw exc instanceof RuntimeException rte ? rte : new RuntimeException(exc);
+					}
+				},
+				ris-> ris, o, e
+			);
 		}
 		public String toString() {
 			var intefaces = Arrays.stream(jfun.getClass().getInterfaces()).map(i-> Vm.this.toString(i)).collect(joining(" "));

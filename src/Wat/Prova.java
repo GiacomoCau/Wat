@@ -32,7 +32,13 @@ import javax.tools.ToolProvider;
 public class Prova {
 	
 	//class $ {}
-	
+
+	public static void main(String[] args) throws Exception {
+		Function<List, Cons> f = l-> (Cons) l;
+		out.println(f.getClass().getMethods());
+		for (Method m: f.getClass().getMethods()) out.println(m);
+	}
+
 	interface List {}
 	static class Nil implements List {}
 	static Nil nil = new Nil();
@@ -54,7 +60,7 @@ public class Prova {
 		};
 	}
 	
-	public static void main(String[] args) throws Exception {
+	private static void list() {
 		Cons x = cons(1, cons( 2, nil));
 		System.out.println(x instanceof Lons);
 		System.out.println(x instanceof List);
