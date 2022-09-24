@@ -80,7 +80,7 @@ import java.util.function.Supplier;
 
 public class Vm {
 	
-	boolean tco = true;
+	boolean dotco = true;
 	boolean jfopv = true;
 	
 	boolean trace = false;
@@ -92,8 +92,8 @@ public class Vm {
 	
 	// Continuations
 	class Continuation {
-		Function<Resumption, Object> f; Continuation next; Object dbg; Env e;
-		Continuation(Function<Resumption, Object> f, Continuation next, Object dbg, Env e) {
+		Function<Resumption, Object> f; Continuation next; Env e; Object dbg;
+		Continuation(Function<Resumption, Object> f, Continuation next, Env e, Object dbg) {
 			this.f = f; this.next = next; this.dbg = dbg; this.e = e;
 		}
 		public String toString() { return "{Continuation %s %s}".formatted(dbg, e); }
@@ -112,19 +112,22 @@ public class Vm {
 		Suspension(Object prompt, Combinable handler) { this.prompt = prompt; this.handler = handler; }
 		public String toString() { return "{Suspension %s %s %s}".formatted(prompt, handler, k); }
 		Suspension suspend(Function<Resumption, Object> f, Env e, Object dbg) { 
-			k = new Continuation(f, k, dbg, e); return this;
+			k = new Continuation(f, k, e, dbg); return this;
 		}
 	}
-	<T, R> Object pipe(Supplier<T> before, Function<T, R> after, Env e, Object dbg) {
-		return pipe(null, before, after, e, dbg);
+	Object pipe(Env e, Object dbg, Supplier before, Function ... after) {
+		return pipe(null, e, dbg, before, after);
 	}
-	<T, R> Object pipe(Resumption r, Supplier<T> before, Function<T, R> after, Env e, Object dbg) {
-		T res = r != null ? r.resume() : before.get();
-		return res instanceof Suspension s ? s.suspend(rr-> pipe(rr, before, after, e, dbg), e, dbg) : after.apply(res);
+	Object pipe(Resumption r, Env e, Object dbg, Supplier before, Function ... after) {
+		var res = r != null ? r.resume() : before.get();
+		return res instanceof Suspension s ? s.suspend(rr-> pipe(rr, e, dbg, before, after), e, dbg) : pipe(null, 0, e, dbg, res, after);
 	}
-	<T, R> Object pipe1(Resumption r, boolean first, Supplier<T> before, Function<T, R> after, Env e, Object dbg) {
-		T res = first && r != null && !(first=false) ? r.resume() : before.get();
-		var ff = first; return res instanceof Suspension s ? s.suspend(rr-> pipe1(rr, ff, before, after, e, dbg), e, dbg) : after.apply(res);
+	Object pipe(Resumption r, int i, Env e, Object dbg, Object res, Function ... after) {
+		for (; i < after.length; i+=1) {
+			res = r != null ? r.resume() : after[i].apply(res);
+			if (res instanceof Suspension s) { var ii=i; var res2=res; return s.suspend(rr-> pipe(rr, ii, e, dbg, res2, after), e, dbg); }
+		}
+		return res;
 	}
 	
 	
@@ -140,7 +143,7 @@ public class Vm {
 	record Tco (Env e, Object o) {
 		public String toString() { return "{Tco " + o + " " + e + "}"; }
 	}
-	Object tco (Env e, Object o) { return tco ? new Tco(e, o) : evaluate(e, o); }
+	Object tco (Env e, Object o) { return dotco ? new Tco(e, o) : evaluate(e, o); }
 	
 	
 	// Evaluation Core
@@ -152,7 +155,7 @@ public class Vm {
 				case null, default-> o;
 				case Symbol s-> e.lookup(s.name);
 				case List c-> {
-					var ee=e; yield pipe1(null, true, ()-> evaluate(ee, c.car), op-> combine(ee, op, (List) c.cdr), e, o);
+					var ee=e; yield pipe(e, o, ()-> evaluate(ee, c.car), op-> combine(ee, op, (List) c.cdr));
 				}
 			};
 			if (!(v instanceof Tco tco)) return (T) v;
@@ -274,7 +277,8 @@ public class Vm {
 		Opv(Object p, Object ep, List x, Env e) { this.p = p; this.ep = ep; this.x = x; this.e = e; }
 		public Object combine(Env e, List o) {
 			var xe = env(this.e);
-			return pipe(()-> bind(xe, p, o, this), $-> pipe(()-> bind(xe, ep, e, this), $$-> begin.combine(xe, x), e, cons(this, x)), e, cons(this, x));
+			return pipe(e, cons(this, x), ()-> bind(xe, p, o, this), $-> bind(xe, ep, e, this), $$-> begin.combine(xe, x));
+			//return pipe(e, cons(this, x), ()-> bind(xe, p, o, this), $-> bind(xe, ep, e, this), $$-> new Tco(xe, cons(begin, x))); // funzica!
 		}
 		public String toString() { return "{Opv " + Vm.this.toString(p) + " " + Vm.this.toString(ep) + " " + Vm.this.toString(x) + "}"; }
 	}
@@ -282,7 +286,8 @@ public class Vm {
 		Combinable cmb;
 		Apv(Combinable cmb) { this.cmb = cmb; }
 		public Object combine(Env e, List o) {
-			return pipe(()-> evalArgs(null, e, o, null), args-> cmb.combine(e, (List) args), e, o);
+			return pipe(e, o, ()-> evalArgs(null, e, o, null), args-> cmb.combine(e, (List) args));
+			//return pipe(e, o, ()-> evalArgs(null, e, o, null), args-> new Tco(e, cons(cmb, args))); // funzica!
 		}
 		Object evalArgs(Resumption r, Env e, List todo, List done) {
 			var first = true;
@@ -321,7 +326,7 @@ public class Vm {
 				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
 			}
 			var arg = o.car(1);
-			return pipe(()-> evaluate(e, arg), res-> bind(e, pt, res, cons(this, o)), e, arg);
+			return pipe(e, arg, ()-> evaluate(e, arg), res-> bind(e, pt, res, cons(this, o)));
 		}
 		public String toString() { return "%Def"; }
 	};
@@ -362,9 +367,9 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 2, 3); // o = (test then else) 
 			var test = o.car();
-			return pipe(()-> evaluate(e, test), res-> istrue(res)
+			return pipe(e, test, ()-> evaluate(e, test), res-> istrue(res)
 				? tco(e, o.car(1))
-				: o.cdr(1) instanceof List list ? tco(e, list.car) : inert, e, test)
+				: o.cdr(1) instanceof List list ? tco(e, list.car) : inert)
 			;
 		}
 		private boolean istrue(Object res) {
@@ -412,7 +417,7 @@ public class Vm {
 			var l = checkO(this, o, 1, 2); // o = (tag) (tag value)
 			var tag = o.car();
 			var value = l > 1 ? o.car(1) : inert;
-			return pipe(()-> evaluate(e, value), res-> { throw new Value(tag, res); }, e, tag);
+			return pipe(e, tag, ()-> evaluate(e, value), res-> { throw new Value(tag, res); });
 		}
 		public String toString() { return "%Throw"; }
 	}
@@ -422,19 +427,18 @@ public class Vm {
 			var x = o.car();
 			var cleanup = o.car(1);
 			try {
-				return pipe(()-> evaluate(e, x), res-> cleanup(null, cleanup, e, res), e, x);
+				return pipe(e, x, ()-> evaluate(e, x), res-> cleanup(null, cleanup, e, res));
 			}
 			catch (Throwable t) {
 				return cleanup(null, cleanup, e, t);
 			}
 		}
 		Object cleanup(Resumption r, Object cleanup, Env e, Object value) {
-			return pipe(()-> evaluate(e, cleanup),
-				res-> {
+			return pipe(e, value, ()-> evaluate(e, cleanup),
+				$-> {
 					if (!(value instanceof Throwable t)) return value;
 					throw t instanceof Value v ? v : t instanceof Error err ? err : new Error(t);
-				},
-				e, value
+				}
 			);
 		}
 		public String toString() { return "%Finally"; }
@@ -517,7 +521,7 @@ public class Vm {
 			var x = o.car(2);
 			var oldVal = dv.val;
 			try {
-				dv.val = val; return pipe(()-> evaluate(e, x), res-> res, e, x);
+				dv.val = val; return pipe(e, x, ()-> evaluate(e, x));
 			}
 			finally {
 				dv.val = oldVal;
@@ -538,7 +542,7 @@ public class Vm {
 				dv.val = vals[i];
 			}
 			try {
-				var x = o.car(2); return pipe(()-> evaluate(e, x), res-> res, e, x);
+				var x = o.car(2); return pipe(e, x, ()-> evaluate(e, x));
 			}
 			finally {
 				for (int i=0; i<vars.length; i+=1) ((DV) vars[i]).val = olds[i];
@@ -773,7 +777,7 @@ public class Vm {
 		JFun(Object jfun) { this.jfun = jfun; };
 		@SuppressWarnings("preview")
 		public Object combine(Env e, List o) {
-			return pipe(()-> {
+			return pipe(e, o, ()-> {
 					try {
 						return switch (jfun) {
 							case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
@@ -796,8 +800,7 @@ public class Vm {
 					catch (Throwable exc) {
 						return error("jfun error: ", exc);
 					}
-				},
-				ris-> ris, e, o
+				}
 			);
 		}
 		public String toString() {
@@ -1011,7 +1014,7 @@ public class Vm {
 					$("%def", "print", jWrap((ArgsList) o-> print(listToArray(o)))),
 					$("%def", "write", jWrap((ArgsList) o-> write(listToArray(o)))),
 					$("%def", "load", jWrap((Function<String, Object>) nf-> uncked(()-> eval(readString(nf))))),
-					$("%def", "tco", jWrap((ArgsList) o-> { if (checkO("tco", o, 0, 1, Boolean.class) == 0) return tco; tco=o.car(); return inert; })),
+					$("%def", "dotco", jWrap((ArgsList) o-> { if (checkO("dotco", o, 0, 1, Boolean.class) == 0) return dotco; dotco=o.car(); return inert; })),
 					$("%def", "trace", jWrap((ArgsList) o-> { if (checkO("trace", o, 0, 1, Boolean.class) == 0) return trace; trace=o.car(); return inert; })),
 					$("%def", "stack", jWrap((ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=o.car(); return inert; })),
 					$("%def", "thenv", jWrap((ArgsList) o-> { if (checkO("thenv", o, 0, 1, Boolean.class) == 0) return thenv; thenv=o.car(); return inert; }))

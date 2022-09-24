@@ -489,5 +489,6 @@
 )
 
 (define (user-break err)
+  ;(log "==" err)
   (when (stack) (log "++" err) (print-stacktrace))
   (throw err) )
