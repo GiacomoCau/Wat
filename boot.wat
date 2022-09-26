@@ -434,7 +434,7 @@
     result ))
 #|
 
-|#
+
 (define-operative (assert-true expr) env
   (unless (== #t (eval expr env))
     (error (+ "Should be true: " expr)) ))
@@ -443,11 +443,13 @@
   (unless (== #f (eval expr env))
      (error (+ "Should be false: " expr)) ))
 
+|#
 (define-operative (assert-=== expected expr2) env
   (let ((res (eval expr2 env))
         (exp (eval expected env)))
     (unless (=== exp res)
       (error (+ expr2 " should be " exp " but is " res) ))))
+#|
 
 (define-operative (assert-== expected expr2) env
   (let ((res (eval expr2 env))
@@ -460,7 +462,7 @@
     (catch (eval expr env)
       (lambda (exc) (return)))
     (error (+ "Should throw: " expr)) ))
-#|
+
 
 |#
 ;;;; Options
@@ -491,4 +493,5 @@
 (define (user-break err)
   ;(log "==" err)
   (when (stack) (log "++" err) (print-stacktrace))
-  (throw err) )
+  (throw err)
+ )
