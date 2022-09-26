@@ -105,7 +105,7 @@ public class Vm {
 		Continuation k; Supplier<Object> s;
 		Resumption(Continuation k, Supplier<Object> s) { this.k=k; this.s=s; }
 		public String toString() { return "{Resumption %s %s}".formatted(s, k); }
-		<T> T resume() { var k = this.k; this.k = k.next; var res = k.f.apply(this); return res instanceof Tco tco ? evaluate(tco.e, tco.o) : (T) res; }
+		<T> T resume() { var k = this.k; this.k = k.next; return getTco(k.f.apply(this)); }
 	};
 	class Suspension {
 		Object prompt; Combinable handler; Continuation k;
@@ -140,27 +140,24 @@ public class Vm {
 	
 	
 	// Tail Call Optimization
-	record Tco (Env e, Object o) {
-		public String toString() { return "{Tco " + o + " " + e + "}"; }
-	}
-	Object tco (Env e, Object o) { return dotco ? new Tco(e, o) : evaluate(e, o); }
+	interface Tco extends Supplier {};
+	Object tco(Tco tco) { return dotco ? tco : tco.get(); }
+	<T> T getTco(Object o) { while (o instanceof Tco tco) o = tco.get(); return (T) o; }
 	
 	
 	// Evaluation Core
 	@SuppressWarnings("preview")
 	<T> T evaluate(Env e, Object o) {
 		if (trace) print("evaluate: ", o);
-		for (;;) {
-			Object v = switch (o) {
+		return getTco(
+			switch (o) {
 				case null, default-> o;
 				case Symbol s-> e.lookup(s.name);
 				case List c-> {
-					var ee=e; yield pipe(e, o, ()-> evaluate(ee, c.car), op-> combine(ee, op, (List) c.cdr));
+					var ee=e; yield pipe(e, o, ()-> evaluate(ee, c.car), op-> combine(ee, op, c.cdr()));
 				}
-			};
-			if (!(v instanceof Tco tco)) return (T) v;
-			e = tco.e; o = tco.o;
-		}
+			}
+		);
 	}
 	
 	class Symbol {
@@ -249,9 +246,9 @@ public class Vm {
 		return switch (lhs) {
 			case Ignore i-> null;
 			case Symbol s-> e.bind(s.name, rhs);  
-			case null-> rhs == null ? null : "too many arguments" /*+ ", none expected, but got: " + toString(rhs)*/;
+			case null-> rhs == null ? null : "too many operands" /*+ ", none expected, but got: " + toString(rhs)*/;
 			case Cons lc-> {
-				if (!(rhs instanceof Cons rc)) yield "too few arguments" /*+ ", more expected, but got: " + toString(rhs)*/;
+				if (!(rhs instanceof Cons rc)) yield "too few operands" /*+ ", more expected, but got: " + toString(rhs)*/;
 				var msg = bind(e, lc.car, rc.car); if (msg != null) yield msg;
 				yield bind(e, lc.cdr, rc.cdr);
 			}
@@ -277,8 +274,8 @@ public class Vm {
 		Opv(Object p, Object ep, List x, Env e) { this.p = p; this.ep = ep; this.x = x; this.e = e; }
 		public Object combine(Env e, List o) {
 			var xe = env(this.e);
-			return pipe(e, cons(this, x), ()-> bind(xe, p, o, this), $-> bind(xe, ep, e, this), $$-> begin.combine(xe, x));
-			//return pipe(e, cons(this, x), ()-> bind(xe, p, o, this), $-> bind(xe, ep, e, this), $$-> new Tco(xe, cons(begin, x))); // funzica!
+			//return pipe(e, cons(this, x), ()-> bind(xe, p, o, this), $-> bind(xe, ep, e, this), $$-> begin.combine(xe, x));
+			return pipe(e, cons(this, x), ()-> bind(xe, p, o, this), $-> bind(xe, ep, e, this), $$-> tco(()-> begin.combine(xe, x))); // funzica!
 		}
 		public String toString() { return "{Opv " + Vm.this.toString(p) + " " + Vm.this.toString(ep) + " " + Vm.this.toString(x) + "}"; }
 	}
@@ -286,8 +283,8 @@ public class Vm {
 		Combinable cmb;
 		Apv(Combinable cmb) { this.cmb = cmb; }
 		public Object combine(Env e, List o) {
-			return pipe(e, o, ()-> evalArgs(null, e, o, null), args-> cmb.combine(e, (List) args));
-			//return pipe(e, o, ()-> evalArgs(null, e, o, null), args-> new Tco(e, cons(cmb, args))); // funzica!
+			//return pipe(e, o, ()-> evalArgs(null, e, o, null), args-> cmb.combine(e, (List) args));
+			return pipe(e, o, ()-> evalArgs(null, e, o, null), args-> tco(()-> cmb.combine(e, (List) args))); // funzica!
 		}
 		Object evalArgs(Resumption r, Env e, List todo, List done) {
 			var first = true;
@@ -354,7 +351,7 @@ public class Vm {
 			if (trace && root && r == null) print("\n--------");
 			var first = true;
 			for (;;) {
-				if (!(list.cdr instanceof List cdr)) return tco(e, list.car); 
+				if (!(list.cdr instanceof List cdr)) { var l = list; return tco(()-> evaluate(e, l.car)); } 
 				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, list.car);
 				if (res instanceof Suspension s) { var l = list; return s.suspend(rr-> begin(rr, e, l), e, list.car); }
 				list = cdr;
@@ -368,8 +365,8 @@ public class Vm {
 			checkO(this, o, 2, 3); // o = (test then else) 
 			var test = o.car();
 			return pipe(e, test, ()-> evaluate(e, test), res-> istrue(res)
-				? tco(e, o.car(1))
-				: o.cdr(1) instanceof List list ? tco(e, list.car) : inert)
+				? tco(()-> evaluate(e, o.car(1)))
+				: o.cdr(1) != null ? tco(()-> evaluate(e, o.car(2))) : inert)
 			;
 		}
 		private boolean istrue(Object res) {
@@ -380,7 +377,7 @@ public class Vm {
 	class Loop implements Combinable  {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 1, -1); // o = (x ...)
-			for (;;) evaluate(e, begin.combine(e, o));
+			for (;;) getTco(begin.combine(e, o));
 		}
 		public String toString() { return "%Loop"; }
 	}
@@ -563,6 +560,7 @@ public class Vm {
 		if (userBreak != null) {
 			// con l'attuale user-break se stack viene tornata una sospension per il takeSubcont (o un tco)
 			var res = evaluate(theEnvironment, cons(userBreak, list(exc)));
+			//var res = pipe(theEnvironment, cons(userBreak, list(exc)), ()-> evaluate(theEnvironment, cons(userBreak, list(exc))));
 			if (res instanceof Suspension) return (T) res;
 			// ignoro il valore ritornato per garantire la throw
 		}
