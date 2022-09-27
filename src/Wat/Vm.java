@@ -725,10 +725,10 @@ public class Vm {
 		try {
 			var env = env(theEnvironment);
 			var val = pushSubcontBarrier(null, env, pushRootPrompt(expr));
-			if (objs.length == 0) print(eIfnull(name, ()-> "test "+ name + ": "), " ", expr, " should throw but is ", val);
+			if (objs.length == 0) print(eIfnull(name, ()-> "test "+ name + ": "), expr, " should throw but is ", val);
 			else {
 				var expt = objs[0];
-				if (equals(val, expt)) return true;
+				if (equals(val, pushSubcontBarrier(null, env, pushRootPrompt(expt)))) return true;
 				print(eIfnull(name, ()-> "test "+ name + ": "), expr, " should be ", expt, " but is ", val);
 			}
 		}

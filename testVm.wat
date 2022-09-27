@@ -1,5 +1,5 @@
 
-(assert (%quote (a b)) (a b))
+(assert (%quote (a b)) '(a b))
 
 (assert (%def)             ) ; throw
 (assert (%def a)           ) ; throw 
@@ -8,8 +8,8 @@
  
 (assert (%begin (%def (a) (%list 1)) a)         1)
 (assert (%begin (%def (a b) (%list 1 2)) b)     2)
-(assert (%begin (%def (a . b) (%list 1 2)) b)   (2))
-(assert (%begin (%def (a . b) (%list 1 2 3)) b) (2 3))
+(assert (%begin (%def (a . b) (%list 1 2)) b)   '(2))
+(assert (%begin (%def (a . b) (%list 1 2 3)) b) '(2 3))
 
 (assert (%def (a))           ) ; throw
 (assert (%def (a) 1)         ) ; throw
@@ -39,22 +39,22 @@
 (assert ((%vau a #ignore)) #inert)
 
 (assert ((%vau a #ignore a))     ())
-(assert ((%vau a #ignore a) 1)   (1))
-(assert ((%vau a #ignore a) 1 2) (1 2))
+(assert ((%vau a #ignore a) 1)   '(1))
+(assert ((%vau a #ignore a) 1 2) '(1 2))
 (assert ((%vau a #ignore b))     ) ;throw
 (assert ((%vau (a) #ignore a) 1) 1)
-(assert ((%vau a #ignore 1 a) 1) (1))
+(assert ((%vau a #ignore 1 a) 1) '(1))
 
 (assert ((%vau 1 #ignore 1))   ) ;throw
 (assert ((%vau "a" #ignore 1)) ) ;throw
 (assert ((%vau a a 1))         ) ;throw
 (assert ((%vau (a . a) e 1))   ) ;throw
-(assert ((%vau a #ignore 1 2 3 4 5 a) 6) (6))
+(assert ((%vau a #ignore 1 2 3 4 5 a) 6) '(6))
 (assert ((%vau (a) #ignore 1 2 3 4 5 a) 6) 6)
 
 (assert ((%lambda (m)  ) 1) #inert)
 (assert ((%lambda (m) m) 1) 1)
-(assert ((%lambda x x) 1)   (1))
+(assert ((%lambda x x) 1)   '(1))
 
 (assert (%catch))
 (assert (%catch #null))

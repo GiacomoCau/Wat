@@ -1,79 +1,56 @@
 ;; -*- mode: scheme -*-
 
-;;;;; Wat Test Suite
+;;;; Utilities
 
 (define (exit v)
   (take-subcont %root-prompt #ignore v) )
 
+;;;;; Wat Test Suite
 
-;;;; Utilities
+(assert (lambda))
+(assert (lambda 12 12))
+(assert (lambda "foo" "bar"))
+(assert (define))
+(assert (define 12))
+(assert (define 12 12))
 
-(define-operative (assert-true expr) env
-  (unless (== (eval expr env) #t)
-    (error (+ "Should be true: " expr)) ))
-
-(define-operative (assert-false expr) env
-  (unless (== (eval expr env) #f)
-    (error (+ "Should be false: " expr)) ))
-
-(define-operative (assert-equal expected expr2) env
-  (let ((res (eval expr2 env)))
-    (unless (eq? (eval expected env) res)
-      (error (+ expr2 " should be " expected " but is " res)) )))
-
-(define-operative (assert-throws expr) env
-  (label return
-    (catch (eval expr env)
-      (lambda (exc) (return)))
-    (error (+ "Should throw: " expr)) ))
-
-(assert-throws (lambda))
-(assert-throws (lambda 12 12))
-(assert-throws (lambda "foo" "bar"))
-(assert-throws (define))
-(assert-throws (define 12))
-(assert-throws (define 12 12))
-
-(assert-equal #inert (begin))
-(assert-equal 1 (begin 1))
-(assert-equal 2 (begin 1 2))
+(assert (begin) #inert)
+(assert (begin 1) 1)
+(assert (begin 1 2) 2)
 
 ;;;; Delimited Dynamic Binding Tests
 
 ;; adapted from 
-
-(define-macro (test-check label expr expected)
-  (list assert-equal expr expected))
 
 (define (new-prompt) (list #null))
 
 (define (abort-prompt p e)
   (take-subcont p #ignore e))
 
-(test-check 'test1
+(test 'test1
   (let ((p (new-prompt)))
     (push-prompt p 1))
   1)
   
-(test-check 'test2
+(test 'test2
   (let ((p (new-prompt)))
     (+ (push-prompt p (push-prompt p 5))
       4))
   9)
   
-(test-check 'test3
+(test 'test3
   (let ((p (new-prompt)))
     (+ (push-prompt p (+ (abort-prompt p 5) 6))
       4))
   9)
 
-(test-check 'test3-1
+(test 'test3-1
   (let ((p (new-prompt)))
     (+ (push-prompt p (push-prompt p (+ (abort-prompt p 5) 6)))
       4))
   9)
 
-(test-check 'test3-2
+(test 'test3-2
   (let ((p (new-prompt)))
     (let ((v (push-prompt p
 	       (let* ((v1 (push-prompt p (+ (abort-prompt p 5) 6)))
@@ -82,7 +59,7 @@
       (+ v 20)))
   27)
 
-'(test-check 'test3-3
+(test 'test3-3
   (let ((p (new-prompt)))
     (let ((v (push-prompt p (let*
 	    ((v1 (push-prompt p (+ 6 (abort-prompt p 5))))
@@ -90,7 +67,7 @@
 		(+ v1 10) ))))
       (abort-prompt p 9)
       (+ v 20) ))
-  'must-be-error )
+  )
 ; gives prompt not found: (#null)
 
 ;; (test-check 'test3-3-1
@@ -102,7 +79,7 @@
 ;;       (prompt-set? p))) ; give unbound: prompt-set?
 ;;   #f)
 
-(test-check 'test4
+(test 'test4
   (let ((p (new-prompt)))
     (+ (push-prompt p 
 	     (+ (take-subcont p sk (push-prompt p (push-subcont sk 5)))
@@ -116,7 +93,7 @@
       (f (lambda (c)
            (push-prompt-subcont p sk (c)) )))))
 
-(test-check 'test5
+(test 'test5
   (+ (push-prompt 'p0
        (+ (shift 'p0 (lambda (sk)
                        (+ 100 (sk (lambda () (sk (lambda () 3))))) ))
@@ -124,7 +101,7 @@
      10)
   117)
 
-(test-check 'test5-1
+(test 'test5-1
   (+ 10 (push-prompt 'p0
           (+ 2 (shift 'p0 (lambda (sk)
                             (sk (lambda () (+ 3 100))))))))
@@ -133,7 +110,7 @@
 (define (abort-subcont prompt value)
   (take-subcont prompt #ignore value))
 
-(test-check 'test5-2
+(test 'test5-2
   (+ (push-prompt 'p0
        (+ (shift 'p0 (lambda (sk)
                        (+ (sk (lambda ()
@@ -145,7 +122,7 @@
      10)
   115)
 
-(test-check 'test5-3
+(test 'test5-3
   (+ (push-prompt 'p0
        (let ((v (shift 'p0 (lambda (sk)
                              (+ (sk (lambda ()
@@ -157,7 +134,7 @@
      10)
   115)
 
-(assert ;'test5-4
+(test 'test5-4
   (+ (push-prompt 'p0
        (let ((v (shift 'p0 (lambda (sk)
                              (+ (sk (lambda ()
@@ -169,7 +146,7 @@
      10)
   124)
 
-(test-check 'test6
+(test 'test6
   (+ (let ((push-twice (lambda (sk)
               (push-subcont sk (push-subcont sk 3)))))
        (push-prompt 'p1
@@ -180,7 +157,7 @@
      10)
   15)
 
-(test-check 'test7
+(test 'test7
   (+ (let ((push-twice (lambda (sk)
               (push-subcont sk
                 (push-subcont sk
@@ -195,7 +172,7 @@
      100)
   135)
 
-(test-check test7-1
+(test 'test7-1
   (+ (let ((push-twice (lambda (sk)
               (sk (lambda ()
                     (sk (lambda ()
@@ -242,12 +219,12 @@
 
 (define (combine cmb ops) (apply (wrap cmb) ops))
 
-(assert-true (combine and (list (== 1 1) (== 2 2))))
-(assert-false (combine and (list (!= 1 1) (== 2 2))))
+(assert (combine and (list (== 1 1) (== 2 2))) #t)
+(assert (combine and (list (!= 1 1) (== 2 2))) #f)
 
-(assert-equal 2 (apply (lambda (x) x) (list 2)))
+(assert (apply (lambda (x) x) (list 2)) 2)
 
-(assert-throws (unwrap ($vau () #ignore)))
+(assert (unwrap ($vau () #ignore)))
 
 |#
 (let ((obj (object ("x" 1))))
@@ -262,32 +239,32 @@
 (assert-equal &x 2)
 #|
 
-(assert-equal 24 (* 1 2 3 4))
-(assert-equal 1 (*))
-(assert-equal 3 (* 3))
-(assert-equal 10 (+ 1 2 3 4))
-(assert-equal 0 (+))
-(assert-equal 1 (+ 1))
+(assert (* 1 2 3 4) 24)
+(assert (*) 1)
+(assert (* 3) 3)
+(assert (+ 1 2 3 4) 10)
+(assert (+) 0)
+(assert (+ 1) 1)
 
-(assert-equal -5 (- 5))
-(assert-equal 3 (- 10 5 2))
-(assert-equal (/ 1 5) (/ 5))
-(assert-equal 9 (/ 54 2 3))
+(assert (- 5) -5)
+(assert (- 10 5 2) 3)
+(assert (/ 5) (/ 1 5))
+(assert (/ 54 2 3) 9)
 
-(assert-equal (toString (list 1 2 3)) (toString (reverse-list (list 3 2 1))))
+(assert (toString (reverse-list (list 3 2 1))) (toString (list 1 2 3)))
 
-(assert-equal "logging" (log "logging" 1 2 3))
+(assert (log "logging" 1 2 3) "logging")
 
-(assert-true (and (== 1 1) (== 4 4) (== 5 5)))
-(assert-false (and (== 1 1) (== 4 4) (== 5 10)))
-(assert-true (or (== 1 1) (== 4 10) (== 5 5)))
-(assert-true (or (== 1 10) (== 4 10) (== 5 5)))
+(assert (and (== 1 1) (== 4 4) (== 5 5)) #t)
+(assert (and (== 1 1) (== 4 4) (== 5 10)) #f)
+(assert (or (== 1 1) (== 4 10) (== 5 5)) #t)
+(assert (or (== 1 10) (== 4 10) (== 5 5)) #t)
 
-(assert-true (== 4 (+ 2 2) (- 6 2)))
-(assert-true (< 1 2 3 4 5))
-(assert-false (< 1 2 3 4 5 1))
-(assert-true (<= 1 1 2 3 4 5 5))
-(assert-false (< 1 1 2 3 4 5 5))
+(assert (== 4 (+ 2 2) (- 6 2)) #t)
+(assert (< 1 2 3 4 5) #t)
+(assert (< 1 2 3 4 5 1) #f)
+(assert (<= 1 1 2 3 4 5 5) #t)
+(assert (< 1 1 2 3 4 5 5) #f)
 
 (define (test-tco n) (if (<= n 0) n (test-tco (- n 1))))
 (assert (test-tco 400) 0)

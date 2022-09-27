@@ -102,9 +102,9 @@
     (if (nil? lst) ()
         (cons (f (car lst)) (map-list f (cdr lst))) )))
 
-(assert (map-list car '((a 1)(b 2))) (a b))
-(assert (map-list cadr '((a 1)(b 2))) (1 2))
-(assert (($vau l e (list* '$define (map-list car l) (map-list cadr l))) (a 1)(b 2))  ($define (a b) 1 2)) 
+(assert (map-list car '((a 1)(b 2))) '(a b))
+(assert (map-list cadr '((a 1)(b 2))) '(1 2))
+(assert (($vau l e (list* '$define! (map-list car l) (list (list 'quote (map-list cadr l))))) (a 1)(b 2)) '($define! (a b) (quote (1 2))))
 
 ($define! list-for-each
   ($lambda (f lst)
@@ -433,36 +433,6 @@
     (log (+ "time " expr ": " (- (@getTime (new Date)) n) "ms"))
     result ))
 #|
-
-
-(define-operative (assert-true expr) env
-  (unless (== #t (eval expr env))
-    (error (+ "Should be true: " expr)) ))
-
-(define-operative (assert-false expr) env
-  (unless (== #f (eval expr env))
-     (error (+ "Should be false: " expr)) ))
-
-|#
-(define-operative (assert-=== expected expr2) env
-  (let ((res (eval expr2 env))
-        (exp (eval expected env)))
-    (unless (=== exp res)
-      (error (+ expr2 " should be " exp " but is " res) ))))
-#|
-
-(define-operative (assert-== expected expr2) env
-  (let ((res (eval expr2 env))
-        (exp (eval expected env)))
-    (unless (== exp res)
-      (error (+ expr2 " should be " exp " but is " res) ))))
-
-(define-operative (assert-throws expr) env
-  (label return
-    (catch (eval expr env)
-      (lambda (exc) (return)))
-    (error (+ "Should throw: " expr)) ))
-
 
 |#
 ;;;; Options
