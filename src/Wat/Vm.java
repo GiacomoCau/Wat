@@ -572,10 +572,10 @@ public class Vm {
 		var userBreak = theEnvironment.get("user-break");
 		if (userBreak != null) {
 			// con l'attuale user-break se stack viene tornata una sospension per il takeSubcont (o un tco)
-			var res = evaluate(theEnvironment, cons(userBreak, list(exc))); // for tco?
-			//var res = pipe(dbg(theEnvironment, userBreak, exc), ()-> evaluate(theEnvironment, cons(userBreak, list(exc))));
-			if (res instanceof Suspension s) return (T) s;
-			// ignoro il valore ritornato per garantire una throw
+			var res = evaluate(theEnvironment, list(userBreak, exc));
+			//var res = pipe(dbg(theEnvironment, userBreak, exc), ()-> evaluate(theEnvironment, list(userBreak, exc))); // for ?
+			// per l'esecuzione della throw anche se user-break non lo facesse
+			if (res instanceof Suspension s) return (T) s.suspend(rr-> { throw exc; }, dbg(theEnvironment, userBreak, exc));
 		}
 		throw exc;
 	}
