@@ -84,7 +84,7 @@ public class Vm {
 	boolean jfopv = true;
 	
 	boolean trace = false;
-	boolean stack = false;
+	boolean stack = true;
 	boolean thenv = false;
 	
 	interface Combinable { <T> T combine(Env e, List o); }
@@ -93,7 +93,7 @@ public class Vm {
 	// Continuations
 	class Continuation {
 		Function<Resumption, Object> f; Continuation next; Object dbg;
-		Continuation(Function<Resumption, Object> f, Continuation next, Dbg dbg) {
+		Continuation(Dbg dbg, Function<Resumption, Object> f, Continuation next) {
 			this.f = f; this.next = next; this.dbg = dbg;
 		}
 		public String toString() { return "{Continuation %s}".formatted(dbg); }
@@ -111,8 +111,8 @@ public class Vm {
 		Object prompt; Combinable handler; Continuation k;
 		Suspension(Object prompt, Combinable handler) { this.prompt = prompt; this.handler = handler; }
 		public String toString() { return "{Suspension %s %s %s}".formatted(prompt, handler, k); }
-		Suspension suspend(Function<Resumption, Object> f, Dbg dbg) { 
-			k = new Continuation(f, k, dbg); return this;
+		Suspension suspend(Dbg dbg, Function<Resumption, Object> f) { 
+			k = new Continuation(dbg, f, k); return this;
 		}
 	}
 	Object pipe(Dbg dbg, Supplier before, Function ... after) {
@@ -120,12 +120,12 @@ public class Vm {
 	}
 	Object pipe(Resumption r, Dbg dbg, Supplier before, Function ... after) {
 		var res = r != null ? r.resume() : before.get();
-		return res instanceof Suspension s ? s.suspend(rr-> pipe(rr, dbg, before, after), dbg) : pipe(null, 0, dbg, res, after);
+		return res instanceof Suspension s ? s.suspend(dbg, rr-> pipe(rr, dbg, before, after)) : pipe(null, 0, dbg, res, after);
 	}
 	Object pipe(Resumption r, int i, Dbg dbg, Object res, Function ... after) {
 		for (; i < after.length; i+=1) {
 			res = r != null ? r.resume() : after[i].apply(res);
-			if (res instanceof Suspension s) { var ii=i; var res2=res; return s.suspend(rr-> pipe(rr, ii, dbg, res2, after), dbg); }
+			if (res instanceof Suspension s) { var ii=i; var res2=res; return s.suspend(dbg, rr-> pipe(rr, ii, dbg, res2, after)); }
 		}
 		return res;
 	}
@@ -303,7 +303,7 @@ public class Vm {
 			for (;;) {
 				if (todo == null) return reverseList(done); 
 				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, todo.car());
-				if (res instanceof Suspension s) { List t=todo, d=done; return s.suspend(rr-> evalArgs(rr, e, t, d), dbg(e, "evalArgs", todo.car)); }
+				if (res instanceof Suspension s) { List t=todo, d=done; return s.suspend(dbg(e, "evalArg", todo.car), rr-> evalArgs(rr, e, t, d)); }
 				todo = todo.cdr(); done = cons(res, done);
 			}
 		}
@@ -365,7 +365,7 @@ public class Vm {
 			for (;;) {
 				if (!(list.cdr instanceof List cdr)) { var l = list; return tco(()-> evaluate(e, l.car)); } 
 				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, list.car);
-				if (res instanceof Suspension s) { var l = list; return s.suspend(rr-> begin(rr, e, l), dbg(e, "begin", list.car)); }
+				if (res instanceof Suspension s) { var l = list; return s.suspend(dbg(e, "evalBegin", list.car), rr-> begin(rr, e, l)); }
 				list = cdr;
 			}
 		}
@@ -410,7 +410,7 @@ public class Vm {
 				if (tag != ignore && !Vm.this.equals(exc.tag, tag)) throw exc; 
 				res = getValue(e, handler, exc);
 			}
-			return res instanceof Suspension s ? s.suspend(rr-> combine(rr, e, tag, x, handler), dbg(e, this, tag, x, handler)) : res;
+			return res instanceof Suspension s ? s.suspend(dbg(e, this, tag, x, handler), rr-> combine(rr, e, tag, x, handler)) : res;
 		}
 		private Object getValue(Env e, Object handler, Value exc) {
 			if (handler == null) return exc.value;
@@ -461,7 +461,7 @@ public class Vm {
 			var handler = o.car(1); 
 			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
 			//return new Suspension(prompt, apv1).suspend(rr-> evaluate(e, cons(rr.s, null)), dbg(e, this, o)); // for tco?
-			return new Suspension(prompt, apv1).suspend(rr-> Vm.this.combine(e, rr.s, null), dbg(e, this, o));
+			return new Suspension(prompt, apv1).suspend(dbg(e, this, o), rr-> Vm.this.combine(e, rr.s, null));
 		}
 		public String toString() { return "%TakeSubcont"; }
 	}
@@ -470,7 +470,7 @@ public class Vm {
 			checkO(this, o, 2); // o = (prompt x) (prompt (begin ...))
 			var prompt = o.car();
 			var x = o.car(1);
-			return pushPrompt(null, e, cons(this, o), prompt, ()-> evaluate(e, x));
+			return pushPrompt(null, e, dbg(e, this, o), prompt, ()-> evaluate(e, x));
 		}
 		public String toString() { return "%PushPrompt"; }
 	}
@@ -482,22 +482,22 @@ public class Vm {
 			var o2 = o.car(2); if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2);
 			//return pushPrompt(null, e, cons(this, o), prompt, ()-> k.apply(()-> Vm.this.combine(e, apv0, null)));
 			//return pushPrompt(null, e, cons(this, o), prompt, ()-> k.apply(()-> evaluate(e, cons(apv0, null)))); // for tco?
-			return pushPrompt(null, e, cons(this, o), prompt, ()-> k.apply(e, apv0));
+			return pushPrompt(null, e, dbg(e, this, o), prompt, ()-> k.apply(e, apv0));
 		}
 		public String toString() { return "%PushPromptSubcont"; }
 	}
-	Object pushPrompt(Resumption r, Env e, List x, Object prompt, Supplier action) {
+	Object pushPrompt(Resumption r, Env e, Dbg dbg, Object prompt, Supplier action) {
 		var res = r != null ? r.resume() : action.get();
 		if (!(res instanceof Suspension s)) return res;
 		return prompt == ignore || !equals(s.prompt, prompt)
-			? s.suspend(rr-> pushPrompt(rr, e, x, prompt, action), dbg(e, x.car(), x.cdr()))
+			? s.suspend(dbg, rr-> pushPrompt(rr, e, dbg, prompt, action))
 			: combine(e, s.handler, cons(s.k, null))
 		;
 	}
 	Object pushSubcontBarrier(Resumption r, Env e, Object x) {
 		var res = r != null ? r.resume() : evaluate(e, x);
 		if (!(res instanceof Suspension s)) return res;
-		return s.suspend(rr-> pushSubcontBarrier(rr, e, x), dbg(e, "pushSubcontBarrier", x)).k.apply(()-> error("prompt not found: " + s.prompt));
+		return s.suspend(dbg(e, "pushSubcontBarrier", x), rr-> pushSubcontBarrier(rr, e, x)).k.apply(()-> error("prompt not found: " + s.prompt));
 	}
 	
 	
@@ -575,7 +575,7 @@ public class Vm {
 			var res = evaluate(theEnvironment, list(userBreak, exc));
 			//var res = pipe(dbg(theEnvironment, userBreak, exc), ()-> evaluate(theEnvironment, list(userBreak, exc))); // for ?
 			// per l'esecuzione della throw anche se user-break non lo facesse
-			if (res instanceof Suspension s) return (T) s.suspend(rr-> { throw exc; }, dbg(theEnvironment, userBreak, exc));
+			if (res instanceof Suspension s) return (T) s.suspend(dbg(theEnvironment, "throw", exc), rr-> { throw exc; });
 		}
 		throw exc;
 	}
