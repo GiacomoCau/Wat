@@ -2,6 +2,7 @@ package Wat;
 
 import static List.Parser.parse;
 import static Wat.Utility.$;
+import static Wat.Utility.binOp;
 import static Wat.Utility.eIf;
 import static Wat.Utility.eIfnull;
 import static Wat.Utility.getClasses;
@@ -10,6 +11,21 @@ import static Wat.Utility.getField;
 import static Wat.Utility.isInstance;
 import static Wat.Utility.reorg;
 import static Wat.Utility.uncked;
+import static Wat.Utility.Binop.And;
+import static Wat.Utility.Binop.Dvd;
+import static Wat.Utility.Binop.Ge;
+import static Wat.Utility.Binop.Gt;
+import static Wat.Utility.Binop.Le;
+import static Wat.Utility.Binop.Ls;
+import static Wat.Utility.Binop.Mns;
+import static Wat.Utility.Binop.Or;
+import static Wat.Utility.Binop.Pls;
+import static Wat.Utility.Binop.Pwr;
+import static Wat.Utility.Binop.Rst;
+import static Wat.Utility.Binop.Sl;
+import static Wat.Utility.Binop.Sr;
+import static Wat.Utility.Binop.Sr0;
+import static Wat.Utility.Binop.Xor;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.System.in;
 import static java.lang.System.out;
@@ -41,6 +57,8 @@ import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
+
+import Wat.Utility.Binop;
 
 /* Abbreviations:
 	c: cons
@@ -84,7 +102,7 @@ public class Vm {
 	boolean jfopv = true;
 	
 	boolean trace = false;
-	boolean stack = true;
+	boolean stack = false;
 	boolean thenv = false;
 	
 	interface Combinable { <T> T combine(Env e, List o); }
@@ -172,6 +190,17 @@ public class Vm {
 		);
 	}
 	
+	class Keyword {
+		String name;
+		Keyword(String name) { this.name = name; }
+		public String toString() { return name; }
+		public int hashCode() { return Objects.hashCode(name); }
+		public boolean equals(Object o) {
+			return this == o || o instanceof Keyword sym && name.equals(sym.name);
+		}		
+	}
+	Keyword keyword(String name) { return new Keyword(name); }
+	
 	class Symbol {
 		String name;
 		Symbol(String name) { this.name = name; }
@@ -200,18 +229,21 @@ public class Vm {
 		public <T> T cdr() { return (T) cdr; }
 		public <T> T car(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? o.car() : error("not a cons: " + o); }
 		public <T> T cdr(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? o.cdr() : error("not a cons: " + o); }
-		Object setCar(Object v) { return car=v; }
-		Object setCdr(Object v) { return cdr=v; }
+		Object setCar(Object car) { return this.car=car; }
+		Object setCdr(Object cdr) { return this.cdr=cdr; }
 	}
 	class List extends Cons {
 		List(Object car, List cdr) { super(car, cdr); }
-		public List cdr() { return (List) cdr; }
-		List setCdr(List v) { return (List)(cdr=v); }
-		Object setCdr(Object v) { return error("not setCdr on list"); }
+		@Override public List cdr() { return (List) cdr; }
+		List setCdr(List cdr) { return (List)(this.cdr=cdr); }
+		@Override Object setCdr(Object cdr) { return error("not a list: " + cdr); }
 	}
 	public int len(List o) { int i=0; for (; o != null; i+=1, o=o.cdr()); return i; }
 	<T> T cons(Object car, Object cdr) {
+		/*
 		return (T)(cdr == null ? new List(car, null) : cdr instanceof List list ? new List(car, list) : new Cons(car, cdr));
+		*/
+		return (T)(cdr == null || cdr instanceof List ? new List(car, (List) cdr) : new Cons(car, cdr));
 	}
 	
 	
@@ -743,7 +775,7 @@ public class Vm {
 	
 	// Bytecode parser
 	Object parseBytecode(Object o) {
-		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore"-> ignore; default-> symbol(s); };
+		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore"-> ignore; default-> s.startsWith(":") ? keyword(s) : symbol(s); };
 		if (o instanceof Object[] a) return parseBytecode(a);
 		return o;
 	}
@@ -998,17 +1030,25 @@ public class Vm {
 					$("%def", "%array->list", jWrap((BiFunction<Boolean,Object[],Object>) this::arrayToList)),
 					$("%def", "%reverse-list", jWrap((Function<List,List>) this::reverseList)),
 					// 
-					$("%def", "+", jWrap((BinaryOperator) (a,b)-> a instanceof Integer && b instanceof Integer ? ((Integer)a) + ((Integer)b) : toString(a) + toString(b))),
-					$("%def", "*", jWrap((BinaryOperator<Integer>) (a,b)-> a * b)),
-					$("%def", "-", jWrap((BinaryOperator<Integer>) (a,b)-> a - b)),
-					$("%def", "/", jWrap((BinaryOperator<Integer>) (a,b)-> a / b)),
+					$("%def", "+", jWrap((BinaryOperator) (a,b)-> a instanceof Number n1 && b instanceof Number n2 ? binOp(Pls, n1, n2) : toString(a) + toString(b))),
+					$("%def", "*", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Pwr, a, b))),
+					$("%def", "-", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Mns, a, b))),
+					$("%def", "/", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Dvd, a, b))),
+					$("%def", "%", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Rst, a, b))),
 					//
 					$("%def", "!", jWrap((Function<Boolean,Boolean>) a-> !a)),
-					$("%def", "not", jWrap((Function<Boolean,Boolean>) a-> !a)),
-					$("%def", "<", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a < b)),
-					$("%def", ">", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a > b)),
-					$("%def", "<=", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a <= b)),
-					$("%def", ">=", jWrap((BiFunction<Integer,Integer,Boolean>) (a,b)-> a >= b)),
+					$("%def", "<", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Ls, a, b))),
+					$("%def", ">", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Gt, a, b))),
+					$("%def", "<=", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Le, a, b))),
+					$("%def", ">=", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Ge, a, b))),
+					//
+					$("%def", "~", jWrap((Function<Integer,Integer>) a-> ~a)),
+					$("%def", "&", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(And, a, b))),
+					$("%def", "|", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Or, a, b))),
+					$("%def", "^", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Xor, a, b))),
+					$("%def", "<<", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Sl, a, b))),
+					$("%def", ">>", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr, a, b))),
+					$("%def", ">>>", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr0, a, b))),
 					//
 					$("%def", "%quote", $("%vau", $("a"), ignore, "a")),
 					$("%def", "%lambda", $("%vau", $("formals", ".", "body"), "env",

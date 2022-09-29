@@ -180,7 +180,8 @@ Object Elt() throws Exception: {
 	|	"'" o=Elt() { return $("%quote", o); }
 	|	t=<Prim>	{ return classForName(t.image.substring(1)); }	
 	|	t=<ClsId>	{ return classForName(t.image.substring(1)); }	
-	|	t=<Id> [":" t2=<Id>] {
+	|	t=":" t=<Id> { return ":" + t.image; }
+	|	t=<Id> ["::" t2=<Id>] {
   		if (t2 != null) return $("%eval", $("%quote", t2.image), t.image);
   		var id = t.image;
   		if (id.length() == 1) return id;

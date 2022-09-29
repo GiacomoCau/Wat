@@ -20,6 +20,7 @@
 ($define! loop %loop)
 ($define! make-environment %make-environment)
 ($define! nil? %nil?)
+($define! not !)
 ($define! reverse-list %reverse-list)
 ($define! string->symbol %string->symbol)
 ($define! symbol-name %symbol-name)
@@ -325,7 +326,6 @@
 (define >= (relational-op >=))
 
 (define (!= . args) (not (apply == args)))
-;(define (!== . args) (not (apply === args)))
 
 (define *
   (let ((vm* *))
@@ -453,9 +453,10 @@
 
 (define (print-stacktrace)
   (define (print-frame k)
-    (log "--" k)
+    ;(log "--" k)
     (if (!= (.next k) #null)
-      (print-frame (.next k)) ))
+      (print-frame (.next k)) )
+    (log "--" k) )
   (take-subcont %root-prompt k (print-frame k) (push-prompt %root-prompt (push-subcont k) )) ;old need 2+ vau args 
   ;(take-subcont %root-prompt k (push-prompt %root-prompt (push-subcont k (print-frame k) ))) ;ok with 3+ vau args
 )

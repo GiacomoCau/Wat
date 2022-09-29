@@ -22,7 +22,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.BinaryOperator;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -34,6 +34,9 @@ public class Prova {
 	//class $ {}
 
 	public static void main(String[] args) throws Exception {
+		binop();
+	}
+	static void function() {
 		Function<List, Cons> f = l-> (Cons) l;
 		out.println(f.getClass().getMethods());
 		for (Method m: f.getClass().getMethods()) out.println(m);
@@ -52,6 +55,7 @@ public class Prova {
 	static <T> T cons(Object car, Object cdr) {
 		return (T)(cdr instanceof Nil nil ? new Lons(car, nil) : cdr instanceof Lons list ? new Lons(car, list) : new Cons(car, cdr));
 	}
+	@SuppressWarnings("preview")
 	Cons cons2(Object car, Object cdr) {
 		return switch (cdr) {
 			default-> new Cons(car, cdr); 
@@ -60,7 +64,7 @@ public class Prova {
 		};
 	}
 	
-	private static void list() {
+	static void list() {
 		Cons x = cons(1, cons( 2, nil));
 		System.out.println(x instanceof Lons);
 		System.out.println(x instanceof List);
@@ -83,41 +87,38 @@ public class Prova {
 		return compile("-\\w").matcher(s).replaceAll(mr-> mr.group().substring(1).toUpperCase());
 	}
 	
-	static void binop() {
-		BinaryOperator<Number> plus = makeNumOp("+");
-		out.println(plus.apply(1, 2));
-	}
-	
-	@SuppressWarnings("preview")
-	static BinaryOperator<Number> makeNumOp(String op) {
-		return (BinaryOperator<Number>) (a, b) -> switch (a) {
-			case Integer i-> numOp(op, i, b.intValue());
-			case Double d-> numOp(op, d, b.doubleValue());
-			default-> throw new RuntimeException("unknown type");
+	enum Binop {
+		Pls((a, b)-> a+b,   (a, b)-> a+b,   (a, b)-> a+b),
+		Mns((a, b)-> a-b,   (a, b)-> a-b,   (a, b)-> a-b),
+		Pwr((a, b)-> a*b,   (a, b)-> a*b,   (a, b)-> a*b),
+		Dvd((a, b)-> a/b,   (a, b)-> a/b,   (a, b)-> a/b),
+		Rst((a, b)-> a%b,   (a, b)-> a%b,   (a, b)-> a%b),
+		 Ls((a, b)-> a<b,   (a, b)-> a<b,   (a, b)-> a<b),
+		 Gt((a, b)-> a>b,   (a, b)-> a>b,   (a, b)-> a>b),
+		 Le((a, b)-> a<=b,  (a, b)-> a<=b,  (a, b)-> a<=b),
+		 Ge((a, b)-> a>=b,  (a, b)-> a>=b,  (a, b)-> a>=b),
+		 Sl((a, b)-> a<<b,  (a, b)-> a<<b,  null),
+		 Sr((a, b)-> a>>b,  (a, b)-> a>>b,  null),
+		Sr0((a, b)-> a>>>b, (a, b)-> a>>>b, null);
+		
+		BiFunction<Integer, Integer, Object> i;
+		BiFunction<Double, Double, Object> d;
+		BiFunction<Long, Long, Object> l;
+		Binop(BiFunction<Integer, Integer, Object> i, BiFunction<Long, Long, Object> l, BiFunction<Double, Double, Object> d) {
+			this.i = i; this.l = l; this.d = d;		
 		};
 	}
-	static Integer numOp(String op, Integer a, Integer b) {
-		return switch (op) {
-			case "+"-> a + b;
-			case "-"-> a - b;
-			default-> throw new RuntimeException("unknown op"); };
+	static BiFunction<Number, Number, Object> getNumOp(Binop op) {
+		return (a, b)-> a instanceof Integer i1 && b instanceof Integer i2 ? op.i.apply(i1, i2) : op.d.apply(a.doubleValue(), b.doubleValue());
+	}	
+	static void binop() {
+		out.println(1 * 2.1);
+		var plus = getNumOp(Binop.Pwr);
+		out.println(plus.apply(2.1, 3));
+		var lesser = getNumOp(Binop.Le);
+		out.println(lesser.apply(1.0, 2));
 	}
-	static Double numOp(String op, Double a, Double b) {
-		return switch (op) {
-			case "+"-> a + b;
-			case "-"-> a - b;
-			default-> throw new RuntimeException("unknown op"); };
-	}
-	/*
-	static class NumOp <T extends Number> {
-		T numOp(String op, T a, T b) {
-			return switch (op) {
-				case "+"-> a + b;
-				case "-"-> a - b;
-				default-> throw new RuntimeException("unknown op"); };
-		}
-	}
-	*/
+	
 	
 	static void varArgs() {
 		args(Integer.class, int.class); // 2

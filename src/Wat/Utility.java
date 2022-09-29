@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -75,6 +76,45 @@ public class Utility {
 		for (Entry<String,String> e: control) s = s.replaceAll(e.getValue(), e.getKey());
 		return s;
 	}
+
+	enum Binop {
+		Pls((a, b)-> a+b,   (a, b)-> a+b,   (a, b)-> a+b),
+		Mns((a, b)-> a-b,   (a, b)-> a-b,   (a, b)-> a-b),
+		Pwr((a, b)-> a*b,   (a, b)-> a*b,   (a, b)-> a*b),
+		Dvd((a, b)-> a/b,   (a, b)-> a/b,   (a, b)-> a/b),
+		Rst((a, b)-> a%b,   (a, b)-> a%b,   (a, b)-> a%b),
+		 Ls((a, b)-> a<b,   (a, b)-> a<b,   (a, b)-> a<b),
+		 Gt((a, b)-> a>b,   (a, b)-> a>b,   (a, b)-> a>b),
+		 Le((a, b)-> a<=b,  (a, b)-> a<=b,  (a, b)-> a<=b),
+		 Ge((a, b)-> a>=b,  (a, b)-> a>=b,  (a, b)-> a>=b),
+		And((a, b)-> a&b,   (a, b)-> a&b,   null),
+		 Or((a, b)-> a|b,   (a, b)-> a|b,   null),
+		Xor((a, b)-> a^b,   (a, b)-> a^b,   null),
+		 Sl((a, b)-> a<<b,  (a, b)-> a<<b,  null),
+		 Sr((a, b)-> a>>b,  (a, b)-> a>>b,  null),
+		Sr0((a, b)-> a>>>b, (a, b)-> a>>>b, null);
+		
+		BiFunction<Integer, Integer, Object> i;
+		BiFunction<Double, Double, Object> d;
+		BiFunction<Long, Long, Object> l;
+		Binop(BiFunction<Integer, Integer, Object> i, BiFunction<Long, Long, Object> l, BiFunction<Double, Double, Object> d) {
+			this.i = i; this.l = l; this.d = d;		
+		};
+	}
+	static Object binOp(Binop op, Number a, Number b) {
+		if (op == null) throw new RuntimeException("no operator for this operands");
+		return a instanceof Integer i1 && b instanceof Integer i2
+			? op.i.apply(i1, i2)
+			: op.d.apply(a.doubleValue(), b.doubleValue())
+		;
+		/*
+		return (a, b)->
+			a instanceof Double d ? op.d.apply(d, b.doubleValue())
+			: b instanceof Double d ? op.d.apply(a.doubleValue(), d)
+			: op.i.apply(a.intValue(), b.intValue())
+		;
+		*/
+	}	
 	
 	public static boolean isInstance(Object o, Class ... cs) {
 		for (Class c: cs) if (c.isInstance(o)) return true;
