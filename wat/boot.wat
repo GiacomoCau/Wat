@@ -18,12 +18,13 @@
 ($define! list* %list*)
 ($define! list->array %list->array)
 ($define! loop %loop)
-($define! make-environment %make-environment)
+($define! make-environment %makeEnvironment)
 ($define! nil? %nil?)
 ($define! not !)
-($define! reverse-list %reverse-list)
+($define! reverse-list %reverseList)
+($define! root-prompt %rootPrompt)
 ($define! string->symbol %string->symbol)
-($define! symbol-name %symbol-name)
+($define! symbol-name %symbolName)
 ($define! symbol? %symbol?)
 ($define! unwrap %unwrap)
 ($define! wrap %wrap)
@@ -74,16 +75,16 @@
   (eval (list %finally protected (list* begin cleanup)) env) )
 
 (define-macro (take-subcont prompt k . body)
-  (list %take-subcont prompt (list* $lambda (list k) body)) )
+  (list %takeSubcont prompt (list* $lambda (list k) body)) )
 
 (define-operative (push-prompt prompt . body) env
-  (eval (list %push-prompt (eval prompt env) (list* begin body)) env) )
+  (eval (list %pushPrompt (eval prompt env) (list* begin body)) env) )
 
 (define-macro (push-prompt-subcont p k . body)
-  (list %push-prompt-subcont p k (list* $lambda () body)) )
+  (list %pushPromptSubcont p k (list* $lambda () body)) )
 
 (define-macro (push-subcont k . body)
-  (list %push-prompt-subcont #ignore k (list* $lambda () body)) )
+  (list %pushPromptSubcont #ignore k (list* $lambda () body)) )
 
 ;;;; List utilities
 

@@ -34,7 +34,7 @@ public class Prova {
 	//class $ {}
 
 	public static void main(String[] args) throws Exception {
-		binop();
+		camelize();
 	}
 	static void function() {
 		Function<List, Cons> f = l-> (Cons) l;
@@ -77,8 +77,8 @@ public class Prova {
 	}
 	
 	static void camelize() throws IOException, FileNotFoundException {
-		for (var s: $("test", "boot")) {
-			try (var pw = new PrintWriter(s + ".out")) {
+		for (var s: $("testVm", "boot", "test", "testJni")) {
+			try (var pw = new PrintWriter(s + ".lsp")) {
 				pw.print(replace(readString(get(s + ".wat"), forName("cp1252"))));
 			}
 		}

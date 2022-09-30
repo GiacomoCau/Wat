@@ -58,8 +58,6 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import Wat.Utility.Binop;
-
 /* Abbreviations:
 	c: cons
 	x: expression
@@ -991,7 +989,7 @@ public class Vm {
 					// Basics
 					$("%def", "%vau", new Vau()),
 					$("%def", "%eval", wrap(new Eval())),
-					$("%def", "%make-environment", jWrap((ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car()))),
+					$("%def", "%makeEnvironment", jWrap((ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car()))),
 					$("%def", "%wrap", jWrap((Function<Object, Object>) this::wrap)),
 					$("%def", "%unwrap", jWrap((Function<Object, Object>) this::unwrap)),
 					// Values
@@ -1000,7 +998,7 @@ public class Vm {
 					$("%def", "%nil?", jWrap((Function<Object, Boolean>) obj-> obj == null)),
 					$("%def", "%string->symbol", jWrap((Function<String, Symbol>) this::symbol)),
 					$("%def", "%symbol?", jWrap((Function<Object, Boolean>) obj-> obj instanceof Symbol)),
-					$("%def", "%symbol-name", jWrap((Function<Symbol, String>) sym-> sym.name)),
+					$("%def", "%symbolName", jWrap((Function<Symbol, String>) sym-> sym.name)),
 					// First-order Control
 					$("%def", "%if", new If()),
 					$("%def", "%loop", new Loop()),
@@ -1008,16 +1006,16 @@ public class Vm {
 					$("%def", "%throw", new Throw()),
 					$("%def", "%finally", new Finally()),
 					// Delimited Control
-					$("%def", "%take-subcont", wrap(new TakeSubcont())),
-					$("%def", "%push-prompt", new PushPrompt()),
-					$("%def", "%push-prompt-subcont", wrap(new PushPromptSubcont())),
+					$("%def", "%takeSubcont", wrap(new TakeSubcont())),
+					$("%def", "%pushPrompt", new PushPrompt()),
+					$("%def", "%pushPromptSubcont", wrap(new PushPromptSubcont())),
 					// Dynamically-scoped Variables
-					$("%def", "%dnew", wrap(new DNew())),
-					$("%def", "%dref", wrap(new DRef())),
-					$("%def", "%dlet", new DLet()),
-					$("%def", "%dlets", new DLets()),
+					$("%def", "%dNew", wrap(new DNew())),
+					$("%def", "%dRef", wrap(new DRef())),
+					$("%def", "%dLet", new DLet()),
+					$("%def", "%dLets", new DLets()),
 					// Errors
-					$("%def", "%root-prompt", rootPrompt),
+					$("%def", "%rootPrompt", rootPrompt),
 					$("%def", "%error", jWrap((Function<String, Object>) this::error)),
 					// JS Interface
 					$("%def", "%jinvoke", jWrap((Function<String,Object>) this::jInvoke)),
@@ -1028,7 +1026,7 @@ public class Vm {
 					$("%def", "%list*", jWrap((ArgsList) this::listToListStar)),
 					$("%def", "%list->array", jWrap((Function<List,Object[]>) this::listToArray)),
 					$("%def", "%array->list", jWrap((BiFunction<Boolean,Object[],Object>) this::arrayToList)),
-					$("%def", "%reverse-list", jWrap((Function<List,List>) this::reverseList)),
+					$("%def", "%reverseList", jWrap((Function<List,List>) this::reverseList)),
 					// 
 					$("%def", "+", jWrap((BinaryOperator) (a,b)-> a instanceof Number n1 && b instanceof Number n2 ? binOp(Pls, n1, n2) : toString(a) + toString(b))),
 					$("%def", "*", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Pwr, a, b))),
@@ -1269,10 +1267,12 @@ public class Vm {
 		//exec(readBytecode("boot.wat"));
 		//*
 		var milli = currentTimeMillis();
-		eval(readString("testVm.wat"));
-		eval(readString("boot.wat"));
-		eval(readString("test.wat"));
-		eval(readString("testJni.wat"));
+		eval(readString("testVm.lsp"));
+		//eval(readString("wat/boot.wat"));
+		//eval(readString("wat/test.wat"));
+		eval(readString("boot.lsp"));
+		eval(readString("test.lsp"));
+		eval(readString("testJni.lsp"));
 		print("start time: " + (currentTimeMillis() - milli));
 		stack = true;
 		repl();
