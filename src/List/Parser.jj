@@ -125,7 +125,7 @@ SKIP:	// white spaces
 }
 
 TOKEN:	// separators
-{	"(" | ")" /*| "."*/ | "'" | ":"
+{	"(" | ")" | "'" //| ":"
 }
 
 TOKEN:	// reserved words
@@ -146,19 +146,22 @@ TOKEN:	// literals
 |	< Double: (<sNat> | <Integer> "." (<d09>)+) (<exp>)? >
 |	< # exp: ["e","E"] <Integer> >
 |	< String:	"\"" ( <sChr> )* "\"" >
+|	< UString:	"|" (~["|"])+ "|" >
 |	< # sChr: ~["\"","\n","\r","\f","\b","\t"] | "\\" ["\"","n","r","f","b","t"] >
-//|	< # escape: ["\"","\n","\r","\f","\b","\t"]
-//|	< # sChr: ~<escape> | "\\" <escape>
 }
 
 TOKEN:	// identifiers
-{ 	< Prim:  "&" ("boolean" | "byte" | "short" | "char" | "int" | "long" | "float" | "double") ("[]")* >
-|  	< ClsId: "&" <jvid> ("." <jvid>)* ( ("[]")+ | ("$" <jvid> ("[]")* )+ )? >
-|	< # jvid: ( <jvf> | "_" <jvf> ) ( <jvf> | <digit> | "_" )* >
-|	< # jvf:  "$" | <letter> >
-|	< Id: ("."|"@")? <first> ( <first> | "." | <digit> )* >
+{ 	< Prim:   "&" ("boolean" | "byte" | "short" | "char" | "int" | "long" | "float" | "double") ("[]")* >
+|  	< ClsId:  "&" <jvid> ("." <jvid>)* ( ("[]")+ | ("$" <jvid> ("[]")* )+ )? >
+|   < GetSet: "." (<jvid>)+ >
+|   < Invoke: "@" (<jvid>)+ > 
+|	< # jvid: ( <jvf> | "_" <jvn>) ( <jvn> )* >
+|	< # jvf: "$" | <letter> >
+|   < # jvn: "_" | <jvf> | <digit> >
+|   < Kwd: ":" (<Id>)+ >
+|	< Id: <first> ( <first> | "." | <digit> )* >
 |	< # first: <letter> | <special> > 
-|	< # special: [ "-", "&", "!", "=", ">", "<", "%", "+", "?", "/", "*", "$", "_", "@", "|", "~", "^"] >
+|	< # special: [ "-", "&", "!", "=", ">", "<", "%", "+", "?", "/", "*", "$", "_", "@", "|", "~", "^", ":"] >
 |	< # letter: [ "A"-"Z", "a"-"z" ] >
 |	< # digit: [ "0"-"9" ] >
 }
@@ -177,20 +180,15 @@ Object Elt() throws Exception: {
 	|	t=<Integer>	{ return java.lang.Integer.parseInt(t.image); }
 	|	t=<Double>	{ return java.lang.Double.parseDouble(t.image); }
 	|	t=<String>	{ return $("wat-string", toStringTokenImage(t.image)); }
-	|	"'" o=Elt() { return $("%quote", o); }
+	|	t=<UString>	{ return $("wat-string", t.image); }
 	|	t=<Prim>	{ return classForName(t.image.substring(1)); }	
 	|	t=<ClsId>	{ return classForName(t.image.substring(1)); }	
-	|	t=":" t=<Id> { return ":" + t.image; }
-	|	t=<Id> ["::" t2=<Id>] {
-  		if (t2 != null) return $("%eval", $("%quote", t2.image), t.image);
-  		var id = t.image;
-  		if (id.length() == 1) return id;
-  		switch (id.charAt(0)) {
-  			case '.': return $("%jgetset", $("wat-string", id.substring(1)));
-  			case '@': return $("%jinvoke", $("wat-string", id.substring(1)));
-  			default: return id;
-  		}  	
-	}
+	|   t=<GetSet>  { return $("%jgetset", $("wat-string", t.image.substring(1))); } 
+	|   t=<Invoke>  { return $("%jinvoke", $("wat-string", t.image.substring(1))); } 
+	|	t=<Kwd>     { return t.image; }
+	|	t=<Id>      { return t.image; }  	
+	//|	t=<Id> ["::" t2=<Id>] {	return t2 == null ? t.image : $("%eval", $("%quote", t2.image), t.image); }  	
+	|	"'" o=Elt() { return $("%quote", o); }
 	|	"(" ( o=Elt(){ l.add(o); } )+ [ "." o2=Elt() ] ")" {
 		if (o2 != null && !isNil(o2)) { l.add( "." ); l.add( o2 ); };
 		return l.toArray();

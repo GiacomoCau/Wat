@@ -1124,17 +1124,20 @@ public class Vm {
 	public String read() throws IOException {
 		var s = new StringBuilder();
 		int open = 0, close = 0;
-		boolean inEscape = false, inString = false, inComment=false, sMlComment=false, inMlComment=false, eMlComment=false;
+		boolean inEscape = false, inString = false, inUString = false, inComment=false, sMlComment=false, inMlComment=false, eMlComment=false;
 		do {
 			var oc = close-open;
 			out.print(oc==0 ? ">" : "%+d%s>".formatted(oc, oc>0 ? "(" : ")"));
-			for (int c; (c = in.read()) != '\n';) {
+			for (int c; (c = in.read()) != '\n' || inUString;) {
 				if (inEscape) {
 					inEscape = false;
 				}
 				else if (inString) switch (c) {
 					case '\\'-> inEscape = true;
 					case '"'-> inString = false;
+				}
+				else if (inUString) switch (c) {
+					case '|'-> inUString = false;
 				}
 				else if (inComment) switch (c) {
 					case '"'-> inString = true;
@@ -1151,6 +1154,7 @@ public class Vm {
 				else if (sMlComment) switch (c) {
 					case '#': inMlComment = true;
 					default : sMlComment = false;
+					          inUString = true;
 				}
 				else switch (c) {
 					case '"'-> inString = true;
@@ -1159,7 +1163,7 @@ public class Vm {
 					case '('-> open += 1;
 					case ')'-> close += 1;
 				}
-				if (c >= 32) s.append((char) c);
+				if (c >= 32 || inUString) s.append((char) c);
 			}
 			if (inComment) { s.append('\n'); inComment = false; }
 		} while (open > close);
