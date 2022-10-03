@@ -101,7 +101,7 @@ public class Vm {
 	
 	boolean trace = false;
 	boolean stack = false;
-	boolean thenv = false;
+	boolean tsenv = false;
 	
 	interface Combinable { <T> T combine(Env e, List o); }
 	
@@ -113,8 +113,8 @@ public class Vm {
 			this.f = f; this.next = next; this.dbg = dbg;
 		}
 		public String toString() { return "{Continuation %s}".formatted(dbg); }
-		Object apply(Env e, Apv apv0) { return apply(()-> combine(e, apv0, null)); }
 		//Object apply(Env e, Apv apv0) { return apply(()-> evaluate(e, cons(apv0, null))); } // for tco?
+		Object apply(Env e, Apv apv0) { return apply(()-> combine(e, apv0, null)); }
 		Object apply(Supplier s) { return f.apply(new Resumption(next, s));}
 	}
 	class Resumption {
@@ -238,9 +238,6 @@ public class Vm {
 	}
 	public int len(List o) { int i=0; for (; o != null; i+=1, o=o.cdr()); return i; }
 	<T> T cons(Object car, Object cdr) {
-		/*
-		return (T)(cdr == null ? new List(car, null) : cdr instanceof List list ? new List(car, list) : new Cons(car, cdr));
-		*/
 		return (T)(cdr == null || cdr instanceof List ? new List(car, (List) cdr) : new Cons(car, cdr));
 	}
 	
@@ -255,7 +252,7 @@ public class Vm {
 		}
 		public String toString() {
 			var isThenv = this == theEnvironment;
-			return "[" + eIf(!isThenv, "The-") + "Env" + eIf(isThenv && !thenv, ()-> mapReverse()) + eIf(parent == null, ()-> " " + parent) + "]";
+			return "[" + eIf(!isThenv, "The-") + "Env" + eIf(isThenv && !tsenv, ()-> mapReverse()) + eIf(parent == null, ()-> " " + parent) + "]";
 		}
 		String mapReverse() {
 			var sb = new StringBuilder(); map.entrySet().forEach(e-> sb.insert(0, " " + e)); return sb.toString();
@@ -316,8 +313,7 @@ public class Vm {
 		Opv(Object p, Object ep, List x, Env e) { this.p = p; this.ep = ep; this.x = x; this.e = e; }
 		public Object combine(Env e, List o) {
 			var xe = env(this.e);
-			//return pipe(e, cons(this, x), ()-> bind(xe, p, o, this), $-> bind(xe, ep, e, this), $$-> begin.combine(xe, x));
-			return pipe(dbg(e, this, x), ()-> bind(xe, p, o, this), $-> bind(xe, ep, e, this), $$-> tco(()-> begin.combine(xe, x))); // funzica!
+			return pipe(dbg(e, this, x), ()-> bind(xe, p, o, this), $-> bind(xe, ep, e, this), $$-> tco(()-> begin.combine(xe, x)));
 		}
 		public String toString() { return "{Opv " + Vm.this.toString(p) + " " + Vm.this.toString(ep) + " " + Vm.this.toString(x) + "}"; }
 	}
@@ -325,8 +321,7 @@ public class Vm {
 		Combinable cmb;
 		Apv(Combinable cmb) { this.cmb = cmb; }
 		public Object combine(Env e, List o) {
-			//return pipe(e, o, ()-> evalArgs(null, e, o, null), args-> cmb.combine(e, (List) args));
-			return pipe(dbg(e, this, o), ()-> evalArgs(null, e, o, null), args-> tco(()-> cmb.combine(e, (List) args))); // funzica!
+			return pipe(dbg(e, this, o), ()-> evalArgs(null, e, o, null), args-> tco(()-> cmb.combine(e, (List) args))); 
 		}
 		Object evalArgs(Resumption r, Env e, List todo, List done) {
 			var first = true;
@@ -510,8 +505,8 @@ public class Vm {
 			var prompt = o.car();
 			var o1 = o.car(1); if (!(o1 instanceof Continuation k)) return error("not a continuation: " + o1); 
 			var o2 = o.car(2); if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2);
-			//return pushPrompt(null, e, cons(this, o), prompt, ()-> k.apply(()-> Vm.this.combine(e, apv0, null)));
-			//return pushPrompt(null, e, cons(this, o), prompt, ()-> k.apply(()-> evaluate(e, cons(apv0, null)))); // for tco?
+			//return pushPrompt(null, e, dbg(e, this, o), prompt, ()-> k.apply(()-> evaluate(e, cons(apv0, null)))); // for tco?
+			//return pushPrompt(null, e, dbg(e, this, o), prompt, ()-> k.apply(()-> Vm.this.combine(e, apv0, null)));
 			return pushPrompt(null, e, dbg(e, this, o), prompt, ()-> k.apply(e, apv0));
 		}
 		public String toString() { return "%PushPromptSubcont"; }
@@ -601,10 +596,10 @@ public class Vm {
 		var exc = new Error(msg, cause); 
 		var userBreak = theEnvironment.get("userBreak");
 		if (userBreak != null) {
-			// con l'attuale user-break se stack viene tornata una sospension per il takeSubcont (o un tco)
+			// con l'attuale userBbreak se stack is true viene tornata una sospension per il takeSubcont (o un tco)
 			var res = evaluate(theEnvironment, list(userBreak, exc));
 			//var res = pipe(dbg(theEnvironment, userBreak, exc), ()-> evaluate(theEnvironment, list(userBreak, exc))); // for ?
-			// per l'esecuzione della throw anche se user-break non lo facesse
+			// per l'esecuzione della throw anche se userbreak non lo facesse
 			if (res instanceof Suspension s) return (T) s.suspend(dbg(theEnvironment, "throw", exc), rr-> { throw exc; });
 		}
 		throw exc;
@@ -702,21 +697,6 @@ public class Vm {
 		for (; list != null; list = list.cdr()) res = cons(list.car, res);
 		return res;
 	}
-	/*
-	Object listToListStar(List h) {
-		if (!(h instanceof Cons)) return h;
-		List hc = h;
-		if (hc.cdr == null) return hc.car;
-		if (hc.cdr instanceof Cons c1) {
-			if (c1.cdr == null) { hc.setCdr(c1.car); return hc; }
-			if (c1.cdr instanceof Cons c2) {
-				while (c2.cdr != null && c2.cdr instanceof Cons c3) { c1=c2; c2=c3; }
-				if (c2.cdr == null) { c1.setCdr(c2.car);  return hc; }
-			}
-		}
-		return error("not a proper list: " + toString(hc));
-	}
-	*/
 	Object listToListStar(List h) {
 		if (h.cdr == null) return h.car;
 		return cons(h.car(), listToListStar(h.cdr()));
@@ -777,34 +757,15 @@ public class Vm {
 		if (o instanceof Object[] a) return parseBytecode(a);
 		return o;
 	}
-	/*
 	Object parseBytecode(Object ... objs) {
 		if (objs.length == 0) return null;
-		if (objs.length == 2 && objs[0].equals("wat-string")) return objs[1];
-		List head = cons(parseBytecode(objs[0]), null), cons = head;
-		for (int i=1; i<objs.length; i+=1) {
-			var obj = objs[i];
-			if (obj == null || !obj.equals(".")) {
-				cons = cons.setCdr(cons(parseBytecode(objs[i]), null));
-				continue;
-			}
-			if (i != objs.length-2) throw new Error(". not is the penultimate element in " + objs);
-			cons.setCdr(parseBytecode(objs[i+1]));
-			break;
-		}
-		return head;
-	}
-	*/
-	Object parseBytecode(Object ... objs) {
-		if (objs.length == 0) return null;
-		if (objs.length == 2 && objs[0].equals("wat-string")) return objs[1];
+		if (objs.length == 2 && objs[0] != null && objs[0].equals("wat-string")) return objs[1];
 		int i = objs.length - 1;
 		Object tail = null; 
 		if (i > 1 && objs[i-1] != null && objs[i-1].equals(".")) { tail = parseBytecode(objs[i]); i-=2; }
 		for (; i>=0; i-=1) {
 			var obj = objs[i];
-			if (obj != null && obj.equals("."))
-				throw new Error(". not is the penultimate element in " + objs);
+			if (obj != null && obj.equals("."))	throw new Error(". not is the penultimate element in " + objs);
 			tail = cons(parseBytecode(obj), tail);
 		}
 		return tail;
@@ -1069,7 +1030,7 @@ public class Vm {
 					$("%def", "dotco", jWrap((ArgsList) o-> { if (checkO("dotco", o, 0, 1, Boolean.class) == 0) return dotco; dotco=o.car(); return inert; })),
 					$("%def", "trace", jWrap((ArgsList) o-> { if (checkO("trace", o, 0, 1, Boolean.class) == 0) return trace; trace=o.car(); return inert; })),
 					$("%def", "stack", jWrap((ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=o.car(); return inert; })),
-					$("%def", "thenv", jWrap((ArgsList) o-> { if (checkO("thenv", o, 0, 1, Boolean.class) == 0) return thenv; thenv=o.car(); return inert; }))
+					$("%def", "thenv", jWrap((ArgsList) o-> { if (checkO("tsenv", o, 0, 1, Boolean.class) == 0) return tsenv; tsenv=o.car(); return inert; }))
 				)
 			)
 		);
