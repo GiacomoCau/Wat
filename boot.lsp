@@ -2,12 +2,13 @@
 
 ;; ``72. An adequate bootstrap is a contradiction in terms.''
 
-;; Rename urDef
+;; Rename %def
 (%def $define! %def)
 
 ;; Rename bindings that will be used as provided by VM
 ($define! array->list %array->list)
 ($define! begin %begin)
+($define! catchTag %catch)
 ($define! cons %cons)
 ($define! cons? %cons?)
 ($define! dnew %dNew)
@@ -22,9 +23,11 @@
 ($define! nil? %nil?)
 ($define! not !)
 ($define! reverseList %reverseList)
+($define! rootPrompt %rootPrompt)
 ($define! string->symbol %string->symbol)
 ($define! symbolName %symbolName)
 ($define! symbol? %symbol?)
+($define! throwTag %throw)
 ($define! unwrap %unwrap)
 ($define! wrap %wrap)
 
@@ -60,11 +63,11 @@
 
 ;;;; Wrap incomplete VM forms
 
-($define! catchTag %catch)
-(defineMacro (catch x . handler) (list* %catch #ignore x handler))
+(defineMacro (catch x . handler)
+  (list* catchTag #ignore x handler))
 
-($define! throwTag %throw)
-(defineMacro (throw . x) (list* %throw #ignore x))
+(defineMacro (throw . x)
+  (list* throwTag #ignore x))
 
 (assert (catch (throw)) #inert)
 (assert (catch (throw 1)) 1)
@@ -103,7 +106,8 @@
     (if (nil? lst) ()
         (cons (f (car lst)) (mapList f (cdr lst))) )))
 
-(assert (mapList car '((a 1)(b 2))) '(a b))
+(assert (mapList car  '((a 1)(b 2))) '(a b))
+(assert (mapList cdr  '((a 1)(b 2))) '((1) (2)))
 (assert (mapList cadr '((a 1)(b 2))) '(1 2))
 (assert (($vau l e (list* '$define! (mapList car l) (list (list 'quote (mapList cadr l))))) (a 1)(b 2)) '($define! (a b) (quote (1 2))))
 
@@ -250,8 +254,10 @@
            (list* begin body)
            (let* ( (((name expr) . restBs) bs)
                    (value (eval expr env)) )
-             (list %dlet name value (processBindings restBs)) )))
+             (list %dLet name value (processBindings restBs)) )))
     env ))
+
+(assert (begin (define a (dnew 1)) (dlet ((a 2)) (assert (dref a) 2)) (dref a)) 1)
 
 |#
 ;;;; Prototypes
@@ -382,7 +388,7 @@
 (define (array . args) (list->array args))
 
 (define (jsCallback fun)
-  (%jsFunction ($lambda args (pushPrompt %rootPrompt (apply fun args)))) )
+  (%jsFunction ($lambda args (pushPrompt rootPrompt (apply fun args)))) )
 
 (defineMacro (jsLambda params . body)
   (list jsCallback (list* lambda params body)))
@@ -457,8 +463,9 @@
     (if (!= (.next k) #null)
       (printFrame (.next k)) )
     (log "--" k) )
-  (takeSubcont %rootPrompt k (printFrame k) (pushPrompt %rootPrompt (pushSubcont k) )) ;old need 2+ vau args 
-  ;(takeSubcont %rootPrompt k (pushPrompt %rootPrompt (pushSubcont k (printFrame k) ))) ;ok with 3+ vau args
+  (takeSubcont rootPrompt k
+  	(printFrame k) (pushPrompt rootPrompt (pushSubcont k) )) ;old need 2+ vau args
+    ;(pushPrompt rootPrompt (pushSubcont k (printFrame k) )) ;ok with 3+ vau args
 )
 
 (define (userBreak err)

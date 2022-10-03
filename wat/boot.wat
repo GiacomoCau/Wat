@@ -2,16 +2,17 @@
 
 ;; ``72. An adequate bootstrap is a contradiction in terms.''
 
-;; Rename ur-def
+;; Rename %def
 (%def $define! %def)
 
 ;; Rename bindings that will be used as provided by VM
 ($define! array->list %array->list)
 ($define! begin %begin)
+($define! catch-tag %catch)
 ($define! cons %cons)
 ($define! cons? %cons?)
-($define! dnew %dnew)
-($define! dref %dref)
+($define! dnew %dNew)
+($define! dref %dRef)
 ($define! error %error)
 ($define! eval %eval)
 ($define! if %if)
@@ -26,6 +27,7 @@
 ($define! string->symbol %string->symbol)
 ($define! symbol-name %symbolName)
 ($define! symbol? %symbol?)
+($define! throw-tag %throw)
 ($define! unwrap %unwrap)
 ($define! wrap %wrap)
 
@@ -61,11 +63,11 @@
 
 ;;;; Wrap incomplete VM forms
 
-($define! catch-tag %catch)
-(define-macro (catch x . handler) (list* %catch #ignore x handler))
+(define-macro (catch x . handler)
+  (list* catch-tag #ignore x handler))
 
-($define! throw-tag %throw)
-(define-macro (throw . x) (list* %throw #ignore x))
+(define-macro (throw . x)
+  (list* throw-tag #ignore x))
 
 (assert (catch (throw)) #inert)
 (assert (catch (throw 1)) 1)
@@ -104,7 +106,8 @@
     (if (nil? lst) ()
         (cons (f (car lst)) (map-list f (cdr lst))) )))
 
-(assert (map-list car '((a 1)(b 2))) '(a b))
+(assert (map-list car  '((a 1)(b 2))) '(a b))
+(assert (map-list cdr  '((a 1)(b 2))) '((1) (2)))
 (assert (map-list cadr '((a 1)(b 2))) '(1 2))
 (assert (($vau l e (list* '$define! (map-list car l) (list (list 'quote (map-list cadr l))))) (a 1)(b 2)) '($define! (a b) (quote (1 2))))
 
@@ -251,8 +254,10 @@
            (list* begin body)
            (let* ( (((name expr) . rest-bs) bs)
                    (value (eval expr env)) )
-             (list %dlet name value (process-bindings rest-bs)) )))
+             (list %dLet name value (process-bindings rest-bs)) )))
     env ))
+
+(assert (begin (define a (dnew 1)) (dlet ((a 2)) (assert (dref a) 2)) (dref a)) 1)
 
 |#
 ;;;; Prototypes
@@ -383,7 +388,7 @@
 (define (array . args) (list->array args))
 
 (define (js-callback fun)
-  (%js-function ($lambda args (push-prompt %root-prompt (apply fun args)))) )
+  (%js-function ($lambda args (push-prompt root-prompt (apply fun args)))) )
 
 (define-macro (js-lambda params . body)
   (list js-callback (list* lambda params body)))
@@ -458,11 +463,12 @@
     (if (!= (.next k) #null)
       (print-frame (.next k)) )
     (log "--" k) )
-  (take-subcont %root-prompt k (print-frame k) (push-prompt %root-prompt (push-subcont k) )) ;old need 2+ vau args 
-  ;(take-subcont %root-prompt k (push-prompt %root-prompt (push-subcont k (print-frame k) ))) ;ok with 3+ vau args
+  (take-subcont root-prompt k
+    (print-frame k) (push-prompt root-prompt (push-subcont k) )) ;old need 2+ vau args 
+    ;(push-prompt root-prompt (push-subcont k (print-frame k) )) ;ok with 3+ vau args
 )
 
-(define (user-break err)
+(define (userBreak err)
   ;(log "==" err)
   (when (stack) (log "++" err) (print-stacktrace))
   (throw err)

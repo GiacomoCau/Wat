@@ -227,14 +227,14 @@ public class Vm {
 		public <T> T cdr() { return (T) cdr; }
 		public <T> T car(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? o.car() : error("not a cons: " + o); }
 		public <T> T cdr(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? o.cdr() : error("not a cons: " + o); }
-		Object setCar(Object car) { return this.car=car; }
-		Object setCdr(Object cdr) { return this.cdr=cdr; }
+		Object setCar(Object car) { return this.car = car; }
+		Object setCdr(Object cdr) { return this.cdr = cdr; }
 	}
 	class List extends Cons {
 		List(Object car, List cdr) { super(car, cdr); }
 		@Override public List cdr() { return (List) cdr; }
-		List setCdr(List cdr) { return (List)(this.cdr=cdr); }
-		@Override Object setCdr(Object cdr) { return error("not a list: " + cdr); }
+		List setCdr(List cdr) { return (List)(this.cdr = cdr); }
+		@Override Object setCdr(Object cdr) { return cdr == null || cdr instanceof List ? this.cdr = cdr : error("not a list: " + cdr); }
 	}
 	public int len(List o) { int i=0; for (; o != null; i+=1, o=o.cdr()); return i; }
 	<T> T cons(Object car, Object cdr) {
@@ -535,7 +535,7 @@ public class Vm {
 	class DV {
 		Object val;
 		DV(Object val) { this.val = val; }
-		public String toString() { return "[DV " + val + "]"; }
+		public String toString() { return "{DV " + val + "}"; }
 	}
 	class DNew implements Combinable  {
 		public Object combine(Env e, List o) {
@@ -555,9 +555,9 @@ public class Vm {
 	class DLet implements Combinable  {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 3); // o = (var val x)
-			var o0 = o.car();
+			var o0 = evaluate(e, o.car());
 			if (!(o0 instanceof DV dv)) return error("not a dinamic variable: " + o0);
-			var val = o.car(1);
+			var val = evaluate(e, o.car(1));
 			var x = o.car(2);
 			var oldVal = dv.val;
 			try {
@@ -599,7 +599,7 @@ public class Vm {
 	}
 	<T> T error(String msg, Throwable cause) {
 		var exc = new Error(msg, cause); 
-		var userBreak = theEnvironment.get("user-break");
+		var userBreak = theEnvironment.get("userBreak");
 		if (userBreak != null) {
 			// con l'attuale user-break se stack viene tornata una sospension per il takeSubcont (o un tco)
 			var res = evaluate(theEnvironment, list(userBreak, exc));
@@ -746,14 +746,14 @@ public class Vm {
 	}
 	boolean vmAssert(String str, Object objs) throws Exception {
 		var expr = cons(begin, parseBytecode(parse(str)));
-		return objs instanceof Throwable ? vmAssert(expr) : vmAssert(expr, parseBytecode(objs)); 
+		return vmAssert(theEnvironment, objs instanceof Throwable ? $(expr) : $(expr, parseBytecode(objs))); 
 	}
-	boolean vmAssert(Object ... objs) {
-		return vmAssert((String) null, objs[0], objs.length == 1 ? new Object[] {} : new Object[] { objs[1] }); 
+	boolean vmAssert(Env env, Object ... objs) {
+		return vmAssert(env, (String) null, objs[0], objs.length == 1 ? $() : $(objs[1])); 
 	}
-	boolean vmAssert(String name, Object expr, Object ... objs) {
+	boolean vmAssert(Env env, String name, Object expr, Object ... objs) {
 		try {
-			var env = env(theEnvironment);
+			env = env(env);
 			var val = pushSubcontBarrier(null, env, pushRootPrompt(expr));
 			if (objs.length == 0) print(eIfnull(name, ()-> "test "+ name + ": "), expr, " should throw but is ", val);
 			else {
@@ -813,6 +813,7 @@ public class Vm {
 	
 	// JNI
 	interface ArgsList extends Function<List,Object> {}
+	interface EnvArgsList extends BiFunction<Env,List,Object> {}
 	class JFun implements Combinable {
 		Object jfun;
 		JFun(Object jfun) { this.jfun = jfun; };
@@ -824,6 +825,7 @@ public class Vm {
 							case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
 							case ArgsList a-> a.apply(o);  
 							case Function f-> { checkO(jfun, o, 1); yield f.apply(o.car()); }  
+							case EnvArgsList f-> { yield f.apply(e, o); }
 							case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(o.car(), o.car(1)); }
 							case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; }
 							case Method mt-> {
@@ -849,7 +851,7 @@ public class Vm {
 			return "{JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "}"; }
 	}
 	boolean isjFun(Object jfun) {
-		return isInstance(jfun, Supplier.class, ArgsList.class, Function.class, BiFunction.class, Executable.class, Field.class);
+		return isInstance(jfun, Supplier.class, ArgsList.class, Function.class, EnvArgsList.class, BiFunction.class, Executable.class, Field.class);
 	}
 	JFun jFun(Object jFun) {
 		return jFun instanceof JFun jfun ? jfun : isjFun(jFun) ? new JFun(jFun) : error("no a jFun: " + jFun);
@@ -1017,7 +1019,7 @@ public class Vm {
 					// Errors
 					$("%def", "%rootPrompt", rootPrompt),
 					$("%def", "%error", jWrap((Function<String, Object>) this::error)),
-					// JS Interface
+					// Java Interface
 					$("%def", "%jinvoke", jWrap((Function<String,Object>) this::jInvoke)),
 					$("%def", "%jgetset", jWrap((Function<String,Object>) this::jGetSet)),
 					$("%def", "instanceof", jWrap((BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o))),
@@ -1048,16 +1050,17 @@ public class Vm {
 					$("%def", ">>", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr, a, b))),
 					$("%def", ">>>", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr0, a, b))),
 					//
-					$("%def", "%quote", $("%vau", $("a"), ignore, "a")),
+					$("%def", "%quote", $("%vau", $("arg"), ignore, "arg")),
+					$("%def", "%theEnvironment", $("%vau", null, "env", "env")),
 					$("%def", "%lambda", $("%vau", $("formals", ".", "body"), "env",
-						$("%wrap", $("%eval", $("%list*", "%vau", "formals", "#ignore", "body"), "env")))),
+						$("%wrap", $("%eval", $("%list*", "%vau", "formals", ignore, "body"), "env")))),
 					$("%def", "%jambda", jFun((ArgsList) o-> lambda(o.car(), o.car(1), o.cdr(1)))),
 					
 					$("%def", "==", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a == b)),
 					$("%def", "!=", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a != b)),
 					$("%def", "eq?", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
-					$("%def", "assert", jFun((ArgsList) o-> { checkO("assert", o, 1, 2); return vmAssert(listToArray(o)); } )),
-					$("%def", "test", jFun((ArgsList) o-> { checkO("test", o, 2, 3); return vmAssert(toString(o.car()), o.car(1), listToArray(o.cdr(1))); } )),
+					$("%def", "assert", jFun((EnvArgsList) (e,o)-> { checkO("assert", o, 1, 2); return vmAssert(e,listToArray(o)); } )),
+					$("%def", "test", jFun((EnvArgsList) (e,o)-> { checkO("test", o, 2, 3); return vmAssert(e,toString(o.car()), o.car(1), listToArray(o.cdr(1))); } )),
 					$("%def", "toString", jWrap((Function<Object,String>) obj-> toString(obj))),
 					$("%def", "log", jWrap((ArgsList) o-> log(listToArray(o)))),
 					$("%def", "print", jWrap((ArgsList) o-> print(listToArray(o)))),
@@ -1218,40 +1221,40 @@ public class Vm {
 		vmAssert("1", 1);
 		vmAssert("1 2 3", 3);
 		vmAssert("(%cons 1 2)", $(1,".",2));
-		vmAssert("(%list 1 2 3)", $(1,2,3));
-		vmAssert("(%list* 1 2 3 4)", $(1,2,3,".",4));
-		vmAssert("(%array->list #t (%list->array (%list 1 2 3 4)))", $(1,2,3,4));
-		vmAssert("(%array->list #f (%list->array (%list 1 2 3 4)))", $(1,2,3,".",4));
-		vmAssert("(%reverse-list (%list 1 2 3 4))", $(4,3,2,1));
+		vmAssert("(%list 1 2 3)", $("%quote",$(1,2,3)));
+		vmAssert("(%list* 1 2 3 4)", $("%quote",$(1,2,3,".",4)));
+		vmAssert("(%array->list #t (%list->array (%list 1 2 3 4)))", $("%quote",$(1,2,3,4)));
+		vmAssert("(%array->list #f (%list->array (%list 1 2 3 4)))", $("%quote",$(1,2,3,".",4)));
+		vmAssert("(%reverseList (%list 1 2 3 4))", $("%list",4,3,2,1));
 		
 		vmAssert("(+ 1 2)", 3);
 		vmAssert("(* 3 2)", 6);
 		vmAssert("(* (* 3 2) 2)", 12);
 		
-		vmAssert("((%vau a #ignore a) 1 2)", $(1,2));
+		vmAssert("((%vau a #ignore a) 1 2)",  $("%list",1,2));
 		vmAssert("((%vau (a b) #ignore b) 1 2)", 2);
-		vmAssert("((%vau (a . b) #ignore b) 1 2 3)", $(2,3));
-		vmAssert("(%def x (%list 1)) x", $(1));
+		vmAssert("((%vau (a . b) #ignore b) 1 2 3)", $("%list",2,3));
+		vmAssert("(%def x (%list 1)) x", $($("%list",1)));
 		vmAssert("(%def x 1)((%wrap(%vau (a) #ignore a)) x)", 1);
 		
 		vmAssert("(%def () 1) a", Throw);
-		vmAssert("(%def a (%list 1)) a", $(1));
+		vmAssert("(%def a (%list 1)) a",  $("%list", 1));
 		vmAssert("(%def (a) (%list 1)) a", 1);
-		vmAssert("(%def a (%list 1 2 3)) a", $(1,2,3));
+		vmAssert("(%def a (%list 1 2 3)) a", $("%list", 1,2,3));
 		vmAssert("(%def (a) 1 2 3) a", Throw);
 		vmAssert("(%def 2 1)", Throw);
 		vmAssert("(%def (a) (%list 1)) a", 1);
 		vmAssert("(%def (a b) (%list 1 2)) a b", 2);
-		vmAssert("(%def (a . b) (%list 1 2 3)) a b", $(2,3)); 
+		vmAssert("(%def (a . b) (%list 1 2 3)) a b", $("%list", 2,3)); 
 		
 		vmAssert("(%vau (a . 12) #ignore 0)", Throw);
 		vmAssert("(%def (a b 12) 1)", Throw);
 		
-		vmAssert("(%quote (a b c))", $("a","b","c"));
+		vmAssert("(%quote (a b c))", $("%quote", $("a","b","c")));
 		
 		vmAssert("(%def 2 1)", Throw);
 		vmAssert("(%def a 1) a", 1);
-		vmAssert("(%def (a . b) (%list 1 2 3)) a b", $(2,3));
+		vmAssert("(%def (a . b) (%list 1 2 3)) a b", $("%list",2,3));
 		vmAssert("(%def define %def) (define a 1) a", 1);
 		vmAssert("(%def $define! %def) ($define! a 1) a", 1);
 		vmAssert("(%def $define! %def) $define!", theEnvironment.get("%def"));
