@@ -255,7 +255,7 @@ public class Vm {
 	class Env {
 		Map<String,Object> map = new LinkedHashMap(); Env parent;
 		Env(Env parent) { this.parent = parent; }
-		record Lookup(boolean bound, Object value) {}
+		record Lookup(boolean isBound, Object value) {}
 		Lookup get(String name) {
 			Env env = this;	do {
 				Object res = env.map.get(name);
@@ -274,10 +274,10 @@ public class Vm {
 			var sb = new StringBuilder(); map.entrySet().forEach(e-> sb.insert(0, " " + e)); return sb.toString();
 		}
 		Object lookup(String name) {
-			var lookup = get(name); if (!lookup.bound) return error("unbound: " + name);
+			var lookup = get(name); if (!lookup.isBound) return error("unbound: " + name);
 			if (trace) print("  lookup: ", lookup.value); return lookup.value;
 		}
-		boolean isBound(String name) { return get(name).bound; }
+		boolean isBound(String name) { return get(name).isBound; }
 	}
 	Env env(Env parent) { return new Env(parent); }
 	
@@ -527,62 +527,56 @@ public class Vm {
 	
 	
 	// Dynamic Variables
-	class DV {
+	class DVar {
 		Object val;
-		DV(Object val) { this.val = val; }
-		public String toString() { return "{DV " + val + "}"; }
+		DVar(Object val) { this.val = val; }
+		public String toString() { return "{DVar " + val + "}"; }
 	}
-	class DNew implements Combinable  {
+	class DDef implements Combinable {
 		public Object combine(Env e, List o) {
-			checkO(this, o, 1); // o = (x)
-			return new DV(o.car());
-		}
-		public String toString() { return "%DNew"; }
-	}
-	class DRef implements Combinable  {
-		public Object combine(Env e, List o) {
-			checkO(this, o, 1); // o = (x)
-			var x = o.car();
-			return x instanceof DV dv ? dv.val : error("not a dinamic variable: " + x);
-		}
-		public String toString() { return "%DRef"; }
-	}
-	class DLet implements Combinable  {
-		public Object combine(Env e, List o) {
-			checkO(this, o, 3); // o = (var val x)
-			var o0 = evaluate(e, o.car());
-			if (!(o0 instanceof DV dv)) return error("not a dinamic variable: " + o0);
-			var val = evaluate(e, o.car(1));
-			var x = o.car(2);
-			var oldVal = dv.val;
-			try {
-				dv.val = val; return pipe(dbg(e, this, o), ()-> evaluate(e, x));
+			checkO(this, o, 2, -1); // o = (vars ... vals)
+			var vars = listToArray(o.car(), Symbol.class);
+			var dVars = new DVar[vars.length];
+			for (int i=0; i<vars.length; i+=1) {
+				var var = vars[i];
+				var lookup = e.get(var.name);
+				if (!lookup.isBound) continue;
+				if (!(lookup.value instanceof DVar dVar)) return error("not a dinamic variable: " + var);
+				dVars[i] = dVar;
 			}
-			finally {
-				dv.val = oldVal;
-			}
+			return pipe(dbg(e, this, o), ()-> mapCar(null, car-> evaluate(e, car), o.cdr(), null), args-> {
+					var vals = listToArray((List) args);
+					if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
+					for (int i=0; i<dVars.length; i+=1) dSet(dbg(e, this, o), dVars[i], vars[i], vals[i]);
+					return inert;
+				}
+			);
 		}
-		public String toString() { return "%DLet"; }
+		private void dSet(Dbg dbg, DVar dvar, Symbol var, Object val) {
+			if (dvar != null) dvar.val = val; else bind(dbg.e, dbg, var, new DVar(val));
+		}
+		public String toString() { return "%DDef"; }
 	}
-	class DLets implements Combinable {
+	class DLet implements Combinable {
 		public Object combine(Env e, List o) {
-			checkO(this, o, 3); // o = (vars vals x)
+			checkO(this, o, 3, -1); // o = (vars vals ... x)
 			var vars = listToArray(o.car());
 			var vals = listToArray(o.car(1));
 			if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
 			var olds = new Object[vals.length];
 			for (int i=0; i<vars.length; i+=1) {
-				if (!(vars[i] instanceof DV dv)) return error("not a dinamic variable: " + vars[i]);
-				olds[i] = dv.val;
-				dv.val = vals[i];
+				if (!(vars[i] instanceof DVar dvar)) return error("not a dinamic variable: " + vars[i]);
+				olds[i] = dvar.val;
+				dvar.val = vals[i];
 			}
 			try {
-				var x = o.car(2); return pipe(dbg(e, this, x), ()-> evaluate(e, x));
+				List x = o.cdr(1); return pipe(dbg(e, this, x), ()-> getTco(begin.combine(e, x)));
 			}
 			finally {
-				for (int i=0; i<vars.length; i+=1) ((DV) vars[i]).val = olds[i];
+				for (int i=0; i<vars.length; i+=1) ((DVar) vars[i]).val = olds[i];
 			}
 		}
+		public String toString() { return "%DLet"; }
 	}
 	
 	
@@ -974,10 +968,10 @@ public class Vm {
 					$("%def", "%pushPrompt", new PushPrompt()),
 					$("%def", "%pushPromptSubcont", wrap(new PushPromptSubcont())),
 					// Dynamically-scoped Variables
-					$("%def", "%dNew", wrap(new DNew())),
-					$("%def", "%dRef", wrap(new DRef())),
+					$("%def", "%dNew", jWrap((Function<Object,DVar>) DVar::new)),
+					$("%def", "%dVal", jWrap((ArgsList) o-> { DVar dv = o.car(); return checkO("%dVal", o, 1, 2) == 1 ? dv.val : (dv.val=o.car(1)); })),
+					$("%def", "%dDef", new DDef()),
 					$("%def", "%dLet", new DLet()),
-					$("%def", "%dLets", new DLets()),
 					// Errors
 					$("%def", "%rootPrompt", rootPrompt),
 					$("%def", "%error", jWrap((Function<String, Object>) this::error)),
@@ -1243,7 +1237,7 @@ public class Vm {
 		eval(readString("test.lsp"));
 		eval(readString("testJni.lsp"));
 		print("start time: " + (currentTimeMillis() - milli));
-		stack = true;
+		//stack = true;
 		repl();
 		//*/
 	}

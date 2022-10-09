@@ -3,6 +3,7 @@
 ;; ``72. An adequate bootstrap is a contradiction in terms.''
 
 ;; Rename %def
+(%def def %def)
 (%def $define! %def)
 
 ;; Rename bindings that will be used as provided by VM
@@ -11,8 +12,9 @@
 ($define! catchTag %catch)
 ($define! cons %cons)
 ($define! cons? %cons?)
+($define! ddef %dDef)
 ($define! dnew %dNew)
-($define! dref %dRef)
+($define! dval %dVal)
 ($define! error %error)
 ($define! eval %eval)
 ($define! if %if)
@@ -42,6 +44,7 @@
 ($define! theEnvironment ($vau () e e))
 ($define! theEnvironment %theEnvironment)
 
+
 ;;;; Macro
 
 ($define! makeMacro
@@ -61,6 +64,7 @@
 
 (defineMacro (defineOperative (name . params) envparam . body)
   (list $define! name (list* $vau params envparam body)) )
+
 
 ;;;; Wrap incomplete VM forms
 
@@ -89,6 +93,7 @@
 (defineMacro (pushSubcont k . body)
   (list %pushPromptSubcont #ignore k (list* $lambda () body)) )
 
+
 ;;;; List utilities
 
 ($define! compose ($lambda (f g) ($lambda (arg) (f (g arg)))))
@@ -99,6 +104,7 @@
 ($define! cadr (compose car cdr))
 ($define! cdar (compose cdr car))
 ($define! cddr (compose cdr cdr))
+
 
 ;;;; Important macros and functions
 
@@ -192,6 +198,7 @@
                 (makeEnvironment)
                 (car opt)))))
 
+
 ;;;; Simple control
 
 (defineOperative (cond . clauses) env
@@ -245,20 +252,142 @@
 (defineMacro (set (getter . args) newVal)
   (list* (list setter getter) newVal args))
 
+
 ;;;; Delimited dynamic binding
 
-;; Evaluate right hand sides before binding all dynamic variables at once.
-(defineOperative (dlet bindings . body) env
+(defineOperative (progv dyns vals . forms) env
   (eval
-    (let processBindings ((bs bindings))
-       (if (nil? bs)
-           (list* begin body)
-           (let* ( (((name expr) . restBs) bs)
-                   (value (eval expr env)) )
-             (list %dLet name value (processBindings restBs)) )))
+    (list* %dLet 
+      (eval (list* list dyns) env)
+      (eval (list* list vals) env)
+      forms )
     env ))
 
-(assert (begin (define a (dnew 1)) (dlet ((a 2)) (assert (dref a) 2)) (dref a)) 1)
+(assert (begin (ddef (a) 1) (progv (a) (2) (assert (dval a) 2)) (assert (dval a) 1)) #t)
+
+(defineOperative (dlet bindings . forms) env
+  (eval
+    (list* %dLet 
+      (mapList (%lambda ((name #ignore))  (eval name env)) bindings)
+      (mapList (%lambda ((#ignore value)) (eval value env)) bindings)
+      forms )
+    env ))
+
+(assert (begin (ddef (a b) 1 2) (dlet ((a 2)) (assert (dval a) 2)) (dval b)) 2)
+
+(defineMacro (dlet* bindings . body)
+  (if (nil? bindings)
+    (list* begin body)
+    (list dlet
+	  (list (car bindings))
+      (list* dlet* (cdr bindings) body) )))
+
+(assert (begin (ddef (a) 1) (dlet* ((a (+ 1 (dval a))) (a (+ 1 (dval a)))) (dval a))) 3)
+
+(test defdynamic.1
+  (begin
+    (ddef (x y) 1 (+ 1 1))
+    (assert (dval x) 1)
+    (assert (dval y) 2)
+    (dlet* ((x 3))
+      (assert (dval x) 3)
+      (assert (dval y) 2)
+      (dlet* ((y 4))
+        (assert (dval x) 3)
+        (assert (dval y) 4))
+      (assert (dval x) 3)
+      (assert (dval y) 2))
+    (assert (dval x) 1)
+    (assert (dval y) 2))
+  #t)
+  
+(test defdynamic.redefine
+  (begin  
+    (ddef (a) (+ 1 1))
+    (def oa a)
+    (assert (dval a) 2)
+    (assert (dval oa) 2)
+    (ddef (a) (+ 2 2))
+    (assert (dval a) 4)
+    (assert (dval oa) 4)
+    (assert (eq? oa a) #t)
+    (ddef (a) #null)
+    (assert (dval a) #null)
+    (assert (eq? oa a) #t) )
+  #t )
+
+(test progv.1
+  (begin
+    (ddef (*x*) 1)
+    (ddef (*y*) 2)
+    (assert (dval *x*) 1)
+    (assert (dval *y*) 2)
+    (progv (*x*) (3)
+      (assert (dval *x*) 3)
+      (assert (dval *y*) 2)
+      (progv (*y*) (4)
+        (assert (dval *x*) 3)
+        (assert (dval *y*) 4) )
+      (assert (dval *x*) 3)
+      (assert (dval *y*) 2) )
+    (assert (dval *x*) 1)
+    (assert (dval *y*) 2) )
+  #t )
+    
+|#
+  (deftest dynamic.1
+    (progn
+      (defdynamic *foo*)
+      (assert (= (dynamic *foo*) #void))
+      (assert (= (slot-value *foo* 'value) #void))
+      (assert (typep *foo* #^dynamic))
+      (assert (typep *foo* #^standard-object))
+      (assert (typep *foo* #^object))
+      (assert (subclassp #^dynamic #^standard-object))
+      (assert (subclassp #^dynamic #^object)))
+    #void)
+#|
+
+(test set-dynamic.1
+  (begin
+    (ddef (*bar*) #null)
+    (dlet ((*bar* 1))
+      (dval *bar* 2)
+      (assert (dval *bar*) 2)
+      (dlet ((*bar* 3))
+        (assert (dval *bar*) 3) )
+      (assert (dval *bar*) 2)
+      (dval *bar* 4)
+      (assert (dval *bar*) 4) )
+    (assert (dval *bar*) #null) )
+  #t )
+
+(test dynamic-let*.1
+  (dlet* () (+ 1 1))
+  2)
+
+(test dynamic-let*.2
+  (begin
+    (ddef (*x*) 1)
+    (dlet* ((*x* 2)) (+ 1 (dval *x*))))
+  3)
+
+(test dynamic-let*.2
+  (begin
+    (ddef (*x*) 1)
+    (ddef (*y*) 0)
+    (dlet* ((*x* 2) (*y* (+ (dval *x*) 1)))
+      (list (dval *x*) (dval *y*))))
+  '(2 3))
+
+(test dynamic-let-sanity-check
+  (begin
+    (ddef (*x*) 1)
+    (ddef (*y*) 0)
+    (dlet ((*x* 2) (*y* (+ (dval *x*) 1)))
+      (list (dval *x*) (dval *y*))))
+  '(2 2) )
+
 
 |#
 ;;;; Prototypes
@@ -282,6 +411,7 @@
 (define (putMethod ctor name fun)
   (set ((jsGetter name) (.prototype ctor)) fun))
 #|
+
 
 ;;;; Modules
 
@@ -314,6 +444,7 @@
 
 (assert (begin (defineModule m (x) (define x 10)) (import m (x)) x) 10)
 
+
 ;;;; JavaScript
 
 (define (relationalOp %binop)
@@ -326,7 +457,6 @@
       op)))
 
 (define == (relationalOp ==))
-;(define === (relationalOp "==="))
 (define < (relationalOp <))
 (define > (relationalOp >))
 (define <= (relationalOp <=))
@@ -341,11 +471,11 @@
 
 (assert (* 1 2 3) 6)
 
-;; Can't simply use 0 as unit or it won't work with strings
+
 (define +
   (let ((vm+ +))
 	(lambda args
-	  (if (nil? args) 0
+	  (if (nil? args) 0 ;; Can't simply use 0 as unit or it won't work with strings
 	      (foldList vm+ (car args) (cdr args)) ))))
 
 (define (negativeOp binop unit)
@@ -425,6 +555,7 @@
 (defineMacro (-- place)
   (list set place (list - place 1)) )
 
+
 ;;;; Utilities
 
 ;; ugh
@@ -439,9 +570,8 @@
         (result (eval expr env)))
     (log (+ "time " expr ": " (- (@getTime (new Date)) n) "ms"))
     result ))
-#|
 
-|#
+
 ;;;; Options
 
 (definePrototype Option Object ())
@@ -455,6 +585,7 @@
         (eval (list (list lambda (list optionName) then) (.value option)) env)
         (eval else env) )))
 #|
+
 
 ;;;; Error break routine, called by VM to print stacktrace and throw
 
