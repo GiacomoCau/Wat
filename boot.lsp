@@ -40,19 +40,20 @@
 ($define! $lambda ($vau (formals . body) env (wrap (eval (list* $vau formals #ignore body) env))))
 ($define! $lambda %lambda)
 ($define! theEnvironment ($vau () e e))
+($define! theEnvironment %theEnvironment)
 
 ;;;; Macro
 
-($define! makeMacroExpander
+($define! makeMacro
   (wrap
     ($vau (expander) #ignore
       ($vau operands env
         (eval (eval (cons expander operands) (makeEnvironment)) env) ))))
 
 ($define! macro
-  (makeMacroExpander
+  (makeMacro
     ($vau (params . body) #ignore
-      (list makeMacroExpander (list* $vau params #ignore body)) )))
+      (list makeMacro (list* $vau params #ignore body)) )))
 
 ($define! defineMacro
   (macro ((name . params) . body)

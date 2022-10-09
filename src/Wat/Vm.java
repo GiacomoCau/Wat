@@ -101,7 +101,7 @@ public class Vm {
 	
 	boolean trace = false;
 	boolean stack = false;
-	boolean tsenv = false;
+	boolean prenv = false;
 	
 	interface Combinable { <T> T combine(Env e, List o); }
 	
@@ -246,31 +246,29 @@ public class Vm {
 	class Env {
 		Map<String,Object> map = new LinkedHashMap(); Env parent;
 		Env(Env parent) { this.parent = parent; }
-		public Object get(String name) { return map.get(name); };
-		public Object bind(String name, Object rhs) {
+		record Lookup(boolean bound, Object value) {}
+		Lookup get(String name) {
+			Env env = this;	do {
+				Object res = env.map.get(name);
+				if (res != null || env.map.containsKey(name)) return new Lookup(true, res);
+			} while ((env = env.parent) != null);
+			return new Lookup(false, null);
+		};
+		Object bind(String name, Object rhs) {
 			if (trace) print("    bind: ", name, "=", rhs, " in: ", this); map.put(name, rhs); return null; 
 		}
 		public String toString() {
 			var isThenv = this == theEnvironment;
-			return "[" + eIf(!isThenv, "The-") + "Env" + eIf(isThenv && !tsenv, ()-> mapReverse()) + eIf(parent == null, ()-> " " + parent) + "]";
+			return "[" + eIf(!isThenv, "The-") + "Env" + eIf(isThenv && !prenv, ()-> mapReverse()) + eIf(parent == null, ()-> " " + parent) + "]";
 		}
 		String mapReverse() {
 			var sb = new StringBuilder(); map.entrySet().forEach(e-> sb.insert(0, " " + e)); return sb.toString();
 		}
 		Object lookup(String name) {
-			if (!map.containsKey(name)) return parent != null ? parent.lookup(name) : error("unbound: " + name);
-			Object value = map.get(name); if (trace) print("  lookup: ", value); return value;
-			/* TODO in alternativa al precedente
-			Object value = map.get(name);
-			if (value != null || map.containsKey(name)) { if (trace) print("  lookup: ", value); return value; }
-			return parent != null ? parent.lookup(name) : error("unbound: " + name);
-			//*/
-			/* TODO idem
-			Object value = map.get(name);
-			if (value == null && !map.containsKey(name)) return parent != null ? parent.lookup(name) : error("unbound: " + name);
-			if (trace) print("  lookup: ", value); return value;
-			//*/
+			var lookup = get(name); if (!lookup.bound) return error("unbound: " + name);
+			if (trace) print("  lookup: ", lookup.value); return lookup.value;
 		}
+		boolean isBound(String name) { return get(name).bound; }
 	}
 	Env env(Env parent) { return new Env(parent); }
 	
@@ -594,7 +592,7 @@ public class Vm {
 	}
 	<T> T error(String msg, Throwable cause) {
 		var exc = new Error(msg, cause); 
-		var userBreak = theEnvironment.get("userBreak");
+		var userBreak = theEnvironment.get("userBreak").value;
 		if (userBreak != null) {
 			// con l'attuale userBbreak se stack is true viene tornata una sospension per il takeSubcont (o un tco)
 			var res = evaluate(theEnvironment, list(userBreak, exc));
@@ -732,20 +730,21 @@ public class Vm {
 		return vmAssert(env, (String) null, objs[0], objs.length == 1 ? $() : $(objs[1])); 
 	}
 	boolean vmAssert(Env env, String name, Object expr, Object ... objs) {
+		name = eIfnull(name, n-> "test "+ n + ": ");
 		try {
 			env = env(env);
 			var val = pushSubcontBarrier(null, env, pushRootPrompt(expr));
-			if (objs.length == 0) print(eIfnull(name, ()-> "test "+ name + ": "), expr, " should throw but is ", val);
+			if (objs.length == 0) print(name, expr, " should throw but is ", val);
 			else {
 				var expt = objs[0];
 				if (equals(val, pushSubcontBarrier(null, env, pushRootPrompt(expt)))) return true;
-				print(eIfnull(name, ()-> "test "+ name + ": "), expr, " should be ", expt, " but is ", val);
+				print(name, expr, " should be ", expt, " but is ", val);
 			}
 		}
 		catch (Throwable t) {
 			if (objs.length == 0) return true;
 			if (stack) t.printStackTrace(out);
-			else print(expr, " throw ", t);
+			else print(name, expr, " throw ", t);
 		}
 		return false;
 	}
@@ -1030,7 +1029,7 @@ public class Vm {
 					$("%def", "dotco", jWrap((ArgsList) o-> { if (checkO("dotco", o, 0, 1, Boolean.class) == 0) return dotco; dotco=o.car(); return inert; })),
 					$("%def", "trace", jWrap((ArgsList) o-> { if (checkO("trace", o, 0, 1, Boolean.class) == 0) return trace; trace=o.car(); return inert; })),
 					$("%def", "stack", jWrap((ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=o.car(); return inert; })),
-					$("%def", "thenv", jWrap((ArgsList) o-> { if (checkO("tsenv", o, 0, 1, Boolean.class) == 0) return tsenv; tsenv=o.car(); return inert; }))
+					$("%def", "prenv", jWrap((ArgsList) o-> { if (checkO("prenv", o, 0, 1, Boolean.class) == 0) return prenv; prenv=o.car(); return inert; }))
 				)
 			)
 		);

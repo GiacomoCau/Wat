@@ -27,30 +27,30 @@
 (define (abortPrompt p e)
   (takeSubcont p #ignore e))
 
-(test 'test1
+(test test1
   (let ((p (newPrompt)))
     (pushPrompt p 1))
   1)
   
-(test 'test2
+(test test2
   (let ((p (newPrompt)))
     (+ (pushPrompt p (pushPrompt p 5))
       4))
   9)
   
-(test 'test3
+(test test3
   (let ((p (newPrompt)))
     (+ (pushPrompt p (+ (abortPrompt p 5) 6))
       4))
   9)
 
-(test 'test31
+(test test31
   (let ((p (newPrompt)))
     (+ (pushPrompt p (pushPrompt p (+ (abortPrompt p 5) 6)))
       4))
   9)
 
-(test 'test32
+(test test32
   (let ((p (newPrompt)))
     (let ((v (pushPrompt p
 	       (let* ((v1 (pushPrompt p (+ (abortPrompt p 5) 6)))
@@ -59,7 +59,7 @@
       (+ v 20)))
   27)
 
-(test 'test33
+(test test33
   (let ((p (newPrompt)))
     (let ((v (pushPrompt p (let*
 	    ((v1 (pushPrompt p (+ 6 (abortPrompt p 5))))
@@ -70,7 +70,7 @@
   )
 ; gives prompt not found: (#null)
 
-;; (testCheck 'test331
+;; (testCheck test331
 ;;   (let ((p (newPrompt)))
 ;;     (let ((v (pushPrompt p
 ;; 	       (let* ((v1 (pushPrompt p (+ (abortPrompt p 5) 6)))
@@ -79,7 +79,7 @@
 ;;       (promptSet? p))) ; give unbound: promptSet?
 ;;   #f)
 
-(test 'test4
+(test test4
   (let ((p (newPrompt)))
     (+ (pushPrompt p 
 	     (+ (takeSubcont p sk (pushPrompt p (pushSubcont sk 5)))
@@ -93,7 +93,7 @@
       (f (lambda (c)
            (pushPromptSubcont p sk (c)) )))))
 
-(test 'test5
+(test test5
   (+ (pushPrompt 'p0
        (+ (shift 'p0 (lambda (sk)
                        (+ 100 (sk (lambda () (sk (lambda () 3))))) ))
@@ -101,7 +101,7 @@
      10)
   117)
 
-(test 'test51
+(test test51
   (+ 10 (pushPrompt 'p0
           (+ 2 (shift 'p0 (lambda (sk)
                             (sk (lambda () (+ 3 100))))))))
@@ -110,7 +110,7 @@
 (define (abortSubcont prompt value)
   (takeSubcont prompt #ignore value))
 
-(test 'test52
+(test test52
   (+ (pushPrompt 'p0
        (+ (shift 'p0 (lambda (sk)
                        (+ (sk (lambda ()
@@ -122,7 +122,7 @@
      10)
   115)
 
-(test 'test53
+(test test53
   (+ (pushPrompt 'p0
        (let ((v (shift 'p0 (lambda (sk)
                              (+ (sk (lambda ()
@@ -134,7 +134,7 @@
      10)
   115)
 
-(test 'test54
+(test test54
   (+ (pushPrompt 'p0
        (let ((v (shift 'p0 (lambda (sk)
                              (+ (sk (lambda ()
@@ -146,7 +146,7 @@
      10)
   124)
 
-(test 'test6
+(test test6
   (+ (let ((pushTwice (lambda (sk)
               (pushSubcont sk (pushSubcont sk 3)))))
        (pushPrompt 'p1
@@ -157,7 +157,7 @@
      10)
   15)
 
-(test 'test7
+(test test7
   (+ (let ((pushTwice (lambda (sk)
               (pushSubcont sk
                 (pushSubcont sk
@@ -172,7 +172,7 @@
      100)
   135)
 
-(test 'test71
+(test test71
   (+ (let ((pushTwice (lambda (sk)
               (sk (lambda ()
                     (sk (lambda ()

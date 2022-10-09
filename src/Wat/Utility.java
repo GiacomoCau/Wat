@@ -44,6 +44,9 @@ public class Utility {
 	public static String eIfnull(Object o, Supplier<String> s) {
 		return o==null ? "" : s.get();
 	}
+	public static <T> String eIfnull(T o, Function<T, String> f) {
+		return o==null ? "" : f.apply(o);
+	}
 	
 	public static <T> T uncked(Callable<T> t) {
 		try {
