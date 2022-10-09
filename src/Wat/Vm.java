@@ -141,16 +141,19 @@ public class Vm {
 	Object pipe(Resumption r, int i, Dbg dbg, Object res, Function ... after) {
 		for (; i < after.length; i+=1) {
 			res = r != null ? r.resume() : after[i].apply(res);
-			if (res instanceof Suspension s) { var ii=i; var res2=res; return s.suspend(dbg, rr-> pipe(rr, ii, dbg, res2, after)); }
+			if (res instanceof Suspension s) { var ii=i; var rres=res; return s.suspend(dbg, rr-> pipe(rr, ii, dbg, rres, after)); }
 		}
 		return res;
 	}
-	Object mapCar(Resumption r, Function f, List todo, List done) {
+	Object mapCar(Function f, List todo) {
+		return mapCar(null, null, f, todo);
+	}
+	Object mapCar(Resumption r, List done, Function f, List todo) {
 		var first = true;
 		for (;;) {
 			if (todo == null) return reverseList(done); 
 			var res = first && r != null && !(first = false) ? r.resume() : f.apply(todo.car());
-			if (res instanceof Suspension s) { List t=todo, d=done; return s.suspend(dbg(null, "mapCar", todo.car), rr-> mapCar(rr, f, t, d)); }
+			if (res instanceof Suspension s) { List td=todo, dn=done; return s.suspend(dbg(null, "mapCar", todo.car), rr-> mapCar(rr, dn, f, td)); }
 			todo = todo.cdr(); done = cons(res, done);
 		}
 	}
@@ -329,7 +332,7 @@ public class Vm {
 		Combinable cmb;
 		Apv(Combinable cmb) { this.cmb = cmb; }
 		public Object combine(Env e, List o) {
-			return pipe(dbg(e, this, o), ()-> mapCar(null, arg-> evaluate(e, arg), o, null), args-> tco(()-> cmb.combine(e, (List) args))); 
+			return pipe(dbg(e, this, o), ()-> mapCar(car-> evaluate(e, car), o),args-> tco(()-> cmb.combine(e, (List) args))); 
 		}
 		public String toString() { return "{Apv " + Vm.this.toString(cmb) + "}"; }
 		Combinable unwrap() { return cmb; }
@@ -544,7 +547,7 @@ public class Vm {
 				if (!(lookup.value instanceof DVar dVar)) return error("not a dinamic variable: " + var);
 				dVars[i] = dVar;
 			}
-			return pipe(dbg(e, this, o), ()-> mapCar(null, car-> evaluate(e, car), o.cdr(), null), args-> {
+			return pipe(dbg(e, this, o), ()-> mapCar(car-> evaluate(e, car), o.cdr()), args-> {
 					var vals = listToArray((List) args);
 					if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
 					for (int i=0; i<dVars.length; i+=1) dSet(dbg(e, this, o), dVars[i], vars[i], vals[i]);
