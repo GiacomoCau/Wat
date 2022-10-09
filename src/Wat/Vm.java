@@ -1090,7 +1090,7 @@ public class Vm {
 		do {
 			var oc = close-open;
 			out.print(oc==0 ? ">" : "%+d%s>".formatted(oc, oc>0 ? "(" : ")"));
-			for (int c; (c = in.read()) != '\n' || inUString;) {
+			for (int c; (c = in.read()) != '\n' || inString || inUString || inMlComment;) {
 				if (inEscape) {
 					inEscape = false;
 				}
@@ -1114,9 +1114,8 @@ public class Vm {
 					case '#'-> eMlComment = true;
 				}
 				else if (sMlComment) switch (c) {
-					case '#': inMlComment = true;
-					default : sMlComment = false;
-					          inUString = true;
+					case '#'-> inMlComment = !(sMlComment = false);
+					default -> inUString = !(sMlComment = false);
 				}
 				else switch (c) {
 					case '"'-> inString = true;
@@ -1180,31 +1179,31 @@ public class Vm {
 		vmAssert("1", 1);
 		vmAssert("1 2 3", 3);
 		vmAssert("(%cons 1 2)", $(1,".",2));
-		vmAssert("(%list 1 2 3)", $("%quote",$(1,2,3)));
-		vmAssert("(%list* 1 2 3 4)", $("%quote",$(1,2,3,".",4)));
-		vmAssert("(%array->list #t (%list->array (%list 1 2 3 4)))", $("%quote",$(1,2,3,4)));
-		vmAssert("(%array->list #f (%list->array (%list 1 2 3 4)))", $("%quote",$(1,2,3,".",4)));
+		vmAssert("(%list 1 2 3)", $("%list",1,2,3));
+		vmAssert("(%list* 1 2 3 4)", $("%list*",1,2,3,4));
+		vmAssert("(%array->list #t (%list->array (%list 1 2 3 4)))", $("%list",1,2,3,4));
+		vmAssert("(%array->list #f (%list->array (%list 1 2 3 4)))", $("%list*",1,2,3,4));
 		vmAssert("(%reverseList (%list 1 2 3 4))", $("%list",4,3,2,1));
 		
 		vmAssert("(+ 1 2)", 3);
 		vmAssert("(* 3 2)", 6);
 		vmAssert("(* (* 3 2) 2)", 12);
 		
-		vmAssert("((%vau a #ignore a) 1 2)",  $("%list",1,2));
+		vmAssert("((%vau a #ignore a) 1 2)", $("%list",1,2));
 		vmAssert("((%vau (a b) #ignore b) 1 2)", 2);
 		vmAssert("((%vau (a . b) #ignore b) 1 2 3)", $("%list",2,3));
-		vmAssert("(%def x (%list 1)) x", $($("%list",1)));
-		vmAssert("(%def x 1)((%wrap(%vau (a) #ignore a)) x)", 1);
+		vmAssert("(%def x (%list 1)) x", $("%list",1));
+		vmAssert("(%def x 1) ((%wrap(%vau (a) #ignore a)) x)", 1);
 		
 		vmAssert("(%def () 1) a", Throw);
-		vmAssert("(%def a (%list 1)) a",  $("%list", 1));
+		vmAssert("(%def a (%list 1)) a", $("%list", 1));
 		vmAssert("(%def (a) (%list 1)) a", 1);
-		vmAssert("(%def a (%list 1 2 3)) a", $("%list", 1,2,3));
+		vmAssert("(%def a (%list 1 2 3)) a", $("%list",1,2,3));
 		vmAssert("(%def (a) 1 2 3) a", Throw);
 		vmAssert("(%def 2 1)", Throw);
 		vmAssert("(%def (a) (%list 1)) a", 1);
 		vmAssert("(%def (a b) (%list 1 2)) a b", 2);
-		vmAssert("(%def (a . b) (%list 1 2 3)) a b", $("%list", 2,3)); 
+		vmAssert("(%def (a . b) (%list 1 2 3)) a b", $("%list",2,3)); 
 		
 		vmAssert("(%vau (a . 12) #ignore 0)", Throw);
 		vmAssert("(%def (a b 12) 1)", Throw);
@@ -1216,7 +1215,7 @@ public class Vm {
 		vmAssert("(%def (a . b) (%list 1 2 3)) a b", $("%list",2,3));
 		vmAssert("(%def define %def) (define a 1) a", 1);
 		vmAssert("(%def $define! %def) ($define! a 1) a", 1);
-		vmAssert("(%def $define! %def) $define!", theEnvironment.get("%def"));
+		vmAssert("(%def $define! %def) $define!", theEnvironment.get("%def").value);
 		vmAssert("(%if #t 1 2)", 1);
 		vmAssert("(%if #f 1 2)", 2);
 		vmAssert("(%if #null 1 2)", 2);
