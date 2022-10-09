@@ -145,6 +145,15 @@ public class Vm {
 		}
 		return res;
 	}
+	Object mapCar(Resumption r, Function f, List todo, List done) {
+		var first = true;
+		for (;;) {
+			if (todo == null) return reverseList(done); 
+			var res = first && r != null && !(first = false) ? r.resume() : f.apply(todo.car());
+			if (res instanceof Suspension s) { List t=todo, d=done; return s.suspend(dbg(null, "mapCar", todo.car), rr-> mapCar(rr, f, t, d)); }
+			todo = todo.cdr(); done = cons(res, done);
+		}
+	}
 	class Dbg {
 		Env e; Object op; Object[] os;
 		Dbg (Env e, Object op, Object ... os) {
@@ -274,9 +283,9 @@ public class Vm {
 	
 	
 	// Bind
-	Object bind(Env e, Object lhs, Object rhs, Object exp) {
+	Object bind(Env e, Dbg dbg, Object lhs, Object rhs) {
 		var msg = bind(e, lhs, rhs); if (msg == null) return inert;
-		return error(msg + " for bind: " + toString(lhs) + eIfnull(exp, ()-> " of: " + exp) + " with: " + rhs);
+		return error(msg + " for bind: " + toString(lhs) + eIfnull(dbg,()-> " of: " + cons(dbg.op, dbg.os)) + " with: " + rhs);
 	}
 	@SuppressWarnings("preview")
 	Object bind(Env e, Object lhs, Object rhs) {
@@ -311,7 +320,8 @@ public class Vm {
 		Opv(Object p, Object ep, List x, Env e) { this.p = p; this.ep = ep; this.x = x; this.e = e; }
 		public Object combine(Env e, List o) {
 			var xe = env(this.e);
-			return pipe(dbg(e, this, x), ()-> bind(xe, p, o, this), $-> bind(xe, ep, e, this), $$-> tco(()-> begin.combine(xe, x)));
+			var dbg = dbg(e, this, o);
+			return pipe(dbg, ()-> bind(xe, dbg, p, o), $-> bind(xe, dbg, ep, e), $$-> tco(()-> begin.combine(xe, x)));
 		}
 		public String toString() { return "{Opv " + Vm.this.toString(p) + " " + Vm.this.toString(ep) + " " + Vm.this.toString(x) + "}"; }
 	}
@@ -319,16 +329,7 @@ public class Vm {
 		Combinable cmb;
 		Apv(Combinable cmb) { this.cmb = cmb; }
 		public Object combine(Env e, List o) {
-			return pipe(dbg(e, this, o), ()-> evalArgs(null, e, o, null), args-> tco(()-> cmb.combine(e, (List) args))); 
-		}
-		Object evalArgs(Resumption r, Env e, List todo, List done) {
-			var first = true;
-			for (;;) {
-				if (todo == null) return reverseList(done); 
-				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, todo.car());
-				if (res instanceof Suspension s) { List t=todo, d=done; return s.suspend(dbg(e, "evalArg", todo.car), rr-> evalArgs(rr, e, t, d)); }
-				todo = todo.cdr(); done = cons(res, done);
-			}
+			return pipe(dbg(e, this, o), ()-> mapCar(null, arg-> evaluate(e, arg), o, null), args-> tco(()-> cmb.combine(e, (List) args))); 
 		}
 		public String toString() { return "{Apv " + Vm.this.toString(cmb) + "}"; }
 		Combinable unwrap() { return cmb; }
@@ -358,7 +359,8 @@ public class Vm {
 				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
 			}
 			var arg = o.car(1);
-			return pipe(dbg(e, this, o), ()-> evaluate(e, arg), res-> bind(e, pt, res, cons(this, o)));
+			var dbg = dbg(e, this, o);
+			return pipe(dbg, ()-> evaluate(e, arg), res-> bind(e, dbg, pt, res));
 		}
 		public String toString() { return "%Def"; }
 	};
@@ -943,8 +945,8 @@ public class Vm {
 	
 	// Bootstrap
 	Env theEnvironment = env(null); {
-		bind(theEnvironment, symbol("%def"), new Def(), null);
-		bind(theEnvironment, symbol("%begin"), begin, null);
+		bind(theEnvironment, null, symbol("%def"), new Def());
+		bind(theEnvironment, null, symbol("%begin"), begin);
 		evaluate(theEnvironment,
 			parseBytecode(
 				$("%begin",
