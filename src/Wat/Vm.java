@@ -139,8 +139,8 @@ public class Vm {
 		return res instanceof Suspension s ? s.suspend(dbg, rr-> pipe(rr, dbg, before, after)) : pipe(null, 0, dbg, res, after);
 	}
 	Object pipe(Resumption r, int i, Dbg dbg, Object res, Function ... after) {
-		for (; i < after.length; i+=1) {
-			res = r != null ? r.resume() : after[i].apply(res);
+		for (var first=true; i<after.length; i+=1) { // only one resume for suspension
+			res = first && r != null && !(first = false) ? r.resume() : after[i].apply(res);
 			if (res instanceof Suspension s) { var ii=i; var rres=res; return s.suspend(dbg, rr-> pipe(rr, ii, dbg, rres, after)); }
 		}
 		return res;
@@ -149,8 +149,7 @@ public class Vm {
 		return mapCar(null, null, f, todo);
 	}
 	Object mapCar(Resumption r, List done, Function f, List todo) {
-		var first = true;
-		for (;;) {
+		for (var first=true;;) { // only one resume for suspension
 			if (todo == null) return reverseList(done); 
 			var res = first && r != null && !(first = false) ? r.resume() : f.apply(todo.car());
 			if (res instanceof Suspension s) { List td=todo, dn=done; return s.suspend(dbg(null, "mapCar", todo.car), rr-> mapCar(rr, dn, f, td)); }
@@ -271,7 +270,7 @@ public class Vm {
 		}
 		public String toString() {
 			var isThenv = this == theEnvironment;
-			return "[" + eIf(!isThenv, "The-") + "Env" + eIf(isThenv && !prenv, ()-> mapReverse()) + eIf(parent == null, ()-> " " + parent) + "]";
+			return "{" + eIf(!isThenv, "The-") + "Env" + eIf(isThenv && !prenv, ()-> mapReverse()) + eIf(parent == null, ()-> " " + parent) + "}";
 		}
 		String mapReverse() {
 			var sb = new StringBuilder(); map.entrySet().forEach(e-> sb.insert(0, " " + e)); return sb.toString();
@@ -295,6 +294,7 @@ public class Vm {
 		return switch (lhs) {
 			case Ignore i-> null;
 			case Symbol s-> e.bind(s.name, rhs);  
+			case Keyword k-> k.equals(rhs) ? null : "not found " + k;  
 			case null-> rhs == null ? null : "too many operands" /*+ ", none expected, but got: " + toString(rhs)*/;
 			case Cons lc-> {
 				if (!(rhs instanceof Cons rc)) yield "too few operands" /*+ ", more expected, but got: " + toString(rhs)*/;
@@ -310,7 +310,7 @@ public class Vm {
 	<T> T combine(Env e, Object op, List o) {
 		if (trace) print(" combine: ", op, " ", o);
 		if (op instanceof Combinable cmb) return cmb.combine(e, o);
-		// per default le jFun dovrebbero essere operative e non applicative
+		// per default le jFun nude dovrebbero essere operative e non applicative
 		if (isjFun(op)) return jfopv
 			? ((Combinable) jFun(op)).combine(e, o) // jfun x default operative
 			: ((Combinable) jWrap(op)).combine(e, o) // jfun x default applicative
@@ -332,7 +332,7 @@ public class Vm {
 		Combinable cmb;
 		Apv(Combinable cmb) { this.cmb = cmb; }
 		public Object combine(Env e, List o) {
-			return pipe(dbg(e, this, o), ()-> mapCar(car-> evaluate(e, car), o),args-> tco(()-> cmb.combine(e, (List) args))); 
+			return pipe(dbg(e, this, o), ()-> mapCar(car-> evaluate(e, car), o), args-> tco(()-> cmb.combine(e, (List) args))); 
 		}
 		public String toString() { return "{Apv " + Vm.this.toString(cmb) + "}"; }
 		Combinable unwrap() { return cmb; }
@@ -389,12 +389,12 @@ public class Vm {
 		}
 		Object begin(Resumption r, Env e, List list) {
 			if (trace && root && r == null) print("\n--------");
-			var first = true;
-			for (;;) {
-				if (!(list.cdr instanceof List cdr)) { var l = list; return tco(()-> evaluate(e, l.car)); } 
-				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, list.car);
+			for (var first = true;;) { // only one resume for suspension
+				var car = list.car;
+				if (list.cdr == null) { return tco(()-> evaluate(e, car)); } 
+				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, car);
 				if (res instanceof Suspension s) { var l = list; return s.suspend(dbg(e, "evalBegin", list.car), rr-> begin(rr, e, l)); }
-				list = cdr;
+				list = list.cdr();
 			}
 		}
 		public String toString() { return "%Begin" + eIf(!root, "*"); }
@@ -627,8 +627,9 @@ public class Vm {
 		}
 		private Object check(Object p) {
 			if (p == ignore) return null;
+			if (p instanceof Keyword) return null;
 			if (p instanceof Symbol) { return syms.add(p) ? null : "not a unique symbol: " + p + eIf(p == pt, ()-> " in: " + pt); }
-			if (!(p instanceof Cons c)) return "not a #ignore or symbol: " + p + eIf(p == pt, ()-> " in: " + pt);
+			if (!(p instanceof Cons c)) return "not a #ignore, keyword or symbol: " + p + eIf(p == pt, ()-> " in: " + pt);
 			var msg = check(c.car); if (msg != null) return msg;
 			return c.cdr == null ? null : check(c.cdr);
 		}
@@ -800,7 +801,7 @@ public class Vm {
 						throw exc;
 					}
 					catch (Throwable exc) {
-						return error("jfun error: ", exc);
+						return error("jfun error: " + exc.getMessage(), exc);
 					}
 				}
 			);
@@ -889,7 +890,7 @@ public class Vm {
 					};
 				}
 				catch (Exception exc) {
-					return error("error executing " + executable(name, args) + "of: " + toString(o0) + " with: " + toString(args), exc);
+					return error("error executing " + executable(name, args) + " of: " + toString(o0) + " with: " + toString(args), exc);
 				}
 			}
 		);
@@ -989,25 +990,25 @@ public class Vm {
 					$("%def", "%array->list", jWrap((BiFunction<Boolean,Object[],Object>) this::arrayToList)),
 					$("%def", "%reverseList", jWrap((Function<List,List>) this::reverseList)),
 					// 
-					$("%def", "+", jWrap((BinaryOperator) (a,b)-> a instanceof Number n1 && b instanceof Number n2 ? binOp(Pls, n1, n2) : toString(a) + toString(b))),
-					$("%def", "*", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Pwr, a, b))),
-					$("%def", "-", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Mns, a, b))),
-					$("%def", "/", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Dvd, a, b))),
-					$("%def", "%", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Rst, a, b))),
+					$("%def", "%+", jWrap((BinaryOperator) (a,b)-> a instanceof Number n1 && b instanceof Number n2 ? binOp(Pls, n1, n2) : toString(a) + toString(b))),
+					$("%def", "%*", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Pwr, a, b))),
+					$("%def", "%-", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Mns, a, b))),
+					$("%def", "%/", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Dvd, a, b))),
+					$("%def", "%%", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Rst, a, b))),
 					//
-					$("%def", "!", jWrap((Function<Boolean,Boolean>) a-> !a)),
-					$("%def", "<", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Ls, a, b))),
-					$("%def", ">", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Gt, a, b))),
-					$("%def", "<=", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Le, a, b))),
-					$("%def", ">=", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Ge, a, b))),
+					$("%def", "%!", jWrap((Function<Boolean,Boolean>) a-> !a)),
+					$("%def", "%<", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Ls, a, b))),
+					$("%def", "%>", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Gt, a, b))),
+					$("%def", "%<=", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Le, a, b))),
+					$("%def", "%>=", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Ge, a, b))),
 					//
-					$("%def", "~", jWrap((Function<Integer,Integer>) a-> ~a)),
-					$("%def", "&", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(And, a, b))),
-					$("%def", "|", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Or, a, b))),
-					$("%def", "^", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Xor, a, b))),
-					$("%def", "<<", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Sl, a, b))),
-					$("%def", ">>", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr, a, b))),
-					$("%def", ">>>", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr0, a, b))),
+					$("%def", "%~", jWrap((Function<Integer,Integer>) a-> ~a)),
+					$("%def", "%&", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(And, a, b))),
+					$("%def", "%|", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Or, a, b))),
+					$("%def", "%^", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Xor, a, b))),
+					$("%def", "%<<", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Sl, a, b))),
+					$("%def", "%>>", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr, a, b))),
+					$("%def", "%>>>", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr0, a, b))),
 					//
 					$("%def", "%quote", $("%vau", $("arg"), ignore, "arg")),
 					$("%def", "%theEnvironment", $("%vau", null, "env", "env")),
@@ -1015,9 +1016,9 @@ public class Vm {
 						$("%wrap", $("%eval", $("%list*", "%vau", "formals", ignore, "body"), "env")))),
 					$("%def", "%jambda", jFun((ArgsList) o-> lambda(o.car(), o.car(1), o.cdr(1)))),
 					
-					$("%def", "==", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a == b)),
-					$("%def", "!=", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a != b)),
-					$("%def", "eq?", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
+					$("%def", "%==", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a == b)),
+					$("%def", "%!=", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a != b)),
+					$("%def", "%eq?", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
 					$("%def", "assert", jFun((EnvArgsList) (e,o)-> { checkO("assert", o, 1, 2); return vmAssert(e,listToArray(o)); } )),
 					$("%def", "test", jFun((EnvArgsList) (e,o)-> { checkO("test", o, 2, 3); return vmAssert(e,toString(o.car()), o.car(1), listToArray(o.cdr(1))); } )),
 					$("%def", "toString", jWrap((Function<Object,String>) obj-> toString(obj))),

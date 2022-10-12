@@ -71,7 +71,7 @@
 (assert (%catch #ignore (%throw a 1) (%lambda (x) 2)) 2)
 (assert (%catch a (%throw a 1) (%lambda (x) 2)) 2)
 
-(assert (%catch #ignore (%begin (%def x 0) (%loop (%begin (%if (== x 10) (%throw #ignore) (%def x (+ x 1))))))) #inert)
-(assert (%catch #ignore (%begin (%def x 0) (%loop (%begin (%if (== x 10) (%throw #ignore x) (%def x (+ x 1))))))) 10)
-(assert (%catch #ignore (%begin (%def x 0) (%loop (%if (== x 10) (%throw #ignore x) (%def x (+ x 1)))))) 10)
-(assert (%catch #ignore (%begin (%def x 0) (%loop (%if (== x 10) (%throw #ignore x)) (%def x (+ x 1))))) 10)
+(assert (%catch #ignore (%begin (%def x 0) (%loop (%begin (%if (%== x 10) (%throw #ignore) (%def x (%+ x 1))))))) #inert)
+(assert (%catch #ignore (%begin (%def x 0) (%loop (%begin (%if (%== x 10) (%throw #ignore x) (%def x (%+ x 1))))))) 10)
+(assert (%catch #ignore (%begin (%def x 0) (%loop (%if (%== x 10) (%throw #ignore x) (%def x (%+ x 1)))))) 10)
+(assert (%catch #ignore (%begin (%def x 0) (%loop (%if (%== x 10) (%throw #ignore x)) (%def x (%+ x 1))))) 10)

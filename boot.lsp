@@ -7,6 +7,30 @@
 (%def $define! %def)
 
 ;; Rename bindings that will be used as provided by VM
+
+($define! == %==)
+($define! != %!=)
+
+($define! + %+)
+($define! * %*)
+($define! - %-)
+($define! / %/)
+($define! % %%)
+  
+($define! ! %!)
+($define! < %<)
+($define! > %>)
+($define! <= %<=)
+($define! >= %>=)
+  
+($define! ~ %~)
+($define! & %&)
+;($define! | %|) ;; TODO lo vede come uneascaped string!
+($define! ^ %^)
+($define! << %<<)
+($define! >> %>>)
+($define! >>> %>>>)
+
 ($define! array->list %array->list)
 ($define! begin %begin)
 ($define! catchTag %catch)
@@ -15,6 +39,7 @@
 ($define! ddef %dDef)
 ($define! dnew %dNew)
 ($define! dval %dVal)
+($define! eq? %eq?)
 ($define! error %error)
 ($define! eval %eval)
 ($define! if %if)
@@ -603,5 +628,4 @@
 (define (userBreak err)
   ;(log "==" err)
   (when (stack) (log "++" err) (printStacktrace))
-  (throw err)
- )
+  (throw err) )
