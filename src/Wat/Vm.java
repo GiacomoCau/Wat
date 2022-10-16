@@ -29,7 +29,6 @@ import static Wat.Utility.Binop.Xor;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.System.in;
 import static java.lang.System.out;
-import static java.lang.reflect.Array.newInstance;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
 
@@ -97,7 +96,6 @@ import java.util.function.Supplier;
 public class Vm {
 	
 	boolean dotco = true;
-	boolean jfopv = true;
 	
 	boolean trace = false;
 	boolean stack = false;
@@ -311,10 +309,7 @@ public class Vm {
 		if (trace) print(" combine: ", op, " ", o);
 		if (op instanceof Combinable cmb) return cmb.combine(e, o);
 		// per default le jFun nude dovrebbero essere operative e non applicative
-		if (isjFun(op)) return jfopv
-			? ((Combinable) jFun(op)).combine(e, o) // jfun x default operative
-			: ((Combinable) jWrap(op)).combine(e, o) // jfun x default applicative
-		;
+		if (isjFun(op)) return ((Combinable) jWrap(op)).combine(e, o);
 		return error("not a combiner: " + toString(op) + " in: " + cons(op, o));
 	}
 	
@@ -664,17 +659,17 @@ public class Vm {
 	
 	
 	// Utilities
-	<T extends Cons> T list(Object ... args) {
+	<T,R extends Cons> R list(T ... args) {
 		return arrayToList(true, args);
 	}
-	<T extends Cons> T listStar(Object ... args) {
+	<T,R extends Cons> R listStar(T ... args) {
 		return arrayToList(false, args);
 	}
-	<T extends Cons> T arrayToList(boolean b, Object ... args) {
+	<T, R extends Cons> R arrayToList(boolean b, T ... args) {
 		var len = args.length-1;
 		var c = b || len < 0 ? null : args[len];
 		for (var i=len-(b?0:1); i>=0; i-=1) c = cons(args[i], c);
-		return (T) c;
+		return (R) c;
 	}
 	Object[] listToArray(List c) {
 		return listToArray(c, 0);
@@ -775,8 +770,7 @@ public class Vm {
 	interface ArgsList extends Function<List,Object> {}
 	interface EnvArgsList extends BiFunction<Env,List,Object> {}
 	class JFun implements Combinable {
-		Object jfun;
-		JFun(Object jfun) { this.jfun = jfun; };
+		Object jfun; JFun(Object jfun) { this.jfun = jfun; };
 		@SuppressWarnings("preview")
 		public Object combine(Env e, List o) {
 			return pipe(dbg(e, this, o), ()-> {
@@ -785,15 +779,18 @@ public class Vm {
 							case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
 							case ArgsList a-> a.apply(o);  
 							case Function f-> { checkO(jfun, o, 1); yield f.apply(o.car()); }  
-							case EnvArgsList f-> { yield f.apply(e, o); }
+							case EnvArgsList f-> f.apply(e, o);
 							case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(o.car(), o.car(1)); }
 							case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; }
 							case Method mt-> {
 								var pc = mt.getParameterCount();
-								if (!mt.isVarArgs()) checkO(jfun, o, 1+pc); else checkO(jfun, o, pc, -1);
-								yield mt.invoke(o.car(), listToArray(o.cdr()));
+								if (!mt.isVarArgs()) checkO(jfun, o, pc+1); else checkO(jfun, o, pc, -1);
+								yield mt.invoke(o.car(), reorg(mt, listToArray(o.cdr())));
 							}
-							case Constructor c-> { checkO(jfun, o, c.getParameterCount()); yield c.newInstance(listToArray(o)); }
+							case Constructor c-> {
+								checkO(jfun, o, c.getParameterCount());
+								yield c.newInstance(reorg(c, listToArray(o)));
+							}
 							default -> error("not a combine " + jfun);
 						};
 					}
@@ -810,115 +807,67 @@ public class Vm {
 			var intefaces = Arrays.stream(jfun.getClass().getInterfaces()).map(i-> Vm.this.toString(i)).collect(joining(" "));
 			return "{JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "}"; }
 	}
-	boolean isjFun(Object jfun) {
-		return isInstance(jfun, Supplier.class, ArgsList.class, Function.class, EnvArgsList.class, BiFunction.class, Executable.class, Field.class);
+	boolean isjFun(Object obj) {
+		return isInstance(obj, Supplier.class, ArgsList.class, Function.class, EnvArgsList.class, BiFunction.class, Executable.class, Field.class);
 	}
-	JFun jFun(Object jFun) {
-		return jFun instanceof JFun jfun ? jfun : isjFun(jFun) ? new JFun(jFun) : error("no a jFun: " + jFun);
+	JFun jFun(Object obj) {
+		return obj instanceof JFun jfun ? jfun : isjFun(obj) ? new JFun(obj) : error("no a jFun: " + obj);
 	}
-	Apv jWrap(Object jfun) {
-		return wrap(jFun(jfun));
+	Apv jWrap(Object obj) {
+		return wrap(jFun(obj));
 	}
-	
 	@SuppressWarnings("preview")
 	Object jInvoke(String name) {
 		if (name == null) return error("method name is null");
-		return jWrap(
-			(ArgsList) o-> {
-				if (!(o instanceof List)) return error("no operands for executing: " + name) ;  
-				Object o0 = o.car();
-				if (o0 == null) return error("receiver is null");
-				try {
-					switch (name) {
-						case "getField": {
-							checkO(o0, o, 2, Class.class, String.class);
-							var cl = (Class) o0;
-							String fName = o.car(1);
-							return jWrap(cl.getField(fName));
-						}
-						case "getMethod": {
-							checkO(o0, o, 2, -1, Class.class, String.class, Class.class);
-							var cl = (Class) o0;
-							String mName = o.car(1);
-							return jWrap(cl.getMethod(mName, listToArray(o, 2, Class.class)));
-						}
-						case "invoke": {
-							if (o0 instanceof Apv apv) o0 = apv.cmb;
-							if (o0 instanceof JFun f) o0 = f.jfun; 
-							if (!(o0 instanceof Method mt)) return error("not a Method " + toString(o0));
-							var pc = mt.getParameterCount(); if (!mt.isVarArgs()) checkO(o0, o, 2+pc); else checkO(o0, o, 1+pc, -1); 
-							return mt.invoke(o.car(1), listToArray(o, 2));
-						}
-						case "getConstructor": {
-							checkO(o0, o, 1, -1, Class.class);
-							var cl = (Class) o0;
-							return jWrap(cl.getConstructor(listToArray(o, 1, Class.class)));
-						}
-						case "newInstance": {
-							if (o0 == Array.class) {
-								checkO(o0, o, 2, -1, Class.class, Class.class, Integer.class);
-								Class cl = o.car(1);
-								return newInstance(cl, stream(listToArray(o, 2, Integer.class)).mapToInt(i-> i).toArray() );
-							}
-							else {
-								if (o0 instanceof Apv apv) o0 = apv.cmb;
-								if (o0 instanceof JFun f) o0 = f.jfun; 
-								if (!(o0 instanceof Constructor c)) return error("not a Constructor " + toString(o0));
-								var pc = c.getParameterCount(); if (!c.isVarArgs()) checkO(o0, o, 1+pc); else checkO(o0, o, pc, -1); 
-								return c.newInstance(listToArray(o, 1));
-							}
-						}
-					}
-				}
-				catch (Exception exc) {
-					return error("error executing: " + name + " in: " + toString(o), exc);
-				}
-				Object[] args = listToArray(o, 1);
-				//Executable executable = getExecutable(name.equals("new") ? (Class) o0 : o0.getClass(), name,  getClasses(args));
-				// (@new class classes)   -> class.getConstructor(classes) -> constructor
-				// (@new class objects)   -> class.getConstructor(classes).newInstance(objects) -> constructor.newInstance(objects)
-				// (@name class classes)  -> class.getMethod(name, classes) -> method
-				// (@name object objects) -> object.getClass().getMethod(name, getClasses(objects)).invocke(object, objects) -> method.invoke(object, objects)
-				Executable executable = getExecutable(o0 instanceof Class cl ? cl : o0.getClass(), name, getClasses(args));
-				if (executable == null) return error("not found " + executable(name, args) + " of: " + toString(o0));
-				if (o0 instanceof Class && stream(args).allMatch(a-> a instanceof Class)) return jWrap(executable);
-				try {
-					if (executable.isVarArgs()) args = reorg(executable.getParameterTypes(), args);
-					return switch (executable) {
-						case Method m-> m.invoke(o0, args);
-						case Constructor c-> c.newInstance(args);
-					};
-				}
-				catch (Exception exc) {
-					return error("error executing " + executable(name, args) + " of: " + toString(o0) + " with: " + toString(args), exc);
-				}
+		return (ArgsList) o-> {
+			if (!(o instanceof List)) return error("no operands for executing: " + name) ;  
+			Object o0 = o.car();
+			if (o0 == null) return error("receiver is null");
+			Object[] args = listToArray(o, 1);
+			//Executable executable = getExecutable(name.equals("new") ? (Class) o0 : o0.getClass(), name,  getClasses(args));
+			// (@new class classes)   -> class.getConstructor(classes) -> constructor
+			// (@new class objects)   -> class.getConstructor(classes).newInstance(objects) -> constructor.newInstance(objects)
+			// (@<name> class classes)  -> class.getMethod(name, classes) -> method
+			// (@<name> object objects) -> object.getClass().getMethod(name, getClasses(objects)).invocke(object, objects) -> method.invoke(object, objects)
+			var classes = getClasses(args);
+			Executable executable = getExecutable(o0 instanceof Class cl ? cl : o0.getClass(), name, classes);
+			if (executable == null) return error("not found " + executable(name, classes) + " of: " + toString(o0));
+			if (!name.equals("new") && (!name.equals("getConstructor") || o0 == Class.class) && o0 instanceof Class && stream(args).allMatch(a-> a instanceof Class))
+				return executable;
+			try {
+				args = reorg(executable, args);
+				return switch (executable) { 
+					case Method m-> m.invoke(o0, args);
+					case Constructor c-> c.newInstance(args);
+				};
 			}
-		);
+			catch (Exception exc) {
+				return error("error executing " + executable(name, args) + " of: " + toString(o0) + " with: " + toString(args), exc);
+			}
+		};
 	}
 	private String executable(String name, Object[] args) {
-		return (name.equals("new") ? "constructor" : "method: " + name) + toString(list((Object[])getClasses(args)));
+		return (name.equals("new") ? "constructor" : "method: " + name) + toString(list(args));
 	}
 	Object jGetSet(String name) {
 		if (name == null) return error("field name is null");
-		return jWrap(
-			(ArgsList) o-> {
-				var len = checkO("jGetSet", o, 1, 2); 
-				var o0 = o.car();
-				// (.name class)        -> class.getField(name) -> field
-				// (.name object)       -> object.getclass().getField(name).get(object) -> field.get(object) 
-				// (.name object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
-				Field field = getField(o0 instanceof Class cl ? cl : o0.getClass(), name);
-				if (field == null) return error("not found field: " + name + " in: " + toString(o0));
-				if (o0 instanceof Class) return jWrap(field);
-				try {
-					if (len == 1) return field.get(o0);
-					field.set(o0, o.car(1)); return inert;
-				}
-				catch (Exception e) {
-					return error("can't " + (len==1 ? "get" : "set") + " " + name + " of " + toString(o0) + eIf(len == 1, ()-> " with " + toString(o.car(1))));
-				}
+		return (ArgsList) o-> {
+			var len = checkO("jGetSet", o, 1, 2); 
+			var o0 = o.car();
+			// (.<name> class)        -> class.getField(name) -> field
+			// (.<name> object)       -> object.getclass().getField(name).get(object) -> field.get(object) 
+			// (.<name> object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
+			Field field = getField(o0 instanceof Class cl ? cl : o0.getClass(), name);
+			if (field == null) return error("not found field: " + name + " in: " + toString(o0));
+			if (o0 instanceof Class) return field;
+			try {
+				if (len == 1) return field.get(o0);
+				field.set(o0, o.car(1)); return inert;
 			}
-		);
+			catch (Exception e) {
+				return error("can't " + (len==1 ? "get" : "set") + " " + name + " of " + toString(o0) + eIf(len == 1, ()-> " with " + toString(o.car(1))));
+			}
+		};
 	}
 	
 	
@@ -927,7 +876,7 @@ public class Vm {
 	@SuppressWarnings("preview")
 	String toString(boolean t, Object o) {
 		return switch (o) {
-			case null-> "#null";
+			case null-> "()"; // () in cons  altrove #null
 			case Boolean b-> b ? "#t" : "#f";
 			case Class cl-> "&" + Utility.toSource(cl);
 			case String s-> !t ? s : '"' + Utility.toSource(s) + '"';
@@ -951,16 +900,16 @@ public class Vm {
 					// Basics
 					$("%def", "%vau", new Vau()),
 					$("%def", "%eval", wrap(new Eval())),
-					$("%def", "%makeEnvironment", jWrap((ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car()))),
-					$("%def", "%wrap", jWrap((Function<Object, Object>) this::wrap)),
-					$("%def", "%unwrap", jWrap((Function<Object, Object>) this::unwrap)),
+					$("%def", "%makeEnvironment", (ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car())),
+					$("%def", "%wrap", (Function<Object, Object>) this::wrap),
+					$("%def", "%unwrap", (Function<Object, Object>) this::unwrap),
 					// Values
-					$("%def", "%cons", jWrap((BiFunction<Object, Object, Object>) this::cons)),
-					$("%def", "%cons?", jWrap((Function<Object, Boolean>) obj-> obj instanceof Cons)),
-					$("%def", "%nil?", jWrap((Function<Object, Boolean>) obj-> obj == null)),
-					$("%def", "%string->symbol", jWrap((Function<String, Symbol>) this::symbol)),
-					$("%def", "%symbol?", jWrap((Function<Object, Boolean>) obj-> obj instanceof Symbol)),
-					$("%def", "%symbolName", jWrap((Function<Symbol, String>) sym-> sym.name)),
+					$("%def", "%cons", (BiFunction<Object, Object, Object>) this::cons),
+					$("%def", "%cons?", (Function<Object, Boolean>) obj-> obj instanceof Cons),
+					$("%def", "%nil?", (Function<Object, Boolean>) obj-> obj == null),
+					$("%def", "%string->symbol", (Function<String, Symbol>) this::symbol),
+					$("%def", "%symbol?", (Function<Object, Boolean>) obj-> obj instanceof Symbol),
+					$("%def", "%symbolName", (Function<Symbol, String>) sym-> sym.name),
 					// First-order Control
 					$("%def", "%if", new If()),
 					$("%def", "%loop", new Loop()),
@@ -972,43 +921,43 @@ public class Vm {
 					$("%def", "%pushPrompt", new PushPrompt()),
 					$("%def", "%pushPromptSubcont", wrap(new PushPromptSubcont())),
 					// Dynamically-scoped Variables
-					$("%def", "%dNew", jWrap((Function<Object,DVar>) DVar::new)),
-					$("%def", "%dVal", jWrap((ArgsList) o-> { DVar dv = o.car(); return checkO("%dVal", o, 1, 2) == 1 ? dv.val : (dv.val=o.car(1)); })),
+					$("%def", "%dNew", (Function<Object,DVar>) DVar::new),
+					$("%def", "%dVal", (ArgsList) o-> { DVar dv = o.car(); return checkO("%dVal", o, 1, 2) == 1 ? dv.val : (dv.val=o.car(1)); }),
 					$("%def", "%dDef", new DDef()),
 					$("%def", "%dLet", new DLet()),
 					// Errors
 					$("%def", "%rootPrompt", rootPrompt),
-					$("%def", "%error", jWrap((Function<String, Object>) this::error)),
+					$("%def", "%error", (Function<String, Object>) this::error),
 					// Java Interface
-					$("%def", "%jinvoke", jWrap((Function<String,Object>) this::jInvoke)),
-					$("%def", "%jgetset", jWrap((Function<String,Object>) this::jGetSet)),
-					$("%def", "instanceof", jWrap((BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o))),
+					$("%def", "%jinvoke", (Function<String,Object>) this::jInvoke),
+					$("%def", "%jgetset", (Function<String,Object>) this::jGetSet),
+					$("%def", "instanceof", (BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o)),
 					// Utilities
-					$("%def", "%list", jWrap((ArgsList) o-> o)),
-					$("%def", "%list*", jWrap((ArgsList) this::listToListStar)),
-					$("%def", "%list->array", jWrap((Function<List,Object[]>) this::listToArray)),
-					$("%def", "%array->list", jWrap((BiFunction<Boolean,Object[],Object>) this::arrayToList)),
-					$("%def", "%reverseList", jWrap((Function<List,List>) this::reverseList)),
+					$("%def", "%list", (ArgsList) o-> o),
+					$("%def", "%list*", (ArgsList) this::listToListStar),
+					$("%def", "%list->array", (Function<List,Object[]>) this::listToArray),
+					$("%def", "%array->list", (BiFunction<Boolean,Object[],Object>) this::arrayToList),
+					$("%def", "%reverseList", (Function<List,List>) this::reverseList),
 					// 
-					$("%def", "%+", jWrap((BinaryOperator) (a,b)-> a instanceof Number n1 && b instanceof Number n2 ? binOp(Pls, n1, n2) : toString(a) + toString(b))),
-					$("%def", "%*", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Pwr, a, b))),
-					$("%def", "%-", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Mns, a, b))),
-					$("%def", "%/", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Dvd, a, b))),
-					$("%def", "%%", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Rst, a, b))),
+					$("%def", "%+", (BinaryOperator) (a,b)-> a instanceof Number n1 && b instanceof Number n2 ? binOp(Pls, n1, n2) : toString(a) + toString(b)),
+					$("%def", "%*", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Pwr, a, b)),
+					$("%def", "%-", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Mns, a, b)),
+					$("%def", "%/", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Dvd, a, b)),
+					$("%def", "%%", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Rst, a, b)),
 					//
-					$("%def", "%!", jWrap((Function<Boolean,Boolean>) a-> !a)),
-					$("%def", "%<", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Ls, a, b))),
-					$("%def", "%>", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Gt, a, b))),
-					$("%def", "%<=", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Le, a, b))),
-					$("%def", "%>=", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Ge, a, b))),
+					$("%def", "%!", (Function<Boolean,Boolean>) a-> !a),
+					$("%def", "%<", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Ls, a, b)),
+					$("%def", "%>", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Gt, a, b)),
+					$("%def", "%<=", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Le, a, b)),
+					$("%def", "%>=", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Ge, a, b)),
 					//
-					$("%def", "%~", jWrap((Function<Integer,Integer>) a-> ~a)),
-					$("%def", "%&", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(And, a, b))),
-					$("%def", "%|", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Or, a, b))),
-					$("%def", "%^", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Xor, a, b))),
-					$("%def", "%<<", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Sl, a, b))),
-					$("%def", "%>>", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr, a, b))),
-					$("%def", "%>>>", jWrap((BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr0, a, b))),
+					$("%def", "%~", (Function<Integer,Integer>) a-> ~a),
+					$("%def", "%&", (BiFunction<Number,Number,Object>) (a,b)-> binOp(And, a, b)),
+					$("%def", "%|", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Or, a, b)),
+					$("%def", "%^", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Xor, a, b)),
+					$("%def", "%<<", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Sl, a, b)),
+					$("%def", "%>>", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr, a, b)),
+					$("%def", "%>>>", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr0, a, b)),
 					//
 					$("%def", "%quote", $("%vau", $("arg"), ignore, "arg")),
 					$("%def", "%theEnvironment", $("%vau", null, "env", "env")),
@@ -1016,20 +965,21 @@ public class Vm {
 						$("%wrap", $("%eval", $("%list*", "%vau", "formals", ignore, "body"), "env")))),
 					$("%def", "%jambda", jFun((ArgsList) o-> lambda(o.car(), o.car(1), o.cdr(1)))),
 					
-					$("%def", "%==", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a == b)),
-					$("%def", "%!=", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> a != b)),
-					$("%def", "%eq?", jWrap((BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b))),
+					$("%def", "%==", (BiFunction<Object,Object,Boolean>) (a,b)-> a == b),
+					$("%def", "%!=", (BiFunction<Object,Object,Boolean>) (a,b)-> a != b),
+					$("%def", "%eq?", (BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b)),
 					$("%def", "assert", jFun((EnvArgsList) (e,o)-> { checkO("assert", o, 1, 2); return vmAssert(e,listToArray(o)); } )),
 					$("%def", "test", jFun((EnvArgsList) (e,o)-> { checkO("test", o, 2, 3); return vmAssert(e,toString(o.car()), o.car(1), listToArray(o.cdr(1))); } )),
-					$("%def", "toString", jWrap((Function<Object,String>) obj-> toString(obj))),
-					$("%def", "log", jWrap((ArgsList) o-> log(listToArray(o)))),
-					$("%def", "print", jWrap((ArgsList) o-> print(listToArray(o)))),
-					$("%def", "write", jWrap((ArgsList) o-> write(listToArray(o)))),
-					$("%def", "load", jWrap((Function<String, Object>) nf-> uncked(()-> eval(readString(nf))))),
-					$("%def", "dotco", jWrap((ArgsList) o-> { if (checkO("dotco", o, 0, 1, Boolean.class) == 0) return dotco; dotco=o.car(); return inert; })),
-					$("%def", "trace", jWrap((ArgsList) o-> { if (checkO("trace", o, 0, 1, Boolean.class) == 0) return trace; trace=o.car(); return inert; })),
-					$("%def", "stack", jWrap((ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=o.car(); return inert; })),
-					$("%def", "prenv", jWrap((ArgsList) o-> { if (checkO("prenv", o, 0, 1, Boolean.class) == 0) return prenv; prenv=o.car(); return inert; }))
+					$("%def", "this", jFun((Supplier)() -> this)),
+					$("%def", "toString", (Function<Object,String>) obj-> toString(obj)),
+					$("%def", "log", (ArgsList) o-> log(listToArray(o))),
+					$("%def", "print", (ArgsList) o-> print(listToArray(o))),
+					$("%def", "write", (ArgsList) o-> write(listToArray(o))),
+					$("%def", "load", (Function<String, Object>) nf-> uncked(()-> eval(readString(nf)))),
+					$("%def", "dotco", (ArgsList) o-> { if (checkO("dotco", o, 0, 1, Boolean.class) == 0) return dotco; dotco=o.car(); return inert; }),
+					$("%def", "trace", (ArgsList) o-> { if (checkO("trace", o, 0, 1, Boolean.class) == 0) return trace; trace=o.car(); return inert; }),
+					$("%def", "stack", (ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=o.car(); return inert; }),
+					$("%def", "prenv", (ArgsList) o-> { if (checkO("prenv", o, 0, 1, Boolean.class) == 0) return prenv; prenv=o.car(); return inert; })
 				)
 			)
 		);
@@ -1238,6 +1188,7 @@ public class Vm {
 		//eval(readString("wat/test.wat"));
 		eval(readString("boot.lsp"));
 		eval(readString("test.lsp"));
+		//trace = true;
 		eval(readString("testJni.lsp"));
 		print("start time: " + (currentTimeMillis() - milli));
 		//stack = true;

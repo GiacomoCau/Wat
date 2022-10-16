@@ -1,6 +1,12 @@
 package Wat;
 
 import static java.lang.System.out;
+import static java.lang.reflect.Array.newInstance;
+import static java.lang.reflect.Array.set;
+import static java.util.Arrays.copyOf;
+import static java.util.Arrays.copyOfRange;
+import static java.util.Arrays.stream;
+import static java.util.Comparator.comparing;
 import static java.util.Map.of;
 
 import java.lang.reflect.Array;
@@ -8,7 +14,7 @@ import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -16,6 +22,8 @@ import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
+
+import org.apache.commons.lang3.ClassUtils;
 
 public class Utility {
 	
@@ -26,7 +34,7 @@ public class Utility {
 	public static <T> T[] $(T... objects) {
 		return objects;
 	}
-	*/
+	 */
 	
 	static <T,R> R apply(Function<T,R> f, T a) {
 		return f.apply(a);
@@ -57,8 +65,8 @@ public class Utility {
 		}
 	}
 	
-	public static List toList (Object... objects) {
-		return Arrays.stream(objects).toList();
+	public static List toList(Object... objects) {
+		return stream(objects).toList();
 	}
 	
 	public static void main(String[] args) throws Exception {
@@ -79,7 +87,7 @@ public class Utility {
 		for (Entry<String,String> e: control) s = s.replaceAll(e.getValue(), e.getKey());
 		return s;
 	}
-
+	
 	enum Binop {
 		Pls((a, b)-> a+b,   (a, b)-> a+b,   (a, b)-> a+b),
 		Mns((a, b)-> a-b,   (a, b)-> a-b,   (a, b)-> a-b),
@@ -125,14 +133,15 @@ public class Utility {
 	}
 	
 	private enum Primitive {
-			byte$('B', byte.class, Byte.class),
-			short$('S', short.class, Short.class),
-			int$('I', int.class, Integer.class),
-			long$('J', long.class, Long.class),
-			float$('F', float.class, Float.class),
-			double$('D', double.class, Double.class),
-			boolean$('Z', boolean.class, Boolean.class),
-			void$('V', void.class, Void.class)
+		byte$('B', byte.class, Byte.class),
+		short$('S', short.class, Short.class),
+		char$('C', char.class, Character.class),
+		int$('I', int.class, Integer.class),
+		long$('J', long.class, Long.class),
+		float$('F', float.class, Float.class),
+		double$('D', double.class, Double.class),
+		boolean$('Z', boolean.class, Boolean.class),
+		void$('V', void.class, Void.class)
 		;
 		public final char type;
 		public final Class classe;
@@ -146,7 +155,7 @@ public class Utility {
 			this.name = classe.getSimpleName();
 		}
 	}
-
+	
 	public static Class <?> classForName(String name) {
 		if (name == null) return null;
 		boolean L = true;
@@ -181,11 +190,12 @@ public class Utility {
 		return cl.toString();
 	}
 	
+	/* TODO sostituito dal seguente eliminare appena verificato
 	public static Object[] reorg(Class[] classi, Object[] args) throws Exception {
 		int length = classi.length;
 		/* TODO verificare l'ottimizzazione, eliminare altrimenti
 		if (length == 1 && !classi[0].isPrimitive()) return args;
-		*/
+	 	* /
 		Object[] newArgs = Arrays.copyOf(args, length); // eventualmente null in più!
 		if (args.length < length) return newArgs;
 		Class componentType = classi[length-=1].getComponentType();
@@ -200,31 +210,97 @@ public class Utility {
 		}
 		return newArgs;
 	}
+	*/
+	public static Object[] reorg(Executable ex, Object[] args) throws Exception {
+		return reorg(ex.isVarArgs(), ex.getParameterTypes(), args); 
+	}
+	/* TODO sostituito dal seguente eliminare appena verificato
+	public static Object[] reorg(boolean isVarArgs, Class[] parms, Object[] args) throws Exception {
+		int length = parms.length;
+		if (!isVarArgs) {
+			if (length != 1 || !parms[0].isArray()) return args;
+			return new Object[] { copyOf(args, length, getClassArray(parms[0].componentType())) };
+		}
+		Object[] newArgs = copyOf(args, length); // eventualmente null in più!
+		if (args.length < length) return newArgs;
+		Class componentType = parms[length-=1].getComponentType();
+		if (!componentType.isPrimitive()) {
+			newArgs[length] = copyOfRange(args, length, args.length, getClassArray(componentType));
+		}
+		else {
+			Object last = Array.newInstance(componentType, args.length-length);
+			for (int i=length; i<args.length; i+=1) set(last, i-length, args[i]);
+			newArgs[length] = last;
+		}
+		return newArgs;
+	}
+	private static Object[] reorg(boolean isVarArgs, Class[] parms, Object[] args) throws Exception {
+		int length = parms.length;
+		if (!isVarArgs) {
+			if (length != 1 || !parms[0].isArray()) return args;
+			var cType = parms[0].componentType();
+			if (args.getClass().componentType() == cType) return new Object[] { args };
+			if (!cType.isPrimitive()) {
+				return new Object[] { copyOfRange(args, 0, args.length, getClassArray(cType)) };
+			}
+			Object newArgs = newInstance(cType, length);
+			for (int i=0; i<args.length; i+=1) Array.set(newArgs, i-length, args[i]);
+			return new Object[] { newArgs };
+		}
+		Object[] newArgs = copyOf(args, length); // eventualmente null in più!
+		if (args.length < length) return newArgs;
+		Class cType = parms[length-=1].getComponentType();
+		if (!cType.isPrimitive()) {
+			newArgs[length] = copyOfRange(args, length, args.length, getClassArray(cType));
+		}
+		else {
+			Object lastArg = newInstance(cType, args.length-length);
+			for (int i=length; i<args.length; i+=1) Array.set(lastArg, i-length, args[i]);
+			newArgs[length] = lastArg;
+		}
+		return newArgs;
+	}
+	*/
+	public static Object[] reorg(boolean isVarArgs, Class[] parms, Object[] args) throws Exception {
+		int length = parms.length;
+		if (!isVarArgs) {
+			if (length != 1 || !parms[0].isArray()) return args;
+			var cType = parms[0].componentType();
+			return new Object[] { args.getClass().componentType() == cType ?  args : copyFrom(cType, 0, args) };
+		}
+		Object[] newArgs = copyOf(args, length); // eventualmente un null in più!
+		if (args.length < length) return newArgs;
+		var cType = parms[length-=1].getComponentType();
+		newArgs[length] = copyFrom(cType, length, args);
+		return newArgs;
+	}
+	private static Object copyFrom(Class cType, int from, Object[] args) {
+		if (!cType.isPrimitive()) return copyOfRange(args, from, args.length, getClassArray(cType));
+		var newArgs = newInstance(cType, args.length-from);
+		for (int i=from; i<args.length; i+=1) set(newArgs, i-from, args[i]);
+		return newArgs;
+	}
 	
 	public static Class getClassArray(Class c) {
-	    return Array.newInstance(c, 0).getClass();
-	    /* TODO in alternativa al precedente, eliminare altrimenti
+		return Array.newInstance(c, 0).getClass();
+		/* TODO in alternativa al precedente, eliminare altrimenti
 		return getClassArray(c, 1);
 		*/
 	}
 	
 	public static Class getClassArray(Class c, int n) {
-	    return Array.newInstance(c, new int[n]).getClass();
+		return Array.newInstance(c, new int[n]).getClass();
 	}
-
+	
 	static boolean publicMember = false;
-		
+	
 	public static Field getField(Class <?> classe, String name) {
 		return getField(classe, publicMember, name);
 	}
 	public static Field getField(Class <?> classe, boolean onlyPublicMember, String name) {
 		do {
 			try {
-				Field f = onlyPublicMember
-					? classe.getField(name)
-					: classe.getDeclaredField(name)
-				;
-				return f;
+				return onlyPublicMember ? classe.getField(name) : classe.getDeclaredField(name);
 			}
 			catch (Exception e) {
 				if (onlyPublicMember) return null;
@@ -268,66 +344,172 @@ public class Utility {
 	}
 	
 	public static Class[] getClasses(Object ... objects) {
-		return Arrays.stream(objects).map(o-> o == null ? null : o instanceof Class c ? c : o.getClass()).toArray(Class[]::new);
+		return stream(objects).map(o-> o == null ? null : o instanceof Class c ? c : o.getClass()).toArray(Class[]::new);
 	}
-
+	
 	public static <T extends Executable> T getExecutable(Class <?> classe, String name) {
 		return getExecutable(classe, name, (Class[]) null);
 	}
 	
 	public static <T extends Executable> T getExecutable(Class <?> classe, String name, Class <?> ... classes) {
 		return getExecutable(classe, publicMember, name, classes);
+		//T executable = getExecutable(classe, publicMember, name, classes);
+		//return executable != null ? executable : getExecutable(classe.getClass(), publicMember, name, classes);
 	}
 	
 	private static boolean trace = false; 
 	
+	private static String toString(String name, Class <?> ... argumentsClass) {
+		String s = stream(argumentsClass).map(c-> c == null ? null : c.toString()).toList().toString();
+		return name + "(" + s.substring(1, s.length()-1) + ")";
+	}
+	
 	public static <T extends Executable> T getExecutable(Class <?> classe, boolean publicMember, String name, Class <?> ... argumentsClass) {
-		if (trace) out.println("%s %s(%s)".formatted(classe, name, Arrays.stream(argumentsClass).toList()));
-		boolean constructor = name.equals("new");
-		Executable r = null;
+		if (trace) out.println(classe + " " + toString(name, argumentsClass));
+		boolean constructors = name.equals("new");
+		List<Executable> executables = new ArrayList<>();
 		do {
 			if (trace) out.println("\tc: " + classe);
 			try {
-				var t = (T) getExecutor(classe, constructor, publicMember, name, argumentsClass);
+				var t = (T) getExecutor(classe, constructors, publicMember, name, argumentsClass);
 				if (trace) out.println("\t\t1: " + t);
 				return t;
 			}
 			catch (NoSuchMethodException nsme) {
-				for (Executable executor: getExecutors(classe, constructor, publicMember)) {
-					if (!constructor && !executor.getName().equals(name)) continue;
+				for (Executable executor: getExecutors(classe, constructors, publicMember)) {
+					if (!constructors && !executor.getName().equals(name)) continue;
 					if (trace) out.println("\t\tn: " + executor);
 					if (argumentsClass == null) return (T) executor; // si va per nome, non si possono controllare gli argomenti
 					boolean isVarArgs = executor.isVarArgs();
 					Class [] parametersClass = executor.getParameterTypes();
 					if (!isVarArgs && argumentsClass.length != parametersClass.length || argumentsClass.length < parametersClass.length - 1) continue;
 					if (!isInvokeConvertible(isVarArgs, parametersClass, argumentsClass)) continue;
-					/* TODO sostituito dal seguente, eliminare appena verificato
-					return (T) e; // torna il primo buono 
-					*/
-					if (r != null && executor.isVarArgs() && executor.getParameterCount() >= r.getParameterCount()) continue;
-					r = executor; // torna il primo buono con meno varargs 
+					executables.add(executor);
 				}
 				if (publicMember) break;
 			}
-		} while ((classe = classe.getSuperclass()) != null);
-		// funziona ma sono valutare le implicazioni
-		//} while (classe != Class.class && (classe = classe.getSuperclass() == null ? Class.class: classe.getSuperclass()) != null);
-		return (T) r;
-	}
-
-	private static Executable getExecutor(Class<?> classe, boolean constructor, boolean publicMember, String name, Class<?>... classes)
-	throws NoSuchMethodException {
-		return constructor
-			? (publicMember ? classe.getConstructor(classes) : classe.getDeclaredConstructor(classes))
-			: (publicMember ? classe.getMethod(name, classes) : classe.getDeclaredMethod(name, classes));
+		} while (classe != Class.class && (classe = classe.getSuperclass() == null ? Class.class: classe.getSuperclass()) != null);
+		
+		switch (executables.size()) {
+			case 0: throw new RuntimeException(toString(name, argumentsClass) + " non trovato in " + classe);
+			case 1: return (T) executables.get(0);
+			default: {
+				executables.sort(comparing(Executable::toString));
+				Executable bestMatch = null;
+				Float bestCost = Float.MAX_VALUE;
+				for (var executable: executables) {
+					var cost = getTotalTransformationCost(executable, argumentsClass);
+					if (cost > bestCost) continue;
+					if (cost == bestCost) throw new RuntimeException("I " + (name.equals("new") ? "costruttori" : "metodi") + " " + bestMatch + " and " + executable + " has equal cost: " + bestCost);
+					bestCost = cost;
+					bestMatch = executable;
+				}
+				if (bestMatch != null) return (T) bestMatch;
+				throw new RuntimeException((name.equals("new") ? "Costruttore" : "Metodo") + " non univoco." + executables);
+			}
+		}
 	}
 	
-	private static Executable[] getExecutors(Class<?> classe, boolean constructor, boolean publicMember) {
-		return constructor
-			? (publicMember ? classe.getConstructors() : classe.getDeclaredConstructors())
-			: (publicMember ? classe.getMethods() : classe.getDeclaredMethods());
+	public static float getTotalTransformationCost(final Executable executable, final Class<?>[] srcArgs) {
+		final Class<?>[] destArgs = executable.getParameterTypes();
+		final boolean isVarArgs = executable.isVarArgs();
+		
+		// "source" and "destination" are the actual and declared args respectively.
+		float totalCost = 0.0f;
+		final long normalArgsLen = isVarArgs ? destArgs.length-1 : destArgs.length;
+		if (srcArgs.length < normalArgsLen) return Float.MAX_VALUE;
+		
+		for (int i = 0; i < normalArgsLen; i++) totalCost += getObjectTransformationCost(srcArgs[i], destArgs[i]);
+		
+		if (isVarArgs) {
+			// When isVarArgs is true, srcArgs and dstArgs may differ in length.
+			// There are two special cases to consider:
+			final boolean noVarArgsPassed = srcArgs.length < destArgs.length;
+			final boolean explicitArrayForVarargs =
+				srcArgs.length == destArgs.length
+				&& srcArgs[srcArgs.length-1] != null
+				&& srcArgs[srcArgs.length-1].isArray()
+			;
+			
+			final float varArgsCost = 0.001f;
+			final Class<?> destClass = destArgs[destArgs.length-1].getComponentType();
+			if (noVarArgsPassed) {
+				// When no varargs passed, the best match is the most generic matching type, not the most specific.
+				totalCost += varArgsCost + getObjectTransformationCost(destClass, Object.class);
+			}
+			else if (explicitArrayForVarargs) {
+				final Class<?> srcClass = srcArgs[srcArgs.length-1].getComponentType();
+				totalCost += varArgsCost + getObjectTransformationCost(srcClass, destClass);
+			}
+			else {
+				// This is typical varargs case.
+				for (int i = destArgs.length-1; i < srcArgs.length; i++) {
+					final Class<?> srcClass = srcArgs[i];
+					totalCost += varArgsCost + getObjectTransformationCost(srcClass, destClass);
+				}
+			}
+		}
+		return totalCost;
 	}
-
+	
+	private static float getObjectTransformationCost(Class<?> srcClass, final Class<?> destClass) {
+		if (destClass.isPrimitive()) return getPrimitivePromotionCost(srcClass, destClass);
+		
+		float cost = 0.0f;
+		while (srcClass != null && !destClass.equals(srcClass)) {
+			if (destClass.isInterface() && ClassUtils.isAssignable(srcClass, destClass)) {
+				// slight penalty for interface match.
+				// we still want an exact match to override an interface match,
+				// but
+				// an interface match should override anything where we have to
+				// get a superclass.
+				cost += 0.25f;
+				break;
+			}
+			cost++;
+			srcClass = srcClass.getSuperclass();
+		}
+		// If the destination class is null, we've traveled all the way up to
+		// an Object match. We'll penalize this by adding 1.5 to the cost.
+		if (srcClass == null) cost += 1.5f;
+		return cost;
+	}
+	
+	private static float getPrimitivePromotionCost(final Class<?> srcClass, final Class<?> destClass) {
+		if (srcClass == null) return 1.5f;
+		
+		float cost = 0.0f;
+		Class<?> cls = srcClass;
+		if (!cls.isPrimitive()) {
+			// slight unwrapping penalty
+			cost += 0.1f;
+			cls = ClassUtils.wrapperToPrimitive(cls);
+		}
+		Class<?>[] primitiveTypes = { Byte.TYPE, Short.TYPE, Character.TYPE, Integer.TYPE, Long.TYPE, Float.TYPE, Double.TYPE };
+		for (int i = 0; cls != destClass && i < primitiveTypes.length; i++) {
+			if (cls != primitiveTypes[i]) continue;
+			cost += 0.1f;
+			if (i >= primitiveTypes.length - 1) continue;
+			cls = primitiveTypes[i + 1];
+		}
+		return cost;
+	}
+	
+	private static Executable getExecutor(Class<?> classe, boolean constructors, boolean publicMember, String name, Class<?>... classes)
+	throws NoSuchMethodException {
+		return constructors
+			? (publicMember ? classe.getConstructor(classes) : classe.getDeclaredConstructor(classes))
+			: (publicMember ? classe.getMethod(name, classes) : classe.getDeclaredMethod(name, classes))
+		;
+	}
+	
+	private static Executable[] getExecutors(Class<?> classe, boolean constructors, boolean publicMember) {
+		return constructors
+			? (publicMember ? classe.getConstructors() : classe.getDeclaredConstructors())
+			: (publicMember ? classe.getMethods() : classe.getDeclaredMethods())
+		;
+	}
+	
 	private static boolean isInvokeConvertible(boolean varArg, Class[] parameters, Class[] arguments) {
 		if (!varArg) return isInvokeConvertible(parameters, arguments);
 		int i=0;

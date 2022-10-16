@@ -29,13 +29,23 @@ import java.util.stream.Collectors;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
+//import org.apache.commons.lang3.reflect.ConstructorUtils;
+//import org.apache.commons.lang3.reflect.MethodUtils;
+
 public class Prova {
 	
 	//class $ {}
 
 	public static void main(String[] args) throws Exception {
-		camelize();
+		out.println(Utility.getExecutable(Box.class, "new", Integer.class));
+		//MethodUtils.getMatchingMethod(Box.class, null, null)
+		//out.println(ConstructorUtils.getMatchingAccessibleConstructor(Box.class, null));
+		for (var c: Box.class.getConstructors()) out.println(c);
+		for (var c: Vm.DVar.class.getConstructors()) out.println(c);
+		out.println();
+		out.println("fatto");
 	}
+	
 	static void function() {
 		Function<List, Cons> f = l-> (Cons) l;
 		out.println(f.getClass().getMethods());
@@ -335,25 +345,35 @@ public class Prova {
 		list.toArray();
 		String id = " ";
 		Object o = id.length() == 1 ? id : switch (id.charAt(0)) {
-			case '.' -> $_("js-getter", $_("wat-string", id.substring(1)));
-			case '@' -> $_("js-invoker", $_("wat-string", id.substring(1)));
+			case '.' -> $_("jsGetSet", $_("wat-string", id.substring(1)));
+			case '@' -> $_("jsInvoker", $_("wat-string", id.substring(1)));
 			default -> id;
 		};
 		System.out.println(o);
 	}
 	
 	public static class Box {
-		public int i;
+		public Object i;
 		public void set(int i) {
 			this.i = i;
 		}
+		public void setn(int[] i) {
+			this.i = i[i.length-1];
+		}
 		public int get() {
-			return i;
+			return (Integer) i;
 		}
 		public Box() {
 		}
 		public Box(int i) {
 			this.i = i;
+		}
+		public Box(Object o) {
+			this.i = o;
+		}
+		@Override
+		public String toString() {
+			return "{Box " + i + "}";
 		}
 	}
 }
