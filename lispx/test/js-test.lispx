@@ -1,0 +1,621 @@
+;;; JavaScript Interface Tests
+
+(defsuite js-eq
+
+  (deftest js-eq.1
+    (and (js-eq +js-true+ +js-true+)
+         (js-eq +js-false+ +js-false+)
+         (not (js-eq +js-true+ +js-false+))
+         (js-eq (to-js-number 1) (to-js-number 1))
+         (not (js-eq (to-js-number 1) (to-js-number 2)))
+         (js-eq (to-js-string "1") (to-js-string "1"))
+         (not (js-eq (to-js-string "1") (to-js-string "2")))))
+
+  (deftest js-eq.2
+    (signals-error
+     (js-eq 1)
+     match-error))
+
+  (deftest js-eq.3
+    (signals-error
+     (js-eq)
+     match-error)))
+
+(defsuite null-and-undefined
+
+  (deftest null-and-undefined-exist
+    (and (eq (class-of +js-null+) #^object)
+         (eq (class-of +js-undefined+) #^object)))
+
+  (deftest null-and-undefined-distinguishable
+    (not (js-eq +js-null+ +js-undefined+))))
+
+(defsuite js-booleans
+
+  (deftest js-booleans-exist
+    (and
+     (eq (class-of +js-true+) #^object)
+     (eq (class-of +js-false+) #^object)))
+
+  (deftest js-booleans-identity
+    (and (not (eq +js-true+ +js-false+))
+         (eq +js-true+ +js-true+)
+         (eq +js-false+ +js-false+)
+         (not (eq +js-true+ #t))
+         (not (eq +js-false+ #f))))
+
+  (deftest to-lisp-boolean.1
+    (and (to-lisp-boolean +js-true+)
+         (not (to-lisp-boolean +js-false+))))
+
+  (deftest to-lisp-boolean.2
+    (signals-error
+     (to-lisp-boolean 12)
+     type-error :datum 12 :expected-type "boolean"))
+
+  (deftest to-lisp-boolean.3
+    (signals-error
+     (to-lisp-boolean)
+     match-error))
+
+  (deftest to-js-boolean.1
+    (and (to-lisp-boolean (to-js-boolean #t))
+         (not (to-lisp-boolean (to-js-boolean #f)))))
+
+  (deftest to-js-boolean.2
+    (signals-error
+     (to-js-boolean 12)
+     type-error :datum 12 :expected-type 'boolean))
+
+  (deftest to-js-boolean.3
+    (signals-error
+     (to-js-boolean)
+     match-error)))
+
+(defsuite js-numbers
+
+  (deftest to-lisp-number.1
+    (and
+     (= -1 (to-lisp-number (to-js-number -1)))
+     (= 0 (to-lisp-number (to-js-number 0)))
+     (= 1 (to-lisp-number (to-js-number 1)))))
+
+  (deftest to-lisp-number.2
+    (signals-error
+     (to-lisp-number #t)
+     type-error :datum #t :expected-type "number"))
+
+  (deftest to-lisp-number.3
+    (signals-error
+     (to-lisp-number)
+     match-error))
+
+  (deftest to-js-number.1
+    (eq (class-of (to-js-number 1))
+        #^object))
+
+  (deftest to-js-number.1a
+    (and (js-eq (to-js-number 1)
+                (to-js-number 1))
+         (not (js-eq (to-js-number 1)
+                     (to-js-number 2)))))
+
+  (deftest to-js-number.2
+    (signals-error
+     (to-js-number #t)
+     type-error :datum #t :expected-type 'number))
+
+  (deftest to-js-number.3
+    (signals-error
+     (to-js-number)
+     match-error)))
+
+(defsuite js-strings
+
+  (deftest to-lisp-string.1
+    (= "a" (to-lisp-string (to-js-string "a"))))
+
+  (deftest to-lisp-string.2
+    (signals-error
+     (to-lisp-string #t)
+     type-error :datum #t :expected-type "string"))
+
+  (deftest to-lisp-string.3
+    (signals-error
+     (to-lisp-string)
+     match-error))
+
+  (deftest to-js-string.1
+    (eq (class-of (to-js-string "1"))
+        #^object))
+
+  (deftest to-js-string.1a
+    (and (js-eq (to-js-string "1")
+                (to-js-string "1"))
+         (not (js-eq (to-js-string "1")
+                     (to-js-string "2")))))
+
+  (deftest to-js-string.2
+    (signals-error
+     (to-js-string #t)
+     type-error :datum #t :expected-type 'string))
+
+  (deftest to-js-string.3
+    (signals-error
+     (to-js-string)
+     match-error)))
+
+(defsuite to-lisp-function
+
+  (deftest to-lisp-function.1
+    (let ((#'parseInt (to-lisp-function (js-global "parseInt"))))
+      (js-eq (parseInt (to-js-string "123")) (to-js-number 123))))
+
+  (deftest to-lisp-function.1a
+    (let* ((#'parseInt (to-lisp-function (js-global "parseInt")))
+           (result (parseInt)))
+      (to-lisp-boolean (call-js-function (js-global "isNaN") result))))
+
+  (deftest to-lisp-function.2
+    (signals-error
+     (to-lisp-function 12)
+     type-error :datum 12 :expected-type "function")))
+
+(defsuite to-js-function
+
+  (deftest to-js-function.1
+    (let ((x 0))
+      (def env (the-environment))
+      (flet ((fun (v1 v2) (set env x (+ v1 v2))))
+        (call-js-function (to-js-function #'fun) 1 2))
+      (= x 3)))
+
+  (deftest to-js-function.2
+    (signals-error
+     (to-js-function 12)
+     type-error :datum 12 :expected-type 'operator)))
+
+(defsuite apply-js-function
+
+  (deftest apply-js-function.1
+    (js-eq (apply-js-function (js-global "parseInt") (list (to-js-string "12")))
+           (to-js-number 12)))
+
+  (deftest apply-js-function.2
+    (signals-error
+     (apply-js-function 12 (list))
+     type-error :datum 12 :expected-type "function"))
+
+  (deftest apply-js-function.3
+    (signals-error
+     (apply-js-function (js-global "parseInt"))
+     match-error))
+
+  (deftest apply-js-function.4
+    (signals-error
+     (apply-js-function)
+     match-error)))
+
+(defsuite call-js-function
+
+  (deftest call-js-function.1
+    (js-eq (call-js-function (js-global "parseInt") (to-js-string "12"))
+           (to-js-number 12)))
+
+  (deftest call-js-function.2
+    (signals-error
+     (call-js-function 12)
+     type-error :datum 12 :expected-type "function"))
+
+  (deftest call-js-function.3
+    (signals-error
+     (call-js-function)
+     match-error)))
+
+(defsuite js-lambda
+
+  (deftest js-lambda.1
+    (let ((x 0))
+      (def env (the-environment))
+      (let ((fun (js-lambda (v1 v2) (set env x (+ v1 v2)))))
+        (call-js-function fun 1 2))
+      (= x 3)))
+
+  (deftest js-lambda.2
+    (signals-error
+     (js-lambda)
+     match-error))
+
+  (deftest js-lambda.3
+    (signals-error
+     (js-lambda 12)
+     type-error :datum 12 :expected-type '(or symbol ignore list)))
+
+  (deftest js-lambda.4
+    (call-js-function (js-lambda ()))
+    #void)
+
+  (deftest js-lambda.root-prompt-is-set
+    (call-js-function (js-lambda () (take-subcont +root-prompt+ #ignore)))
+    #void)
+
+  (deftest js-lambda.barrier
+    (signals-error
+     (push-prompt 'foo
+       (call-js-function (js-lambda () (take-subcont 'foo k))))
+     prompt-not-found-error :prompt 'foo)))
+
+(defsuite js-global
+
+  (deftest js-global.1
+    (let ((Math (js-global "Math")))
+      (= 4 (to-lisp-number (call-js-method Math "round" (to-js-number 4.1))))))
+
+  (deftest js-global.2
+    (signals-error
+     (js-global)
+     match-error))
+
+  (deftest js-global.3
+    (js-eq +js-undefined+ (js-global "ThisGlobalDoesNotExist")))
+
+  (deftest js-global.4
+    (signals-error
+     (js-global 12)
+     type-error :datum 12 :expected-type 'string)))
+
+(defsuite js-new
+
+  (deftest js-new.1
+    (let ((re (js-new (js-global "RegExp") (to-js-string "abc"))))
+      (and (to-lisp-boolean (call-js-method re "test" (to-js-string "abcdef")))
+           (not (to-lisp-boolean (call-js-method re "test" (to-js-string "uvwxyz")))))))
+
+  (deftest js-new.2
+    (signals-error
+     (js-new)
+     match-error))
+
+  (deftest js-new.3
+    (signals-error
+     (js-new "foo")
+     type-error :datum "foo" :expected-type "function")))
+
+(defsuite js-get
+
+  (deftest js-get.1
+    (let ((Math (js-global "Math")))
+      (to-lisp-string (call-js-method (js-get Math "PI") "toString")))
+    "3.141592653589793")
+
+  (deftest js-get.2
+    (signals-error
+     (js-get)
+     match-error))
+
+  (deftest js-get.3
+    (signals-error
+     (js-get 12)
+     match-error))
+
+  (deftest js-get.4
+    (signals-error
+     (js-get 12 'bar)
+     type-error :datum 'bar :expected-type 'string)))
+
+(defsuite js-arrays
+
+  (define-js-method array-push "push")
+  (define-js-method array-pop "pop")
+
+  (deftest js-array.1
+    (let ((arr (js-array)))
+      (assert (= (to-js-number 0) (js-get arr "length")))
+      (array-push arr "a")
+      (assert (= (to-js-number 1) (js-get arr "length")))
+      (array-push arr "b")
+      (assert (= (to-js-number 2) (js-get arr "length")))
+      (assert (= "b" (array-pop arr)))
+      (assert (= (to-js-number 1) (js-get arr "length")))
+      (assert (= "a" (array-pop arr)))
+      (assert (= (to-js-number 0) (js-get arr "length")))
+      #t))
+
+    (deftest js-array.2
+      (let ((arr (js-array (+ 1 1) (+ 2 2))))
+        (assert (= (to-js-number 2) (js-get arr "length")))
+        (assert (= 4 (array-pop arr)))
+        (assert (= 2 (array-pop arr)))
+        #t))
+
+    (deftest list-to-js-array.1
+      (js-array-to-list (list-to-js-array '(1 2 3)))
+      '(1 2 3))
+
+    (deftest list-to-js-array.2
+      (signals-error
+       (list-to-js-array)
+       match-error))
+
+    (deftest list-to-js-array.3
+      (signals-error
+       (list-to-js-array 12)
+       type-error :datum 12 :expected-type 'list))
+
+    (deftest js-array-to-list.1
+      (signals-error
+       (js-array-to-list)
+       match-error))
+
+    (deftest js-array-to-list.2
+      (signals-error
+       (js-array-to-list 12)
+       assertion-error))
+
+    (deftest js-array-to-list.3
+      (js-array-to-list (js-array 1 2 3))
+      '(1 2 3))
+
+    (deftest js-array-elt.1
+      (elt (js-array 1 2 3) 0)
+      1)
+
+    (deftest js-array-elt.2
+      (elt (js-array 1 2 3) 1)
+      2)
+
+    (deftest js-array-elt.3
+      (signals-error
+       (elt (js-array 1 2 3) 10)
+       out-of-bounds-error))
+
+    (deftest js-array-elt.4
+      (signals-error
+       (elt (js-array 1 2 3) -1)
+       out-of-bounds-error))
+
+    (deftest js-array-length.1
+      (length (js-array))
+      0)
+
+    (deftest js-array-length.2
+      (length (js-array 1 2 3))
+      3))
+
+(defsuite apply-js-method
+
+  (deftest apply-js-method.1
+    (js-eq
+     (apply-js-method (to-js-number 9.656) "toFixed" (list (to-js-number 2)))
+     (to-js-string "9.66")))
+
+  (deftest apply-js-method.2
+    (js-eq
+     (apply-js-method (to-js-number 9) "toString" (list))
+     (to-js-string "9")))
+
+  (deftest apply-js-method.3
+    (signals-error
+     (apply-js-method)
+     match-error))
+
+  (deftest apply-js-method.4
+    (signals-error
+     (apply-js-method "foo")
+     match-error))
+
+  (deftest apply-js-method.4a
+    (signals-error
+     (apply-js-method "foo" "bar")
+     match-error))
+
+  (deftest apply-js-method.5
+    (signals-error
+     (apply-js-method "foo" "methodDoesNotExist" (list))
+     type-error :expected-type "function"))
+
+  (deftest apply-js-method.6
+    (signals-error
+     (apply-js-method "foo" 12 (list))
+     type-error :datum 12 :expected-type 'string)))
+
+(defsuite call-js-method
+
+  (deftest call-js-method.1
+    (js-eq
+     (call-js-method (to-js-number 9.656) "toFixed" (to-js-number 2))
+     (to-js-string "9.66")))
+
+  (deftest call-js-method.2
+    (js-eq
+     (call-js-method (to-js-number 9) "toString")
+     (to-js-string "9")))
+
+  (deftest call-js-method.3
+    (signals-error
+     (call-js-method)
+     match-error))
+
+  (deftest call-js-method.4
+    (signals-error
+     (call-js-method "foo")
+     match-error))
+
+  (deftest call-js-method.5
+    (signals-error
+     (call-js-method "foo" "methodDoesNotExist")
+     type-error :expected-type "function"))
+
+  (deftest call-js-method.6
+    (signals-error
+     (call-js-method "foo" 12)
+     type-error :datum 12 :expected-type 'string)))
+
+(defsuite js-method
+
+  (deftest js-method.1
+    (progn
+      (def #'to-string (js-method "toString"))
+      (js-eq (to-string (to-js-number 12)) (to-js-string "12"))))
+
+  (deftest js-method.2
+    (signals-error
+     (js-method)
+     match-error)))
+
+(defsuite define-js-method
+
+  (deftest define-js-method.1
+    (progn
+      (define-js-method to-string "toString")
+      (js-eq (to-string (to-js-number 12)) (to-js-string "12"))))
+
+  (deftest define-js-method.2
+    (progn
+      (define-js-method regexp-test "test")
+      (let ((re (js-new (js-global "RegExp") (to-js-string "abc"))))
+        (and (to-lisp-boolean (regexp-test re (to-js-string "abcdef")))
+             (not (to-lisp-boolean (regexp-test re (to-js-string "uvwxyz"))))))))
+
+  (deftest define-js-method.3
+    (signals-error
+     (define-js-method)
+     match-error))
+
+  (deftest define-js-method.4
+    (signals-error
+     (define-js-method symbol)
+     match-error)))
+
+(defsuite js-undefined-option
+
+  (deftest js-undefined-option.1
+    (js-undefined-option (+ 12 12))
+    (some 24))
+
+  (deftest js-undefined-option.2
+    (js-undefined-option +js-undefined+)
+    #nil)
+
+  (deftest js-undefined-option.3
+    (signals-error
+     (js-undefined-option)
+     match-error)))
+
+(defsuite js-null-option
+
+  (deftest js-null-option.1
+    (js-null-option (+ 12 12))
+    (some 24))
+
+  (deftest js-null-option.2
+    (js-null-option +js-null+)
+    #nil)
+
+  (deftest js-null-option.3
+    (signals-error
+     (js-null-option)
+     match-error)))
+
+(defsuite await
+
+  (def Promise (js-global "Promise"))
+  (define-js-method resolve "resolve")
+  (define-js-method reject "reject")
+
+  (deftest await.1
+    (progn
+      (assert (= 1 (await (resolve Promise 1))))
+      (assert (= 2 (await (resolve Promise 2))))
+      3)
+    3)
+
+  (deftest await.2
+    (signals-error
+     (progn
+       (assert (= 1 (await (resolve Promise 1))))
+       (await (reject Promise (make-simple-error "foo"))))
+     simple-error :message "foo"))
+
+  (deftest await.3
+    (signals-error
+     (await)
+     match-error)))
+
+(defsuite sleep
+
+  (deftest sleep.1
+    (progn (sleep 1) #t))
+
+  (deftest sleep.2
+    (signals-error
+     (sleep)
+     match-error))
+
+  (deftest sleep.3
+    (signals-error
+     (sleep "foo")
+     type-error :datum "foo" :expected-type 'number)))
+
+(defsuite sync
+
+  (deftest sync.1
+    (signals-error
+     (sync)
+     match-error))
+
+  (deftest sync.2
+    (prog1 #t
+      ((sync #'%sleep) 1)))
+
+  (def Promise (js-global "Promise"))
+  (define-js-method resolve "resolve")
+  (define-js-method reject "reject")
+
+  (deftest sync.3
+    (progn
+      (assert (= 1 ((sync (lambda () (resolve Promise 1))))))
+      (assert (= 2 ((sync (lambda () (resolve Promise 2))))))
+      3)
+    3)
+
+  (deftest sync.4
+    (signals-error
+     (progn
+       (assert (= 1 ((sync (lambda () (resolve Promise 1))))))
+       ((sync (lambda () (reject Promise (make-simple-error "foo"))))))
+     simple-error :message "foo")))
+
+(defsuite define-js-method/sync
+
+  (def Promise (js-global "Promise"))
+
+  (deftest define-js-method/sync.1
+    (progn
+      (define-js-method/sync resolve-sync "resolve")
+      (= (resolve-sync Promise 12) 12)))
+
+  (deftest define-js-method/sync.2
+    (progn
+      (define-js-method/sync reject-sync "reject")
+      (signals-error
+       (reject-sync Promise (make-simple-error "foo"))
+       simple-error :message "foo"))))
+
+(defsuite js-misc
+
+  (deftest can-define-lisp-methods-on-js-objects
+    (progn
+      (defgeneric foo (obj))
+      (defmethod foo ((obj object)) 12)
+      (assert (= 12 (foo +js-null+)))
+      (assert (= 12 (foo (to-js-string "foo")))))
+    #void)
+
+  (deftest js-exception-becomes-condition
+    (block exit
+      (handler-bind ((object (lambda (c)
+                               (when (js-eq (call-js-method c "toString")
+                                            (to-js-string "ReferenceError: x is not defined"))
+                                 (return-from exit #t)))))
+        (call-js-function (js-global "eval") (to-js-string "x"))))))
