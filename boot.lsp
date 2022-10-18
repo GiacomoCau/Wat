@@ -170,15 +170,15 @@
 
 (defineMacro (letLoop name bindings . body)
   (list letrec
-		(list (list name (list* $lambda (mapList car bindings) body)))
-        (list* name (mapList cadr bindings) )))
+    (list (list name (list* $lambda (mapList car bindings) body)))
+    (list* name (mapList cadr bindings) )))
 
 (defineMacro (let* bindings . body)
   (if (nil? bindings)
       (list* let () body)
       (list let
-			(list (car bindings))
-            (list* let* (cdr bindings) body) )))
+        (list (car bindings))
+        (list* let* (cdr bindings) body) )))
 
 (assert (let* () 1) 1)
 (assert (let* ((a 1)(b a)) b) 1)

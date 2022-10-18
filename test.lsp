@@ -54,17 +54,17 @@
   (let ((p (newPrompt)))
     (let ((v (pushPrompt p
 	       (let* ((v1 (pushPrompt p (+ (abortPrompt p 5) 6)))
-		      (v1 (abortPrompt p 7)))
-		 (+ v1 10)))))
-      (+ v 20)))
+                  (v1 (abortPrompt p 7)))
+             (+ v1 10) ))))
+      (+ v 20) ))
   27)
 
 (test test33
   (let ((p (newPrompt)))
-    (let ((v (pushPrompt p (let*
-	    ((v1 (pushPrompt p (+ 6 (abortPrompt p 5))))
-		 (v1 (abortPrompt p 7)) )
-		(+ v1 10) ))))
+    (let ((v (pushPrompt p
+           (let* ((v1 (pushPrompt p (+ 6 (abortPrompt p 5))))
+                  (v1 (abortPrompt p 7)) )
+             (+ v1 10) ))))
       (abortPrompt p 9)
       (+ v 20) ))
   )
@@ -74,8 +74,8 @@
 ;;   (let ((p (newPrompt)))
 ;;     (let ((v (pushPrompt p
 ;; 	       (let* ((v1 (pushPrompt p (+ (abortPrompt p 5) 6)))
-;; 		      (v1 (abortPrompt p 7)))
-;; 		 (+ v1 10)))))
+;;            (v1 (abortPrompt p 7)))
+;;       (+ v1 10)))))
 ;;       (promptSet? p))) ; give unbound: promptSet?
 ;;   #f)
 

@@ -1,5 +1,6 @@
 package Wat;
 
+import static Wat.Utility.PrimitiveWrapper.toPrimitive;
 import static java.lang.System.out;
 import static java.lang.reflect.Array.newInstance;
 import static java.lang.reflect.Array.set;
@@ -23,7 +24,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import org.apache.commons.lang3.ClassUtils;
 
 public class Utility {
 	
@@ -132,36 +132,43 @@ public class Utility {
 		return false;
 	}
 	
-	private enum Primitive {
-		byte$('B', byte.class, Byte.class),
-		short$('S', short.class, Short.class),
-		char$('C', char.class, Character.class),
-		int$('I', int.class, Integer.class),
-		long$('J', long.class, Long.class),
-		float$('F', float.class, Float.class),
-		double$('D', double.class, Double.class),
-		boolean$('Z', boolean.class, Boolean.class),
-		void$('V', void.class, Void.class)
+	enum PrimitiveWrapper {
+			byte$('B', byte.class, Byte.class),
+			short$('S', short.class, Short.class),
+			char$('C', char.class, Character.class),
+			int$('I', int.class, Integer.class),
+			long$('J', long.class, Long.class),
+			float$('F', float.class, Float.class),
+			double$('D', double.class, Double.class),
+			boolean$('Z', boolean.class, Boolean.class),
+			void$('V', void.class, Void.class)
 		;
 		public final char type;
-		public final Class classe;
-		@SuppressWarnings("unused")
+		public final Class primitive;
 		public final Class wrapper;
 		public final String name;
-		Primitive(char type, Class classe, Class wrapper) {
+		PrimitiveWrapper(char type, Class primitive, Class wrapper) {
 			this.type = type;
-			this.classe = classe;
+			this.primitive = primitive;
 			this.wrapper = wrapper;
-			this.name = classe.getSimpleName();
+			this.name = primitive.getSimpleName();
+		}
+		public static Class toWrapper(Class type) {
+			for (var p: values()) if (type == p.primitive) return p.wrapper;
+			return type;
+		}
+		public static Class toPrimitive(Class type) {
+			for (var p: values()) if (type == p.wrapper) return p.primitive;
+			return type;
 		}
 	}
 	
 	public static Class <?> classForName(String name) {
 		if (name == null) return null;
 		boolean L = true;
-		for (Primitive p: Primitive.values()) {
+		for (var p: PrimitiveWrapper.values()) {
 			if (!name.startsWith(p.name)) continue;
-			if (name.length() == p.name.length()) return p.classe;
+			if (name.length() == p.name.length()) return p.primitive;
 			name = p.type + name.substring(p.name.length());
 			L = false;
 			break;
@@ -186,7 +193,7 @@ public class Utility {
 		//str = str.substring(i);
 		char c = str.charAt(i);
 		if (c == 'L') return str.substring(i+1, str.length()-1) + dim;
-		for (var p: Primitive.values()) if (p.type == c) return p.name + dim;
+		for (var p: PrimitiveWrapper.values()) if (p.type == c) return p.name + dim;
 		return cl.toString();
 	}
 	
@@ -457,7 +464,8 @@ public class Utility {
 		
 		float cost = 0.0f;
 		while (srcClass != null && !destClass.equals(srcClass)) {
-			if (destClass.isInterface() && ClassUtils.isAssignable(srcClass, destClass)) {
+			//if (destClass.isInterface() && ClassUtils.isAssignable(srcClass, destClass)) {
+			if (destClass.isInterface() && isAssignableFrom(destClass, srcClass)) {
 				// slight penalty for interface match.
 				// we still want an exact match to override an interface match,
 				// but
@@ -483,7 +491,8 @@ public class Utility {
 		if (!cls.isPrimitive()) {
 			// slight unwrapping penalty
 			cost += 0.1f;
-			cls = ClassUtils.wrapperToPrimitive(cls);
+			//cls = ClassUtils.wrapperToPrimitive(cls);
+			cls = toPrimitive(cls);
 		}
 		Class<?>[] primitiveTypes = { Byte.TYPE, Short.TYPE, Character.TYPE, Integer.TYPE, Long.TYPE, Float.TYPE, Double.TYPE };
 		for (int i = 0; cls != destClass && i < primitiveTypes.length; i++) {

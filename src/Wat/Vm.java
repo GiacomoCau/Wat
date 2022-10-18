@@ -101,8 +101,6 @@ public class Vm {
 	boolean stack = false;
 	boolean prenv = false;
 	
-	interface Combinable { <T> T combine(Env e, List o); }
-	
 	
 	// Continuations
 	class Continuation {
@@ -263,8 +261,14 @@ public class Vm {
 			} while ((env = env.parent) != null);
 			return new Lookup(false, null);
 		};
-		Object bind(String name, Object rhs) {
-			if (trace) print("    bind: ", name, "=", rhs, " in: ", this); map.put(name, rhs); return null; 
+		boolean set(String name, Object value) {
+			Env env = this;	do {
+				if (env.map.containsKey(name)) { env.put(name, value); return true; }
+			} while ((env = env.parent) != null);
+			return false; // TODO or error("!") ok new Lookup(false, null)
+		};
+		Object put(String name, Object value) {
+			if (trace) print("    bind: ", name, "=", value, " in: ", this); map.put(name, value); return null; 
 		}
 		public String toString() {
 			var isThenv = this == theEnvironment;
@@ -291,8 +295,8 @@ public class Vm {
 	Object bind(Env e, Object lhs, Object rhs) {
 		return switch (lhs) {
 			case Ignore i-> null;
-			case Symbol s-> e.bind(s.name, rhs);  
-			case Keyword k-> k.equals(rhs) ? null : "not found " + k;  
+			case Symbol s-> e.put(s.name, rhs);  
+			case Keyword k-> k.equals(rhs) ? null : "not found keyword: " + k;  
 			case null-> rhs == null ? null : "too many operands" /*+ ", none expected, but got: " + toString(rhs)*/;
 			case Cons lc-> {
 				if (!(rhs instanceof Cons rc)) yield "too few operands" /*+ ", more expected, but got: " + toString(rhs)*/;
@@ -305,6 +309,8 @@ public class Vm {
 	
 	
 	// Operative & Applicative Combiners
+	interface Combinable { <T> T combine(Env e, List o); }
+	
 	<T> T combine(Env e, Object op, List o) {
 		if (trace) print(" combine: ", op, " ", o);
 		if (op instanceof Combinable cmb) return cmb.combine(e, o);
@@ -334,7 +340,7 @@ public class Vm {
 	}
 	Apv wrap(Object arg) { return arg instanceof Apv apv ? apv : arg instanceof Combinable cmb ? new Apv(cmb) : error("cannot wrap: " + arg); }
 	<T> T unwrap(Object arg) { return arg instanceof Apv apv ? (T) apv.cmb : error("cannot unwrap: " + arg); }
-	Apv lambda(Object p, Object e, List b) { return new Apv(new Opv(p, ignore, b, evaluate(theEnvironment, e))); }
+	//Apv lambda(Object p, Object e, List b) { return new Apv(new Opv(p, ignore, b, evaluate(theEnvironment, e))); }
 	
 	
 	// Built-in Combiners
@@ -578,6 +584,111 @@ public class Vm {
 	}
 	
 	
+	// Java Native Interface
+	interface ArgsList extends Function<List,Object> {}
+	interface EnvArgsList extends BiFunction<Env,List,Object> {}
+	class JFun implements Combinable {
+		Object jfun; JFun(Object jfun) { this.jfun = jfun; };
+		@SuppressWarnings("preview")
+		public Object combine(Env e, List o) {
+			return pipe(dbg(e, this, o), ()-> {
+					try {
+						return switch (jfun) {
+							case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
+							case ArgsList a-> a.apply(o);  
+							case Function f-> { checkO(jfun, o, 1); yield f.apply(o.car()); }  
+							case EnvArgsList f-> f.apply(e, o);
+							case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(o.car(), o.car(1)); }
+							case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; }
+							case Method mt-> {
+								var pc = mt.getParameterCount();
+								if (!mt.isVarArgs()) checkO(jfun, o, pc+1); else checkO(jfun, o, pc, -1);
+								yield mt.invoke(o.car(), reorg(mt, listToArray(o.cdr())));
+							}
+							case Constructor c-> {
+								checkO(jfun, o, c.getParameterCount());
+								yield c.newInstance(reorg(c, listToArray(o)));
+							}
+							default -> error("not a combine " + jfun);
+						};
+					}
+					catch (Value | Error exc) {
+						throw exc;
+					}
+					catch (Throwable exc) {
+						return error("jfun error: " + exc.getMessage(), exc);
+					}
+				}
+			);
+		}
+		public String toString() {
+			var intefaces = Arrays.stream(jfun.getClass().getInterfaces()).map(i-> Vm.this.toString(i)).collect(joining(" "));
+			return "{JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "}"; }
+	}
+	boolean isjFun(Object obj) {
+		return isInstance(obj, Supplier.class, ArgsList.class, Function.class, EnvArgsList.class, BiFunction.class, Executable.class, Field.class);
+	}
+	JFun jFun(Object obj) {
+		return obj instanceof JFun jfun ? jfun : isjFun(obj) ? new JFun(obj) : error("no a jFun: " + obj);
+	}
+	Apv jWrap(Object obj) {
+		return wrap(jFun(obj));
+	}
+	@SuppressWarnings("preview")
+	Object jInvoke(String name) {
+		if (name == null) return error("method name is null");
+		return (ArgsList) o-> {
+			if (!(o instanceof List)) return error("no operands for executing: " + name) ;  
+			Object o0 = o.car();
+			if (o0 == null) return error("receiver is null");
+			Object[] args = listToArray(o, 1);
+			//Executable executable = getExecutable(name.equals("new") ? (Class) o0 : o0.getClass(), name,  getClasses(args));
+			// (@new class classes)   -> class.getConstructor(classes) -> constructor
+			// (@new class objects)   -> class.getConstructor(classes).newInstance(objects) -> constructor.newInstance(objects)
+			// (@<name> class classes)  -> class.getMethod(name, classes) -> method
+			// (@<name> object objects) -> object.getClass().getMethod(name, getClasses(objects)).invocke(object, objects) -> method.invoke(object, objects)
+			var classes = getClasses(args);
+			Executable executable = getExecutable(o0 instanceof Class cl ? cl : o0.getClass(), name, classes);
+			if (executable == null) return error("not found " + executable(name, classes) + " of: " + toString(o0));
+			if (!name.equals("new") && (!name.equals("getConstructor") || o0 == Class.class) && o0 instanceof Class && stream(args).allMatch(a-> a instanceof Class))
+				return executable;
+			try {
+				args = reorg(executable, args);
+				return switch (executable) { 
+					case Method m-> m.invoke(o0, args);
+					case Constructor c-> c.newInstance(args);
+				};
+			}
+			catch (Exception exc) {
+				return error("error executing " + executable(name, args) + " of: " + toString(o0) + " with: " + toString(args), exc);
+			}
+		};
+	}
+	private String executable(String name, Object[] args) {
+		return (name.equals("new") ? "constructor" : "method: " + name) + toString(list(args));
+	}
+	Object jGetSet(String name) {
+		if (name == null) return error("field name is null");
+		return (ArgsList) o-> {
+			var len = checkO("jGetSet", o, 1, 2); 
+			var o0 = o.car();
+			// (.<name> class)        -> class.getField(name) -> field
+			// (.<name> object)       -> object.getclass().getField(name).get(object) -> field.get(object) 
+			// (.<name> object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
+			Field field = getField(o0 instanceof Class cl ? cl : o0.getClass(), name);
+			if (field == null) return error("not found field: " + name + " in: " + toString(o0));
+			if (o0 instanceof Class) return field;
+			try {
+				if (len == 1) return field.get(o0);
+				field.set(o0, o.car(1)); return inert;
+			}
+			catch (Exception e) {
+				return error("can't " + (len==1 ? "get" : "set") + " " + name + " of " + toString(o0) + eIf(len == 1, ()-> " with " + toString(o.car(1))));
+			}
+		};
+	}
+	
+	
 	// Error handling
 	Object rootPrompt = new Object() { public String toString() { return "%rootPrompt"; }};
 	Object pushRootPrompt(Object x) { return list(new PushPrompt(), rootPrompt, x); }
@@ -766,111 +877,6 @@ public class Vm {
 	}
 	
 	
-	// JNI
-	interface ArgsList extends Function<List,Object> {}
-	interface EnvArgsList extends BiFunction<Env,List,Object> {}
-	class JFun implements Combinable {
-		Object jfun; JFun(Object jfun) { this.jfun = jfun; };
-		@SuppressWarnings("preview")
-		public Object combine(Env e, List o) {
-			return pipe(dbg(e, this, o), ()-> {
-					try {
-						return switch (jfun) {
-							case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
-							case ArgsList a-> a.apply(o);  
-							case Function f-> { checkO(jfun, o, 1); yield f.apply(o.car()); }  
-							case EnvArgsList f-> f.apply(e, o);
-							case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(o.car(), o.car(1)); }
-							case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; }
-							case Method mt-> {
-								var pc = mt.getParameterCount();
-								if (!mt.isVarArgs()) checkO(jfun, o, pc+1); else checkO(jfun, o, pc, -1);
-								yield mt.invoke(o.car(), reorg(mt, listToArray(o.cdr())));
-							}
-							case Constructor c-> {
-								checkO(jfun, o, c.getParameterCount());
-								yield c.newInstance(reorg(c, listToArray(o)));
-							}
-							default -> error("not a combine " + jfun);
-						};
-					}
-					catch (Value | Error exc) {
-						throw exc;
-					}
-					catch (Throwable exc) {
-						return error("jfun error: " + exc.getMessage(), exc);
-					}
-				}
-			);
-		}
-		public String toString() {
-			var intefaces = Arrays.stream(jfun.getClass().getInterfaces()).map(i-> Vm.this.toString(i)).collect(joining(" "));
-			return "{JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "}"; }
-	}
-	boolean isjFun(Object obj) {
-		return isInstance(obj, Supplier.class, ArgsList.class, Function.class, EnvArgsList.class, BiFunction.class, Executable.class, Field.class);
-	}
-	JFun jFun(Object obj) {
-		return obj instanceof JFun jfun ? jfun : isjFun(obj) ? new JFun(obj) : error("no a jFun: " + obj);
-	}
-	Apv jWrap(Object obj) {
-		return wrap(jFun(obj));
-	}
-	@SuppressWarnings("preview")
-	Object jInvoke(String name) {
-		if (name == null) return error("method name is null");
-		return (ArgsList) o-> {
-			if (!(o instanceof List)) return error("no operands for executing: " + name) ;  
-			Object o0 = o.car();
-			if (o0 == null) return error("receiver is null");
-			Object[] args = listToArray(o, 1);
-			//Executable executable = getExecutable(name.equals("new") ? (Class) o0 : o0.getClass(), name,  getClasses(args));
-			// (@new class classes)   -> class.getConstructor(classes) -> constructor
-			// (@new class objects)   -> class.getConstructor(classes).newInstance(objects) -> constructor.newInstance(objects)
-			// (@<name> class classes)  -> class.getMethod(name, classes) -> method
-			// (@<name> object objects) -> object.getClass().getMethod(name, getClasses(objects)).invocke(object, objects) -> method.invoke(object, objects)
-			var classes = getClasses(args);
-			Executable executable = getExecutable(o0 instanceof Class cl ? cl : o0.getClass(), name, classes);
-			if (executable == null) return error("not found " + executable(name, classes) + " of: " + toString(o0));
-			if (!name.equals("new") && (!name.equals("getConstructor") || o0 == Class.class) && o0 instanceof Class && stream(args).allMatch(a-> a instanceof Class))
-				return executable;
-			try {
-				args = reorg(executable, args);
-				return switch (executable) { 
-					case Method m-> m.invoke(o0, args);
-					case Constructor c-> c.newInstance(args);
-				};
-			}
-			catch (Exception exc) {
-				return error("error executing " + executable(name, args) + " of: " + toString(o0) + " with: " + toString(args), exc);
-			}
-		};
-	}
-	private String executable(String name, Object[] args) {
-		return (name.equals("new") ? "constructor" : "method: " + name) + toString(list(args));
-	}
-	Object jGetSet(String name) {
-		if (name == null) return error("field name is null");
-		return (ArgsList) o-> {
-			var len = checkO("jGetSet", o, 1, 2); 
-			var o0 = o.car();
-			// (.<name> class)        -> class.getField(name) -> field
-			// (.<name> object)       -> object.getclass().getField(name).get(object) -> field.get(object) 
-			// (.<name> object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
-			Field field = getField(o0 instanceof Class cl ? cl : o0.getClass(), name);
-			if (field == null) return error("not found field: " + name + " in: " + toString(o0));
-			if (o0 instanceof Class) return field;
-			try {
-				if (len == 1) return field.get(o0);
-				field.set(o0, o.car(1)); return inert;
-			}
-			catch (Exception e) {
-				return error("can't " + (len==1 ? "get" : "set") + " " + name + " of " + toString(o0) + eIf(len == 1, ()-> " with " + toString(o.car(1))));
-			}
-		};
-	}
-	
-	
 	// Stringification
 	String toString(Object o) { return toString(false, o); }
 	@SuppressWarnings("preview")
@@ -963,7 +969,7 @@ public class Vm {
 					$("%def", "%theEnvironment", $("%vau", null, "env", "env")),
 					$("%def", "%lambda", $("%vau", $("formals", ".", "body"), "env",
 						$("%wrap", $("%eval", $("%list*", "%vau", "formals", ignore, "body"), "env")))),
-					$("%def", "%jambda", jFun((ArgsList) o-> lambda(o.car(), o.car(1), o.cdr(1)))),
+					//$("%def", "%jambda", jFun((ArgsList) o-> lambda(o.car(), o.car(1), o.cdr(1)))),
 					
 					$("%def", "%==", (BiFunction<Object,Object,Boolean>) (a,b)-> a == b),
 					$("%def", "%!=", (BiFunction<Object,Object,Boolean>) (a,b)-> a != b),
