@@ -94,11 +94,13 @@ import java.util.function.Supplier;
  */
 
 public class Vm {
-	
+
+
 	boolean dotco = true;
+	boolean doasrt = true;
 	
-	boolean trace = false;
-	boolean stack = false;
+	int prtrc = 0; // 0:none, 1:load, 2:eval root, 3:eval all, 4:combine, 5:bind/lookup
+	boolean prstk = false;
 	boolean prenv = false;
 	
 	
@@ -169,6 +171,7 @@ public class Vm {
 	// Basic Forms
 	class Inert { public String toString() { return "#inert"; }};
 	public Inert inert = new Inert();
+	//<T> T inert(Object value) { return (T) inert; }
 	
 	class Ignore { public String toString() { return "#ignore"; }};
 	public Ignore ignore = new Ignore();
@@ -183,7 +186,7 @@ public class Vm {
 	// Evaluation Core
 	@SuppressWarnings("preview")
 	<T> T evaluate(Env e, Object o) {
-		if (trace) print("evaluate: ", o);
+		if (prtrc >= 3) print("evaluate: ", o, "   ", e);
 		return getTco(
 			switch (o) {
 				case null, default-> o;
@@ -195,26 +198,20 @@ public class Vm {
 		);
 	}
 	
-	class Keyword {
+	class Intern {
 		String name;
-		Keyword(String name) { this.name = name; }
+		Intern(String name) { this.name = name; }
 		public String toString() { return name; }
 		public int hashCode() { return Objects.hashCode(name); }
 		public boolean equals(Object o) {
-			return this == o || o instanceof Keyword sym && name.equals(sym.name);
+			return this == o || this.getClass().isInstance(o) && name.equals(((Intern) o).name);
 		}		
 	}
+	
+	class Keyword extends Intern { Keyword(String name) { super(name); }}
 	Keyword keyword(String name) { return new Keyword(name); }
 	
-	class Symbol {
-		String name;
-		Symbol(String name) { this.name = name; }
-		public String toString() { return name; }
-		public int hashCode() { return Objects.hashCode(name); }
-		public boolean equals(Object o) {
-			return this == o || o instanceof Symbol sym && name.equals(sym.name);
-		}
-	}
+	class Symbol extends Intern { Symbol(String name) { super(name); }}
 	Symbol symbol(String name) { return new Symbol(name); }
 	
 	class Cons {
@@ -250,40 +247,138 @@ public class Vm {
 	
 	
 	// Environment
-	class Env {
+	class Env /*extends LinkedHashMap<String,Object>*/ {
 		Map<String,Object> map = new LinkedHashMap(); Env parent;
 		Env(Env parent) { this.parent = parent; }
 		record Lookup(boolean isBound, Object value) {}
 		Lookup get(String name) {
-			Env env = this;	do {
+			Env env = this; do {
 				Object res = env.map.get(name);
 				if (res != null || env.map.containsKey(name)) return new Lookup(true, res);
 			} while ((env = env.parent) != null);
+			/*for (var env=this; env!=null; env=env.parent) {
+				Object res = ((LinkedHashMap) env).get(name);
+				if (res != null || env.containsKey(name)) return new Lookup(true, res);
+			}*/
 			return new Lookup(false, null);
 		};
 		boolean set(String name, Object value) {
-			Env env = this;	do {
+			Env env = this; do {
 				if (env.map.containsKey(name)) { env.put(name, value); return true; }
 			} while ((env = env.parent) != null);
+			//for (var env=this; env!=null; env=env.parent)
+			//	if (env.containsKey(name)) { env.put(name, value); return true; }
 			return false; // TODO or error("!") ok new Lookup(false, null)
 		};
 		Object put(String name, Object value) {
-			if (trace) print("    bind: ", name, "=", value, " in: ", this); map.put(name, value); return null; 
+			if (prtrc >= 5) print("    bind: ", name, "=", value, " in: ", this); map.put(name, value); return null; 
 		}
 		public String toString() {
 			var isThenv = this == theEnvironment;
-			return "{" + eIf(!isThenv, "The-") + "Env" + eIf(isThenv && !prenv, ()-> mapReverse()) + eIf(parent == null, ()-> " " + parent) + "}";
-		}
-		String mapReverse() {
-			var sb = new StringBuilder(); map.entrySet().forEach(e-> sb.insert(0, " " + e)); return sb.toString();
+			return "{" + eIf(!isThenv, "The-") + "Env" + eIf(isThenv && !prenv, ()-> reverseMap(map)) + eIf(parent == null, ()-> " " + parent) + "}";
 		}
 		Object lookup(String name) {
 			var lookup = get(name); if (!lookup.isBound) return error("unbound: " + name);
+			if (prtrc >= 5) print("  lookup: ", lookup.value); return lookup.value;
+		}
+		boolean isBound(String name) { return get(name).isBound; }
+		boolean isParent(Env other) {
+			Env env = this; do if (env == other) return true; while ((env = env.parent) != null);
+			//for (var env=this; env!=null; env=env.parent) if (other == env) return true; 
+			return false;
+		};
+	}
+	Env env(Env parent) { return new Env(parent); }
+	
+	
+	// Classes Objects 
+	class WatClass extends Env {
+		WatClass(WatClass watClass) { super(watClass); }
+		@Override public String toString() { return "{WatClass" + reverseMap(map) + "}"; }
+		boolean isSubClass(WatClass other) { return isParent(other); }
+	}
+	class WatObj extends LinkedHashMap<Keyword, Object> {
+		private static final long serialVersionUID = 1L;
+		WatClass watClass;
+		/* TODO sostituito dal seguente
+		WatObject(WatClass watClass, Object ... slot) {
+			this.watClass = watClass;
+			if (slot.length % 2 != 0) throw new Error("a value expected in: " + slot);
+	        for (int i = 0; i<slot.length; i+=2) {
+	        	var car = slot[i]; if (!(car instanceof Keyword key)) throw new Error("not a keyword: " + car + " in: " + slot); 
+	        	put(key, slot[i + 1]);
+	        }
+		}
+		*/
+		WatObj(WatClass watClass, List list) {
+			this.watClass = watClass;
+	        for (var l=list; l!=null; l=l.cdr()) {
+	        	var car = l.car; if (!(car instanceof Keyword key)) throw new Error("not a keyword: " + car + " in: " + list); 
+	        	l = l.cdr(); if (l == null) throw new Error("a value expected in: " + list);
+	        	put(key, l.car);
+	        }
+		}
+		@Override public String toString() { return "{WatObject" + reverseMap(this) + "}"; }
+	}
+	/*
+	class WatRootObj<K> extends LinkedHashMap<K,Object> {
+		private static final long serialVersionUID = 1L;
+	}
+	class Env<K> extends WatRootObj<K> {
+		private static final long serialVersionUID = 1L;
+		Env parent; Env(Env parent) { this.parent = parent; }
+		record Lookup(boolean isBound, Object value) {}
+		Lookup get(String name) {
+			for (var env=this; env!=null; env=env.parent) {
+				Object res = ((WatRootObj) env).get(name);
+				if (res != null || env.containsKey(name)) return new Lookup(true, res);
+			}
+			return new Lookup(false, null);
+		};
+		boolean set(K name, Object value) {
+			for (var env=this; env!=null; env=env.parent)
+				if (env.containsKey(name)) { env.put(name, value); return true; }
+			return false;
+		};
+		public Object put(K name, Object value) {
+			if (trace) print("    bind: ", name, "=", value, " in: ", this); super.put(name, value); return null; 
+		}
+		public String toString() {
+			var isThenv = this == theEnvironment;
+			return "{" + eIf(!isThenv, "The-") + "Env" + eIf(isThenv && !prenv, ()-> reverseMap(this)) + eIf(parent == null, ()-> " " + parent) + "}";
+		}
+		Object lookup(String name) {
+			var lookup = get(name); if (!lookup.isBound)
+				return error("unbound: " + name);
 			if (trace) print("  lookup: ", lookup.value); return lookup.value;
 		}
 		boolean isBound(String name) { return get(name).isBound; }
+		boolean isParent(Env other) {
+			Env env = this; do if (env == other) return true; while ((env = env.parent) != null);
+			return false;
+		};
 	}
-	Env env(Env parent) { return new Env(parent); }
+	Env env(Env parent) { return new Env<String>(parent); }
+	class WatClass extends Env<String> {
+		private static final long serialVersionUID = 1L;
+		WatClass(WatClass watClass) { super(watClass); }
+		@Override public String toString() { return "{WatClass" + reverseMap(this) + "}"; }
+		boolean isSubClass(WatClass other) { return isParent(other); }
+	}
+	class WatObj extends WatRootObj<Keyword> {
+		private static final long serialVersionUID = 1L;
+		WatClass watClass;
+		WatObj(WatClass watClass, List list) {
+			this.watClass = watClass;
+			for (var l=list; l!=null; l=l.cdr()) {
+				var car = l.car; if (!(car instanceof Keyword key)) throw new Error("not a keyword: " + car + " in: " + list); 
+				l = l.cdr(); if (l == null) throw new Error("a value expected in: " + list);
+				put(key, l.car);
+			}
+		}
+		@Override public String toString() { return "{WatObject" + reverseMap(this) + "}"; }
+	}
+	*/
 	
 	
 	// Bind
@@ -312,7 +407,7 @@ public class Vm {
 	interface Combinable { <T> T combine(Env e, List o); }
 	
 	<T> T combine(Env e, Object op, List o) {
-		if (trace) print(" combine: ", op, " ", o);
+		if (prtrc >= 4) print(" combine: ", op, " ", o, "   ", e);
 		if (op instanceof Combinable cmb) return cmb.combine(e, o);
 		// per default le jFun nude dovrebbero essere operative e non applicative
 		if (isjFun(op)) return ((Combinable) jWrap(op)).combine(e, o);
@@ -339,7 +434,7 @@ public class Vm {
 		Combinable unwrap() { return cmb; }
 	}
 	Apv wrap(Object arg) { return arg instanceof Apv apv ? apv : arg instanceof Combinable cmb ? new Apv(cmb) : error("cannot wrap: " + arg); }
-	<T> T unwrap(Object arg) { return arg instanceof Apv apv ? (T) apv.cmb : error("cannot unwrap: " + arg); }
+	<T> T unwrap(Object arg) { return arg instanceof Apv apv ? (T) apv.cmb : isjFun(arg) ? (T) arg : error("cannot unwrap: " + arg); }
 	//Apv lambda(Object p, Object e, List b) { return new Apv(new Opv(p, ignore, b, evaluate(theEnvironment, e))); }
 	
 	
@@ -389,9 +484,10 @@ public class Vm {
 			return o != null ? begin(null, e, o) : inert;
 		}
 		Object begin(Resumption r, Env e, List list) {
-			if (trace && root && r == null) print("\n--------");
 			for (var first = true;;) { // only one resume for suspension
+				if (prtrc >= 3 && root && r == null) print("\n--------");
 				var car = list.car;
+				if (prtrc == 2 && root && r == null) print("evaluate: ", car);
 				if (list.cdr == null) { return tco(()-> evaluate(e, car)); } 
 				var res = first && r != null && !(first = false) ? r.resume() : evaluate(e, car);
 				if (res instanceof Suspension s) { var l = list; return s.suspend(dbg(e, "evalBegin", list.car), rr-> begin(rr, e, l)); }
@@ -519,8 +615,8 @@ public class Vm {
 		var res = r != null ? r.resume() : action.get();
 		if (!(res instanceof Suspension s)) return res;
 		return prompt == ignore || !equals(s.prompt, prompt)
-			? s.suspend(dbg, rr-> pushPrompt(rr, e, dbg, prompt, action))
-			: combine(e, s.handler, cons(s.k, null))
+		? s.suspend(dbg, rr-> pushPrompt(rr, e, dbg, prompt, action))
+		: combine(e, s.handler, cons(s.k, null))
 		;
 	}
 	Object pushSubcontBarrier(Resumption r, Env e, Object x) {
@@ -549,11 +645,11 @@ public class Vm {
 				dVars[i] = dVar;
 			}
 			return pipe(dbg(e, this, o), ()-> mapCar(car-> evaluate(e, car), o.cdr()), args-> {
-					var vals = listToArray((List) args);
-					if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
-					for (int i=0; i<dVars.length; i+=1) dSet(dbg(e, this, o), dVars[i], vars[i], vals[i]);
-					return inert;
-				}
+				var vals = listToArray((List) args);
+				if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
+				for (int i=0; i<dVars.length; i+=1) dSet(dbg(e, this, o), dVars[i], vars[i], vals[i]);
+				return inert;
+			}
 			);
 		}
 		private void dSet(Dbg dbg, DVar dvar, Symbol var, Object val) {
@@ -592,33 +688,33 @@ public class Vm {
 		@SuppressWarnings("preview")
 		public Object combine(Env e, List o) {
 			return pipe(dbg(e, this, o), ()-> {
-					try {
-						return switch (jfun) {
-							case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
-							case ArgsList a-> a.apply(o);  
-							case Function f-> { checkO(jfun, o, 1); yield f.apply(o.car()); }  
-							case EnvArgsList f-> f.apply(e, o);
-							case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(o.car(), o.car(1)); }
-							case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; }
-							case Method mt-> {
-								var pc = mt.getParameterCount();
-								if (!mt.isVarArgs()) checkO(jfun, o, pc+1); else checkO(jfun, o, pc, -1);
-								yield mt.invoke(o.car(), reorg(mt, listToArray(o.cdr())));
-							}
-							case Constructor c-> {
-								checkO(jfun, o, c.getParameterCount());
-								yield c.newInstance(reorg(c, listToArray(o)));
-							}
-							default -> error("not a combine " + jfun);
-						};
-					}
-					catch (Value | Error exc) {
-						throw exc;
-					}
-					catch (Throwable exc) {
-						return error("jfun error: " + exc.getMessage(), exc);
-					}
+				try {
+					return switch (jfun) {
+						case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
+						case ArgsList a-> a.apply(o);  
+						case Function f-> { checkO(jfun, o, 1); yield f.apply(o.car()); }  
+						case EnvArgsList f-> f.apply(e, o);
+						case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(o.car(), o.car(1)); }
+						case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; }
+						case Method mt-> {
+							var pc = mt.getParameterCount();
+							if (!mt.isVarArgs()) checkO(jfun, o, pc+1); else checkO(jfun, o, pc, -1);
+							yield mt.invoke(o.car(), reorg(mt, listToArray(o.cdr())));
+						}
+						case Constructor c-> {
+							checkO(jfun, o, c.getParameterCount());
+							yield c.newInstance(reorg(c, listToArray(o)));
+						}
+						default -> error("not a combine " + jfun);
+					};
 				}
+				catch (Value | Error exc) {
+					throw exc;
+				}
+				catch (Throwable exc) {
+					return error("jfun error: " + exc.getMessage(), exc);
+				}
+			}
 			);
 		}
 		public String toString() {
@@ -836,6 +932,7 @@ public class Vm {
 		return vmAssert(env, (String) null, objs[0], objs.length == 1 ? $() : $(objs[1])); 
 	}
 	boolean vmAssert(Env env, String name, Object expr, Object ... objs) {
+		if (!doasrt) return true;
 		name = eIfnull(name, n-> "test "+ n + ": ");
 		try {
 			env = env(env);
@@ -849,7 +946,7 @@ public class Vm {
 		}
 		catch (Throwable t) {
 			if (objs.length == 0) return true;
-			if (stack) t.printStackTrace(out);
+			if (prstk) t.printStackTrace(out);
 			else print(name, expr, " throw ", t);
 		}
 		return false;
@@ -894,6 +991,9 @@ public class Vm {
 			default-> o.toString();
 		};
 	}
+	String reverseMap(Map map) {
+		var sb = new StringBuilder(); map.entrySet().forEach(e-> sb.insert(0, " " + e)); return sb.toString();
+	}
 	
 	
 	// Bootstrap
@@ -937,7 +1037,22 @@ public class Vm {
 					// Java Interface
 					$("%def", "%jinvoke", (Function<String,Object>) this::jInvoke),
 					$("%def", "%jgetset", (Function<String,Object>) this::jGetSet),
-					$("%def", "instanceof", (BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o)),
+					$("%def", "%instanceof?", (BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o)),
+					// Object System
+					$("%def", "%classOf", (Function<WatObj,WatClass>) lo-> lo.watClass),
+					$("%def", "%addMethod", (ArgsList) o-> ((WatClass) o.car()).put(((Symbol) o.car(1)).name, o.car(2))),
+					$("%def", "%getMethod", (BiFunction<WatClass,Symbol,Combinable>) (lc,n)-> (Combinable) lc.get(n.name).value),
+					//$("%def", "%setSlot", (ArgsList) o-> ((WatObject) o.car()).put(o.car(1), o.car(2))),
+					//$("%def", "%getSlot", (BiFunction<WatObject,Keyword,Object>) (lo,n)-> lo.get(n)),
+					//$("%def", "%makeInstance", (BiFunction<LClass,List,LObject>) (lc,l)-> new LObject(lc, listToArray(l))),
+					//$("%def", "%makeInstance", (ArgsList) o-> new WatObject(o.car(), listToArray(o.cdr()))),
+					//$("%def", "%makeInstance", (ArgsList) o-> new WatObject(o.car(), o.cdr())),
+					$("%def", "%obj", (ArgsList) o-> new WatObj(o.car(), o.cdr())),
+					//$("%def", "%makeClass", (BiFunction<String,LClass,LClass>) (n, lc)-> new LClass(n, lc)),
+					//$("%def", "%makeClass", (BiFunction<String,WatClass,WatClass>) WatClass::new),
+					//$("%def", "%makeClass", (Function<WatClass,WatClass>) WatClass::new),
+					$("%def", "%class", (Function<WatClass,WatClass>) WatClass::new),
+					$("%def", "%subClass?", (BiFunction<WatClass,WatClass,Boolean>) (sc,c)-> sc.isSubClass(c)),
 					// Utilities
 					$("%def", "%list", (ArgsList) o-> o),
 					$("%def", "%list*", (ArgsList) this::listToListStar),
@@ -965,15 +1080,16 @@ public class Vm {
 					$("%def", "%>>", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr, a, b)),
 					$("%def", "%>>>", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr0, a, b)),
 					//
+					$("%def", "%==", (BiFunction<Object,Object,Boolean>) (a,b)-> a == b),
+					$("%def", "%!=", (BiFunction<Object,Object,Boolean>) (a,b)-> a != b),
+					$("%def", "%eq?", (BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b)),
+					//
 					$("%def", "%quote", $("%vau", $("arg"), ignore, "arg")),
 					$("%def", "%theEnvironment", $("%vau", null, "env", "env")),
 					$("%def", "%lambda", $("%vau", $("formals", ".", "body"), "env",
 						$("%wrap", $("%eval", $("%list*", "%vau", "formals", ignore, "body"), "env")))),
 					//$("%def", "%jambda", jFun((ArgsList) o-> lambda(o.car(), o.car(1), o.cdr(1)))),
-					
-					$("%def", "%==", (BiFunction<Object,Object,Boolean>) (a,b)-> a == b),
-					$("%def", "%!=", (BiFunction<Object,Object,Boolean>) (a,b)-> a != b),
-					$("%def", "%eq?", (BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b)),
+					//
 					$("%def", "assert", jFun((EnvArgsList) (e,o)-> { checkO("assert", o, 1, 2); return vmAssert(e,listToArray(o)); } )),
 					$("%def", "test", jFun((EnvArgsList) (e,o)-> { checkO("test", o, 2, 3); return vmAssert(e,toString(o.car()), o.car(1), listToArray(o.cdr(1))); } )),
 					$("%def", "this", jFun((Supplier)() -> this)),
@@ -983,9 +1099,11 @@ public class Vm {
 					$("%def", "write", (ArgsList) o-> write(listToArray(o))),
 					$("%def", "load", (Function<String, Object>) nf-> uncked(()-> eval(readString(nf)))),
 					$("%def", "dotco", (ArgsList) o-> { if (checkO("dotco", o, 0, 1, Boolean.class) == 0) return dotco; dotco=o.car(); return inert; }),
-					$("%def", "trace", (ArgsList) o-> { if (checkO("trace", o, 0, 1, Boolean.class) == 0) return trace; trace=o.car(); return inert; }),
-					$("%def", "stack", (ArgsList) o-> { if (checkO("stack", o, 0, 1, Boolean.class) == 0) return stack; stack=o.car(); return inert; }),
+					$("%def", "doasrt", (ArgsList) o-> { if (checkO("doasrt", o, 0, 1, Boolean.class) == 0) return doasrt; doasrt=o.car(); return inert; }),
+					$("%def", "prtrc", (ArgsList) o-> { if (checkO("prtrc", o, 0, 1, Integer.class) == 0) return prtrc; prtrc=o.car(); return inert; }),
+					$("%def", "prstk", (ArgsList) o-> { if (checkO("prstk", o, 0, 1, Boolean.class) == 0) return prstk; prstk=o.car(); return inert; }),
 					$("%def", "prenv", (ArgsList) o-> { if (checkO("prenv", o, 0, 1, Boolean.class) == 0) return prenv; prenv=o.car(); return inert; })
+					//$("%def", "prenv", (ArgsList) o-> checkO("prenv", o, 0, 1, Boolean.class) == 0 ? prenv : inert(prenv=o.car()))
 				)
 			)
 		);
@@ -1012,14 +1130,14 @@ public class Vm {
 		}
 	}
 	public String readString(String fileName) throws IOException {
-		if (trace) print("\n--------:  " + fileName);
+		if (prtrc >= 1) print("\n--------:  " + fileName);
 		return Files.readString(Paths.get(fileName), Charset.forName("cp1252"));
 	} 
 	public Object exec(String fileName) throws Exception {
 		return exec(readBytecode(fileName));
 	}
 	public Object readBytecode(String fileName) throws Exception {
-		if (trace) print("\n--------:  " + fileName);
+		if (prtrc >= 1) print("\n--------:  " + fileName);
 		try (var ois = new ObjectInputStream(new FileInputStream("build/" + fileName))) {
 			return ois.readObject();
 		}
@@ -1033,7 +1151,7 @@ public class Vm {
 					print(exec(parse(exp)));
 				}
 				catch (Throwable t) {
-					if (stack) t.printStackTrace(out);
+					if (prstk) t.printStackTrace(out);
 					else out.println(t.getClass().getSimpleName() + ": " + t.getMessage());
 				}
 			}
@@ -1188,14 +1306,17 @@ public class Vm {
 		//compile("boot.wat");
 		//exec(readBytecode("boot.wat"));
 		//*
+		//print("inizio");
 		var milli = currentTimeMillis();
 		eval(readString("testVm.lsp"));
-		//eval(readString("wat/boot.wat"));
-		//eval(readString("wat/test.wat"));
 		eval(readString("boot.lsp"));
 		eval(readString("test.lsp"));
+		//eval(readString("wat/boot.wat"));
+		//eval(readString("wat/test.wat"));
 		//trace = true;
+		//eval(readString("lispx/boot.lispx"));
 		eval(readString("testJni.lsp"));
+		eval(readString("testOos.lsp"));
 		print("start time: " + (currentTimeMillis() - milli));
 		//stack = true;
 		repl();

@@ -166,12 +166,12 @@
       (list* (list* $lambda (mapList car bindings) body)
              (mapList cadr bindings) )))
 
+(defineMacro (let bindings . body)
+  (list*
+    (list* $lambda (mapList car bindings) body)
+    (mapList cadr bindings) ))
+    
 (assert (let ((a 1)) a) 1)
-
-(defineMacro (letLoop name bindings . body)
-  (list letrec
-    (list (list name (list* $lambda (mapList car bindings) body)))
-    (list* name (mapList cadr bindings) )))
 
 (defineMacro (let* bindings . body)
   (if (nil? bindings)
@@ -193,7 +193,13 @@
 (assert (letrec ( (a 1)) a) 1)
 (assert (letrec ( (a ($lambda () 1)) ) (a)) 1)
 
+(defineMacro (letLoop name bindings . body)
+  (list letrec
+    (list (list name (list* $lambda (mapList car bindings) body)))
+    (list* name (mapList cadr bindings) )))
+
 (assert (letLoop l ((a 1)) a) 1)
+(assert (letLoop sum ((as (list 1 2)) (bs (list 3 4))) (if (nil? as) () (cons (+ (car as) (car bs)) (sum (cdr as) (cdr bs))))) '(4 6))
 
 (defineMacro (lambda params . body)
   (letrec ((typedParams->namesAndChecks
@@ -215,13 +221,11 @@
     (list $define! (car lhs) (list* lambda (cdr lhs) rhs))
     (list $define! lhs (car rhs))))
 
-(define (apply appv arg . opt)
-  (if (instanceof appv &java.util.function.Function)
+(define (apply appv arg . optEnv)
+  (if (%instanceof? appv &java.util.function.Function)
       (@apply appv (list->array arg))
       (eval (cons (unwrap appv) arg)
-            (if (nil? opt)
-                (makeEnvironment)
-                (car opt)))))
+            (if (nil? optEnv) (makeEnvironment) (car optEnv)) )))
 
 
 ;;;; Simple control
@@ -495,7 +499,6 @@
       (foldList vm* 1 args) )))
 
 (assert (* 1 2 3) 6)
-
 
 (define +
   (let ((vm+ +))

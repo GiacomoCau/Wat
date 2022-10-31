@@ -184,7 +184,7 @@
     (list $define! lhs (car rhs))))
 
 (define (apply appv arg . opt)
-  (if (instanceof appv &java.util.function.Function)
+  (if (%instanceof? appv &java.util.function.Function)
       (@apply appv (list->array arg))
       (eval (cons (unwrap appv) arg)
             (if (nil? opt)

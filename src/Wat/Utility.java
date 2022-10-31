@@ -406,7 +406,7 @@ public class Utility {
 				Float bestCost = Float.MAX_VALUE;
 				for (var executable: executables) {
 					var cost = getTotalTransformationCost(executable, argumentsClass);
-					if (cost > bestCost) continue;
+					if (cost >= bestCost) continue;
 					if (cost == bestCost) throw new RuntimeException("I " + (name.equals("new") ? "costruttori" : "metodi") + " " + bestMatch + " and " + executable + " has equal cost: " + bestCost);
 					bestCost = cost;
 					bestMatch = executable;

@@ -37,6 +37,10 @@ public class Prova {
 	//class $ {}
 
 	public static void main(String[] args) throws Exception {
+		executable();
+	}
+	
+	private static void executable() {
 		out.println(Utility.getExecutable(Box.class, "new", Integer.class));
 		//MethodUtils.getMatchingMethod(Box.class, null, null)
 		//out.println(ConstructorUtils.getMatchingAccessibleConstructor(Box.class, null));
