@@ -100,8 +100,8 @@ public class Vm {
 	boolean doasrt = true;
 	
 	int prtrc = 0; // 0:none, 1:load, 2:eval root, 3:eval all, 4:combine, 5:bind/lookup
+	int prenv = 2;
 	boolean prstk = false;
-	boolean prenv = false;
 	
 	
 	// Continuations
@@ -190,7 +190,7 @@ public class Vm {
 		return getTco(
 			switch (o) {
 				case null, default-> o;
-				case Symbol s-> pipe(dbg(e, o), ()-> e.lookup(s.name));
+				case Symbol s-> pipe(dbg(e, o), ()-> e.lookup(s));
 				case List c-> {
 					var ee=e; yield pipe(dbg(e, o), ()-> evaluate(ee, c.car), op-> combine(ee, op, c.cdr()));
 				}
@@ -247,11 +247,11 @@ public class Vm {
 	
 	
 	// Environment
-	class Env /*extends LinkedHashMap<String,Object>*/ {
-		Map<String,Object> map = new LinkedHashMap(); Env parent;
+	class Env<K> /*extends LinkedHashMap<K,Object>*/ {
+		Env parent; Map<K,Object> map = new LinkedHashMap(); 
 		Env(Env parent) { this.parent = parent; }
 		record Lookup(boolean isBound, Object value) {}
-		Lookup get(String name) {
+		Lookup get(K name) {
 			Env env = this; do {
 				Object res = env.map.get(name);
 				if (res != null || env.map.containsKey(name)) return new Lookup(true, res);
@@ -262,7 +262,7 @@ public class Vm {
 			}*/
 			return new Lookup(false, null);
 		};
-		boolean set(String name, Object value) {
+		boolean set(K name, Object value) {
 			Env env = this; do {
 				if (env.map.containsKey(name)) { env.put(name, value); return true; }
 			} while ((env = env.parent) != null);
@@ -270,29 +270,33 @@ public class Vm {
 			//	if (env.containsKey(name)) { env.put(name, value); return true; }
 			return false; // TODO or error("!") ok new Lookup(false, null)
 		};
-		Object put(String name, Object value) {
+		Object put(K name, Object value) {
 			if (prtrc >= 5) print("    bind: ", name, "=", value, " in: ", this); map.put(name, value); return null; 
 		}
 		public String toString() {
-			var isThenv = this == theEnvironment;
-			return "{" + eIf(!isThenv, "The-") + "Env" + eIf(isThenv && !prenv, ()-> reverseMap(map)) + eIf(parent == null, ()-> " " + parent) + "}";
+			var deep = deep();
+			var prefix = switch(deep) { case 1-> "Vm-"; case 2-> "The-"; default-> ""; };
+			return "{" + prefix + "Env" + eIf(deep <= prenv, ()-> reverseMap(map)) + eIf(parent == null, ()-> " " + parent) + "}";
 		}
-		Object lookup(String name) {
+		Object lookup(K name) {
 			var lookup = get(name); if (!lookup.isBound) return error("unbound: " + name);
 			if (prtrc >= 5) print("  lookup: ", lookup.value); return lookup.value;
 		}
-		boolean isBound(String name) { return get(name).isBound; }
+		boolean isBound(K name) { return get(name).isBound; }
 		boolean isParent(Env other) {
 			Env env = this; do if (env == other) return true; while ((env = env.parent) != null);
 			//for (var env=this; env!=null; env=env.parent) if (other == env) return true; 
 			return false;
 		};
+		int deep() {
+			int i=0; for (var env=this; env!=null; env=env.parent) i+=1; return i;
+		}
 	}
-	Env env(Env parent) { return new Env(parent); }
+	Env env(Env parent) { return new Env<Symbol>(parent); }
 	
 	
 	// Classes Objects 
-	class WatClass extends Env {
+	class WatClass extends Env<Symbol> {
 		WatClass(WatClass watClass) { super(watClass); }
 		@Override public String toString() { return "{WatClass" + reverseMap(map) + "}"; }
 		boolean isSubClass(WatClass other) { return isParent(other); }
@@ -347,19 +351,19 @@ public class Vm {
 			var isThenv = this == theEnvironment;
 			return "{" + eIf(!isThenv, "The-") + "Env" + eIf(isThenv && !prenv, ()-> reverseMap(this)) + eIf(parent == null, ()-> " " + parent) + "}";
 		}
-		Object lookup(String name) {
+		Object lookup(K name) {
 			var lookup = get(name); if (!lookup.isBound)
 				return error("unbound: " + name);
 			if (trace) print("  lookup: ", lookup.value); return lookup.value;
 		}
-		boolean isBound(String name) { return get(name).isBound; }
+		boolean isBound(K name) { return get(name).isBound; }
 		boolean isParent(Env other) {
 			Env env = this; do if (env == other) return true; while ((env = env.parent) != null);
 			return false;
 		};
 	}
-	Env env(Env parent) { return new Env<String>(parent); }
-	class WatClass extends Env<String> {
+	Env env(Env parent) { return new Env<Symbol>(parent); }
+	class WatClass extends Env<Symbol> {
 		private static final long serialVersionUID = 1L;
 		WatClass(WatClass watClass) { super(watClass); }
 		@Override public String toString() { return "{WatClass" + reverseMap(this) + "}"; }
@@ -390,7 +394,7 @@ public class Vm {
 	Object bind(Env e, Object lhs, Object rhs) {
 		return switch (lhs) {
 			case Ignore i-> null;
-			case Symbol s-> e.put(s.name, rhs);  
+			case Symbol s-> e.put(s, rhs);  
 			case Keyword k-> k.equals(rhs) ? null : "not found keyword: " + k;  
 			case null-> rhs == null ? null : "too many operands" /*+ ", none expected, but got: " + toString(rhs)*/;
 			case Cons lc-> {
@@ -639,7 +643,7 @@ public class Vm {
 			var dVars = new DVar[vars.length];
 			for (int i=0; i<vars.length; i+=1) {
 				var var = vars[i];
-				var lookup = e.get(var.name);
+				var lookup = e.get(var);
 				if (!lookup.isBound) continue;
 				if (!(lookup.value instanceof DVar dVar)) return error("not a dinamic variable: " + var);
 				dVars[i] = dVar;
@@ -997,7 +1001,7 @@ public class Vm {
 	
 	
 	// Bootstrap
-	Env theEnvironment = env(null); {
+	Env theEnvironment=env(null); {
 		bind(theEnvironment, null, symbol("%def"), new Def());
 		bind(theEnvironment, null, symbol("%begin"), begin);
 		evaluate(theEnvironment,
@@ -1007,6 +1011,9 @@ public class Vm {
 					$("%def", "%vau", new Vau()),
 					$("%def", "%eval", wrap(new Eval())),
 					$("%def", "%makeEnvironment", (ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car())),
+					$("%def", "%resetEnvironment", (Supplier) ()-> theEnvironment = env(theEnvironment.parent)),
+					$("%def", "%pushEnvironment", (Supplier) ()-> theEnvironment = env(theEnvironment)),
+					$("%def", "%popEnvironment", (Supplier) ()-> theEnvironment = theEnvironment.parent),
 					$("%def", "%wrap", (Function<Object, Object>) this::wrap),
 					$("%def", "%unwrap", (Function<Object, Object>) this::unwrap),
 					// Values
@@ -1040,8 +1047,8 @@ public class Vm {
 					$("%def", "%instanceof?", (BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o)),
 					// Object System
 					$("%def", "%classOf", (Function<WatObj,WatClass>) lo-> lo.watClass),
-					$("%def", "%addMethod", (ArgsList) o-> ((WatClass) o.car()).put(((Symbol) o.car(1)).name, o.car(2))),
-					$("%def", "%getMethod", (BiFunction<WatClass,Symbol,Combinable>) (lc,n)-> (Combinable) lc.get(n.name).value),
+					$("%def", "%addMethod", (ArgsList) o-> ((WatClass) o.car()).put(o.car(1), o.car(2))),
+					$("%def", "%getMethod", (BiFunction<WatClass,Symbol,Combinable>) (lc,n)-> (Combinable) lc.get(n).value),
 					//$("%def", "%setSlot", (ArgsList) o-> ((WatObject) o.car()).put(o.car(1), o.car(2))),
 					//$("%def", "%getSlot", (BiFunction<WatObject,Keyword,Object>) (lo,n)-> lo.get(n)),
 					//$("%def", "%makeInstance", (BiFunction<LClass,List,LObject>) (lc,l)-> new LObject(lc, listToArray(l))),
@@ -1101,12 +1108,13 @@ public class Vm {
 					$("%def", "dotco", (ArgsList) o-> { if (checkO("dotco", o, 0, 1, Boolean.class) == 0) return dotco; dotco=o.car(); return inert; }),
 					$("%def", "doasrt", (ArgsList) o-> { if (checkO("doasrt", o, 0, 1, Boolean.class) == 0) return doasrt; doasrt=o.car(); return inert; }),
 					$("%def", "prtrc", (ArgsList) o-> { if (checkO("prtrc", o, 0, 1, Integer.class) == 0) return prtrc; prtrc=o.car(); return inert; }),
-					$("%def", "prstk", (ArgsList) o-> { if (checkO("prstk", o, 0, 1, Boolean.class) == 0) return prstk; prstk=o.car(); return inert; }),
-					$("%def", "prenv", (ArgsList) o-> { if (checkO("prenv", o, 0, 1, Boolean.class) == 0) return prenv; prenv=o.car(); return inert; })
+					$("%def", "prenv", (ArgsList) o-> { if (checkO("prenv", o, 0, 1, Integer.class) == 0) return prenv; prenv=o.car(); return inert; }),
+					$("%def", "prstk", (ArgsList) o-> { if (checkO("prstk", o, 0, 1, Boolean.class) == 0) return prstk; prstk=o.car(); return inert; })
 					//$("%def", "prenv", (ArgsList) o-> checkO("prenv", o, 0, 1, Boolean.class) == 0 ? prenv : inert(prenv=o.car()))
 				)
 			)
 		);
+		theEnvironment = env(theEnvironment);
 	}
 	
 	
