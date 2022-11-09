@@ -1,6 +1,7 @@
 package Wat;
 
 import static Wat.Utility.PrimitiveWrapper.toPrimitive;
+import static java.lang.System.in;
 import static java.lang.System.out;
 import static java.lang.reflect.Array.newInstance;
 import static java.lang.reflect.Array.set;
@@ -10,6 +11,8 @@ import static java.util.Arrays.stream;
 import static java.util.Comparator.comparing;
 import static java.util.Map.of;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
@@ -588,5 +591,58 @@ public class Utility {
 			case "Double":    if (t == double.class) return true;
 			default:          return false;
 		}
-	}	
+	}
+	
+	static public String read() throws IOException {
+		return read(in);
+	}
+	static public String read(InputStream in) throws IOException {
+		var s = new StringBuilder();
+		int open = 0, close = 0;
+		boolean inEscape = false, inString = false, inUString = false, inComment=false, sMlComment=false, inMlComment=false, eMlComment=false;
+		do {
+			var oc = close-open;
+			if (in.available() == 0) out.print(oc==0 ? "> " : "%+d%s> ".formatted(oc, oc>0 ? "(" : ")"));
+			for (int c; (c = in.read()) != '\n' || inString || inUString || inMlComment;) {
+				if (inEscape) {
+					inEscape = false;
+				}
+				else if (inString) switch (c) {
+					case '\\'-> inEscape = true;
+					case '"'-> inString = false;
+				}
+				else if (inUString) switch (c) {
+					case '|'-> inUString = false;
+				}
+				else if (inComment) switch (c) {
+					case '"'-> inString = true;
+					case '\n'-> inComment = false;
+				}
+				else if (eMlComment) switch (c) {
+					case '|'-> inMlComment = eMlComment = false;
+				}
+				else if (inMlComment) switch (c) {
+					case '"'-> inString = true;
+					case ';'-> inComment = true;
+					case '#'-> eMlComment = true;
+				}
+				else if (sMlComment) switch (c) {
+					case '#'-> inMlComment = !(sMlComment = false);
+					default -> inUString = !(sMlComment = false);
+				}
+				else switch (c) {
+					case '"'-> inString = true;
+					case ';'-> inComment = true;
+					case '|'-> sMlComment = true;
+					case '('-> open += 1;
+					case ')'-> close += 1;
+				}
+				if (c >= 32 || inUString) s.append((char) c);
+			}
+			if (inComment) { inComment = false; }
+			s.append('\n'); 
+		} while (open > close);
+		return s.toString();
+	}
+
 }

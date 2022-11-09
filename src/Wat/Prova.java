@@ -29,25 +29,36 @@ import java.util.stream.Collectors;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
-//import org.apache.commons.lang3.reflect.ConstructorUtils;
-//import org.apache.commons.lang3.reflect.MethodUtils;
+import List.Parser;
 
 public class Prova {
 	
 	//class $ {}
 
 	public static void main(String[] args) throws Exception {
-		executable();
+		var s = """
+		A
+		|#
+		#|
+		  C
+		|#
+		  "D"
+		#|
+		E 
+		""";
+		//var is = new ByteArrayInputStream(s.getBytes());
+		//while (is.available() > 0) out.println(Vm.read(is));
+		out.println(Parser.toString(Parser.parse(s)));
+		out.println("fatto");		
 	}
 	
-	private static void executable() {
+	static void executable() {
 		out.println(Utility.getExecutable(Box.class, "new", Integer.class));
 		//MethodUtils.getMatchingMethod(Box.class, null, null)
 		//out.println(ConstructorUtils.getMatchingAccessibleConstructor(Box.class, null));
 		for (var c: Box.class.getConstructors()) out.println(c);
 		for (var c: Vm.DVar.class.getConstructors()) out.println(c);
 		out.println();
-		out.println("fatto");
 	}
 	
 	static void function() {

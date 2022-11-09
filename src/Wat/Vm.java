@@ -9,6 +9,7 @@ import static Wat.Utility.getClasses;
 import static Wat.Utility.getExecutable;
 import static Wat.Utility.getField;
 import static Wat.Utility.isInstance;
+import static Wat.Utility.read;
 import static Wat.Utility.reorg;
 import static Wat.Utility.uncked;
 import static Wat.Utility.Binop.And;
@@ -27,7 +28,6 @@ import static Wat.Utility.Binop.Sr;
 import static Wat.Utility.Binop.Sr0;
 import static Wat.Utility.Binop.Xor;
 import static java.lang.System.currentTimeMillis;
-import static java.lang.System.in;
 import static java.lang.System.out;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
@@ -411,7 +411,7 @@ public class Vm {
 	interface Combinable { <T> T combine(Env e, List o); }
 	
 	<T> T combine(Env e, Object op, List o) {
-		if (prtrc >= 4) print(" combine: ", op, " ", o, "   ", e);
+		if (prtrc >= 4) print(" combine: ", op, " ", o /*, "   ", e*/);
 		if (op instanceof Combinable cmb) return cmb.combine(e, o);
 		// per default le jFun nude dovrebbero essere operative e non applicative
 		if (isjFun(op)) return ((Combinable) jWrap(op)).combine(e, o);
@@ -426,7 +426,7 @@ public class Vm {
 			var dbg = dbg(e, this, o);
 			return pipe(dbg, ()-> bind(xe, dbg, p, o), $-> bind(xe, dbg, ep, e), $$-> tco(()-> begin.combine(xe, x)));
 		}
-		public String toString() { return "{Opv " + Vm.this.toString(p) + " " + Vm.this.toString(ep) + " " + Vm.this.toString(x) + "}"; }
+		public String toString() { return "{Opv " + Vm.this.toString(p) + " " + Vm.this.toString(ep) + " " + Vm.this.toString(x) + " " + e + "}"; }
 	}
 	class Apv implements Combinable  {
 		Combinable cmb;
@@ -1010,16 +1010,34 @@ public class Vm {
 					// Basics
 					$("%def", "%vau", new Vau()),
 					$("%def", "%eval", wrap(new Eval())),
-					$("%def", "%makeEnvironment", (ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car())),
+					$("%def", "%makeEnvironment", new ArgsList() {
+						@Override public Object apply(List o) { return env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car()); }
+						@Override public String toString() { return "%makeEnvironment"; }
+					}),
 					$("%def", "%resetEnvironment", (Supplier) ()-> theEnvironment = env(theEnvironment.parent)),
 					$("%def", "%pushEnvironment", (Supplier) ()-> theEnvironment = env(theEnvironment)),
 					$("%def", "%popEnvironment", (Supplier) ()-> theEnvironment = theEnvironment.parent),
-					$("%def", "%wrap", (Function<Object, Object>) this::wrap),
-					$("%def", "%unwrap", (Function<Object, Object>) this::unwrap),
+					$("%def", "%wrap", new Function<Object, Object>() {
+						@Override public Object apply(Object t) { return wrap(t); }
+						@Override public String toString() { return "%wrap"; }
+					}),
+					$("%def", "%unwrap", new Function<Object, Object>() {
+						@Override public Object apply(Object t) { return unwrap(t); }
+						@Override public String toString() { return "%unwrap"; }
+					}),
 					// Values
-					$("%def", "%cons", (BiFunction<Object, Object, Object>) this::cons),
-					$("%def", "%cons?", (Function<Object, Boolean>) obj-> obj instanceof Cons),
-					$("%def", "%nil?", (Function<Object, Boolean>) obj-> obj == null),
+					$("%def", "%cons", new BiFunction<Object, Object, Object>(){
+						@Override public Object apply(Object car, Object cdr) { return cons(car,cdr);	}
+						@Override public String toString() { return "%cons"; }
+					}),
+					$("%def", "%cons?", new Function<Object, Boolean>(){
+						@Override public Boolean apply(Object obj) { return obj instanceof Cons; }
+						@Override public String toString() { return "%cons?"; }
+					}),
+					$("%def", "%nil?", new Function<Object, Boolean>(){
+						@Override public Boolean apply(Object obj) { return obj == null; }
+						@Override public String toString() { return "%nil?"; }
+					}),
 					$("%def", "%string->symbol", (Function<String, Symbol>) this::symbol),
 					$("%def", "%symbol?", (Function<Object, Boolean>) obj-> obj instanceof Symbol),
 					$("%def", "%symbolName", (Function<Symbol, String>) sym-> sym.name),
@@ -1044,7 +1062,11 @@ public class Vm {
 					// Java Interface
 					$("%def", "%jinvoke", (Function<String,Object>) this::jInvoke),
 					$("%def", "%jgetset", (Function<String,Object>) this::jGetSet),
-					$("%def", "%instanceof?", (BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o)),
+					//$("%def", "%instanceof?", (BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o)),
+					$("%def", "%instanceof?", new BiFunction<Object,Class,Boolean>() {
+						@Override public Boolean apply(Object o, Class c) { return c.isInstance(o); }
+						@Override public String toString() { return "%instanceof?"; }
+					}),
 					// Object System
 					$("%def", "%classOf", (Function<WatObj,WatClass>) lo-> lo.watClass),
 					$("%def", "%addMethod", (ArgsList) o-> ((WatClass) o.car()).put(o.car(1), o.car(2))),
@@ -1061,8 +1083,14 @@ public class Vm {
 					$("%def", "%class", (Function<WatClass,WatClass>) WatClass::new),
 					$("%def", "%subClass?", (BiFunction<WatClass,WatClass,Boolean>) (sc,c)-> sc.isSubClass(c)),
 					// Utilities
-					$("%def", "%list", (ArgsList) o-> o),
-					$("%def", "%list*", (ArgsList) this::listToListStar),
+					$("%def", "%list", new ArgsList() {
+						@Override public Object apply(List o) { return o; }
+						@Override public String toString() { return "%list"; }						
+					}),
+					$("%def", "%list*", new ArgsList() {
+						@Override public Object apply(List o) { return listToListStar(o); }
+						@Override public String toString() { return "%list*"; }						
+					}),
 					$("%def", "%list->array", (Function<List,Object[]>) this::listToArray),
 					$("%def", "%array->list", (BiFunction<Boolean,Object[],Object>) this::arrayToList),
 					$("%def", "%reverseList", (Function<List,List>) this::reverseList),
@@ -1087,9 +1115,15 @@ public class Vm {
 					$("%def", "%>>", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr, a, b)),
 					$("%def", "%>>>", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr0, a, b)),
 					//
-					$("%def", "%==", (BiFunction<Object,Object,Boolean>) (a,b)-> a == b),
+					$("%def", "%==", new BiFunction<Object,Object,Boolean>(){
+						@Override public Boolean apply(Object a, Object b) { return a == b;	}
+						@Override public String toString() { return "%=="; }						
+					}),
 					$("%def", "%!=", (BiFunction<Object,Object,Boolean>) (a,b)-> a != b),
-					$("%def", "%eq?", (BiFunction<Object,Object,Boolean>) (a,b)-> equals(a, b)),
+					$("%def", "%eq?", new BiFunction<Object,Object,Boolean>(){
+						@Override public Boolean apply(Object a, Object b) { return Vm.this.equals(a, b);	}
+						@Override public String toString() { return "%eq?"; }						
+					}),
 					//
 					$("%def", "%quote", $("%vau", $("arg"), ignore, "arg")),
 					$("%def", "%theEnvironment", $("%vau", null, "env", "env")),
@@ -1165,53 +1199,6 @@ public class Vm {
 			}
 		}
 		print("finito");
-	}
-	public String read() throws IOException {
-		var s = new StringBuilder();
-		int open = 0, close = 0;
-		boolean inEscape = false, inString = false, inUString = false, inComment=false, sMlComment=false, inMlComment=false, eMlComment=false;
-		do {
-			var oc = close-open;
-			out.print(oc==0 ? ">" : "%+d%s>".formatted(oc, oc>0 ? "(" : ")"));
-			for (int c; (c = in.read()) != '\n' || inString || inUString || inMlComment;) {
-				if (inEscape) {
-					inEscape = false;
-				}
-				else if (inString) switch (c) {
-					case '\\'-> inEscape = true;
-					case '"'-> inString = false;
-				}
-				else if (inUString) switch (c) {
-					case '|'-> inUString = false;
-				}
-				else if (inComment) switch (c) {
-					case '"'-> inString = true;
-					case '\n'-> inComment = false;
-				}
-				else if (eMlComment) switch (c) {
-					case '|'-> inMlComment = eMlComment = false;
-				}
-				else if (inMlComment) switch (c) {
-					case '"'-> inString = true;
-					case ';'-> inComment = true;
-					case '#'-> eMlComment = true;
-				}
-				else if (sMlComment) switch (c) {
-					case '#'-> inMlComment = !(sMlComment = false);
-					default -> inUString = !(sMlComment = false);
-				}
-				else switch (c) {
-					case '"'-> inString = true;
-					case ';'-> inComment = true;
-					case '|'-> sMlComment = true;
-					case '('-> open += 1;
-					case ')'-> close += 1;
-				}
-				if (c >= 32 || inUString) s.append((char) c);
-			}
-			if (inComment) { s.append('\n'); inComment = false; }
-		} while (open > close);
-		return s.toString();
 	}
 	
 	
@@ -1316,15 +1303,15 @@ public class Vm {
 		//*
 		//print("inizio");
 		var milli = currentTimeMillis();
-		eval(readString("testVm.lsp"));
-		eval(readString("boot.lsp"));
-		eval(readString("test.lsp"));
+		//eval(readString("testVm.lsp"));
+		//eval(readString("boot.lsp"));
+		//eval(readString("test.lsp"));
 		//eval(readString("wat/boot.wat"));
 		//eval(readString("wat/test.wat"));
 		//trace = true;
 		//eval(readString("lispx/boot.lispx"));
-		eval(readString("testJni.lsp"));
-		eval(readString("testOos.lsp"));
+		//eval(readString("testJni.lsp"));
+		//eval(readString("testOos.lsp"));
 		print("start time: " + (currentTimeMillis() - milli));
 		//stack = true;
 		repl();

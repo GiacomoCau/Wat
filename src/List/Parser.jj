@@ -46,23 +46,28 @@ public class Parser {
 		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 		boolean expr = true;
 		for (;;) {
+			/*
 			System.out.print("> ");
 			String line = in.readLine();
 			if (line.length() == 0) break;
-			try {
-			  	if (line.equals("!expr"))
-			  		expr = true;
-			  	else if (line.equals("!token"))
-			  		expr = false;
-				else if (expr) {
-					System.out.println(line);
-					//Object o = Parser.parse(line); // static=true
-					Object o = parse(line); // static=false
+			*/
+			String line = Wat.Utility.read();
+			if (line.equals("\n")) continue;
+			var cmd = line.substring(0,line.length()-1);
+			if (cmd.equals("!end")) break;
+		  	if (cmd.equals("!expr"))
+		  		expr = true;
+		  	else if (cmd.equals("!token"))
+		  		expr = false;
+			else try {
+ 				//line = Utility.toString(line);
+				System.out.print(line);
+				Parser parser = new Parser(line); // static=false
+ 				if (expr) {
+					Object o = parser.parse();
 					System.out.println("OK: " + toString(o));
 				}
 				else {
-					// static=false
-					Parser parser = new Parser(line);
 					for(;;) {
 						Token token = parser.getNextToken();
 						if (token.kind == 0) break;
@@ -118,14 +123,80 @@ public class Parser {
 
 PARSER_END(Parser)
 
+/*
 SKIP:	// white spaces
-{	< " " | "\t" | < cmt > | < mlcmt > | "\n" | "\r" >
+{	< " " | "\t" | < cmt > | < mlc > | "\n" | "\r" >
 | 	< # cmt: ";" (<String> | ~["\n"])* (("\r")? "\n")? >
-| 	< # mlcmt: "|#" (<cmt> | <String> | ~["#"])* "#" (~["|"] (~["#"])* "#")* "|">
+| 	< # mlc: "|#" (<cmt> | <String> | ~["#"])* "#" (~["|"] (~["#"])* "#")* "|">
+}
+//*/
+
+/*
+SKIP:	// white spaces
+// test: a\n|#\n "b"\n#|\nc\n|#\n  "d"\n#|\ne -> ["a" "c" "e"]
+// test: a |# "b" #| c |# "d" #| e -> ["a" "c" "e"]
+// test: a|#"b"#|c|#"d"#|e -> ["a" "c" "e"]
+{	< ( < mlc > | " " | "\t" | "\r" "\n" | "\r" | "\n" )+ > 
+|  	< # str: "\"" ( "\\" "\"" | ~["\""] )* "\"" >
+| 	< # mlc: "|#" ( < str > | "#" ~["|"] | "|" ~["#"] | ~["|","#"] )* "#|">
+//|  	< # str: "\"" ( ~["\""] )* "\"" >
+//| 	< # cmt: ";" (<String> | ~["\n"])* (("\r")? "\n")? >
+//| 	< # mlc: "|#" (<cmt> | <String> | ~["#"])* "#" (~["|"] (~["#"])* "#")* "|">  
+}
+//*/
+
+//* funzionicchia
+// test: a |# "b" "\\\"" "#|" #||##|c |# "d" #|e -> ["a" "c" "e"]
+// test: a |#"b"#|c |#"d"#|e - > ["a" "c" "e"] -> necessari i blanck dopo gli id!
+SKIP:	// white spaces
+{	< "|" "#" > : MLC | < ";" > : CMT | < (" " | "\t" | "\r" | "\n")+  >
+}
+<MLC> SKIP:
+{	< "#" "|" > : DEFAULT
+}
+<MLC> MORE:
+{  	< "\"" > : SMLC
+|	< ";" > : CMLC 
+|  	< ~[] >
+}
+<SMLC> SKIP:
+{	< "\"" > : MLC
+} 
+<SMLC> MORE:
+{	< "\\" "\"" | ~["\""] >
 }
 
+<CMLC> SKIP:
+{	< (("\r")? "\n") > : MLC
+}
+<CMLC> MORE:
+{	"\"" : SCMLC
+|	< ~[] >
+}
+<SCMLC> SKIP:
+{	"\"" : CMLC
+} 
+<SCMLC> MORE:
+{	< "\\" "\"" | ~["\""] >
+}
+
+<CMT> SKIP:
+{	< (("\r")? "\n") > : DEFAULT
+}
+<CMT> MORE:
+{	"\"" : SCMT 
+|   < ~[] >
+}
+<SCMT> SKIP:
+{	"\"" : CMT
+} 
+<SCMT> MORE:
+{	< "\\" "\"" | ~["\""] >
+}
+//*/
+
 TOKEN:	// separators
-{	"(" | ")" | "'" //| ":"
+{	"(" | ")" | "'" //| "\"" | ";" | "|"
 }
 
 TOKEN:	// reserved words
@@ -145,9 +216,10 @@ TOKEN:	// literals
 |	< # d09: ["0"-"9"] >
 |	< Double: (<sNat> | <Integer> "." (<d09>)+) (<exp>)? >
 |	< # exp: ["e","E"] <Integer> >
-|	< String:	"\"" ( <sChr> )* "\"" >
-|	< UString:	"|" (~["|"])+ "|" >
-|	< # sChr: ~["\"","\n","\r","\f","\b","\t"] | "\\" ["\"","n","r","f","b","t"] >
+|	< String:	"\"" ( "\\" "\"" | ~["\""] )* "\"" >
+|	< UString:	"|" ~["#", "|"] ( ~["|"] )* "|" >
+//|	< # sChr: ~["\"","\n","\r","\f","\b","\t"] | "\\" ["\"","n","r","f","b","t"] >
+//|	< # sChr: "\\" ["\""] | ~["\""] >
 }
 
 TOKEN:	// identifiers
@@ -180,7 +252,8 @@ Object Elt() throws Exception: {
 	|	t=<Integer>	{ return java.lang.Integer.parseInt(t.image); }
 	|	t=<Double>	{ return java.lang.Double.parseDouble(t.image); }
 	|	t=<String>	{ return $("wat-string", toStringTokenImage(t.image)); }
-	|	t=<UString>	{ return $("wat-string", t.image); }
+	//|	t=<UString>	{ return $("wat-string", t.image); }
+	|	t=<UString>	{ return t.image; }
 	|	t=<Prim>	{ return classForName(t.image.substring(1)); }	
 	|	t=<ClsId>	{ return classForName(t.image.substring(1)); }	
 	|   t=<GetSet>  { return $("%jgetset", $("wat-string", t.image.substring(1))); } 
