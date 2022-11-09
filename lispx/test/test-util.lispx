@@ -10,8 +10,8 @@
 
 (defexpr deftest (name expression . expected?) env
   "Run the EXPRESSION as a test identified by NAME and compare its
-result to an EXPECTED value (which defaults to true).  Tests may
-capture a continuation to the default prompt."
+  |result to an EXPECTED value (which defaults to true).  Tests may
+  |capture a continuation to the default prompt."
   (mocha:it
    (to-js-string (symbol-name name))
    (js-lambda ()
@@ -30,14 +30,14 @@ capture a continuation to the default prompt."
 
 (defmacro deftest* (name . forms)
   "Run the FORMS as a test identified by NAME, but unlike `deftest',
-simply ignore their result.  The test only fails when the forms signal
-an error.  Use this instead of `deftest' if you just want to run some
-forms, and don't need to compare their result to an expected value."
+  |simply ignore their result.  The test only fails when the forms signal
+  |an error.  Use this instead of `deftest' if you just want to run some
+  |forms, and don't need to compare their result to an expected value."
   (list #'deftest name (list* #'prog1 #t forms)))
 
 (defexpr defsuite (name . forms) env
   "Evaluate FORMS as a group of tests identified by NAME.  The forms
-must not capure any continuations."
+  |must not capure any continuations."
   (mocha:describe
    (to-js-string (symbol-name name))
    (js-lambda ()
@@ -63,9 +63,9 @@ must not capure any continuations."
 
 (defexpr signals-error (form condition-class . slot-specs) env
   "Evaluate the FORM and assert that it signals a condition of the
-given CONDITION-CLASS.  Expected slots of the condition can be
-specified by SLOT-SPECS (a plist) and will be compared against the
-slots of the signalled condition."
+  |given CONDITION-CLASS.  Expected slots of the condition can be
+  |specified by SLOT-SPECS (a plist) and will be compared against the
+  |slots of the signalled condition."
   (let ((class (find-class condition-class env)))
     (block exit
       (handler-case ((object (lambda (c)

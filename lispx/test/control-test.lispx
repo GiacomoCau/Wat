@@ -38,7 +38,7 @@
 
 (defun run-fiber (#'thunk)
   "Get all values yielded by a fiber, and its final result, and
-collect them in a list."
+  |collect them in a list."
   (loop-let -run- ((result (fiber (thunk))))
     (if (typep result #^yield-record)
         (cons (slot-value result 'value) (-run- (fiber-resume result)))
@@ -46,7 +46,7 @@ collect them in a list."
 
 (defun run-fiber-with-values (#'thunk values)
   "Like `run-fiber' but uses a list of values that are sent to the
-fiber with `fiber-resume'."
+  |fiber with `fiber-resume'."
   (loop-let -run- ((result (fiber (thunk))) (values values))
     (if (typep result #^yield-record)
         (cons (slot-value result 'value)

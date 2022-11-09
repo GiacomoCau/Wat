@@ -12,7 +12,7 @@
 
 (defmacro push-subcont (k . forms)
   "We don't have `push-subcont' but for these tests we can emulate it
-with a `push-delim-subcont' that pushes an unused prompt."
+  |with a `push-delim-subcont' that pushes an unused prompt."
   (list* #'push-delim-subcont ''unused-prompt k forms))
 
 (defun shift (p #'f)
@@ -24,7 +24,7 @@ with a `push-delim-subcont' that pushes an unused prompt."
 
 (defun prompt-set-p (prompt)
   "Return true if a prompt is set, false otherwise.
-(Note that this leads to stack growth, i.e. leaks.)"
+  |(Note that this leads to stack growth, i.e. leaks.)"
   (handler-case ((prompt-not-found-error (lambda #ignore #f)))
     (take-subcont prompt k (push-delim-subcont prompt k #t))))
 
