@@ -3,13 +3,13 @@
 (defsuite stream-tests
 
   (deftest standard-streams-defined
-    (and (typep *standard-input* #^dynamic)
-         (typep *standard-output* #^dynamic))))
+    (and (typep *standard-input* Dynamic)
+         (typep *standard-output* Dynamic))))
 
 (defsuite string-input-streams
 
   (deftest make-string-input-stream.1
-    (typep (make-string-input-stream "foo") #^string-input-stream))
+    (typep (make-string-input-stream "foo") String-input-stream))
 
   (deftest make-string-input-stream.2
     (signals-error
@@ -23,7 +23,7 @@
 
   (deftest with-standard-input-from-string.1
     (with-standard-input-from-string "foo")
-    #void)
+    #inert)
 
   (deftest with-standard-input-from-string.2
     (with-standard-input-from-string "12" (read))
@@ -36,7 +36,7 @@
 (defsuite string-output-streams
 
   (deftest make-string-output-stream.1
-    (typep (make-string-output-stream) #^string-output-stream))
+    (typep (make-string-output-stream) String-output-stream))
 
   (deftest with-standard-output-to-string.1
     (with-standard-output-to-string (print "foo") (print "bar"))

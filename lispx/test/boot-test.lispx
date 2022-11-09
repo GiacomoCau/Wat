@@ -47,7 +47,7 @@
 
   (deftest assert.1
     (assert (= 1 1))
-    #void)
+    #inert)
 
   (deftest assert.2
     (signals-error
@@ -73,7 +73,7 @@
 
   (deftest error.1
     (signals-error
-     (error (make-instance #^standard-object :x 1 :y 2))
+     (error (make-instance Standard-object :x 1 :y 2))
      standard-object :x 1 :y 2))
 
   (deftest error.2
@@ -120,11 +120,11 @@
 (defsuite assert-type
 
   (deftest assert-type.1
-    (assert-type #t #^boolean))
+    (assert-type #t Boolean))
 
   (deftest assert-type.2
     (signals-error
-     (assert-type #t #^string)
+     (assert-type #t String)
     type-error :datum #t :expected-type 'string))
 
   (deftest assert-type.3
@@ -172,22 +172,22 @@
 
   (deftest make-type-error.1
     (let ((e (make-type-error "foo" 'number)))
-      (assert (typep e #^type-error))
-      (assert (typep e #^error))
-      (assert (typep e #^condition))
+      (assert (typep e Type-error))
+      (assert (typep e Error))
+      (assert (typep e Condition))
       (assert (= "foo" (slot-value e 'datum)))
       (assert (= 'number (slot-value e 'expected-type))))
-    #void))
+    #inert))
 
 (defsuite simple-error
 
   (deftest make-simple-error.1
     (let ((e (make-simple-error "foo")))
-      (assert (typep e #^simple-error))
-      (assert (typep e #^error))
-      (assert (typep e #^condition))
+      (assert (typep e Simple-error))
+      (assert (typep e Error))
+      (assert (typep e Condition))
       (assert (= "foo" (slot-value e 'message))))
-    #void)
+    #inert)
 
   (deftest simple-error.1
     (signals-error
@@ -203,17 +203,17 @@
 
   (deftest make-restart-error.1
     (let ((e (make-restart-error 'continue)))
-      (assert (typep e #^restart-error))
-      (assert (typep e #^error))
-      (assert (typep e #^condition))
+      (assert (typep e Restart-error))
+      (assert (typep e Error))
+      (assert (typep e Condition))
       (assert (= 'continue (slot-value e 'restart-name))))
-    #void))
+    #inert))
 
 (defsuite vau
 
   (deftest |A fexpr without body expression results in #VOID.|
     ((vau #ignore #ignore))
-    #void)
+    #inert)
 
   (deftest |A fexpr returns its operands unevaluated.|
     ((vau ops #ignore ops) x y z)
@@ -225,7 +225,7 @@
       (assert (= ((vau ops #ignore (set env var 1) ops) x y z)
                  '(x y z)))
       (assert (= (eval 'var env) 1)))
-    #void)
+    #inert)
 
   (deftest |The environment parameter receives the current environment.|
     (progn
@@ -233,10 +233,10 @@
       (eq ((vau #ignore e e)) env)))
 
   (deftest |Fexprs are instances of FEXPR, OPERATOR, OBJECT.|
-    (let ((#'fexpr (vau #ignore #ignore 12)))
-      (typep #'fexpr #^fexpr)
-      (typep #'fexpr #^operator)
-      (typep #'fexpr #^object)
+    (let ((fexpr (vau #ignore #ignore 12)))
+      (typep fexpr Fexpr)
+      (typep fexpr Operator)
+      (typep fexpr Object)
       (fexpr))
     12)
 
@@ -255,19 +255,19 @@
   (deftest |Quoted symbols are pointer identical.|
     (and
      (eq 'foo 'foo)
-     (eq '#'foo '#'foo)
-     (eq '#'foo (function-symbol 'foo))
-     (eq '#^foo '#^foo)
-     (eq '#^foo (class-symbol 'foo))))
+     (eq 'foo 'foo)
+     (eq 'foo (function-symbol 'foo))
+     (eq 'Foo 'Foo)
+     (eq 'Foo (class-symbol 'foo))))
 
   (deftest |Ordinary symbols can be quoted.|
     (eq 'foo (variable-symbol 'foo)))
 
   (deftest |Function symbols can be quoted.|
-    (eq '#'foo (function-symbol 'foo)))
+    (eq 'foo (function-symbol 'foo)))
 
   (deftest |Class symbols can be quoted.|
-    (eq '#^foo (class-symbol 'foo)))
+    (eq 'Foo (class-symbol 'foo)))
 
   (deftest |Lists can be quoted.|
     (= '(1 2 3) (list 1 2 3)))
@@ -291,7 +291,7 @@
 (defsuite list
 
   (deftest list.1
-    (eq #nil (list)))
+    (eq #null (list)))
 
   (deftest list.2
     (= '(1) (list 1)))
@@ -303,7 +303,7 @@
 
   (deftest list*.1
     (list*)
-    #nil)
+    #null)
 
   (deftest list*.2
     (list* 1 2 '(3))
@@ -352,10 +352,10 @@
     #f)
 
   (deftest boundp.2
-    (boundp '#'defun (the-environment)))
+    (boundp 'defun (the-environment)))
 
   (deftest boundp.3
-    (boundp '#^standard-object (the-environment)))
+    (boundp 'Standard-object (the-environment)))
 
   (deftest boundp.4
     (signals-error
@@ -386,7 +386,7 @@
 
   (deftest macro.0
     ((macro ()))
-    #void)
+    #inert)
 
   (deftest macro.1
     (let ((z 1))
@@ -394,7 +394,7 @@
     1)
 
   (deftest macro.2
-    ((macro () (list #'= 1 1)))
+    ((macro () (list = 1 1)))
     #t)
 
   (deftest macro.3
@@ -408,7 +408,7 @@
   (deftest defmacro.1
     (progn
       (defmacro myprogn body
-        (list* #'progn body))
+        (list* progn body))
       (myprogn 1 2 3))
     3)
 
@@ -426,14 +426,14 @@
     (progn
       (defmacro foo ())
       (foo))
-    #void))
+    #inert))
 
 (defsuite defexpr
 
   (deftest defexpr.1
     (progn
       (defexpr myprogn body env
-        (eval (list* #'progn body) env))
+        (eval (list* progn body) env))
       (myprogn 1 2 3))
     3)
 
@@ -456,7 +456,7 @@
     (progn
       (defexpr foo () #ignore)
       (foo))
-    #void))
+    #inert))
 
 (defsuite def
 
@@ -466,7 +466,7 @@
       (assert (= x 1))
       (assert (= y 2))
       (assert (= z 3)))
-    #void)
+    #inert)
 
   (deftest def.2
     (def :key :key)
@@ -540,7 +540,7 @@
 
   (deftest lambda.1
     ((lambda ()))
-    #void)
+    #inert)
 
   (deftest lambda.2
     ((lambda args 'whatever args) 1 2 (intern "foo"))
@@ -569,7 +569,7 @@
     (progn
       (defun nope ())
       (nope))
-    #void)
+    #inert)
 
   (deftest defun.3
     (signals-error
@@ -587,13 +587,13 @@
      type-error :datum #t :expected-type 'symbol))
 
   (deftest defun.6
-    (typep (defun foo ()) #^function)))
+    (typep (defun foo ()) Function)))
 
 (defsuite progn
 
   (deftest progn.1
     (progn)
-    #void)
+    #inert)
 
   (deftest progn.2
     (progn (list))
@@ -630,8 +630,8 @@
 (defsuite eval
 
   (deftest eval.1
-    (eval #nil (the-environment))
-    #nil)
+    (eval #null (the-environment))
+    #null)
 
   (deftest eval.2
     (eval '(= 1 2) (the-environment))
@@ -665,7 +665,7 @@
     '((1) . (2)))
 
   (deftest cons.2
-    (cons (list 1) #nil)
+    (cons (list 1) #null)
     '((1)))
 
   (deftest cons.3
@@ -731,7 +731,7 @@
     (= "foo" (symbol-name 'foo)))
 
   (deftest symbol-name.2
-    (= "foo" (symbol-name '#'foo)))
+    (= "foo" (symbol-name 'foo)))
 
   (deftest symbol-name.3
     (= "foo" (symbol-name (class-symbol 'foo))))
@@ -752,7 +752,7 @@
 (defsuite variable-symbol
 
   (deftest variable-symbol.1
-    (variable-symbol '#'foo)
+    (variable-symbol 'foo)
     'foo)
 
   (deftest variable-symbol.2
@@ -777,15 +777,15 @@
 
   (deftest function-symbol.1
     (function-symbol 'foo)
-    '#'foo)
+    'foo)
 
   (deftest function-symbol.2
     (function-symbol :foo)
-    '#'foo)
+    'foo)
 
   (deftest function-symbol.4
     (function-symbol (class-symbol 'foo))
-    '#'foo)
+    'foo)
 
   (deftest function-symbol.5
     (signals-error
@@ -808,7 +808,7 @@
     (class-symbol 'foo))
 
   (deftest class-symbol.3
-    (class-symbol '#'foo)
+    (class-symbol 'foo)
     (class-symbol 'foo))
 
   (deftest class-symbol.5
@@ -828,7 +828,7 @@
     :foo)
 
   (deftest keyword-symbol.2
-    (keyword-symbol '#'foo)
+    (keyword-symbol 'foo)
     :foo)
 
   (deftest keyword-symbol.3
@@ -911,11 +911,11 @@
 
   (deftest cond.1
     (cond)
-    #void)
+    #inert)
 
   (deftest cond.2
     (cond (#f 1 2 3))
-    #void)
+    #inert)
 
   (deftest cond.3
     (cond (#f 1 2 3)
@@ -936,7 +936,7 @@
 
   (deftest typecase.2
     (typecase (+ 2 2))
-    #void)
+    #inert)
 
   (deftest typecase.3
     (typecase (+ 2 2)
@@ -1020,7 +1020,7 @@
     #t)
 
   (deftest eq.5
-    (eq #void #void)
+    (eq #inert #inert)
     #t)
 
   (deftest eq.6
@@ -1028,15 +1028,15 @@
     #t)
 
   (deftest eq.7
-    (eq #nil #nil)
+    (eq #null #null)
     #t)
 
   (deftest eq.8
-    (eq #nil ())
+    (eq #null ())
     #t)
 
   (deftest eq.9
-    (eq #nil '())
+    (eq #null '())
     #t)
 
   (deftest eq.10
@@ -1422,18 +1422,18 @@
 
   (deftest typep.1
     (and
-     (typep #t #^boolean)
-     (typep #f #^boolean)
-     (typep 12 #^number)
-     (typep "foo" #^string)
-     (typep #nil #^nil)
-     (typep #^object #^class)))
+     (typep #t Boolean)
+     (typep #f Boolean)
+     (typep 12 Number)
+     (typep "foo" String)
+     (typep #null Nil)
+     (typep Object Class)))
 
   (deftest typep.2
     (and
-     (typep #^condition #^standard-class)
-     (typep #^condition #^class)
-     (typep #^condition #^object)))
+     (typep Condition Standard-class)
+     (typep Condition Class)
+     (typep Condition Object)))
 
   (deftest typep.3
     (signals-error
@@ -1463,11 +1463,11 @@
 (defsuite apply
 
   (deftest apply.1
-    (apply #'list ())
+    (apply list ())
     '())
 
   (deftest apply.2
-    (apply #'list '(1))
+    (apply list '(1))
     '(1))
 
   (deftest apply.3
@@ -1477,7 +1477,7 @@
 
   (deftest apply.4
     (signals-error
-     (apply #'list)
+     (apply list)
      match-error))
 
   (deftest apply.5
@@ -1515,7 +1515,7 @@
 
   (deftest make-environment.1
     (let ((env (make-environment)))
-      (boundp '#'def env))
+      (boundp 'def env))
     #f)
 
   (deftest make-environment.2
@@ -1528,7 +1528,7 @@
       (assert (boundp 'x child))
       (assert (= 1 (eval 'x env)))
       (assert (= 1 (eval 'x child))))
-    #void)
+    #inert)
 
   (deftest make-environment.3
     (signals-error
@@ -1597,11 +1597,11 @@
 
   (deftest when.1
     (when #t)
-    #void)
+    #inert)
 
   (deftest when.2
     (when #f)
-    #void)
+    #inert)
 
   (deftest when.3
     (when #t 1 2 (= 1 1))
@@ -1609,7 +1609,7 @@
 
   (deftest when.4
     (when #f 1 2 3)
-    #void)
+    #inert)
 
   (deftest when.5
     (signals-error
@@ -1625,11 +1625,11 @@
 
   (deftest unless.1
     (unless #t)
-    #void)
+    #inert)
 
   (deftest unless.2
     (unless #f)
-    #void)
+    #inert)
 
   (deftest unless.3
     (unless #f 1 2 (= 1 1))
@@ -1637,7 +1637,7 @@
 
   (deftest unless.4
     (unless #t 1 2 3)
-    #void)
+    #inert)
 
   (deftest unless.5
     (signals-error
@@ -1652,7 +1652,7 @@
 (defsuite null
 
   (deftest null.1
-    (null #nil)
+    (null #null)
     #t)
 
   (deftest null.2
@@ -1671,7 +1671,7 @@
 (defsuite consp
 
   (deftest consp.1
-    (consp #nil)
+    (consp #null)
     #f)
 
   (deftest consp.2
@@ -1690,8 +1690,8 @@
 (defsuite identity
 
   (deftest identity.1
-    (identity #nil)
-    #nil)
+    (identity #null)
+    #null)
 
   (deftest identity.2
     (identity '(1))
@@ -1719,28 +1719,28 @@
      match-error))
 
   (deftest compose.3
-    (typep (compose (lambda ()) (lambda ())) #^function))
+    (typep (compose (lambda ()) (lambda ())) Function))
 
   (deftest compose.4
-    ((compose #'identity #'identity) 12)
+    ((compose identity identity) 12)
     12)
 
   (deftest compose.5
-    ((compose #'list #'length) 'a 'b 'c)
+    ((compose list length) 'a 'b 'c)
     3)
 
   (deftest compose.6
-    ((compose #'list #'car) 'a 'b 'c)
+    ((compose list car) 'a 'b 'c)
     'a))
 
 (defsuite mapcar
 
   (deftest mapcar.1
-    (mapcar #'intern ())
+    (mapcar intern ())
     ())
 
   (deftest mapcar.2
-    (mapcar #'intern '("foo" "bar"))
+    (mapcar intern '("foo" "bar"))
     '(foo bar))
 
   (deftest mapcar.3
@@ -1750,12 +1750,12 @@
 
   (deftest mapcar.4
     (signals-error
-     (mapcar #'intern)
+     (mapcar intern)
      match-error))
 
   (deftest mapcar.5
     (signals-error
-     (mapcar #'intern 12)
+     (mapcar intern 12)
      type-error :datum 12 :expected-type 'cons))
 
   (deftest mapcar.6
@@ -1766,11 +1766,11 @@
 (defsuite reduce
 
   (deftest reduce.1
-    (reduce #'%* (list 1 2 3) :initial-value 10)
+    (reduce %* (list 1 2 3) :initial-value 10)
     60)
 
   (deftest reduce.2
-    (reduce #'%* (list) :initial-value 10)
+    (reduce %* (list) :initial-value 10)
     10)
 
   (deftest reduce.3
@@ -1780,20 +1780,20 @@
 
   (deftest reduce.4
     (signals-error
-     (reduce #'%*)
+     (reduce %*)
      match-error))
 
   (deftest reduce.5
     (signals-error
-     (reduce #'%* (list))
+     (reduce %* (list))
      match-error))
 
   (deftest reduce.ansi.3
-    (reduce #'cons '(a b c d e f) :initial-value 'z)
+    (reduce cons '(a b c d e f) :initial-value 'z)
     '((((((z . a) . b) . c) . d) . e) . f))
 
   (deftest reduce.clhs.1
-    (reduce #'list '(1 2 3 4) :initial-value 'foo)
+    (reduce list '(1 2 3 4) :initial-value 'foo)
     '((((foo 1) 2) 3) 4)))
 
 (defsuite mapc
@@ -1838,7 +1838,7 @@
     ())
 
   (deftest mapcan.2
-    (mapcan #'list '("foo" "bar"))
+    (mapcan list '("foo" "bar"))
     '("foo" "bar"))
 
   (deftest mapcan.3
@@ -1848,12 +1848,12 @@
 
   (deftest mapcan.4
     (signals-error
-     (mapcan #'list)
+     (mapcan list)
      match-error))
 
   (deftest mapcan.5
     (signals-error
-     (mapcan #'list 12)
+     (mapcan list 12)
      type-error :datum 12 :expected-type 'cons))
 
   (deftest mapcan.6
@@ -1862,7 +1862,7 @@
      type-error :datum 12 :expected-type 'operator))
 
   (deftest mapcan.7
-    (mapcan (lambda (x) (if (typep x #^number) (list x) #nil))
+    (mapcan (lambda (x) (if (typep x Number) (list x) #null))
             '(a 1 b c 3 4 d 5))
     '(1 3 4 5))
 
@@ -1889,7 +1889,7 @@
 
   (deftest dolist.4
     (dolist (x '(1 2 3)))
-    #void)
+    #inert)
 
   (deftest dolist.5
     (signals-error
@@ -1906,7 +1906,7 @@
   (deftest dolist.7
     (let ((ct 0))
       (def env (the-environment))
-      (assert (= #void (dolist (x '(1 2 3 4))
+      (assert (= #inert (dolist (x '(1 2 3 4))
                          'bla
                          (set env ct (+ ct x)))))
       ct)
@@ -2129,7 +2129,7 @@
   (deftest subseq.3
     (signals-error
      (subseq 12 1 2)
-     unbound-method-error :class #^number :method-name 'subseq)))
+     unbound-method-error :class Number :method-name 'subseq)))
 
 (defsuite list-subseq
 
@@ -2162,7 +2162,7 @@
     '())
 
   (deftest list-subseq.10
-    (subseq '() 0 #void)
+    (subseq '() 0 #inert)
     '())
 
   (deftest list-subseq.11
@@ -2170,7 +2170,7 @@
     '(1 2 3))
 
   (deftest list-subseq.12
-    (subseq '(1 2 3) 0 #void)
+    (subseq '(1 2 3) 0 #inert)
     '(1 2 3))
 
   (deftest list-subseq.13
@@ -2235,12 +2235,12 @@
     "")
 
   (deftest string-subseq.10
-    (subseq "" 0 #void)
+    (subseq "" 0 #inert)
     "")
 
   (deftest string-subseq.10.1
     (signals-error
-     (subseq "" 1 #void)
+     (subseq "" 1 #inert)
      out-of-bounds-error))
 
   (deftest string-subseq.11
@@ -2248,7 +2248,7 @@
     "123")
 
   (deftest string-subseq.12
-    (subseq "123" 0 #void)
+    (subseq "123" 0 #inert)
     "123")
 
   (deftest string-subseq.13
@@ -2327,27 +2327,27 @@
      match-error))
 
   (deftest member.3
-    (member 'a '() :test #'eq)
-    #nil)
+    (member 'a '() :test eq)
+    #null)
 
   (deftest member.3a
     (member 'a '())
-    #nil)
+    #null)
 
   (deftest member.4
-    (member 'b '(a) :test #'eq)
-    #nil)
+    (member 'b '(a) :test eq)
+    #null)
 
   (deftest member.5
-    (member 'b '(a b) :test #'eq)
+    (member 'b '(a b) :test eq)
     '(b))
 
   (deftest member.5b
-    (member  'x '(a b) :test #'eq)
-    #nil)
+    (member  'x '(a b) :test eq)
+    #null)
 
   (deftest member.6
-    (member 'b '(a b c) :test #'eq)
+    (member 'b '(a b c) :test eq)
     '(b c))
 
   (deftest member.6a
@@ -2355,27 +2355,27 @@
     '(b c))
 
   (deftest member.7
-    (member "b" '("a" "b" "c") :test #'eq)
-    #nil)
+    (member "b" '("a" "b" "c") :test eq)
+    #null)
 
   (deftest member.7a
     (member "b" '("a" "b" "c"))
-    #nil)
+    #null)
 
   (deftest member.8
-    (member "b" '("a" "b" "c") :test #'=)
+    (member "b" '("a" "b" "c") :test =)
     '("b" "c"))
 
   (deftest member.9
-    (member 'b '((2 a) (1 b) (3 c)) :key #'cadr)
+    (member 'b '((2 a) (1 b) (3 c)) :key cadr)
     '((1 b) (3 c)))
 
   (deftest member.9a
-    (member "b" '((2 "a") (1 "b") (3 "c")) :key #'cadr)
-    #nil)
+    (member "b" '((2 "a") (1 "b") (3 "c")) :key cadr)
+    #null)
 
   (deftest member.9b
-    (member "b" '((2 "a") (1 "b") (3 "c")) :key #'cadr :test #'=)
+    (member "b" '((2 "a") (1 "b") (3 "c")) :key cadr :test =)
     '((1 "b") (3 "c"))))
 
 (defsuite remove-if
@@ -2420,11 +2420,11 @@
 
   (deftest get?.3
     (get? '() :bar)
-    #nil)
+    #null)
 
   (deftest get?.4
     (get? '(:foo 1 :bar 2) :quux)
-    #nil)
+    #null)
 
   (deftest get?.5
     (signals-error
@@ -2506,12 +2506,12 @@
 
   (deftest make-instance.1
     (progn
-      (def obj (make-instance #^type-error :datum 1 :expected-type 'string))
+      (def obj (make-instance Type-error :datum 1 :expected-type 'string))
       (assert (= (slot-value obj 'datum) 1))
       (assert (= (slot-value obj :datum) 1))
       (assert (= (slot-value obj 'expected-type) 'string))
       (assert (= (slot-value obj :expected-type) 'string)))
-    #void)
+    #inert)
 
   (deftest make-instance.2
     (signals-error
@@ -2525,19 +2525,19 @@
 
   (deftest make-instance.4
     (signals-error
-     (make-instance #^object)
-     type-error :datum #^object :expected-type 'standard-class))
+     (make-instance Object)
+     type-error :datum Object :expected-type 'standard-class))
 
   (deftest make-instance.5
     (signals-error
-     (make-instance #^standard-object :x)
+     (make-instance Standard-object :x)
      assertion-error)))
 
 (defsuite slots
 
   (deftest slots.1
     (progn
-      (def obj (make-instance #^standard-object))
+      (def obj (make-instance Standard-object))
       (assert (not (slot-bound-p obj 'x)))
       (assert (not (slot-bound-p obj :x)))
       (assert (signals-error (slot-value obj 'x)
@@ -2552,7 +2552,7 @@
       (set-slot-value obj 'x 2)
       (assert (= (slot-value obj 'x) 2))
       (assert (= (slot-value obj :x) 2)))
-    #void)
+    #inert)
 
   (deftest slot-value.1
     (signals-error
@@ -2561,12 +2561,12 @@
 
   (deftest slot-value.1a
     (signals-error
-     (slot-value (make-instance #^standard-object) "x")
+     (slot-value (make-instance Standard-object) "x")
      type-error :datum "x" :expected-type 'symbol))
 
   (deftest slot-value.2
     (signals-error
-     (slot-value (make-instance #^standard-object))
+     (slot-value (make-instance Standard-object))
      match-error))
 
   (deftest slot-value.3
@@ -2581,17 +2581,17 @@
 
   (deftest set-slot-value.1a
     (signals-error
-     (set-slot-value (make-instance #^standard-object) "x" 1)
+     (set-slot-value (make-instance Standard-object) "x" 1)
      type-error :datum "x" :expected-type 'symbol))
 
   (deftest set-slot-value.2
     (signals-error
-     (set-slot-value (make-instance #^standard-object))
+     (set-slot-value (make-instance Standard-object))
      match-error))
 
   (deftest set-slot-value.3
     (signals-error
-     (set-slot-value (make-instance #^standard-object) 'x)
+     (set-slot-value (make-instance Standard-object) 'x)
      match-error))
 
   (deftest slot-bound-p.1
@@ -2601,7 +2601,7 @@
 
   (deftest slot-bound-p.1a
     (signals-error
-     (slot-bound-p (make-instance #^standard-object) "x")
+     (slot-bound-p (make-instance Standard-object) "x")
      type-error :datum "x" :expected-type 'symbol))
 
   (deftest slot-bound-p.2
@@ -2611,7 +2611,7 @@
 
   (deftest slot-bound-p.3
     (signals-error
-     (slot-bound-p (make-instance #^standard-object))
+     (slot-bound-p (make-instance Standard-object))
      match-error)))
 
 (defsuite let
@@ -2642,7 +2642,7 @@
 
   (deftest let.5
     (let ())
-    #void)
+    #inert)
 
   (deftest let.6
     (signals-error
@@ -2670,7 +2670,7 @@
 
   (deftest let*.2
     (let* ())
-    #void)
+    #inert)
 
   (deftest let*.3
     (signals-error
@@ -2699,7 +2699,7 @@
   (deftest flet.2
     (flet ((foo ()))
           (foo))
-    #void)
+    #inert)
 
   (deftest flet.2
     (flet ((foo (x) x))
@@ -2718,7 +2718,7 @@
 
   (deftest flet.5
     (flet ())
-    #void))
+    #inert))
 
 (defsuite labels
 
@@ -2732,7 +2732,7 @@
   (deftest labels.2
     (labels ((foo ()))
             (foo))
-    #void)
+    #inert)
 
   (deftest labels.3
     (labels ((foo (x) x))
@@ -2751,7 +2751,7 @@
 
   (deftest labels.6
     (labels ())
-    #void))
+    #inert))
 
 (defsuite loop-let
 
@@ -2767,13 +2767,13 @@
 
   (deftest loop-let.3
     (loop-let -name- ())
-    #void)
+    #inert)
 
   (deftest loop-let.4
     (loop-let -sum- ((as (list 1 2 3))
                      (bs (list 4 5 6)))
       (if (null as)
-          #nil
+          #null
           (cons (+ (car as) (car bs))
                 (-sum- (cdr as) (cdr bs)))))
     '(5 7 9)))
@@ -2787,7 +2787,7 @@
 
   (deftest while.2
     (while (= 1 2))
-    #void)
+    #inert)
 
   (deftest while.3
     (signals-error
@@ -2814,7 +2814,7 @@
 
   (deftest until.2
     (until (/= 1 2))
-    #void)
+    #inert)
 
   (deftest until.3
     (signals-error
@@ -2858,15 +2858,15 @@
 
   (deftest dotimes.5
     (dotimes (x 0))
-    #void)
+    #inert)
 
   (deftest dotimes.6
     (dotimes (x 1))
-    #void)
+    #inert)
 
   (deftest dotimes.7
     (dotimes (x 1) 1 2 3)
-    #void)
+    #inert)
 
   (deftest dotimes.8
     (signals-error
@@ -2887,7 +2887,7 @@
 
   (deftest optional.1
     (optional '())
-    #void)
+    #inert)
 
   (deftest optional.2
     (optional '() "default")
@@ -2917,7 +2917,7 @@
 
   (deftest optional.lazy.2
     (signals-error
-     (optional #nil (error (make-simple-error "foo")))
+     (optional #null (error (make-simple-error "foo")))
      simple-error :message "foo")))
 
 (defsuite optionals
@@ -2963,7 +2963,7 @@
 
   (deftest get-option.3
     (signals-error
-     (get-option #nil)
+     (get-option #null)
      simple-error :message "Option is nil")))
 
 (defsuite some
@@ -2991,7 +2991,7 @@
     12)
 
   (deftest if-option.2
-    (if-option (x #nil)
+    (if-option (x #null)
                x
                14)
     14)
@@ -3025,7 +3025,7 @@
 
   (deftest when-option.0
     (when-option (x (some 12)))
-    #void)
+    #inert)
 
   (deftest when-option.1
     (when-option (x (some 12))
@@ -3033,9 +3033,9 @@
     12)
 
   (deftest when-option.2
-    (when-option (x #nil)
+    (when-option (x #null)
                  x)
-    #nil)
+    #null)
 
   (deftest when-option.3
     (signals-error
@@ -3051,15 +3051,15 @@
 
   (deftest unless-option.0
     (unless-option (some 12) 2 3 (+ 2 2))
-    #nil)
+    #null)
 
   (deftest unless-option.1
-    (unless-option #nil 2 3 (+ 2 2))
+    (unless-option #null 2 3 (+ 2 2))
     4)
 
   (deftest unless-option.2
-    (unless-option #nil)
-    #void)
+    (unless-option #null)
+    #inert)
 
   (deftest unless-option.3
     (signals-error
@@ -3070,10 +3070,10 @@
 
   (deftest class-of.1
     (progn
-      (assert (eq (class-of "foo") #^string))
-      (assert (eq (class-of 12) #^number))
-      (assert (eq (class-of #^string) #^built-in-class)))
-    #void)
+      (assert (eq (class-of "foo") String))
+      (assert (eq (class-of 12) Number))
+      (assert (eq (class-of String) Built-in-class)))
+    #inert)
 
   (deftest class-of.2
     (signals-error
@@ -3134,7 +3134,7 @@
      type-error :datum "foo" :expected-type 'class))
 
   (deftest class-name.3
-    (class-name #^object)
+    (class-name Object)
     'object))
 
 (defsuite subclassp
@@ -3146,54 +3146,54 @@
 
   (deftest subclassp.2
     (signals-error
-     (subclassp #^object)
+     (subclassp Object)
      match-error))
 
   (deftest subclassp.3
     (signals-error
-     (subclassp #^object "foo")
+     (subclassp Object "foo")
      type-error :datum "foo" :expected-type 'class))
 
   (deftest subclassp.4
     (signals-error
-     (subclassp "foo" #^object)
+     (subclassp "foo" Object)
      type-error :datum "foo" :expected-type 'class))
 
   (deftest subclassp.5
-    (and (subclassp #^object #^object)
-         (subclassp #^class #^object)
-         (subclassp #^standard-class #^class)
-         (subclassp #^standard-class #^object))
+    (and (subclassp Object Object)
+         (subclassp Class Object)
+         (subclassp Standard-class Class)
+         (subclassp Standard-class Object))
     #t))
 
 ;; Utility used by `%make-standard-class' and `defclass' tests.
 
 (defun classes-test (c d p q)
-  (assert (typep c #^standard-class))
-  (assert (typep c #^class))
-  (assert (typep c #^object))
+  (assert (typep c Standard-class))
+  (assert (typep c Class))
+  (assert (typep c Object))
   (assert (= (class-name c) 'point-2d))
-  (assert (subclassp c #^standard-object))
-  (assert (subclassp c #^object))
+  (assert (subclassp c Standard-object))
+  (assert (subclassp c Object))
 
   (assert (typep p c))
-  (assert (typep p #^standard-object))
-  (assert (typep p #^object))
+  (assert (typep p Standard-object))
+  (assert (typep p Object))
   (assert (= (slot-value p 'x) 1))
   (assert (= (slot-value p 'y) 2))
 
-  (assert (typep d #^standard-class))
-  (assert (typep d #^class))
-  (assert (typep d #^object))
+  (assert (typep d Standard-class))
+  (assert (typep d Class))
+  (assert (typep d Object))
   (assert (= (class-name d) 'point-3d))
   (assert (subclassp d c))
-  (assert (subclassp d #^standard-object))
-  (assert (subclassp d #^object))
+  (assert (subclassp d Standard-object))
+  (assert (subclassp d Object))
 
   (assert (typep q d))
   (assert (typep q c))
-  (assert (typep q #^standard-object))
-  (assert (typep q #^object))
+  (assert (typep q Standard-object))
+  (assert (typep q Object))
   (assert (= (slot-value q 'x) 1))
   (assert (= (slot-value q 'y) 2))
   (assert (= (slot-value q 'z) 3)))
@@ -3201,17 +3201,17 @@
 (defsuite %make-standard-class
 
   (deftest %make-standard-class.1
-    (let* ((c (%make-standard-class 'point-2d #^standard-object))
+    (let* ((c (%make-standard-class 'point-2d Standard-object))
            (d (%make-standard-class 'point-3d c))
            (p (make-instance c :x 1 :y 2))
            (q (make-instance d :x 1 :y 2 :z 3)))
       (classes-test c d p q))
-    #void)
+    #inert)
 
   (deftest %make-standard-class.2
     (signals-error
-     (%make-standard-class 'foo #^object)
-     type-error :datum #^object :expected-type 'standard-class))
+     (%make-standard-class 'foo Object)
+     type-error :datum Object :expected-type 'standard-class))
 
   #|
   (deftest %make-standard-class.3
@@ -3227,16 +3227,16 @@
 
   (deftest %make-standard-class.5
     (signals-error
-     (%make-standard-class "foo" #^standard-object)
+     (%make-standard-class "foo" Standard-object)
      type-error :datum "foo" :expected-type 'symbol)))
 
 (defsuite %reinitialize-standard-class
 
   (deftest* %reinitialize-standard-class.1
-    (let* ((a (%make-standard-class 'a #^standard-object))
+    (let* ((a (%make-standard-class 'a Standard-object))
            (b (%make-standard-class 'b a))
            (c (%make-standard-class 'c b))
-           (d (%make-standard-class 'd #^standard-object))
+           (d (%make-standard-class 'd Standard-object))
            (e (%make-standard-class 'e d)))
       (assert (subclassp b a))
       (assert (subclassp c a))
@@ -3271,34 +3271,34 @@
      match-error))
 
   (deftest defclass.5
-    (typep (defclass c () ()) #^standard-class))
+    (typep (defclass c () ()) Standard-class))
 
   (deftest defclass.6
     (progn
       (defclass point-2d () (x y))
       (defclass point-3d (point-2d) (z))
-      (def p (make-instance #^point-2d :x 1 :y 2))
-      (def q (make-instance #^point-3d :x 1 :y 2 :z 3))
-      (classes-test #^point-2d #^point-3d p q))
-    #void)
+      (def p (make-instance Point-2d :x 1 :y 2))
+      (def q (make-instance Point-3d :x 1 :y 2 :z 3))
+      (classes-test Point-2d Point-3d p q))
+    #inert)
 
   (deftest* defclass.redefine.1
     (defclass a () ())
     (defclass b (a) ())
     (defgeneric foo (x))
     (defmethod foo ((a a)) "foo")
-    (def b (make-instance #^b))
-    (assert (subclassp #^b #^a))
-    (assert (typep b #^b))
-    (assert (typep b #^a))
+    (def b (make-instance B))
+    (assert (subclassp B A))
+    (assert (typep b B))
+    (assert (typep b A))
     (assert (= "foo" (foo b)))
     (defclass c () ())
     (defmethod foo ((c c)) "bar")
     (defclass b (c) ())
-    (assert (subclassp #^b #^c))
-    (assert (eq (class-of b) #^b))
-    (assert (typep b #^b))
-    (assert (typep b #^c))
+    (assert (subclassp B C))
+    (assert (eq (class-of b) B))
+    (assert (typep b B))
+    (assert (typep b C))
     (assert (= "bar" (foo b)))))
 
 (defsuite generics
@@ -3307,28 +3307,28 @@
     (progn
       (defclass foo () ())
       (defclass bar (foo) ())
-      (def foo (make-instance #^foo))
-      (def bar (make-instance #^bar))
+      (def foo (make-instance Foo))
+      (def bar (make-instance Bar))
 
       (defgeneric g1 (obj param))
-      (assert (typep #'g1 #^function))
+      (assert (typep g1 Function))
 
       (assert (signals-error
                (g1 12 (+ 1 1))
-               unbound-method-error :class #^number :method-name 'g1))
+               unbound-method-error :class Number :method-name 'g1))
       (assert (signals-error
                (g1 foo (+ 1 1))
-               unbound-method-error :class #^foo :method-name 'g1))
+               unbound-method-error :class Foo :method-name 'g1))
       (assert (signals-error
                (g1 bar (+ 1 1))
-               unbound-method-error :class #^bar :method-name 'g1))
+               unbound-method-error :class Bar :method-name 'g1))
 
       (defmethod g1 ((obj foo) param)
         (+ param 100))
 
       (assert (signals-error
                (g1 12 (+ 1 1))
-               unbound-method-error :class #^number :method-name 'g1))
+               unbound-method-error :class Number :method-name 'g1))
       (assert (= 102 (g1 foo (+ 1 1))))
       (assert (= 102 (g1 bar (+ 1 1))))
 
@@ -3337,7 +3337,7 @@
 
       (assert (signals-error
                (g1 12 (+ 1 1))
-               unbound-method-error :class #^number :method-name 'g1))
+               unbound-method-error :class Number :method-name 'g1))
       (assert (= 102 (g1 foo (+ 1 1))))
       (assert (= 1002 (g1 bar (+ 1 1))))
 
@@ -3362,24 +3362,24 @@
       (assert (= 102 (g1 foo (+ 1 1))))
       (assert (= 1002 (g1 bar (+ 1 1))))
       (assert (= -2 (g1 #t (+ 1 1))))
-      (assert (= -2 (g1 #void (+ 1 1))))
+      (assert (= -2 (g1 #inert (+ 1 1))))
       (assert (= -2 (g1 "hello" (+ 1 1)))))
-    #void))
+    #inert))
 
 (defsuite box
 
   (deftest box.1
-    (let ((#'c (box)))
+    (let ((c (box)))
       (c))
-    #void)
+    #inert)
 
   (deftest box.2
-    (let ((#'c (box (+ 1 1))))
+    (let ((c (box (+ 1 1))))
       (c))
     2)
 
   (deftest box.3
-    (let ((#'c (box (+ 1 1))))
+    (let ((c (box (+ 1 1))))
       (c (+ 2 2))
       (assert (= (c) 4))
       (c (+ 4 4))

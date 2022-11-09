@@ -24,8 +24,8 @@
 (defsuite null-and-undefined
 
   (deftest null-and-undefined-exist
-    (and (eq (class-of +js-null+) #^object)
-         (eq (class-of +js-undefined+) #^object)))
+    (and (eq (class-of +js-null+) Object)
+         (eq (class-of +js-undefined+) Object)))
 
   (deftest null-and-undefined-distinguishable
     (not (js-eq +js-null+ +js-undefined+))))
@@ -34,8 +34,8 @@
 
   (deftest js-booleans-exist
     (and
-     (eq (class-of +js-true+) #^object)
-     (eq (class-of +js-false+) #^object)))
+     (eq (class-of +js-true+) Object)
+     (eq (class-of +js-false+) Object)))
 
   (deftest js-booleans-identity
     (and (not (eq +js-true+ +js-false+))
@@ -92,7 +92,7 @@
 
   (deftest to-js-number.1
     (eq (class-of (to-js-number 1))
-        #^object))
+        Object))
 
   (deftest to-js-number.1a
     (and (js-eq (to-js-number 1)
@@ -127,7 +127,7 @@
 
   (deftest to-js-string.1
     (eq (class-of (to-js-string "1"))
-        #^object))
+        Object))
 
   (deftest to-js-string.1a
     (and (js-eq (to-js-string "1")
@@ -148,11 +148,11 @@
 (defsuite to-lisp-function
 
   (deftest to-lisp-function.1
-    (let ((#'parseInt (to-lisp-function (js-global "parseInt"))))
+    (let ((parseInt (to-lisp-function (js-global "parseInt"))))
       (js-eq (parseInt (to-js-string "123")) (to-js-number 123))))
 
   (deftest to-lisp-function.1a
-    (let* ((#'parseInt (to-lisp-function (js-global "parseInt")))
+    (let* ((parseInt (to-lisp-function (js-global "parseInt")))
            (result (parseInt)))
       (to-lisp-boolean (call-js-function (js-global "isNaN") result))))
 
@@ -167,7 +167,7 @@
     (let ((x 0))
       (def env (the-environment))
       (flet ((fun (v1 v2) (set env x (+ v1 v2))))
-        (call-js-function (to-js-function #'fun) 1 2))
+        (call-js-function (to-js-function fun) 1 2))
       (= x 3)))
 
   (deftest to-js-function.2
@@ -233,11 +233,11 @@
 
   (deftest js-lambda.4
     (call-js-function (js-lambda ()))
-    #void)
+    #inert)
 
   (deftest js-lambda.root-prompt-is-set
     (call-js-function (js-lambda () (take-subcont +root-prompt+ #ignore)))
-    #void)
+    #inert)
 
   (deftest js-lambda.barrier
     (signals-error
@@ -455,7 +455,7 @@
 
   (deftest js-method.1
     (progn
-      (def #'to-string (js-method "toString"))
+      (def to-string (js-method "toString"))
       (js-eq (to-string (to-js-number 12)) (to-js-string "12"))))
 
   (deftest js-method.2
@@ -495,7 +495,7 @@
 
   (deftest js-undefined-option.2
     (js-undefined-option +js-undefined+)
-    #nil)
+    #null)
 
   (deftest js-undefined-option.3
     (signals-error
@@ -510,7 +510,7 @@
 
   (deftest js-null-option.2
     (js-null-option +js-null+)
-    #nil)
+    #null)
 
   (deftest js-null-option.3
     (signals-error
@@ -566,7 +566,7 @@
 
   (deftest sync.2
     (prog1 #t
-      ((sync #'%sleep) 1)))
+      ((sync %sleep) 1)))
 
   (def Promise (js-global "Promise"))
   (define-js-method resolve "resolve")
@@ -610,7 +610,7 @@
       (defmethod foo ((obj object)) 12)
       (assert (= 12 (foo +js-null+)))
       (assert (= 12 (foo (to-js-string "foo")))))
-    #void)
+    #inert)
 
   (deftest js-exception-becomes-condition
     (block exit

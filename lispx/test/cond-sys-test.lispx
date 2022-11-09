@@ -9,7 +9,7 @@
 
   (deftest handler-bind.0b
     (handler-bind ())
-    #void)
+    #inert)
 
   (deftest handler-bind.1
     (handler-bind ()
@@ -30,12 +30,12 @@
   (deftest handler-bind.no-handler
     (handler-bind ((test-error (lambda (e) 'whatever)))
       (signal (make-simple-error "foo")))
-    #void)
+    #inert)
 
   (deftest handler-bind.unhandled
     (handler-bind ((simple-error (lambda (e) 'whatever)))
       (signal (make-simple-error "foo")))
-    #void)
+    #inert)
 
   (deftest handler-bind.decline
     (block b
@@ -70,7 +70,7 @@
     (block b
       (handler-bind ((test-error (lambda (e) (return-from b 'outer))))
         (handler-bind ((simple-error (lambda (e)
-                                       (signal (make-instance #^test-error)))))
+                                       (signal (make-instance Test-error)))))
           (handler-bind ((test-error (lambda (e) (return-from b 'inner))))
             (signal (make-simple-error "foo"))))))
     'outer)
@@ -86,7 +86,7 @@
     (block b
       (handler-bind ((test-error (lambda (e) (return-from b 'test)))
                      (simple-error (lambda (e) (return-from b 'simple))))
-        (signal (make-instance #^test-error))))
+        (signal (make-instance Test-error))))
     'test)
 
   (deftest handler-bind.anything
@@ -106,7 +106,7 @@
 
   (deftest handler-case.0b
     (handler-case ())
-    #void)
+    #inert)
 
   (deftest handler-case.1
     (handler-case ()
@@ -127,7 +127,7 @@
   (deftest handler-case.no-handler
     (handler-case ((test-error (lambda (e) 'whatever)))
       (signal (make-simple-error "foo")))
-    #void)
+    #inert)
 
   (deftest handler-case.handled
     (handler-case ((simple-error (lambda (e)
@@ -157,7 +157,7 @@
   (deftest handler-case.multiple.2
     (handler-case ((test-error (lambda (e) 'test))
                    (simple-error (lambda (e) 'simple)))
-      (signal (make-instance #^test-error)))
+      (signal (make-instance Test-error)))
     'test)
 
   (deftest handler-case.anything
@@ -174,7 +174,7 @@
 
   (deftest restart-bind.0b
     (restart-bind ())
-    #void)
+    #inert)
 
   (deftest restart-bind.1
     (restart-bind ()
@@ -280,7 +280,7 @@
 
   (deftest restart-case.0b
     (restart-case ())
-    #void)
+    #inert)
 
   (deftest restart-case.1
     (restart-case ()
@@ -383,16 +383,16 @@
 
   (deftest find-restart?.1
     (find-restart? 'foo)
-    #nil)
+    #null)
 
   (deftest find-restart?.1b
     (restart-bind ((bar (lambda ())))
       (find-restart? 'foo))
-    #nil)
+    #null)
 
   (deftest find-restart?.2
     (find-restart? 'foo (make-simple-error "foo"))
-    #nil)
+    #null)
 
   (deftest find-restart?.3
     (block exit
@@ -496,7 +496,7 @@
     '())
 
   (defun restart-names condition?
-    (let ((restarts (apply #'compute-restarts condition?)))
+    (let ((restarts (apply compute-restarts condition?)))
       (mapcar (lambda (restart)
                 (slot-value restart 'restart-name))
               restarts)))
@@ -557,11 +557,11 @@
 
   (deftest signal.1
     (signal (make-simple-error "foo"))
-    #void)
+    #inert)
 
   (deftest signal.2
     (signals-error
-     (signal (make-instance #^standard-object :x 1 :y 2))
+     (signal (make-instance Standard-object :x 1 :y 2))
      standard-object :x 1 :y 2))
 
   (deftest signal.3
@@ -604,7 +604,7 @@
   ;;; Test that `signal' (and `error' likewise) associates the
   ;;; restarts it binds with the signalled error.
   (deftest signal.associations
-    (dolist (#'signal-operator (list #'signal #'error) #t)
+    (dolist (signal-operator (list signal error) #t)
       (block ok ; so that the test doesn't fail when testing `error'.
         (handler-bind ((simple-error
                         (lambda (e)
@@ -674,21 +674,21 @@
     (let ((result
            (handler-case ((unbound-variable (lambda (c) (list 'outer c))))
              (handler-bind ((error (lambda (#ignore)
-                                     (error (make-instance #^unbound-variable :name 'fred)))))
+                                     (error (make-instance Unbound-variable :name 'fred)))))
                (handler-case ((unbound-variable (lambda (c) (list 'inner c))))
                  ;; Signal an arbitrary error:
                  (simple-error "Not an UNBOUND-VARIABLE error."))))))
       (assert (and (eq (car result) 'outer)
-                   (typep (cadr result) #^unbound-variable)
+                   (typep (cadr result) Unbound-variable)
                    (eq (slot-value (cadr result) 'name) 'fred)))))
 
   (deftest* firewall.2
     (let ((result
            (handler-case ((unbound-variable (lambda (c) (list 'outer c))))
              (handler-bind ((error (lambda (#ignore)
-                                     (error (make-instance #^unbound-variable :name 'fred)))))
+                                     (error (make-instance Unbound-variable :name 'fred)))))
                (handler-case ((unbound-variable (lambda (c) (list 'inner c))))
-                 (error (make-instance #^unbound-variable :name 'marvin)))))))
+                 (error (make-instance Unbound-variable :name 'marvin)))))))
       (assert (and (eq (car result) 'inner)
-                   (typep (cadr result) #^unbound-variable)
+                   (typep (cadr result) Unbound-variable)
                    (eq (slot-value (cadr result) 'name) 'marvin))))))

@@ -20,7 +20,7 @@
 
 (defun make-yield-record (v k)
   "Create a new yield record with the given yielded value and resume continuation."
-  (make-instance #^yield-record :value v :continuation k))
+  (make-instance Yield-record :value v :continuation k))
 
 (defun fiber-yield v?
   "Yield a value (which defaults to void)."
@@ -34,21 +34,21 @@
 
 (defmacro fiber body
   "Evaluate the body expressions as a fiber."
-  (list* #'push-prompt '+fiber-prompt+ body))
+  (list* push-prompt '+fiber-prompt+ body))
 
-(defun run-fiber (#'thunk)
+(defun run-fiber (thunk)
   "Get all values yielded by a fiber, and its final result, and
   |collect them in a list."
   (loop-let -run- ((result (fiber (thunk))))
-    (if (typep result #^yield-record)
+    (if (typep result Yield-record)
         (cons (slot-value result 'value) (-run- (fiber-resume result)))
         (list result))))
 
-(defun run-fiber-with-values (#'thunk values)
+(defun run-fiber-with-values (thunk values)
   "Like `run-fiber' but uses a list of values that are sent to the
   |fiber with `fiber-resume'."
   (loop-let -run- ((result (fiber (thunk))) (values values))
-    (if (typep result #^yield-record)
+    (if (typep result Yield-record)
         (cons (slot-value result 'value)
               (-run- (fiber-resume result (car values)) (cdr values)))
         (list result))))
@@ -62,10 +62,10 @@
   (deftest fiber.2
     (progn
       (def yield-record (fiber 1 2 (+ (fiber-yield (= 1 1)) 3)))
-      (assert (typep yield-record #^yield-record))
+      (assert (typep yield-record Yield-record))
       (assert (= #t (slot-value yield-record 'value)))
       (assert (= 33 (fiber-resume yield-record 30))))
-    #void)
+    #inert)
 
   (deftest fiber.progn.1
     (run-fiber
@@ -82,7 +82,7 @@
        (progn
          (fiber-yield 1)
          (fiber-yield 2)))
-     '(#void 3))
+     '(#inert 3))
     '(1 2 3))
 
   (deftest fiber.vau.1
@@ -100,7 +100,7 @@
        ((vau () #ignore
           (fiber-yield 1)
           (fiber-yield 2))))
-     '(#void 3))
+     '(#inert 3))
     '(1 2 3))
 
   (deftest fiber.lambda.1
@@ -118,7 +118,7 @@
        ((lambda ()
           (fiber-yield 1)
           (fiber-yield 2))))
-     '(#void 3))
+     '(#inert 3))
     '(1 2 3))
 
   (deftest fiber.def.1
@@ -126,7 +126,7 @@
      (lambda ()
        (def (x y) (list (fiber-yield 1) (fiber-yield 2)))
        (list x y)))
-    '(1 2 (#void #void)))
+    '(1 2 (#inert #inert)))
 
   (deftest fiber.def.2
     (run-fiber-with-values
@@ -140,7 +140,7 @@
     (run-fiber
      (lambda ()
        (if #t (fiber-yield 1) (fiber-yield 2))))
-    '(1 #void))
+    '(1 #inert))
 
   (deftest fiber.if.2
     (run-fiber-with-values
@@ -153,7 +153,7 @@
     (run-fiber
      (lambda ()
        (if #f (fiber-yield 1) (fiber-yield 2))))
-    '(2 #void))
+    '(2 #inert))
 
   (deftest fiber.if.4
     (run-fiber-with-values
@@ -182,7 +182,7 @@
        (if (progn (fiber-yield 1) (fiber-yield 2))
            (progn (fiber-yield 3) (fiber-yield 3.5))
            (progn (fiber-yield 4) (fiber-yield 4.5))))
-     '(#void #t #void 5))
+     '(#inert #t #inert 5))
     '(1 2 3 3.5 5))
 
   (deftest fiber.if.8
@@ -191,7 +191,7 @@
        (if (progn (fiber-yield 1) (fiber-yield 2))
            (progn (fiber-yield 3) (fiber-yield 3.5))
            (progn (fiber-yield 4) (fiber-yield 4.5))))
-     '(#void #f #void 5))
+     '(#inert #f #inert 5))
     '(1 2 4 4.5 5))
 
   (deftest fiber.loop.1
@@ -224,7 +224,7 @@
        (block b
          (fiber-yield 1)
          (fiber-yield 2)))
-     '(#void 3))
+     '(#inert 3))
     '(1 2 3))
 
   (deftest fiber.block.3
@@ -242,7 +242,7 @@
        (block b
          (fiber-yield 1)
          (return-from b (fiber-yield 2))))
-     '(#void 3))
+     '(#inert 3))
     '(1 2 3))
 
   (deftest fiber.catch.1
@@ -260,7 +260,7 @@
        (catch 'b
          (fiber-yield 1)
          (fiber-yield 2)))
-     '(#void 3))
+     '(#inert 3))
     '(1 2 3))
 
   (deftest fiber.catch.3
@@ -278,7 +278,7 @@
        (catch 'b
          (fiber-yield 1)
          (throw 'b (fiber-yield 2))))
-     '(#void 3))
+     '(#inert 3))
     '(1 2 3))
 
   (deftest fiber.unwind-protect.1
@@ -288,7 +288,7 @@
          (fiber-yield 2)
          (fiber-yield 2.5)
          3))
-     '(4 #void #void))
+     '(4 #inert #inert))
     '(1 2 2.5 4))
 
   (deftest fiber.unwind-protect.2
@@ -299,7 +299,7 @@
            (fiber-yield 2)
            (fiber-yield 2.5)
            3)))
-     '(4 #void #void))
+     '(4 #inert #inert))
     '(1 2 2.5 4))
 
   (deftest fiber.unwind-protect.3
@@ -310,7 +310,7 @@
            (fiber-yield 2)
            (fiber-yield 2.5)
            3)))
-     '(#void #void))
+     '(#inert #inert))
     '(2 2.5 4))
 
   (deftest fiber.unwind-protect.4
@@ -321,7 +321,7 @@
            (fiber-yield 2)
            (fiber-yield 2.5)
            3)))
-     '(#void 4 #void #void))
+     '(#inert 4 #inert #inert))
     '(1 1.5 2 2.5 4))
 
   (deftest fiber.progv.1
@@ -347,14 +347,14 @@
          (progv (list *x*) (list 2)
            (fiber-yield (dynamic *x*))
            (fiber-yield (dynamic *x*)))))
-     '(#void #void #void 3))
+     '(#inert #inert #inert 3))
     '(1 1 2 2 3))
 
   (deftest fiber.fun.1
     (run-fiber
      (lambda ()
        (list (fiber-yield 1) (fiber-yield 2))))
-    '(1 2 (#void #void)))
+    '(1 2 (#inert #inert)))
 
   (deftest fiber.fun.2
     (run-fiber-with-values
@@ -373,7 +373,7 @@
 
   (deftest push-prompt.2
     (push-prompt 'p)
-    #void)
+    #inert)
 
   (deftest push-prompt.3
     (push-prompt 'p 1 2 (= 1 1))
@@ -386,7 +386,7 @@
           (assert (prompt-set-p 'p))
           (return-from ret)))
       (assert (not (prompt-set-p 'p))))
-    #void)
+    #inert)
 
   (deftest push-prompt.5
     (progn
@@ -402,7 +402,7 @@
         (assert (not (prompt-set-p 'q))))
       (assert (not (prompt-set-p 'p)))
       (assert (not (prompt-set-p 'q))))
-    #void))
+    #inert))
 
 (defsuite take-subcont
 
@@ -428,7 +428,7 @@
 
   (deftest take-subcont.5
     (push-prompt 'p (take-subcont 'p #ignore))
-    #void)
+    #inert)
 
   (deftest take-subcont.6
     (push-prompt 'p (take-subcont 'p #ignore (= 1 1)))
@@ -459,14 +459,14 @@
     (let ((k (push-prompt 'p (+ 100 (take-subcont 'p k k)))))
       (assert (= 102 (push-delim-subcont 'p k (+ 1 1))))
       (assert (= 120 (push-delim-subcont 'p k (+ 10 10)))))
-    #void)
+    #inert)
 
   (deftest push-delim-subcont.5
     (let ((k (push-prompt 'p (push-prompt 'q (take-subcont 'p k k)))))
       (push-delim-subcont 'p k
         (assert (prompt-set-p 'q))
         (assert (prompt-set-p 'p))))
-    #void))
+    #inert))
 
 (defsuite prompt-set-p
 
@@ -516,7 +516,7 @@
         (assert (= (dynamic *y*) 2)))
       (assert (= (dynamic *x*) 1))
       (assert (= (dynamic *y*) 2)))
-    #void)
+    #inert)
 
   (deftest* defdynamic.redefine
     (defdynamic *a* (+ 1 1))
@@ -528,8 +528,8 @@
     (assert (= (dynamic old-a) 4))
     (assert (eq old-a *a*))
     (defdynamic *a*)
-    (assert (= (dynamic *a*) #void))
-    (assert (= (dynamic old-a) #void))
+    (assert (= (dynamic *a*) #inert))
+    (assert (= (dynamic old-a) #inert))
     (assert (eq old-a *a*)))
 
   (deftest progv.1
@@ -548,19 +548,19 @@
         (assert (= (dynamic *y*) 2)))
       (assert (= (dynamic *x*) 1))
       (assert (= (dynamic *y*) 2)))
-    #void)
+    #inert)
 
   (deftest dynamic.1
     (progn
       (defdynamic *foo*)
-      (assert (= (dynamic *foo*) #void))
-      (assert (= (slot-value *foo* 'value) #void))
-      (assert (typep *foo* #^dynamic))
-      (assert (typep *foo* #^standard-object))
-      (assert (typep *foo* #^object))
-      (assert (subclassp #^dynamic #^standard-object))
-      (assert (subclassp #^dynamic #^object)))
-    #void)
+      (assert (= (dynamic *foo*) #inert))
+      (assert (= (slot-value *foo* 'value) #inert))
+      (assert (typep *foo* Dynamic))
+      (assert (typep *foo* Standard-object))
+      (assert (typep *foo* Object))
+      (assert (subclassp Dynamic Standard-object))
+      (assert (subclassp Dynamic Object)))
+    #inert)
 
   (deftest set-dynamic.1
     (progn
@@ -573,7 +573,7 @@
         (assert (= 2 (dynamic *bar*)))
         (set-dynamic *bar* 4)
         (assert (= 4 (dynamic *bar*))))
-      (assert (= #void (dynamic *bar*)))
+      (assert (= #inert (dynamic *bar*)))
       #t))
 
   (deftest dynamic-let*.1
@@ -615,7 +615,7 @@
     ;; but it's unclear how it interacts with test-util.lispx's
     ;; Mocha stuff that runs this test.
     (take-subcont +root-prompt+ #ignore)
-    #void))
+    #inert))
 
 ;;; Simple Control Operators
 
@@ -640,7 +640,7 @@
 
   (deftest catch.2
     (catch 'x)
-    #void)
+    #inert)
 
   (deftest catch.3
     (catch 'x 1 2 3 (= 1 1))
@@ -652,7 +652,7 @@
 
   (deftest catch.5
     (catch 'x 1 (throw 'x) 3 (= 1 1))
-    #void)
+    #inert)
 
   (deftest catch.6
     (catch 'x 1 (catch 'y (throw 'x 44)) 3 (= 1 1))
@@ -668,7 +668,7 @@
 
   (deftest catch.9
     (catch 'x 1 (catch 'y (throw 'y)))
-    #void))
+    #inert))
 
 (defsuite block/return-from
 
@@ -679,7 +679,7 @@
 
   (deftest block.2
     (block x)
-    #void)
+    #inert)
 
   (deftest block.3
     (block x 1 2 3 (= 1 1))
@@ -691,7 +691,7 @@
 
   (deftest block.5
     (block x 1 (return-from x) 3 (= 1 1))
-    #void)
+    #inert)
 
   (deftest block.6
     (block x 1 (block y (return-from x (= 1 2))) 3 (= 1 1))
@@ -707,7 +707,7 @@
 
   (deftest block.9
     (block x 1 (block y (return-from y)))
-    #void))
+    #inert))
 
 (defsuite unwind-protect
 

@@ -6,17 +6,17 @@
 
 ;;; Core Forms
 
-(%def #'list
+(%def list
   (%wrap (%vau arguments #ignore arguments))
   ;"Return the list of evaluated ARGUMENTS.
   ;|$(fn (arguments))
   ;|$(type function)"
 )
 
-(%def #'vau
+(%def vau
   (%vau (parameter-tree environment-parameter . forms) env
-    (%eval (list #'%vau parameter-tree environment-parameter
-                 (%list* #'%progn forms))
+    (%eval (list %vau parameter-tree environment-parameter
+                 (%list* %progn forms))
            env))
   ;"Construct a fexpr with the given PARAMETER-TREE,
   ;|ENVIRONMENT-PARAMETER, and FORMS.
@@ -24,7 +24,7 @@
   ;|$(type fexpr)"
 )
 
-(%def #'lispx::make-macro
+(%def lispx::make-macro
   (%wrap
    (%vau (expander) #ignore
      (%vau operand env
@@ -39,20 +39,20 @@
   ;|$(type function)"
 )
 
-(%def #'macro
+(%def macro
   (lispx::make-macro
    (%vau (parameter-tree . forms) #ignore
-     (list #'lispx::make-macro
-           (%list* #'vau parameter-tree #ignore forms))))
+     (list lispx::make-macro
+           (%list* vau parameter-tree #ignore forms))))
   ;"Create an anonymous macro with the given PARAMETER-TREE and FORMS.
   ;|$(fn (parameter-tree . forms))
   ;|$(type macro)"
 )
 
-(%def #'defmacro
+(%def defmacro
   (macro (name parameter-tree . forms)
-    (list #'%def (%function-symbol name)
-          (%list* #'macro parameter-tree forms)))
+    (list %def (%function-symbol name)
+          (%list* macro parameter-tree forms)))
   ;"Define a macro with the given NAME, PARAMETER-TREE, and FORMS.
   ;|$(fn (name parameter-tree . forms))
   ;|$(type macro)"
@@ -61,48 +61,48 @@
 (defmacro defexpr (name parameter-tree environment-parameter . forms)
   "Define a fexpr with the given NAME, PARAMETER-TREE,
   |ENVIRONMENT-PARAMETER, and FORMS."
-  (list #'%def (%function-symbol name)
-        (%list* #'vau parameter-tree environment-parameter forms)))
+  (list %def (%function-symbol name)
+        (%list* vau parameter-tree environment-parameter forms)))
 
 (defmacro def (definiend-tree value . docstring?)
   "Match the DEFINIEND-TREE against the VALUE and place resulting
   |bindings into the current environment.  The optional DOCSTRING? is
   |currently ignored."
-  (list #'%def definiend-tree value))
+  (list %def definiend-tree value))
 
 (defmacro defconstant (name value . docstring?)
   "Define a constant with the given NAME and VALUE.  This is mostly
   |for documentation purposes, as constants are still mutable.  The
   |optional DOCSTRING? is currently ignored."
-  (list #'def name value))
+  (list def name value))
 
 (defmacro lambda (parameter-tree . forms)
   "Create an anonymous function with the given PARAMETER-TREE and FORMS."
-  (list #'%wrap (%list* #'vau parameter-tree #ignore forms)))
+  (list %wrap (%list* vau parameter-tree #ignore forms)))
 
 (defmacro defun (name parameter-tree . forms)
   "Define a function with the given NAME, PARAMETER-TREE, and FORMS."
-  (list #'def (%function-symbol name)
-        (%list* #'lambda parameter-tree forms)))
+  (list def (%function-symbol name)
+        (%list* lambda parameter-tree forms)))
 
 ;;; Built-Ins
 
 (defmacro progn forms
   "Sequentially evaluate FORMS, returning the value of the last one,
   |or void if there are no forms."
-  (list* #'%progn forms))
+  (list* %progn forms))
 
 (defmacro if (test consequent alternative)
   "Evaluate the TEST which must yield a boolean.  Then evaluate either
   |the CONSEQUENT or ALTERNATIVE depending on whether the TEST yielded
   |true or false."
-  (list #'%if test consequent alternative))
+  (list %if test consequent alternative))
 
 (defmacro catch (tag . forms)
   "Establish a catch tag and evaluate FORMS as an implicit `progn'
   |inside it.  The forms may use `throw' to nonlocally exit from the
   |tag.  Usually, `block' should be preferred."
-  (list #'%catch tag (list* #'lambda () forms)))
+  (list %catch tag (list* lambda () forms)))
 
 (defun throw (tag . result?)
   "Abort to a nesting catch tag established by `catch' and pass the
@@ -111,7 +111,7 @@
 
 (defmacro loop forms
   "Evaluate the FORMS in an infinite loop."
-  (list #'%loop (list* #'progn forms)))
+  (list %loop (list* progn forms)))
 
 (defun eq (a b)
   "Return true if the values A and B are pointer-identical, false otherwise."
@@ -164,7 +164,7 @@
 (defun list* arguments
   "Create a list from the ARGUMENTS so that the last argument becomes
   |the `cdr' of the list."
-  (apply #'%list* arguments))
+  (apply %list* arguments))
 
 (defun reverse (list)
   "Reverse the LIST."
@@ -186,7 +186,7 @@
 (defun make-environment parent-environment?
   "Create a new environment with an optional PARENT-ENVIRONMENT? in
   |which bindings are looked up if they are not found."
-  (apply #'%make-environment parent-environment?))
+  (apply %make-environment parent-environment?))
 
 (defun boundp (symbol environment)
   "Return true if the SYMBOL is bound in the ENVIRONMENT, false otherwise."
@@ -216,46 +216,46 @@
   "Establish BINDINGS parallelly during the evaluation of FORMS, so
   |that no binding can refer to the other ones.
   |$(syntax binding (definiend-tree value))"
-  (list* (list* #'lambda (mapcar #'car bindings)
+  (list* (list* lambda (mapcar car bindings)
                 forms)
-         (mapcar #'cadr bindings)))
+         (mapcar cadr bindings)))
 
 (defmacro let* (bindings . forms)
   "Establish BINDINGS serially during the evaluation of FORMS, so that
   |every binding can refer to previous ones.
   |$(syntax binding (definiend-tree value))"
   (if (null bindings)
-      (list* #'let () forms) ; Always introduce a new scope.
-      (list #'let (list (car bindings))
-            (list* #'let* (cdr bindings) forms))))
+      (list* let () forms) ; Always introduce a new scope.
+      (list let (list (car bindings))
+            (list* let* (cdr bindings) forms))))
 
 (defmacro lispx::letrec (bindings . forms)
   "Utility to establish BINDINGS recursively during the evaluation of
   |FORMS.  Used by `labels'."
   (if (null bindings)
-      (list* #'let () forms) ; Always introduce a new scope.
-      (list* #'let ()
-             (list #'def
-                   (mapcar #'car bindings)
-                   (list* #'list (mapcar #'cadr bindings)))
+      (list* let () forms) ; Always introduce a new scope.
+      (list* let ()
+             (list def
+                   (mapcar car bindings)
+                   (list* list (mapcar cadr bindings)))
              forms)))
 
 (defun lispx::make-function-binding ((name parameter-tree . forms))
   "Utility to turn a function binding as it appears in `flet' and
   |`labels' into a binding for `let' or `lispx::letrec'."
-  (list (function-symbol name) (list* #'lambda parameter-tree forms)))
+  (list (function-symbol name) (list* lambda parameter-tree forms)))
 
 (defmacro flet (function-bindings . forms)
   "Establish FUNCTION-BINDINGS parallelly during evaluation of FORMS,
   |so that no function can refer to the other ones.
   |$(syntax function-binding (name parameter-tree . forms))"
-  (list* #'let (mapcar #'lispx::make-function-binding function-bindings) forms))
+  (list* let (mapcar lispx::make-function-binding function-bindings) forms))
 
 (defmacro labels (function-bindings . forms)
   "Establish FUNCTION-BINDINGS recursively during evaluation of FORMS,
   |so that every function can refer to the other ones.
   |$(syntax function-binding (name parameter-tree . forms))"
-  (list* #'lispx::letrec (mapcar #'lispx::make-function-binding function-bindings) forms))
+  (list* lispx::letrec (mapcar lispx::make-function-binding function-bindings) forms))
 
 ;;; Data and Control Flow
 
@@ -274,12 +274,12 @@
 (defmacro when (test . forms)
   "If TEST yields true, evaluate the FORMS as an implicit `progn'.
   |Otherwise, return void."
-  (list #'if test (list* #'progn forms) #void))
+  (list if test (list* progn forms) #inert))
 
 (defmacro unless (test . forms)
   "If TEST yields false, evaluate the FORMS as an implicit `progn'.
   |Otherwise, return void."
-  (list #'if test #void (list* #'progn forms)))
+  (list if test #inert (list* progn forms)))
 
 (defexpr cond clauses env
   "Multi-armed conditional.
@@ -290,8 +290,8 @@
   (unless (null clauses)
     (let ((((test . forms) . rest-clauses) clauses))
       (if (eval test env)
-          (eval (cons #'progn forms) env)
-          (eval (cons #'cond rest-clauses) env)))))
+          (eval (cons progn forms) env)
+          (eval (cons cond rest-clauses) env)))))
 
 (defun not (boolean)
   "Invert the BOOLEAN."
@@ -303,7 +303,7 @@
   |there are no operands, return false."
   (cond ((null operands)           #t)
         ((null (cdr operands))     (the boolean (eval (car operands) env)))
-        ((eval (car operands) env) (eval (cons #'and (cdr operands)) env))
+        ((eval (car operands) env) (eval (cons and (cdr operands)) env))
         (#t                        #f)))
 
 (defexpr or operands env
@@ -313,11 +313,11 @@
   (cond ((null operands)           #f)
         ((null (cdr operands))     (the boolean (eval (car operands) env)))
         ((eval (car operands) env) #t)
-        (#t                        (eval (cons #'or (cdr operands)) env))))
+        (#t                        (eval (cons or (cdr operands)) env))))
 
 (defexpr while (test-form . forms) env
   "Evaluate FORMS while TEST-FORM evaluates to true."
-  (let ((forms (list* #'progn forms)))
+  (let ((forms (list* progn forms)))
     (block exit
       (loop
         (if (eval test-form env)
@@ -326,20 +326,20 @@
 
 (defmacro until (test-form . forms)
   "Evaluate FORMS until TEST-FORM evaluates to true."
-  (list* #'while (list #'not test-form) forms))
+  (list* while (list not test-form) forms))
 
 (defmacro dotimes ((var count-form . result-form?) . body-forms)
   "Cf. Common Lisp's DOTIMES."
-  (flet ((_dotimes_ (n #'body #'result)
-           (let ((#'i (box 0)))
+  (flet ((_dotimes_ (n body result)
+           (let ((i (box 0)))
              (while (< (i) n)
                (body (i))
                (i (+ (i) 1)))
              (result (i)))))
-    (list #'_dotimes_
+    (list _dotimes_
           count-form
-          (list* #'lambda (list var) body-forms)
-          (list* #'lambda (list var) result-form?))))
+          (list* lambda (list var) body-forms)
+          (list* lambda (list var) result-form?))))
 
 (defmacro loop-let (name initializers . forms)
   "Labelled recursive loop, analogous to Scheme's named `let'.
@@ -349,8 +349,8 @@
   |return the result.  The function is bound per `labels' so it can
   |recursively refer to itself.
   |$(syntax initializer (parameter value))"
-  (list #'labels (list (list* name (mapcar #'car initializers) forms))
-        (list* name (mapcar #'cadr initializers))))
+  (list labels (list (list* name (mapcar car initializers) forms))
+        (list* name (mapcar cadr initializers))))
 
 (defexpr block (block-name . forms) env
   "Establish a block named BLOCK-NAME and evaluate the FORMS as an
@@ -358,14 +358,14 @@
   |nonlocally exit from the block.
   |Note that unlike in Common Lisp, there is no separate namespace for
   |block names; a block is named in the normal variable namespace."
-  (let ((tag (list #void))) ; cons up a fresh object as tag
+  (let ((tag (list #inert))) ; cons up a fresh object as tag
     (flet ((escape (value) (throw tag value)))
       (catch tag
-        (eval (list (list* #'lambda (list block-name) forms)
-                    #'escape)
+        (eval (list (list* lambda (list block-name) forms)
+                    escape)
               env)))))
 
-(defun return-from (#'block-name . value?)
+(defun return-from (block-name . value?)
   "Abort evaluation and return the optional VALUE? (which defaults to
   |void) from the block named BLOCK-NAME.  It is an error to return from
   |a block whose dynamic extent has ended.
@@ -376,15 +376,15 @@
   "Evaluate the PROTECTED-FORM and return its result.  Regardless of
   |whether the protected form returns normally, or via a nonlocal exit or
   |panic, the CLEANUP-FORMS are evaluated after the protected form."
-  (list #'%unwind-protect protected-form (list* #'progn cleanup-forms)))
+  (list %unwind-protect protected-form (list* progn cleanup-forms)))
 
 (defexpr prog1 (form . forms) env
   "Evaluate FORM and any additional FORMS, and return the result of FORM."
   (let ((result (eval form env)))
-    (eval (list* #'progn forms) env)
+    (eval (list* progn forms) env)
     result))
 
-(defun lispx::make-typecase-with-default-function (#'default)
+(defun lispx::make-typecase-with-default-function (default)
   "Metaprogramming utility used to create `typecase' and `etypecase'.
   |If no matching clause is found, the DEFAULT function is called with
   |the key."
@@ -395,11 +395,11 @@
             (default key)
             (let ((((class-name . forms) . rest-clauses) clauses))
               (if (typep key (find-class class-name env))
-                  (eval (list* #'progn forms) env)
+                  (eval (list* progn forms) env)
                   (-typecase- rest-clauses))))))))
 
-(def #'typecase (lispx::make-typecase-with-default-function
-                 (lambda (#ignore) #void))
+(def typecase (lispx::make-typecase-with-default-function
+                 (lambda (#ignore) #inert))
   "Multi-armed type test.
   |Evaluate the KEYFORM.  Go through the CLAUSES.  If the result of
   |evaluating KEYFORM is an instance of the class named by CLASS-NAME,
@@ -409,12 +409,12 @@
   |$(fn (keyform . clauses))
   |$(syntax clause (class-name . forms))")
 
-(def #'etypecase (lispx::make-typecase-with-default-function
-                  ;; Note: we use #^object as :expected-type of the
+(def etypecase (lispx::make-typecase-with-default-function
+                  ;; Note: we use Object as :expected-type of the
                   ;; type error which is somewhat nonsensical.  The
                   ;; proper/CL way would be to use an OR type spec,
                   ;; but they might get removed from the language.
-                  (lambda (key) (error (make-type-error key #^object))))
+                  (lambda (key) (error (make-type-error key Object))))
   "Like `typecase' but signal a `type-error' if no clause matches the KEYFORM.
   |$(type fexpr)
   |$(fn (keyform . clauses))
@@ -427,8 +427,8 @@
   |bindings -- you always need to know the environment a binding is in to
   |change it.  Therefore, we usually use boxes (see below) instead of
   |mutating bindings directly."
-  (eval (list #'def definiend-tree
-              (list (unwrap #'eval) value dynamic-environment))
+  (eval (list def definiend-tree
+              (list (unwrap eval) value dynamic-environment))
         (eval environment dynamic-environment)))
 
 (defun box initial-value?
@@ -445,11 +445,11 @@
 
 (defun assert (boolean)
   "Signal an error if the BOOLEAN is false.  Otherwise return void."
-  (unless boolean (error (make-instance #^assertion-error))))
+  (unless boolean (error (make-instance Assertion-error))))
 
-(defun compose (#'f #'g)
+(defun compose (f g)
   "Compose two functions, creating a new function equivalent to (G (F ...))."
-  (lambda args (g (apply #'f args))))
+  (lambda args (g (apply f args))))
 
 (defun identity (x)
   "Identity function."
@@ -459,11 +459,11 @@
 
 (defun null (object)
   "Return true if the OBJECT is nil, false otherwise."
-  (eq object #nil))
+  (eq object #null))
 
 (defun consp (object)
   "Return true if the OBJECT is a cons, false otherwise."
-  (typep object #^cons))
+  (typep object Cons))
 
 (defun caar (cons)
   "Return the `car' of the `car' of the CONS."
@@ -497,46 +497,46 @@
   |times in succession."
   (%nthcdr n list))
 
-(defun mapcar (#'function list)
+(defun mapcar (function list)
   "Create a new list by applying the FUNCTION to every element of the LIST."
   (if (null list)
-      #nil
-      (cons (function (car list)) (mapcar #'function (cdr list)))))
+      #null
+      (cons (function (car list)) (mapcar function (cdr list)))))
 
-(defun mapc (#'function list)
+(defun mapc (function list)
   "Apply the FUNCTION to every element of the LIST for effect.  Return the list."
   (unless (null list)
     (function (car list))
-    (mapc #'function (cdr list)))
+    (mapc function (cdr list)))
   list)
 
-(defun mapcan (#'function list)
+(defun mapcan (function list)
   "Apply the FUNCTION, which must return a list, to every element of the
   |LIST, and append the results.  (Note: this currently uses `append',
   |but might be changed to use `nconc' in the future, like Common Lisp.)"
   (if (null list)
-      #nil
-      (append (function (car list)) (mapcan #'function (cdr list)))))
+      #null
+      (append (function (car list)) (mapcan function (cdr list)))))
 
 (defmacro dolist ((var list-form . result-form?) . body-forms)
   "Cf. Common Lisp's DOLIST."
-  (labels ((_dolist_ (list #'body #'result)
+  (labels ((_dolist_ (list body result)
              (if (null list)
                  (result list)
                  (progn
                    (body (car list))
-                   (_dolist_ (cdr list) #'body #'result)))))
-    (list #'_dolist_
+                   (_dolist_ (cdr list) body result)))))
+    (list _dolist_
           list-form
-          (list* #'lambda (list var) body-forms)
-          (list* #'lambda (list var) result-form?))))
+          (list* lambda (list var) body-forms)
+          (list* lambda (list var) result-form?))))
 
-(defun reduce (#'function list :initial-value initial-value)
+(defun reduce (function list :initial-value initial-value)
   "Use the binary FUNCTION to combine the elements of the LIST.  The
   |INITIAL-VALUE is logically placed before the list."
   (if (null list)
       initial-value
-      (reduce #'function (cdr list) :initial-value (function initial-value (car list)))))
+      (reduce function (cdr list) :initial-value (function initial-value (car list)))))
 
 (defun member (item list . keywords)
   "Search for ITEM in the LIST according to the TEST predicate
@@ -544,30 +544,30 @@
   |ITEM if found, nil otherwise.  The KEY function is applied to
   |each list element before comparison (defaults to `identity').
   |$(fn (item list &key test key))"
-  (let ((#'test (optional (get? keywords :test) #'eq))
-        (#'key (optional (get? keywords :key) #'identity)))
+  (let ((test (optional (get? keywords :test) eq))
+        (key (optional (get? keywords :key) identity)))
     (loop-let -member- ((items list))
       (if (null items)
-          #nil
+          #null
           (if (test item (key (car items)))
               items
               (-member- (cdr items)))))))
 
-(defun remove-if (#'test list)
+(defun remove-if (test list)
   "Return a new list from which the elements that satisfy the TEST
   |have been removed."
   (if (null list)
-      #nil
+      #null
       (if (test (car list))
-          (remove-if #'test (cdr list))
-          (cons (car list) (remove-if #'test (cdr list))))))
+          (remove-if test (cdr list))
+          (cons (car list) (remove-if test (cdr list))))))
 
 (defun get? (plist indicator)
   "Search for the INDICATOR keyword in the property list PLIST (a list
   |of alternating keywords and values) and return the found value as an
   |option."
   (if (null plist)
-      #nil
+      #null
       (let (((i v . plist) plist))
         (if (eq i indicator)
             (some v)
@@ -578,40 +578,40 @@
 ;; Note that unlike in Common Lisp, these operators currently require
 ;; at least two arguments.  This will be improved in the future.
 
-(defun lispx::make-relational-operator (#'binary-operator)
+(defun lispx::make-relational-operator (binary-operator)
   "Utility to create an n-ary relational operator from a BINARY-OPERATOR."
   (labels ((operator (arg1 arg2 . rest)
              (if (binary-operator arg1 arg2)
                  (if (null rest)
                      #t
-                     (apply #'operator (list* arg2 rest)))
+                     (apply operator (list* arg2 rest)))
                  #f)))
-    #'operator))
+    operator))
 
-(def #'= (lispx::make-relational-operator #'%=)
+(def = (lispx::make-relational-operator %=)
   "Return true if all ARGUMENTS are equal, false otherwise.
   |$(fn arguments)
   |$(type function)")
 
-(def #'< (lispx::make-relational-operator #'%<)
+(def < (lispx::make-relational-operator %<)
   "Return true if the ARGUMENTS are in monotonically increasing order,
   |false otherwise.
   |$(fn arguments)
   |$(type function)")
 
-(def #'> (lispx::make-relational-operator #'%>)
+(def > (lispx::make-relational-operator %>)
   "Return true if the ARGUMENTS are in monotonically decreasing order,
   |false otherwise.
   |$(fn arguments)
   |$(type function)")
 
-(def #'<= (lispx::make-relational-operator #'%<=)
+(def <= (lispx::make-relational-operator %<=)
   "Return true if the ARGUMENTS are in monotonically nondecreasing
   |order, false otherwise.
   |$(fn arguments)
   |$(type function)")
 
-(def #'>= (lispx::make-relational-operator #'%>=)
+(def >= (lispx::make-relational-operator %>=)
   "Return true if the ARGUMENTS are in monotonically nonincreasing
   |order, false otherwise.
   |$(fn arguments)
@@ -622,44 +622,44 @@
   |$(fn arguments)"
   (if (null args)
       #t
-      (if (consp (member arg args :test #'=))
+      (if (consp (member arg args :test =))
           #f
-          (apply #'/= args))))
+          (apply /= args))))
 
 ;;; Numbers
 
 ;; The terms thetic (for + and *) and lytic (for - and /) are due to Hankel.
 
-(defun lispx::make-thetic-operator (#'binary-operator initial-value)
+(defun lispx::make-thetic-operator (binary-operator initial-value)
   "Utility to create an n-ary thetic operator from a BINARY-OPERATOR and INITIAL-VALUE."
   (lambda args
-    (reduce #'binary-operator args :initial-value initial-value)))
+    (reduce binary-operator args :initial-value initial-value)))
 
-(def #'+ (lispx::make-thetic-operator #'%+ 0)
+(def + (lispx::make-thetic-operator %+ 0)
   "Return the sum of the ARGUMENTS, or 0 if no arguments are supplied.
   |$(fn arguments)
   |$(type function)")
 
-(def #'* (lispx::make-thetic-operator #'%* 1)
+(def * (lispx::make-thetic-operator %* 1)
   "Return the product of the ARGUMENTS, or 1 if no arguments are supplied.
   |$(fn arguments)
   |$(type function)")
 
-(defun lispx::make-lytic-operator (#'binary-operator initial-value)
+(defun lispx::make-lytic-operator (binary-operator initial-value)
   "Utility to create an n-ary lytic operator from a BINARY-OPERATOR and INITIAL-VALUE."
   (lambda (arg1 . rest)
     (if (null rest)
         (binary-operator initial-value arg1)
-        (reduce #'binary-operator rest :initial-value arg1))))
+        (reduce binary-operator rest :initial-value arg1))))
 
-(def #'- (lispx::make-lytic-operator #'%- 0)
+(def - (lispx::make-lytic-operator %- 0)
   "If only one number is supplied in the ARGUMENTS, return the
   |negation of that number. If more than one number is supplied, subtract
   |all of the later ones from the first one and return the result.
   |$(fn arguments)
   |$(type function)")
 
-(def #'/ (lispx::make-lytic-operator #'%/ 1)
+(def / (lispx::make-lytic-operator %/ 1)
   "If only one number is supplied in the ARGUMENTS, return the
   |reciprocal of that number.  If more than one number is supplied,
   |divide the first one by all of the later ones and return the result.
@@ -694,7 +694,7 @@
         (superclass (find-class (optional superclass? 'standard-object) env)))
     (if (boundp class-name env)
         (%reinitialize-standard-class (eval class-name env) superclass)
-        (eval (list #'def class-name (%make-standard-class name superclass)) env))))
+        (eval (list def class-name (%make-standard-class name superclass)) env))))
 
 ;;; Generic Functions
 
@@ -703,13 +703,13 @@
   |PARAMETERS, and PROPERTIES are currently ignored.
   |$(syntax property (:documentation docstring))"
   (flet ((generic args (apply (%find-method (class-of (car args)) name) args)))
-    (eval (list #'def (function-symbol name) #'generic) env)))
+    (eval (list def (function-symbol name) generic) env)))
 
 (defexpr defmethod (name ((receiver class-name) . parameters) . forms) env
   "Add a new method to the generic function named by NAME specialized
   |for the class named by CLASS-NAME."
-  (let ((#'method (eval (list* #'lambda (list* receiver parameters) forms) env)))
-    (%add-method (find-class class-name env) name #'method)))
+  (let ((method (eval (list* lambda (list* receiver parameters) forms) env)))
+    (%add-method (find-class class-name env) name method)))
 
 ;;; Standard Objects
 
@@ -717,7 +717,7 @@
   "Create a new instance of CLASS (that must be a `standard-class').
   |The SLOT-INITS must be of even length, and alternately contain slot
   |names (symbols, typically keywords) and values."
-  (apply #'%make-instance (cons class slot-inits)))
+  (apply %make-instance (cons class slot-inits)))
 
 (defun slot-value (object slot-name)
   "Return the value of the slot named SLOT-NAME of the OBJECT."
@@ -735,7 +735,7 @@
 
 (defun make-type-error (datum expected-type)
   "Create a `type-error' with the given DATUM and EXPECTED-TYPE."
-  (make-instance #^type-error :datum datum :expected-type expected-type))
+  (make-instance Type-error :datum datum :expected-type expected-type))
 
 (defun assert-type (object class)
   "Signal a `type-error' if the OBJECT is not an instance of the CLASS."
@@ -791,19 +791,19 @@
   (let ((o? (eval option? env)))
     (if (null o?)
         (eval else env)
-        (eval (list (list #'vau (list name) #ignore then)
+        (eval (list (list vau (list name) #ignore then)
                     (car o?))
               env))))
 
 (defmacro when-option ((name option?) . forms)
   "Destructure the OPTION?.  If it's non-nil, evaluate the FORMS with
   |the NAME bound to the contents of the option.  If it's nil, return nil."
-  (list #'if-option (list name option?) (list* #'progn forms) #nil))
+  (list if-option (list name option?) (list* progn forms) #null))
 
 (defmacro unless-option (option? . forms)
   "Destructure the OPTION?.  If it's nil, evaluate the FORMS.  If it's
   |non-nil, return nil."
-  (list #'if-option (list #ignore option?) #nil (list* #'progn forms)))
+  (list if-option (list #ignore option?) #null (list* progn forms)))
 
 (defexpr optional (option? . default?) env
   "Return the contents of the OPTION?, or the DEFAULT? if the option
@@ -813,7 +813,7 @@
     value
     (if-option (default default?)
       (eval default env)
-      #void)))
+      #inert)))
 
 (defexpr optionals (list . defaults) env
   "Similar to `optional', but provides DEFAULTS for any number of
@@ -823,10 +823,10 @@
   (loop-let -optionals- ((list (eval list env)) (defaults defaults))
     (if (null list)
         (if (null defaults)
-            #nil
-            (cons (eval (car defaults) env) (-optionals- #nil (cdr defaults))))
+            #null
+            (cons (eval (car defaults) env) (-optionals- #null (cdr defaults))))
         (if (null defaults)
-            (cons (car list)                (-optionals- (cdr list) #nil))
+            (cons (car list)                (-optionals- (cdr list) #null))
             (cons (car list)                (-optionals- (cdr list) (cdr defaults)))))))
 
 (defun get-option (option?)
@@ -843,7 +843,7 @@
   (def value (eval (optional value-and-docstring?) env)) ; treating 2-elt list as option
   (if (boundp name env)
       (set-dynamic (eval name env) value)
-      (eval (list #'def name (make-instance #^dynamic :value value)) env)))
+      (eval (list def name (make-instance Dynamic :value value)) env)))
 
 (defun dynamic (dynamic-variable)
   "Return the current value of the DYNAMIC-VARIABLE."
@@ -860,7 +860,7 @@
   |$(syntax binding (dynamic-variable value))"
   (let ((dynamics (mapcar (lambda ((name #ignore)) (eval name env)) bindings))
         (values (mapcar (lambda ((#ignore value)) (eval value env)) bindings))
-        (thunk (eval (list* #'lambda () forms) env)))
+        (thunk (eval (list* lambda () forms) env)))
     (%progv dynamics values thunk)))
 
 (defmacro dynamic-let* (bindings . forms)
@@ -868,15 +868,15 @@
   |temporarily bound to new values.  Bindings are established serially as
   |per `let*'."
   (if (null bindings)
-      (list* #'progn forms)
-      (list #'dynamic-let (list (car bindings))
-            (list* #'dynamic-let* (cdr bindings) forms))))
+      (list* progn forms)
+      (list dynamic-let (list (car bindings))
+            (list* dynamic-let* (cdr bindings) forms))))
 
 (defmacro progv (dynamic-variables values . forms)
   "Evaluate the FORMS with the list of DYNAMIC-VARIABLES temporarily
   |bound to new VALUES.  The DYNAMIC-VARIABLES and VALUES lists must have
   |the same length."
-  (list #'%progv dynamic-variables values (list* #'lambda () forms)))
+  (list %progv dynamic-variables values (list* lambda () forms)))
 
 ;;; Delimited Control Operators
 
@@ -886,23 +886,23 @@
 (defmacro push-prompt (prompt . forms)
   "Push the PROMPT and evaluate the FORMS inside the prompt.  This
   |delimits the continuation."
-  (list #'%push-prompt prompt (list* #'lambda () forms)))
+  (list %push-prompt prompt (list* lambda () forms)))
 
 (defmacro take-subcont (prompt name . forms)
   "Abort outwards to the PROMPT.  When the prompt is reached, evaluate
   |the FORMS with NAME bound to the captured continuation (which does not
   |include the prompt)."
-  (list #'%take-subcont prompt (list* #'lambda (list name) forms)))
+  (list %take-subcont prompt (list* lambda (list name) forms)))
 
 (defmacro push-delim-subcont (prompt continuation . forms)
   "Push the PROMPT and compose the previously captured CONTINUATION
   |inside it.  The FORMS are then evaluated inside the new continuation."
-  (list #'%push-delim-subcont prompt continuation (list* #'lambda () forms)))
+  (list %push-delim-subcont prompt continuation (list* lambda () forms)))
 
 (defmacro push-subcont-barrier forms
   "Push a continuation barrier that prevents the FORMS from capturing
   |any continuations to the outside."
-  (list #'%push-subcont-barrier (list* #'lambda () forms)))
+  (list %push-subcont-barrier (list* lambda () forms)))
 
 ;;; Coroutines
 
@@ -913,16 +913,16 @@
 (defmacro coroutine forms
   "Evaluate the FORMS in a context in which `yield' can be used to pause
   |execution."
-  (list* #'push-prompt '+default-prompt+ forms))
+  (list* push-prompt '+default-prompt+ forms))
 
 (defmacro yield (name . forms)
   "Pause the current coroutine.  In the place where the enclosing
   |`coroutine' (or `resume') was called, evaluate the FORMS with NAME
   |bound to the paused coroutine.  `resume' can later be used to restart
   |execution inside the coroutine."
-  (list* #'take-subcont '+default-prompt+ name forms))
+  (list* take-subcont '+default-prompt+ name forms))
 
 (defmacro resume (k . forms)
   "Resume the paused coroutine K and evaluate FORMS in the place where
   |`yield' was called in the coroutine."
-  (list* #'push-delim-subcont '+default-prompt+ k forms))
+  (list* push-delim-subcont '+default-prompt+ k forms))
