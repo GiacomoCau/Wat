@@ -136,67 +136,34 @@ SKIP:	// white spaces
 // test: a\n|#\n "b"\n#|\nc\n|#\n  "d"\n#|\ne -> ["a" "c" "e"]
 // test: a |# "b" #| c |# "d" #| e -> ["a" "c" "e"]
 // test: a|#"b"#|c|#"d"#|e -> ["a" "c" "e"]
-{	< ( < mlc > | " " | "\t" | "\r" "\n" | "\r" | "\n" )+ > 
+{	< ( <mlc> | <cmt> | " " | "\t" | "\r" "\n" | "\r" | "\n" )+ > 
 |  	< # str: "\"" ( "\\" "\"" | ~["\""] )* "\"" >
-| 	< # mlc: "|#" ( < str > | "#" ~["|"] | "|" ~["#"] | ~["|","#"] )* "#|">
-//|  	< # str: "\"" ( ~["\""] )* "\"" >
-//| 	< # cmt: ";" (<String> | ~["\n"])* (("\r")? "\n")? >
-//| 	< # mlc: "|#" (<cmt> | <String> | ~["#"])* "#" (~["|"] (~["#"])* "#")* "|">  
+| 	< # cmt: ";" ( <str> | ~["\n"] )* (("\r")? "\n")? >
+| 	< # mlc: "|#" ( <cmt> | <str> | "#" ~["|"] | "|" ~["#"] | ~["|","#"] )* "#|">
 }
 //*/
 
-//* funzionicchia
 // test: a |# "b" "\\\"" "#|" #||##|c |# "d" #|e -> ["a" "c" "e"]
 // test: a |#"b"#|c |#"d"#|e - > ["a" "c" "e"] -> necessari i blanck dopo gli id!
 SKIP:	// white spaces
-{	< "|" "#" > : MLC | < ";" > : CMT | < (" " | "\t" | "\r" | "\n")+  >
+{	"|#" : MLC | ";" : CMT | < (" " | "\t" | "\r" | "\n")+  >
 }
-<MLC> SKIP:
-{	< "#" "|" > : DEFAULT
-}
-<MLC> MORE:
-{  	< "\"" > : SMLC
-|	< ";" > : CMLC 
-|  	< ~[] >
-}
-<SMLC> SKIP:
-{	< "\"" > : MLC
-} 
-<SMLC> MORE:
-{	< "\\" "\"" | ~["\""] >
-}
+<MLC> SKIP: { "#|" : DEFAULT }
+<MLC> MORE: { "\"" : SMLC | ";" : CMLC | < ~[] > }
+<SMLC> SKIP: { "\"" : MLC } 
 
-<CMLC> SKIP:
-{	< (("\r")? "\n") > : MLC
-}
-<CMLC> MORE:
-{	"\"" : SCMLC
-|	< ~[] >
-}
-<SCMLC> SKIP:
-{	"\"" : CMLC
-} 
-<SCMLC> MORE:
-{	< "\\" "\"" | ~["\""] >
-}
+<CMLC> SKIP: { < (("\r")? "\n") > : MLC }
+<CMLC> MORE: { "\"" : SCMLC | < ~[] > }
+<SCMLC> SKIP: { "\"" : CMLC } 
 
-<CMT> SKIP:
-{	< (("\r")? "\n") > : DEFAULT
-}
-<CMT> MORE:
-{	"\"" : SCMT 
-|   < ~[] >
-}
-<SCMT> SKIP:
-{	"\"" : CMT
-} 
-<SCMT> MORE:
-{	< "\\" "\"" | ~["\""] >
-}
-//*/
+<CMT> SKIP: { < (("\r")? "\n") > : DEFAULT }
+<CMT> MORE: { "\"" : SCMT | < ~[] > } 
+<SCMT> SKIP: { "\"" : CMT } 
+
+<SMLC, SCMLC, SCMT> MORE: {	< "\\\"" | ~["\""] > }
 
 TOKEN:	// separators
-{	"(" | ")" | "'" //| "\"" | ";" | "|"
+{	"(" | ")" | "'"
 }
 
 TOKEN:	// reserved words
@@ -216,7 +183,7 @@ TOKEN:	// literals
 |	< # d09: ["0"-"9"] >
 |	< Double: (<sNat> | <Integer> "." (<d09>)+) (<exp>)? >
 |	< # exp: ["e","E"] <Integer> >
-|	< String:	"\"" ( "\\" "\"" | ~["\""] )* "\"" >
+|	< String:	"\"" ( "\\\"" | ~["\""] )* "\"" >
 |	< UString:	"|" ~["#", "|"] ( ~["|"] )* "|" >
 //|	< # sChr: ~["\"","\n","\r","\f","\b","\t"] | "\\" ["\"","n","r","f","b","t"] >
 //|	< # sChr: "\\" ["\""] | ~["\""] >
