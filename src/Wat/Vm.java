@@ -60,18 +60,16 @@ import java.util.function.Supplier;
 
 /* Abbreviations:
 	c: cons
-	x: expression
-	xs: expressions
+	x, cln: expression
 	op: operator
 	o, os: operands
 	o0, o1, ..: operand 0, 1, .. 
 	cmb: combiner
 	opv: operative combiner
 	apv: applicative combiner
-	apv0, thunk: zero args applicative combiner
-	apv1, handler: one arg applicative combiner
+	apv0, tnk: 0 args applicative combiner
+	apv1, hdl: 1 arg applicative combiner
 	p: parameter
-	ps: parameters
 	pt: parameters tree
 	arg: argument
 	args: arguments
@@ -79,7 +77,7 @@ import java.util.function.Supplier;
 	eo: environment operand 
 	ep: environment parameter
 	xe: extended environment
-	k, next: continuation
+	k, nxt: continuation
 	s: sospension
 	r: resumption
 	f: function
@@ -90,8 +88,12 @@ import java.util.function.Supplier;
 	str: string
 	stx: syntax
 	sym: symbol
+	key: keyword
 	cmt: comment
 	dbg: debugging information
+	err: Error
+	val: Value
+	thw: Throwable
  */
 
 public class Vm {
@@ -108,25 +110,25 @@ public class Vm {
 	
 	// Continuations
 	class Continuation {
-		Function<Resumption, Object> f; Continuation next; Object dbg;
+		Function<Resumption, Object> f; Continuation nxt; Dbg dbg;
 		Continuation(Dbg dbg, Function<Resumption, Object> f, Continuation next) {
-			this.f = f; this.next = next; this.dbg = dbg;
+			this.f = f; this.nxt = next; this.dbg = dbg;
 		}
 		public String toString() { return "{Continuation %s}".formatted(dbg); }
 		//Object apply(Env e, Apv apv0) { return apply(()-> evaluate(e, cons(apv0, null))); } // for tco?
 		Object apply(Env e, Apv apv0) { return apply(()-> combine(e, apv0, null)); }
-		Object apply(Supplier s) { return f.apply(new Resumption(next, s));}
+		Object apply(Supplier s) { return f.apply(new Resumption(nxt, s));}
 	}
 	class Resumption {
 		Continuation k; Supplier<Object> s;
 		Resumption(Continuation k, Supplier<Object> s) { this.k=k; this.s=s; }
 		public String toString() { return "{Resumption %s %s}".formatted(s, k); }
-		<T> T resume() { var k = this.k; this.k = k.next; return getTco(k.f.apply(this)); }
+		<T> T resume() { var k = this.k; this.k = k.nxt; return getTco(k.f.apply(this)); }
 	};
 	class Suspension {
-		Object prompt; Combinable handler; Continuation k;
-		Suspension(Object prompt, Combinable handler) { this.prompt = prompt; this.handler = handler; }
-		public String toString() { return "{Suspension %s %s %s}".formatted(prompt, handler, k); }
+		Object prt; Combinable hdl; Continuation k;
+		Suspension(Object prt, Combinable handler) { this.prt = prt; this.hdl = handler; }
+		public String toString() { return "{Suspension %s %s %s}".formatted(prt, hdl, k); }
 		Suspension suspend(Dbg dbg, Function<Resumption, Object> f) { 
 			k = new Continuation(dbg, f, k); return this;
 		}
@@ -209,10 +211,8 @@ public class Vm {
 			return this == o || this.getClass().isInstance(o) && name.equals(((Intern) o).name);
 		}		
 	}
-	
 	class Keyword extends Intern { Keyword(String name) { super(name); }}
 	Keyword keyword(String name) { return new Keyword(name); }
-	
 	class Symbol extends Intern { Symbol(String name) { super(name); }}
 	Symbol symbol(String name) { return new Symbol(name); }
 	
@@ -254,22 +254,26 @@ public class Vm {
 		Env(Env parent) { this.parent = parent; }
 		record Lookup(boolean isBound, Object value) {}
 		Lookup get(K name) {
+			/* TODO sostituito dal seguente
 			Env env = this; do {
 				Object res = env.map.get(name);
 				if (res != null || env.map.containsKey(name)) return new Lookup(true, res);
 			} while ((env = env.parent) != null);
-			/*for (var env=this; env!=null; env=env.parent) {
-				Object res = ((LinkedHashMap) env).get(name);
-				if (res != null || env.containsKey(name)) return new Lookup(true, res);
-			}*/
+			*/
+			for (var env=this; env!=null; env=env.parent) {
+				Object res = env.map.get(name);
+				if (res != null || env.map.containsKey(name)) return new Lookup(true, res);
+			}
 			return new Lookup(false, null);
 		};
 		boolean set(K name, Object value) {
+			/* TODO sostituito dal seguente
 			Env env = this; do {
 				if (env.map.containsKey(name)) { env.put(name, value); return true; }
 			} while ((env = env.parent) != null);
-			//for (var env=this; env!=null; env=env.parent)
-			//	if (env.containsKey(name)) { env.put(name, value); return true; }
+			*/
+			for (var env=this; env!=null; env=env.parent)
+				if (env.map.containsKey(name)) { env.put(name, value); return true; }
 			return false; // TODO or error("!") ok new Lookup(false, null)
 		};
 		Object put(K name, Object value) {
@@ -286,8 +290,10 @@ public class Vm {
 		}
 		boolean isBound(K name) { return get(name).isBound; }
 		boolean isParent(Env other) {
+			/* TODO sostituito dal seguente
 			Env env = this; do if (env == other) return true; while ((env = env.parent) != null);
-			//for (var env=this; env!=null; env=env.parent) if (other == env) return true; 
+			*/
+			for (var env=this; env!=null; env=env.parent) if (other == env) return true; 
 			return false;
 		};
 		int deep() {
@@ -297,7 +303,7 @@ public class Vm {
 	Env env(Env parent) { return new Env<Symbol>(parent); }
 	
 	
-	// Classes Objects 
+	// Classes and Objects 
 	class WatClass extends Env<Symbol> {
 		WatClass(WatClass watClass) { super(watClass); }
 		@Override public String toString() { return "{WatClass" + reverseMap(map) + "}"; }
@@ -306,16 +312,6 @@ public class Vm {
 	class WatObj extends LinkedHashMap<Keyword, Object> {
 		private static final long serialVersionUID = 1L;
 		WatClass watClass;
-		/* TODO sostituito dal seguente
-		WatObject(WatClass watClass, Object ... slot) {
-			this.watClass = watClass;
-			if (slot.length % 2 != 0) throw new Error("a value expected in: " + slot);
-	        for (int i = 0; i<slot.length; i+=2) {
-	        	var car = slot[i]; if (!(car instanceof Keyword key)) throw new Error("not a keyword: " + car + " in: " + slot); 
-	        	put(key, slot[i + 1]);
-	        }
-		}
-		*/
 		WatObj(WatClass watClass, List list) {
 			this.watClass = watClass;
 	        for (var l=list; l!=null; l=l.cdr()) {
@@ -326,7 +322,9 @@ public class Vm {
 		}
 		@Override public String toString() { return "{WatObject" + reverseMap(this) + "}"; }
 	}
-	/*
+	
+	/* TODO in alternativa ai precedenti
+	// Environment
 	class WatRootObj<K> extends LinkedHashMap<K,Object> {
 		private static final long serialVersionUID = 1L;
 	}
@@ -365,6 +363,8 @@ public class Vm {
 		};
 	}
 	Env env(Env parent) { return new Env<Symbol>(parent); }
+	
+	// Class and Object
 	class WatClass extends Env<Symbol> {
 		private static final long serialVersionUID = 1L;
 		WatClass(WatClass watClass) { super(watClass); }
@@ -384,7 +384,7 @@ public class Vm {
 		}
 		@Override public String toString() { return "{WatObject" + reverseMap(this) + "}"; }
 	}
-	*/
+	//*/
 	
 	
 	// Bind
@@ -526,13 +526,13 @@ public class Vm {
 	}
 	class Catch implements Combinable {
 		public Object combine(Env e, List o) {
-			var l = checkO(this, o, 2, 3); // o = (tag x) | (tag x handler)
+			var l = checkO(this, o, 2, 3); // o = (tag x) | (tag x hdl) -> (tag x (lambda (exc) ... )) 
 			var tag = o.car();
 			var x = o.car(1);
-			var handler = l == 2 ? null : o.car(2);
-			return combine(null, e, tag, x, handler);
+			var hdl = l == 2 ? null : o.car(2);
+			return combine(null, e, tag, x, hdl);
 		}
-		private Object combine(Resumption r, Env e, Object tag, Object x, Object handler) {
+		private Object combine(Resumption r, Env e, Object tag, Object x, Object hdl) {
 			Object res = null;
 			try {
 				if (ctapv && !(x instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + x);
@@ -540,88 +540,45 @@ public class Vm {
 			}
 			catch (Throwable thw) {
 				if (tag != ignore && thw instanceof Value val && !Vm.this.equals(val.tag, tag)) throw thw; 
-				//res = getValue(e, handler, thw);
-				res = pipe(dbg(e, this, handler, thw), ()-> {
-						if (handler == null) {
+				res = pipe(dbg(e, this, hdl, thw), ()-> {
+						if (hdl == null) {
 							if (thw instanceof Value val) return val.value;
 							throw thw instanceof Error err ? err : new Error(thw);
 						}
-						return (ctapv ? handler : evaluate(e, handler)) instanceof Apv apv1 && args(apv1) == 1
+						return (ctapv ? hdl : evaluate(e, hdl)) instanceof Apv apv1 && args(apv1) == 1
 							? getTco(Vm.this.combine(e, apv1, list(thw instanceof Value val ? val.value : thw)))
-							: error("not a one arg applicative combiner: " + handler)
+							: error("not a one arg applicative combiner: " + hdl)
 						; 
 					}
 				);
-				/* TODO da tenere 
-				res = pipe(dbg(e, this, handler, thw), ()-> {
-						if (handler == null) {
-							if (thw instanceof Value v) return v.value;
-							throw thw instanceof Error err ? err : new Error(thw);
-						}
-						return ctapv ? handler : evaluate(e, handler);
-					},
-					hdl-> hdl instanceof Apv apv1 && args(apv1) == 1
-						? getTco(Vm.this.combine(e, apv1, list(thw instanceof Value val ? val.value : thw)))
-						: error("not a one arg applicative combiner: " + hdl)
-				);
-				//*/
 			}
-			return res instanceof Suspension s ? s.suspend(dbg(e, this, tag, x, handler), rr-> combine(rr, e, tag, x, handler)) : res;
+			return res instanceof Suspension s ? s.suspend(dbg(e, this, tag, x, hdl), rr-> combine(rr, e, tag, x, hdl)) : res;
 		}
-		/*
-		private Object getValue(Env e, Object handler, Throwable thw) {
-			if (handler == null) {
-				if (thw instanceof Value val) return val.value;
-				throw thw instanceof Error err ? err : new Error(thw);
-			}
-			if (!ctapv) handler = evaluate(e, handler);
-			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
-			// unwrap handler to prevent eval if exc is sym or cons
-			//return evaluate(e, list(unwrap(apv1), exc.value));
-			return getTco(Vm.this.combine(e, apv1, list(thw instanceof Value v ? v.value : thw)));
-		}
-		//*/
-		/*
-		private Object getValue1(Env e, Object handler, Throwable thw) {
-			if (handler == null) {
-				if (thw instanceof Value v) return v.value;
-				throw thw instanceof Error err ? err : new Error(thw);
-			}
-			return (ctapv ? handler : evaluate(e, handler)) instanceof Apv apv1 && args(apv1) == 1
-				? getTco(Vm.this.combine(e, apv1, list(thw instanceof Value v ? v.value : thw)))
-				: error("not a one arg applicative combiner: " + handler)
-			;
-		}
-		//*/
 		public String toString() { return "%Catch"; }
 	}
 	class Throw implements Combinable {
 		public Object combine(Env e, List o) {
-			var l = checkO(this, o, 1, 2); // o = (tag)|(tag value)
+			var l = checkO(this, o, 1, 2); // o = (tag) | (tag value)
 			var tag = o.car();
 			var value = l == 1 ? inert : o.car(1);
-			//return pipe(dbg(e, this, o), ()-> evaluate(e, value), res-> { throw new Value(tag, res); });
-			//if (ctopv) return pipe(dbg(e, this, o), ()-> evaluate(e, value), res-> { throw new Value(tag, res); });
-			//if (ctopv) return pipe(dbg(e, this, o), ()-> { throw new Value(tag, evaluate(e, value)); });
-			//throw new Value(tag, value);
 			throw new Value(tag, ctapv ? value : pipe(dbg(e, this, tag, value), ()-> evaluate(e, value)));
 		}
 		public String toString() { return "%Throw"; }
 	}
 	class Finally implements Combinable {
 		public Object combine(Env e, List o) {
-			checkO(this, o, 2); // o = (x cleanup)
+			checkO(this, o, 2); // o = (x cln)
 			var x = o.car();
-			var cleanup = o.car(1);
+			var cln = o.car(1);
 			try {
-				return pipe(dbg(e, this, x, cleanup), ()-> evaluate(e, x), res-> cleanup(cleanup, e, true, res));
+				return pipe(dbg(e, this, x, cln), ()-> evaluate(e, x), res-> cleanup(cln, e, true, res));
 			}
 			catch (Throwable thw) {
-				return cleanup(cleanup, e, false, thw);
+				return cleanup(cln, e, false, thw);
 			}
 		}
-		Object cleanup(Object cleanup, Env e, boolean success, Object res) {
-			return pipe(dbg(e, this, cleanup, success, res), ()-> evaluate(e, cleanup),
+		Object cleanup(Object cln, Env e, boolean success, Object res) {
+			return pipe(dbg(e, this, cln, success, res), ()-> evaluate(e, cln),
 				$-> {
 					if (success) return res;
 					throw res instanceof Value val ? val : res instanceof Error err ? err : new Error((Throwable) res);
@@ -634,48 +591,48 @@ public class Vm {
 	// Delimited Control
 	class TakeSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
-			checkO(this, o, 2); // o = (prompt handler) -> (prompt (lambda (k) ...))
-			var prompt = o.car();
-			var handler = o.car(1); 
-			if (!(handler instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + handler); 
-			//return new Suspension(prompt, apv1).suspend(rr-> evaluate(e, cons(rr.s, null)), dbg(e, this, o)); // for tco?
-			return new Suspension(prompt, apv1).suspend(dbg(e, this, o), rr-> Vm.this.combine(e, rr.s, null));
+			checkO(this, o, 2); // o = (prt hdl) -> (prt (lambda (k) ...))
+			var prt = o.car();
+			var hdl = o.car(1); 
+			if (!(hdl instanceof Apv apv1 && args(apv1) == 1)) return error("not a one arg applicative combiner: " + hdl); 
+			//return new Suspension(prt, apv1).suspend(rr-> evaluate(e, cons(rr.s, null)), dbg(e, this, o)); // for tco?
+			return new Suspension(prt, apv1).suspend(dbg(e, this, o), rr-> Vm.this.combine(e, rr.s, null));
 		}
 		public String toString() { return "%TakeSubcont"; }
 	}
 	class PushPrompt implements Combinable  {
 		public Object combine(Env e, List o) {
-			checkO(this, o, 2); // o = (prompt x) | (prompt (begin ...))
-			var prompt = o.car();
+			checkO(this, o, 2); // o = (prt x) | (prt (begin ...))
+			var prt = o.car();
 			var x = o.car(1);
-			return pushPrompt(null, e, dbg(e, this, o), prompt, ()-> evaluate(e, x));
+			return pushPrompt(null, e, dbg(e, this, o), prt, ()-> evaluate(e, x));
 		}
 		public String toString() { return "%PushPrompt"; }
 	}
 	class PushPromptSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
-			checkO(this, o, 3); // o = (prompt k apv0) -> (prompt k (lambda () ...)
-			var prompt = o.car();
+			checkO(this, o, 3); // o = (prt k apv0) -> (prt k (lambda () ...)
+			var prt = o.car();
 			var o1 = o.car(1); if (!(o1 instanceof Continuation k)) return error("not a continuation: " + o1); 
 			var o2 = o.car(2); if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2);
-			//return pushPrompt(null, e, dbg(e, this, o), prompt, ()-> k.apply(()-> evaluate(e, cons(apv0, null)))); // for tco?
-			//return pushPrompt(null, e, dbg(e, this, o), prompt, ()-> k.apply(()-> Vm.this.combine(e, apv0, null)));
-			return pushPrompt(null, e, dbg(e, this, o), prompt, ()-> k.apply(e, apv0));
+			//return pushPrompt(null, e, dbg(e, this, o), prt, ()-> k.apply(()-> evaluate(e, cons(apv0, null)))); // for tco?
+			//return pushPrompt(null, e, dbg(e, this, o), prt, ()-> k.apply(()-> Vm.this.combine(e, apv0, null)));
+			return pushPrompt(null, e, dbg(e, this, o), prt, ()-> k.apply(e, apv0));
 		}
 		public String toString() { return "%PushPromptSubcont"; }
 	}
-	Object pushPrompt(Resumption r, Env e, Dbg dbg, Object prompt, Supplier action) {
+	Object pushPrompt(Resumption r, Env e, Dbg dbg, Object prt, Supplier action) {
 		var res = r != null ? r.resume() : action.get();
 		if (!(res instanceof Suspension s)) return res;
-		return prompt == ignore || !equals(s.prompt, prompt)
-			? s.suspend(dbg, rr-> pushPrompt(rr, e, dbg, prompt, action))
-			: combine(e, s.handler, cons(s.k, null))
+		return prt == ignore || !equals(s.prt, prt)
+			? s.suspend(dbg, rr-> pushPrompt(rr, e, dbg, prt, action))
+			: combine(e, s.hdl, cons(s.k, null))
 		;
 	}
 	Object pushSubcontBarrier(Resumption r, Env e, Object x) {
 		var res = r != null ? r.resume() : evaluate(e, x);
 		if (!(res instanceof Suspension s)) return res;
-		return s.suspend(dbg(e, "pushSubcontBarrier", x), rr-> pushSubcontBarrier(rr, e, x)).k.apply(()-> error("prompt not found: " + s.prompt));
+		return s.suspend(dbg(e, "pushSubcontBarrier", x), rr-> pushSubcontBarrier(rr, e, x)).k.apply(()-> error("prompt not found: " + s.prt));
 	}
 	
 	
@@ -687,7 +644,7 @@ public class Vm {
 	}
 	class DDef implements Combinable {
 		public Object combine(Env e, List o) {
-			checkO(this, o, 2, -1); // o = (vars ... vals)
+			checkO(this, o, 2, -1); // o = ((var ...) vals ...)
 			var vars = listToArray(o.car(), Symbol.class);
 			var dVars = new DVar[vars.length];
 			for (int i=0; i<vars.length; i+=1) {
@@ -712,7 +669,7 @@ public class Vm {
 	}
 	class DLet implements Combinable {
 		public Object combine(Env e, List o) {
-			checkO(this, o, 3, -1); // o = (vars vals ... x)
+			checkO(this, o, 3, -1); // o = ((var ...) (val ...) x ...)
 			var vars = listToArray(o.car());
 			var vals = listToArray(o.car(1));
 			if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
