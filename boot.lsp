@@ -49,7 +49,7 @@
 ($define! makeEnvironment %makeEnvironment)
 ($define! nil? %nil?)
 ($define! not !)
-($define! reverseList %reverseList)
+($define! reverseList %reverse)
 ($define! rootPrompt %rootPrompt)
 ($define! string->symbol %string->symbol)
 ($define! symbolName %symbolName)

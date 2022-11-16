@@ -187,25 +187,6 @@
      100)
   135)
 
-|#
-(defineOperative (block blockName . forms) env
-  (let ((tag (list #null))) ; cons up a fresh object as tag
-    (let ((escape (lambda (value) (throwTag tag value))))
-      (catchTag tag
-        (eval (list (list* lambda (list blockName) forms)
-                    escape)
-              env)))))
-
-(define (returnFrom blockName . value?)
-    (blockName (optional value?)))
-
-(define optional (lambda value? (if (== value? ()) () (car value?))))
-(assert (optional) ())
-(assert (optional 1) 1)
-
-(define unwindProtect finally)
-#|
-
 (assert (catchTag a (throwTag a)) #inert)
 (assert (catchTag a (throwTag a 2)) 2)
 

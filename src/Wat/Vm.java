@@ -152,7 +152,7 @@ public class Vm {
 	}
 	Object mapCar(Resumption r, List done, Function f, List todo) {
 		for (var first=true;;) { // only one resume for suspension
-			if (todo == null) return reverseList(done); 
+			if (todo == null) return reverse(done); 
 			var res = first && r != null && !(first = false) ? r.resume() : f.apply(todo.car());
 			if (res instanceof Suspension s) { List td=todo, dn=done; return s.suspend(dbg(null, "mapCar", todo.car), rr-> mapCar(rr, dn, f, td)); }
 			todo = todo.cdr(); done = cons(res, done);
@@ -513,7 +513,11 @@ public class Vm {
 			;
 		}
 		private boolean istrue(Object res) {
-			return res != null && res instanceof Boolean b && b;
+			//return res != null && res instanceof Boolean b && b;
+			//if (res == null) return false; if (!(res instanceof Boolean b)) return error("not a boolean."); return b;
+			return res == null ? false : res instanceof Boolean b ? b : error("not a boolean.");
+			//return res != null && (!(res instanceof Boolean b) || b);
+			//return !(res == null || res instanceof Boolean b && !b);
 		}
 		public String toString() { return "%If"; }
 	}
@@ -645,7 +649,7 @@ public class Vm {
 	class DDef implements Combinable {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 2, -1); // o = ((var ...) vals ...)
-			var vars = listToArray(o.car(), Symbol.class);
+			var vars = array(o.car(), Symbol.class);
 			var dVars = new DVar[vars.length];
 			for (int i=0; i<vars.length; i+=1) {
 				var var = vars[i];
@@ -655,7 +659,7 @@ public class Vm {
 				dVars[i] = dVar;
 			}
 			return pipe(dbg(e, this, o), ()-> mapCar(car-> evaluate(e, car), o.cdr()), args-> {
-				var vals = listToArray((List) args);
+				var vals = array((List) args);
 				if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
 				for (int i=0; i<dVars.length; i+=1) dSet(dbg(e, this, o), dVars[i], vars[i], vals[i]);
 				return inert;
@@ -670,8 +674,8 @@ public class Vm {
 	class DLet implements Combinable {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 3, -1); // o = ((var ...) (val ...) x ...)
-			var vars = listToArray(o.car());
-			var vals = listToArray(o.car(1));
+			var vars = array(o.car());
+			var vals = array(o.car(1));
 			if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
 			var olds = new Object[vals.length];
 			for (int i=0; i<vars.length; i+=1) {
@@ -709,11 +713,11 @@ public class Vm {
 						case Method mt-> {
 							var pc = mt.getParameterCount();
 							if (!mt.isVarArgs()) checkO(jfun, o, pc+1); else checkO(jfun, o, pc, -1);
-							yield mt.invoke(o.car(), reorg(mt, listToArray(o.cdr())));
+							yield mt.invoke(o.car(), reorg(mt, array(o.cdr())));
 						}
 						case Constructor c-> {
 							checkO(jfun, o, c.getParameterCount());
-							yield c.newInstance(reorg(c, listToArray(o)));
+							yield c.newInstance(reorg(c, array(o)));
 						}
 						default -> error("not a combine " + jfun);
 					};
@@ -747,7 +751,7 @@ public class Vm {
 			if (!(o instanceof List)) return error("no operands for executing: " + name) ;  
 			Object o0 = o.car();
 			if (o0 == null) return error("receiver is null");
-			Object[] args = listToArray(o, 1);
+			Object[] args = array(o, 1);
 			//Executable executable = getExecutable(name.equals("new") ? (Class) o0 : o0.getClass(), name,  getClasses(args));
 			// (@new class classes)   -> class.getConstructor(classes) -> constructor
 			// (@new class objects)   -> class.getConstructor(classes).newInstance(objects) -> constructor.newInstance(objects)
@@ -877,39 +881,44 @@ public class Vm {
 	
 	// Utilities
 	<T,R extends Cons> R list(T ... args) {
-		return arrayToList(true, args);
+		return list(true, args);
 	}
 	<T,R extends Cons> R listStar(T ... args) {
-		return arrayToList(false, args);
+		return list(false, args);
 	}
-	<T, R extends Cons> R arrayToList(boolean b, T ... args) {
+	<T, R extends Cons> R list(boolean b, T ... args) {
 		var len = args.length-1;
 		var c = b || len < 0 ? null : args[len];
 		for (var i=len-(b?0:1); i>=0; i-=1) c = cons(args[i], c);
 		return (R) c;
 	}
-	Object[] listToArray(List c) {
-		return listToArray(c, 0);
+	Object[] array(List c) {
+		return array(c, 0);
 	}
-	Object[] listToArray(List c, int i) {
-		return listToArray(c, i, Object.class);
+	Object[] array(List c, int i) {
+		return array(c, i, Object.class);
 	}
-	<T> T[] listToArray(List c, Class<T> cl) {
-		return (T[]) listToArray(c, 0, cl);
+	<T> T[] array(List c, Class<T> cl) {
+		return (T[]) array(c, 0, cl);
 	}
-	<T> T[] listToArray(List o, int i, Class<T> cl) {
+	<T> T[] array(List o, int i, Class<T> cl) {
 		var res = new ArrayList<T>();
 		for (; o != null; o = o.cdr()) if (i-- <= 0) res.add(o.car());
 		return res.toArray((T[]) Array.newInstance(cl, 0));
 	}
-	List reverseList(List list) {
+	List reverse(List list) {
 		List res = null;
 		for (; list != null; list = list.cdr()) res = cons(list.car, res);
 		return res;
 	}
-	Object listToListStar(List h) {
+	Object append(List h, Object o) {
+		if (h == null) return o;
+		return cons(h.car(), append(h.cdr(), o));
+	}
+	Object listStar(List h) {
+		if (h == null) return null;
 		if (h.cdr == null) return h.car;
-		return cons(h.car(), listToListStar(h.cdr()));
+		return cons(h.car(), listStar(h.cdr()));
 	}
 	<T> T print(Object ... os) {
 		for (var o: os) out.print(toString(o)); out.println();
@@ -1020,9 +1029,6 @@ public class Vm {
 						@Override public Object apply(List o) { return env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car()); }
 						@Override public String toString() { return "%makeEnvironment"; }
 					}),
-					$("%def", "%resetEnvironment", (Supplier) ()-> theEnvironment = env(theEnvironment.parent)),
-					$("%def", "%pushEnvironment", (Supplier) ()-> theEnvironment = env(theEnvironment)),
-					$("%def", "%popEnvironment", (Supplier) ()-> theEnvironment = theEnvironment.parent),
 					$("%def", "%wrap", new Function<Object, Object>() {
 						@Override public Object apply(Object t) { return wrap(t); }
 						@Override public String toString() { return "%wrap"; }
@@ -1031,22 +1037,29 @@ public class Vm {
 						@Override public Object apply(Object t) { return unwrap(t); }
 						@Override public String toString() { return "%unwrap"; }
 					}),
+					$("%def", "%bound?", (BiFunction<Symbol,Env,Boolean>) (s, e)-> e.isBound(s)),
+					$("%def", "%apply", (ArgsList) o-> combine(o.cdr(1) != null ? o.car(2) : env(null), unwrap(o.car()), o.car(1))),
+					$("%def", "%applyn", (ArgsList) o-> combine(env(null), unwrap(o.car()), o.cdr())),
+					//$("%def", "%resetEnvironment", (Supplier) ()-> theEnvironment = env(theEnvironment.parent)),
+					$("%def", "%resetEnvironment", (Supplier) ()-> { theEnvironment.map.clear(); return theEnvironment; }),
+					$("%def", "%pushEnvironment", (Supplier) ()-> theEnvironment = env(theEnvironment)),
+					$("%def", "%popEnvironment", (Supplier) ()-> theEnvironment = theEnvironment.parent),
 					// Values
-					$("%def", "%cons", new BiFunction<Object, Object, Object>(){
+					$("%def", "%cons", new BiFunction<Object, Object, Object>() {
 						@Override public Object apply(Object car, Object cdr) { return cons(car,cdr);	}
 						@Override public String toString() { return "%cons"; }
 					}),
-					$("%def", "%cons?", new Function<Object, Boolean>(){
+					$("%def", "%cons?", new Function<Object, Boolean>() {
 						@Override public Boolean apply(Object obj) { return obj instanceof Cons; }
 						@Override public String toString() { return "%cons?"; }
 					}),
-					$("%def", "%nil?", new Function<Object, Boolean>(){
+					$("%def", "%nil?", new Function<Object, Boolean>() {
 						@Override public Boolean apply(Object obj) { return obj == null; }
 						@Override public String toString() { return "%nil?"; }
 					}),
 					$("%def", "%string->symbol", (Function<String, Symbol>) this::symbol),
 					$("%def", "%symbol?", (Function<Object, Boolean>) obj-> obj instanceof Symbol),
-					$("%def", "%symbolName", (Function<Symbol, String>) sym-> sym.name),
+					$("%def", "%symbolName", (Function<Intern, String>) i-> i.name),
 					// First-order Control
 					$("%def", "%if", new If()),
 					$("%def", "%loop", new Loop()),
@@ -1057,6 +1070,7 @@ public class Vm {
 					$("%def", "%takeSubcont", wrap(new TakeSubcont())),
 					$("%def", "%pushPrompt", new PushPrompt()),
 					$("%def", "%pushPromptSubcont", wrap(new PushPromptSubcont())),
+					$("%def", "%pushSubcontBarrier", (BiFunction<Object,Env,Object>) (o, e)-> pushSubcontBarrier(null, e, o)),
 					// Dynamically-scoped Variables
 					$("%def", "%dNew", (Function<Object,DVar>) DVar::new),
 					$("%def", "%dVal", (ArgsList) o-> { DVar dv = o.car(); return checkO("%dVal", o, 1, 2) == 1 ? dv.val : (dv.val=o.car(1)); }),
@@ -1088,18 +1102,26 @@ public class Vm {
 					//$("%def", "%makeClass", (Function<WatClass,WatClass>) WatClass::new),
 					$("%def", "%class", (Function<WatClass,WatClass>) WatClass::new),
 					$("%def", "%subClass?", (BiFunction<WatClass,WatClass,Boolean>) (sc,c)-> sc.isSubClass(c)),
+					$("%def", "%type?", (BiFunction<Object,Object,Boolean>) (o,c)-> {
+						if (o instanceof WatObj wo && c instanceof WatClass wc) return wo.watClass.isSubClass(wc);
+						if (c instanceof Class jc) return jc.isInstance(o);
+						return false;
+					}),
+					$("%def", "%classOf", (Function<Object,Object>) (o)-> o instanceof WatObj wo ? wo.watClass : o.getClass()),
 					// Utilities
 					$("%def", "%list", new ArgsList() {
 						@Override public Object apply(List o) { return o; }
 						@Override public String toString() { return "%list"; }						
 					}),
 					$("%def", "%list*", new ArgsList() {
-						@Override public Object apply(List o) { return listToListStar(o); }
+						@Override public Object apply(List o) { return listStar(o); }
 						@Override public String toString() { return "%list*"; }						
 					}),
-					$("%def", "%list->array", (Function<List,Object[]>) this::listToArray),
-					$("%def", "%array->list", (BiFunction<Boolean,Object[],Object>) this::arrayToList),
-					$("%def", "%reverseList", (Function<List,List>) this::reverseList),
+					$("%def", "%len", (Function<List,Integer>) this::len),
+					$("%def", "%list->array", (Function<List,Object[]>) this::array),
+					$("%def", "%array->list", (BiFunction<Boolean,Object[],Object>) this::list),
+					$("%def", "%reverse", (Function<List,List>) this::reverse),
+					$("%def", "%append", (BiFunction<List,Object,Object>) this::append),
 					// 
 					$("%def", "%+", (BinaryOperator) (a,b)-> a instanceof Number n1 && b instanceof Number n2 ? binOp(Pls, n1, n2) : toString(a) + toString(b)),
 					$("%def", "%*", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Pwr, a, b)),
@@ -1137,13 +1159,13 @@ public class Vm {
 						$("%wrap", $("%eval", $("%list*", "%vau", "formals", ignore, "body"), "env")))),
 					//$("%def", "%jambda", jFun((ArgsList) o-> lambda(o.car(), o.car(1), o.cdr(1)))),
 					//
-					$("%def", "assert", jFun((EnvArgsList) (e,o)-> { checkO("assert", o, 1, 2); return vmAssert(e,listToArray(o)); } )),
-					$("%def", "test", jFun((EnvArgsList) (e,o)-> { checkO("test", o, 2, 3); return vmAssert(e,toString(o.car()), o.car(1), listToArray(o.cdr(1))); } )),
+					$("%def", "assert", jFun((EnvArgsList) (e,o)-> { checkO("assert", o, 1, 2); return vmAssert(e,array(o)); } )),
+					$("%def", "test", jFun((EnvArgsList) (e,o)-> { checkO("test", o, 2, 3); return vmAssert(e,toString(o.car()), o.car(1), array(o.cdr(1))); } )),
 					$("%def", "this", jFun((Supplier)() -> this)),
 					$("%def", "toString", (Function<Object,String>) obj-> toString(obj)),
-					$("%def", "log", (ArgsList) o-> log(listToArray(o))),
-					$("%def", "print", (ArgsList) o-> print(listToArray(o))),
-					$("%def", "write", (ArgsList) o-> write(listToArray(o))),
+					$("%def", "log", (ArgsList) o-> log(array(o))),
+					$("%def", "print", (ArgsList) o-> print(array(o))),
+					$("%def", "write", (ArgsList) o-> write(array(o))),
 					$("%def", "load", (Function<String, Object>) nf-> uncked(()-> eval(readString(nf)))),
 					$("%def", "dotco", (ArgsList) o-> { if (checkO("dotco", o, 0, 1, Boolean.class) == 0) return dotco; dotco=o.car(); return inert; }),
 					$("%def", "doasrt", (ArgsList) o-> { if (checkO("doasrt", o, 0, 1, Boolean.class) == 0) return doasrt; doasrt=o.car(); return inert; }),

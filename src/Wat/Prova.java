@@ -36,9 +36,42 @@ public class Prova {
 	//class $ {}
 
 	public static void main(String[] args) throws Exception {
+		dynamicCompilation();
+	}
+
+	static void dynamicCompilation() throws Exception {
+		String source = """
+			package Wat;
+			public class Test {
+				static {
+					System.out.println("hello");
+				}
+				public Test() {
+					System.out.println("world");
+				}
+			}
+			""";
+		// Save source in .java file.
+		var name = "src/Wat/Test.java";
+		Files.write(new File(name).toPath(), source.getBytes("cp1252"));
+
+		// Compile source file.
+		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+		compiler.run(null, null, null, name, "-d", "bin");
+
+		// Load and instantiate compiled class.
+		Class<?> cls = Class.forName("Wat.Test"); // Should print "hello".
+		//Object instance = cls.newInstance(); // Should print "world".
+		Object instance = cls.getConstructor().newInstance(); // Should print "world".
+		System.out.println(instance); // Should print "Wat.Test@hashcode".
+	}
+
+	static void parse() throws Exception {
 		var s = """
 		A
 		|#
+		  "#|"
+		  ; #|
 		#|
 		  C
 		|#
@@ -49,7 +82,7 @@ public class Prova {
 		//var is = new ByteArrayInputStream(s.getBytes());
 		//while (is.available() > 0) out.println(Vm.read(is));
 		out.println(Parser.toString(Parser.parse(s)));
-		out.println("fatto");		
+		out.println("fatto");
 	}
 	
 	static void executable() {
@@ -317,7 +350,7 @@ public class Prova {
 		out.println();
 	}
 
-	static void dinamicClass() throws Exception {
+	static void dynamicClass() throws Exception {
 		String source = """
 			package test;
 			public class Test {
