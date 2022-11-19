@@ -92,7 +92,7 @@ import java.util.function.Supplier;
 	cmt: comment
 	dbg: debugging information
 	err: Error
-	val: Value
+	v, val: Value
 	thw: Throwable
  */
 
@@ -103,7 +103,7 @@ public class Vm {
 	boolean doasrt = true;
 	boolean ctapv = false;
 	
-	int prtrc = 0; // 0:none, 1:load, 2:eval root, 3:eval all, 4:combine, 5:bind/lookup
+	int prtrc = 0; // 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
 	int prenv = 3;
 	boolean prstk = false;
 	
@@ -187,22 +187,36 @@ public class Vm {
 	<T> T getTco(Object o) { while (o instanceof Tco tco) o = tco.get(); return (T) o; }
 	
 	
+	// Trace Log
+	int level=0, start=0; String indent = "|  ";
+	String indent() { return indent.repeat((level-start)); 	}
+	
+	
 	// Evaluation Core
 	@SuppressWarnings("preview")
 	<T> T evaluate(Env e, Object o) {
-		if (prtrc >= 3) print("evaluate: ", o, "   ", e);
-		return getTco(
-			switch (o) {
-				case null, default-> o;
-				case Symbol s-> pipe(dbg(e, o), ()-> e.lookup(s));
-				case List c-> {
-					var ee=e; yield pipe(dbg(e, o), ()-> evaluate(ee, c.car), op-> combine(ee, op, c.cdr()));
+		if (prtrc >= 3) print("evaluate: ", indent(), o, "   ", e);
+		T v;
+		try {
+			level+=1;
+			v = getTco(
+				switch (o) {
+					case null, default-> o;
+					case Symbol s-> pipe(dbg(e, o), ()-> e.lookup(s));
+					case List c-> {
+						var ee=e; yield pipe(dbg(e, o), ()-> evaluate(ee, c.car), op-> combine(ee, op, c.cdr()));
+					}
 				}
-			}
-		);
+			);
+		}
+		finally {
+			level-=1;
+		}
+		if (prtrc >= 4) print("  return: ", indent(), v); 
+		return v;
 	}
 	
-	class Intern {
+	abstract class Intern {
 		String name;
 		Intern(String name) { this.name = name; }
 		public String toString() { return name; }
@@ -277,16 +291,16 @@ public class Vm {
 			return false; // TODO or error("!") ok new Lookup(false, null)
 		};
 		Object put(K name, Object value) {
-			if (prtrc >= 5) print("    bind: ", name, "=", value, " in: ", this); map.put(name, value); return null; 
+			if (prtrc >= 6) print("    bind: ", name, "=", value, " in: ", this); map.put(name, value); return null; 
 		}
 		public String toString() {
 			var deep = deep();
 			var prefix = switch(deep) { case 1-> "Vm-"; case 2-> "The-"; default-> ""; };
-			return "{" + prefix + "Env" + eIf(deep < prenv, ()-> reverseMap(map)) + eIf(parent == null, ()-> " " + parent) + "}";
+			return "{" + prefix + "Env[" + map.size() + "]" + eIf(deep < prenv, ()-> reverseMap(map)) + eIf(parent == null, ()-> " " + parent) + "}";
 		}
 		Object lookup(K name) {
 			var lookup = get(name); if (!lookup.isBound) return error("unbound: " + name);
-			if (prtrc >= 5) print("  lookup: ", lookup.value); return lookup.value;
+			if (prtrc >= 6) print("  lookup: ", lookup.value); return lookup.value;
 		}
 		boolean isBound(K name) { return get(name).isBound; }
 		boolean isParent(Env other) {
@@ -296,9 +310,7 @@ public class Vm {
 			for (var env=this; env!=null; env=env.parent) if (other == env) return true; 
 			return false;
 		};
-		int deep() {
-			int i=0; for (var env=this; env!=null; env=env.parent) i+=1; return i;
-		}
+		int deep() { int i=0; for (var env=this; env!=null; env=env.parent) i+=1; return i; }
 	}
 	Env env(Env parent) { return new Env<Symbol>(parent); }
 	
@@ -321,6 +333,11 @@ public class Vm {
 	        }
 		}
 		@Override public String toString() { return "{WatObject" + reverseMap(this) + "}"; }
+	}
+	Boolean isSubclass (Object sc, Object c) {
+		if (sc instanceof WatClass swc && c instanceof WatClass wc) return swc.isSubClass(wc);
+		if (c instanceof Class jc) return jc.isInstance(sc);
+		return false;
 	}
 	
 	/* TODO in alternativa ai precedenti
@@ -413,10 +430,11 @@ public class Vm {
 	interface Combinable { <T> T combine(Env e, List o); }
 	
 	<T> T combine(Env e, Object op, List o) {
-		if (prtrc >= 4) print(" combine: ", op, " ", o /*, "   ", e*/);
+		if (prtrc >= 5) print(" combine: ", indent(), op, " ", o /*, "   ", e*/);
 		if (op instanceof Combinable cmb) return cmb.combine(e, o);
-		// per default le jFun nude dovrebbero essere operative e non applicative
-		if (isjFun(op)) return ((Combinable) jWrap(op)).combine(e, o);
+		// per default le jFun nude sono considerate applicative
+		//if (isjFun(op)) return ((Combinable) jWrap(op)).combine(e, o);
+		if (isjFun(op)) return (T) new Apv(new JFun(op)).combine(e, o);
 		return error("not a combiner: " + toString(op) + " in: " + cons(op, o));
 	}
 	
@@ -439,8 +457,8 @@ public class Vm {
 		public String toString() { return "{Apv " + Vm.this.toString(cmb) + "}"; }
 		Combinable unwrap() { return cmb; }
 	}
-	Apv wrap(Object arg) { return arg instanceof Apv apv ? apv : arg instanceof Combinable cmb ? new Apv(cmb) : error("cannot wrap: " + arg); }
-	<T> T unwrap(Object arg) { return arg instanceof Apv apv ? (T) apv.cmb : isjFun(arg) ? (T) arg : error("cannot unwrap: " + arg); }
+	Object wrap(Object arg) { return arg instanceof Apv || isjFun(arg) ? arg : arg instanceof JFun jFun ? jFun.jfun : arg instanceof Combinable cmb ? new Apv(cmb) : error("cannot wrap: " + arg); }
+	<T> T unwrap(Object arg) { return arg instanceof Apv apv ? (T) apv.cmb : isjFun(arg) ? (T) new JFun(arg) : error("cannot unwrap: " + arg); }
 	//Apv lambda(Object p, Object e, List b) { return new Apv(new Opv(p, ignore, b, evaluate(theEnvironment, e))); }
 	
 	
@@ -582,8 +600,7 @@ public class Vm {
 			}
 		}
 		Object cleanup(Object cln, Env e, boolean success, Object res) {
-			return pipe(dbg(e, this, cln, success, res), ()-> evaluate(e, cln),
-				$-> {
+			return pipe(dbg(e, this, cln, success, res), ()-> evaluate(e, cln), $-> {
 					if (success) return res;
 					throw res instanceof Value val ? val : res instanceof Error err ? err : new Error((Throwable) res);
 				}
@@ -659,11 +676,11 @@ public class Vm {
 				dVars[i] = dVar;
 			}
 			return pipe(dbg(e, this, o), ()-> mapCar(car-> evaluate(e, car), o.cdr()), args-> {
-				var vals = array((List) args);
-				if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
-				for (int i=0; i<dVars.length; i+=1) dSet(dbg(e, this, o), dVars[i], vars[i], vals[i]);
-				return inert;
-			}
+					var vals = array((List) args);
+					if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
+					for (int i=0; i<dVars.length; i+=1) dSet(dbg(e, this, o), dVars[i], vars[i], vals[i]);
+					return inert;
+				}
 			);
 		}
 		private void dSet(Dbg dbg, DVar dvar, Symbol var, Object val) {
@@ -700,35 +717,34 @@ public class Vm {
 	class JFun implements Combinable {
 		Object jfun; JFun(Object jfun) { this.jfun = jfun; };
 		@SuppressWarnings("preview")
-		public Object combine(Env e, List o) {
-			return pipe(dbg(e, this, o), ()-> {
-				try {
-					return switch (jfun) {
-						case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
-						case ArgsList a-> a.apply(o);  
-						case Function f-> { checkO(jfun, o, 1); yield f.apply(o.car()); }  
-						case EnvArgsList f-> f.apply(e, o);
-						case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(o.car(), o.car(1)); }
-						case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; }
-						case Method mt-> {
-							var pc = mt.getParameterCount();
-							if (!mt.isVarArgs()) checkO(jfun, o, pc+1); else checkO(jfun, o, pc, -1);
-							yield mt.invoke(o.car(), reorg(mt, array(o.cdr())));
-						}
-						case Constructor c-> {
-							checkO(jfun, o, c.getParameterCount());
-							yield c.newInstance(reorg(c, array(o)));
-						}
-						default -> error("not a combine " + jfun);
-					};
+		public Object combine(Env e, List o) { return pipe(dbg(e, this, o), ()-> {
+					try {
+						return switch (jfun) {
+							case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
+							case ArgsList a-> a.apply(o);  
+							case Function f-> { checkO(jfun, o, 1); yield f.apply(o.car()); }  
+							case EnvArgsList f-> f.apply(e, o);
+							case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(o.car(), o.car(1)); }
+							case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; }
+							case Method mt-> {
+								var pc = mt.getParameterCount();
+								if (!mt.isVarArgs()) checkO(jfun, o, pc+1); else checkO(jfun, o, pc, -1);
+								yield mt.invoke(o.car(), reorg(mt, array(o.cdr())));
+							}
+							case Constructor c-> {
+								checkO(jfun, o, c.getParameterCount());
+								yield c.newInstance(reorg(c, array(o)));
+							}
+							default -> error("not a combine " + jfun);
+						};
+					}
+					catch (Value | Error exc) {
+						throw exc;
+					}
+					catch (Throwable exc) {
+						return error("jfun error: " + exc.getMessage(), exc);
+					}
 				}
-				catch (Value | Error exc) {
-					throw exc;
-				}
-				catch (Throwable exc) {
-					return error("jfun error: " + exc.getMessage(), exc);
-				}
-			}
 			);
 		}
 		public String toString() {
@@ -736,12 +752,12 @@ public class Vm {
 			return "{JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "}"; }
 	}
 	boolean isjFun(Object obj) {
-		return isInstance(obj, Supplier.class, ArgsList.class, Function.class, EnvArgsList.class, BiFunction.class, Executable.class, Field.class);
+		return isInstance(obj, Supplier.class /*, ArgsList.class*/, Function.class/*, EnvArgsList.class*/, BiFunction.class, Executable.class, Field.class);
 	}
 	JFun jFun(Object obj) {
 		return obj instanceof JFun jfun ? jfun : isjFun(obj) ? new JFun(obj) : error("no a jFun: " + obj);
 	}
-	Apv jWrap(Object obj) {
+	Object jWrap(Object obj) {
 		return wrap(jFun(obj));
 	}
 	@SuppressWarnings("preview")
@@ -886,7 +902,7 @@ public class Vm {
 	<T,R extends Cons> R listStar(T ... args) {
 		return list(false, args);
 	}
-	<T, R extends Cons> R list(boolean b, T ... args) {
+	<T,R extends Cons> R list(boolean b, T ... args) {
 		var len = args.length-1;
 		var c = b || len < 0 ? null : args[len];
 		for (var i=len-(b?0:1); i>=0; i-=1) c = cons(args[i], c);
@@ -1027,15 +1043,15 @@ public class Vm {
 					$("%def", "%eval", wrap(new Eval())),
 					$("%def", "%makeEnvironment", new ArgsList() {
 						@Override public Object apply(List o) { return env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car()); }
-						@Override public String toString() { return "%makeEnvironment"; }
+						@Override public String toString() { return "%MakeEnvironment"; }
 					}),
 					$("%def", "%wrap", new Function<Object, Object>() {
 						@Override public Object apply(Object t) { return wrap(t); }
-						@Override public String toString() { return "%wrap"; }
+						@Override public String toString() { return "%Wrap"; }
 					}),
 					$("%def", "%unwrap", new Function<Object, Object>() {
 						@Override public Object apply(Object t) { return unwrap(t); }
-						@Override public String toString() { return "%unwrap"; }
+						@Override public String toString() { return "%Unwrap"; }
 					}),
 					$("%def", "%bound?", (BiFunction<Symbol,Env,Boolean>) (s, e)-> e.isBound(s)),
 					$("%def", "%apply", (ArgsList) o-> combine(o.cdr(1) != null ? o.car(2) : env(null), unwrap(o.car()), o.car(1))),
@@ -1047,15 +1063,15 @@ public class Vm {
 					// Values
 					$("%def", "%cons", new BiFunction<Object, Object, Object>() {
 						@Override public Object apply(Object car, Object cdr) { return cons(car,cdr);	}
-						@Override public String toString() { return "%cons"; }
+						@Override public String toString() { return "%Cons"; }
 					}),
 					$("%def", "%cons?", new Function<Object, Boolean>() {
 						@Override public Boolean apply(Object obj) { return obj instanceof Cons; }
-						@Override public String toString() { return "%cons?"; }
+						@Override public String toString() { return "%Cons?"; }
 					}),
 					$("%def", "%nil?", new Function<Object, Boolean>() {
 						@Override public Boolean apply(Object obj) { return obj == null; }
-						@Override public String toString() { return "%nil?"; }
+						@Override public String toString() { return "%Nil?"; }
 					}),
 					$("%def", "%string->symbol", (Function<String, Symbol>) this::symbol),
 					$("%def", "%symbol?", (Function<Object, Boolean>) obj-> obj instanceof Symbol),
@@ -1085,10 +1101,10 @@ public class Vm {
 					//$("%def", "%instanceof?", (BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o)),
 					$("%def", "%instanceof?", new BiFunction<Object,Class,Boolean>() {
 						@Override public Boolean apply(Object o, Class c) { return c.isInstance(o); }
-						@Override public String toString() { return "%instanceof?"; }
+						@Override public String toString() { return "%Instanceof?"; }
 					}),
 					// Object System
-					$("%def", "%classOf", (Function<WatObj,WatClass>) lo-> lo.watClass),
+					//$("%def", "%classOf", (Function<WatObj,WatClass>) lo-> lo.watClass),
 					$("%def", "%addMethod", (ArgsList) o-> ((WatClass) o.car()).put(o.car(1), o.car(2))),
 					$("%def", "%getMethod", (BiFunction<WatClass,Symbol,Combinable>) (lc,n)-> (Combinable) lc.get(n).value),
 					//$("%def", "%setSlot", (ArgsList) o-> ((WatObject) o.car()).put(o.car(1), o.car(2))),
@@ -1101,21 +1117,24 @@ public class Vm {
 					//$("%def", "%makeClass", (BiFunction<String,WatClass,WatClass>) WatClass::new),
 					//$("%def", "%makeClass", (Function<WatClass,WatClass>) WatClass::new),
 					$("%def", "%class", (Function<WatClass,WatClass>) WatClass::new),
-					$("%def", "%subClass?", (BiFunction<WatClass,WatClass,Boolean>) (sc,c)-> sc.isSubClass(c)),
+					$("%def", "%subClass?", (BiFunction<Object,Object,Boolean>) this::isSubclass),
+					/*
 					$("%def", "%type?", (BiFunction<Object,Object,Boolean>) (o,c)-> {
 						if (o instanceof WatObj wo && c instanceof WatClass wc) return wo.watClass.isSubClass(wc);
 						if (c instanceof Class jc) return jc.isInstance(o);
 						return false;
 					}),
+					*/
+					$("%def", "%type?",  (BiFunction<Object,Object,Boolean>) (o,c)-> isSubclass(o instanceof WatObj wo ? wo.watClass : o, c)),
 					$("%def", "%classOf", (Function<Object,Object>) (o)-> o instanceof WatObj wo ? wo.watClass : o.getClass()),
 					// Utilities
 					$("%def", "%list", new ArgsList() {
 						@Override public Object apply(List o) { return o; }
-						@Override public String toString() { return "%list"; }						
+						@Override public String toString() { return "%List"; }						
 					}),
 					$("%def", "%list*", new ArgsList() {
 						@Override public Object apply(List o) { return listStar(o); }
-						@Override public String toString() { return "%list*"; }						
+						@Override public String toString() { return "%List*"; }						
 					}),
 					$("%def", "%len", (Function<List,Integer>) this::len),
 					$("%def", "%list->array", (Function<List,Object[]>) this::array),
@@ -1123,7 +1142,13 @@ public class Vm {
 					$("%def", "%reverse", (Function<List,List>) this::reverse),
 					$("%def", "%append", (BiFunction<List,Object,Object>) this::append),
 					// 
-					$("%def", "%+", (BinaryOperator) (a,b)-> a instanceof Number n1 && b instanceof Number n2 ? binOp(Pls, n1, n2) : toString(a) + toString(b)),
+					//$("%def", "%+", (BinaryOperator) (a,b)-> a instanceof Number n1 && b instanceof Number n2 ? binOp(Pls, n1, n2) : toString(a) + toString(b)),
+					$("%def", "%+", new BinaryOperator() {
+						@Override public Object apply(Object a, Object b) {
+							return a instanceof Number n1 && b instanceof Number n2 ? binOp(Pls, n1, n2) : Vm.this.toString(a) + Vm.this.toString(b);
+						}
+						@Override public String toString() { return "%+"; }						
+					}),
 					$("%def", "%*", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Pwr, a, b)),
 					$("%def", "%-", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Mns, a, b)),
 					$("%def", "%/", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Dvd, a, b)),
@@ -1150,7 +1175,7 @@ public class Vm {
 					$("%def", "%!=", (BiFunction<Object,Object,Boolean>) (a,b)-> a != b),
 					$("%def", "%eq?", new BiFunction<Object,Object,Boolean>(){
 						@Override public Boolean apply(Object a, Object b) { return Vm.this.equals(a, b);	}
-						@Override public String toString() { return "%eq?"; }						
+						@Override public String toString() { return "%Eq?"; }						
 					}),
 					//
 					$("%def", "%quote", $("%vau", $("arg"), ignore, "arg")),
@@ -1169,7 +1194,7 @@ public class Vm {
 					$("%def", "load", (Function<String, Object>) nf-> uncked(()-> eval(readString(nf)))),
 					$("%def", "dotco", (ArgsList) o-> { if (checkO("dotco", o, 0, 1, Boolean.class) == 0) return dotco; dotco=o.car(); return inert; }),
 					$("%def", "doasrt", (ArgsList) o-> { if (checkO("doasrt", o, 0, 1, Boolean.class) == 0) return doasrt; doasrt=o.car(); return inert; }),
-					$("%def", "prtrc", (ArgsList) o-> { if (checkO("prtrc", o, 0, 1, Integer.class) == 0) return prtrc; prtrc=o.car(); return inert; }),
+					$("%def", "prtrc", (ArgsList) o-> { if (checkO("prtrc", o, 0, 1, Integer.class) == 0) return prtrc; prtrc=o.car(); start=level-3; return inert; }),
 					$("%def", "prenv", (ArgsList) o-> { if (checkO("prenv", o, 0, 1, Integer.class) == 0) return prenv; prenv=o.car(); return inert; }),
 					$("%def", "prstk", (ArgsList) o-> { if (checkO("prstk", o, 0, 1, Boolean.class) == 0) return prstk; prstk=o.car(); return inert; })
 					//$("%def", "prenv", (ArgsList) o-> checkO("prenv", o, 0, 1, Boolean.class) == 0 ? prenv : inert(prenv=o.car()))
@@ -1331,17 +1356,17 @@ public class Vm {
 		//*
 		//print("inizio");
 		var milli = currentTimeMillis();
+		//*
 		eval(readString("testVm.lsp"));
 		eval(readString("boot.lsp"));
 		eval(readString("test.lsp"));
-		//eval(readString("wat/boot.wat"));
-		//eval(readString("wat/test.wat"));
-		//trace = true;
-		//eval(readString("lispx/boot.lispx"));
 		eval(readString("testJni.lsp"));
 		eval(readString("testOos.lsp"));
+		//*/
+		//eval(readString("wat/boot.wat"));
+		//eval(readString("wat/test.wat"));
+		//eval(readString("lispx/load.lispx"));
 		print("start time: " + (currentTimeMillis() - milli));
-		//stack = true;
 		repl();
 		//*/
 	}
