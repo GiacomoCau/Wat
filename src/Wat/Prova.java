@@ -30,23 +30,212 @@ import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
 import List.Parser;
+import Wat.Vm.Keyword;
+import Wat.Vm.Symbol;
 
 public class Prova {
 	
 	//class $ {}
 
 	public static void main(String[] args) throws Exception {
-		dynamicCompilation();
+		//dynamicCompilation3("Test2", "Vm.WatClass");
+		//dynamicCompilation3("Test3", "Test2");
+		
+		//out.println(Wat1.class instanceof WatObj0);
+		//out.println(Wat1.class instanceof WatObj0.class);
+		//out.println(Wat1.class.isInstance(WatObj0.class));
+		out.println(WatObj0.class.isAssignableFrom(Wat1.class));
+		Wat0.methods.put("m", 1);
+		Wat0 w0 = new Wat0();
+		w0.slot.put("a", 1);
+		Wat1.methods.put("m", 2);
+		Wat1 w1 = new Wat1();
+		w1.slot.put("b", 2);
+		out.println(Wat1.class.getSuperclass());
+		var wat1 = Wat1.class;
+		var wat1Methods = (Map) wat1.getDeclaredField("methods").get(wat1);
+		var wat0 = wat1.getSuperclass();
+		var wat0Methods = (Map) wat0.getDeclaredField("methods").get(wat0);
+		out.println(wat0Methods.get("m"));
+		wat0Methods.put("m", 3);
+		out.println(wat0Methods.get("m"));
+		
+		putMethod(WatObj0.class, "x", 0);
+		out.println(getMethod(Wat2.class, "x"));
+		out.println(getMethod(Wat2.class, "o"));
 	}
-
-	static void dynamicCompilation() throws Exception {
+	
+	static class WatObj0 {
+		static Map<String, Object> methods = new LinkedHashMap();
+		Map<String,Object> slot = new LinkedHashMap();
+	}
+	static class Wat0 extends WatObj0 {
+		static Map<String, Object> methods = new LinkedHashMap();
+	}
+	static class Wat1 extends Wat0 {
+		static Map<String, Object> methods = new LinkedHashMap();
+	}
+	static class Wat2 extends Wat1 {
+		static Map<String, Object> methods = new LinkedHashMap();
+	}
+	
+	static Map<String,Object> getMethods(Class<? extends WatObj0> cls) {
+		try {
+			return (Map<String,Object>) cls.getDeclaredField("methods").get(cls);
+		}
+		catch (Exception e) {
+			return null;
+		}
+	}
+	static Object getMethod0(Class<? extends WatObj0> cls, String name) {
+		try {
+			return getMethods(cls).get(name);
+		}
+		catch (Exception e) {
+			return null;
+		}
+	}
+	static Object getMethod(Class<? extends WatObj0> cls, String name) {
+		Class c = cls; do {
+			var m = getMethod0(c, name); if (m != null) return m;
+		} while (WatObj0.class.isAssignableFrom(c = c.getSuperclass()));
+		return null;
+	}
+	static Object putMethod(Class<? extends WatObj0> cls, String name, Object method) {
+		return getMethods(cls).put(name, method);
+	}
+	
+	static Class extend(String className, Class<? extends WatObj0> superClass) throws Exception {
 		String source = """
 			package Wat;
-			public class Test {
+			class %1$s extends %2$s { 
+				static Map<String, Object> methods = new LinkedHashMap();
+				@Override public String toString() { return "{%1$s" + vm.reverseMap(slot) + "}"; }
+			}
+			""".formatted(className, superClass == null ? "WatObj0" : superClass.getSimpleName())
+		;
+		var classPath = "src/Wat/%s.java".formatted(className);
+		Files.write(new File(classPath).toPath(), source.getBytes("cp1252"));
+		ToolProvider.getSystemJavaCompiler().run(null, null, null, classPath, "-d", "bin", "--enable-preview", "-source", "19", "-Xlint:unchecked" );
+		return Class.forName("Wat."+className);
+	}
+
+	
+	
+	
+	static class WatObj {
+		private static Map<Symbol, Object> methods = new LinkedHashMap();
+		<T extends WatObj> Object  getMethod(Symbol name) {
+			 for(Class cls = this.getClass();;cls = cls.getSuperclass()) {
+				try {
+					Object res = ((Map<Symbol, Object>) cls.getDeclaredField("methods").get(cls)).get(name);
+					if (res != null) return res;
+				}
+				catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException e) {
+					return null;
+				}	
+			}
+		}
+		private Map<Keyword,Object> slot = new LinkedHashMap();
+		WatObj(Vm.List list) {
+	        for (var l=list; l!=null; l=l.cdr()) {
+	        	var car = l.car; if (!(car instanceof Keyword key)) throw new RuntimeException("not a keyword: " + car + " in: " + list); 
+	        	l = l.cdr(); if (l == null) throw new RuntimeException("a value expected in: " + list);
+	        	slot.put(key, l.car);
+	        }
+		}
+		@Override public String toString() { return "{WatObject" /*+ reverseMap(this)*/ + "}"; }
+	}
+
+	/*
+	static <T extends Vm.WatClass> void newClass(String className, Class<T> watSuperclass) {
+		/*
+		String source = watSuperclass == null
+			? """
+			package Wat;
+			class %1$s extends Vm.WatClass {
+				Vm vm;
+				public %1$s(Vm vm, Vm.WatClass watClass) { vm.super(watClass); this.vm = vm; }
+				@Override public String toString() { return "{%1$s" + vm.reverseMap(map) + "}"; }
+			}
+			""".formatted(className)
+			: """
+			class %1$s extends %2$s {
+				Vm vm;
+				public %1$s(Vm vm, %2$s watClass) { super(vm, watClass); this.vm = vm; }
+				@Override public String toString() { return "{%1$s" + vm.reverseMap(map) + "}"; }
+			}
+			""".formatted(className, watSuperclass.getSimpleName())
+		;
+		* /
+		String source = """
+			package Wat;
+			class %1$s extends %2$s { 
+				Vm vm; public %1$s(Vm vm, %2$s watClass) { %3$s; this.vm = vm; }
+				@Override public String toString() { return "{%1$s" + vm.reverseMap(map) + "}"; }
+			}
+			""".formatted(className,
+				watSuperclass == null ? "Vm.WatClass" : watSuperclass.getSimpleName(),
+				watSuperclass == null ? "vm.super(watClass)" : "super(vm, watClass)"
+			)
+		;
+	}
+	*/
+	
+	/*
+	//package Wat;
+	//class Test extends Vm.Root { Test(Vm vm) { vm.super(); }}
+	//class Test extends Vm.WatClass { Test(Vm vm) { vm.super(null); }}
+	//class Test extends Vm.WatClass { Test(Vm vm, Vm.WatClass watClass ) { vm.super(watClass); }}
+	//class Test<T extends Vm.WatClass> extends Vm.WatClass { Test(Vm vm, T watClass ) { vm.super(watClass); }}
+	
+	static void dynamicCompilation3(String name, String nome2) throws Exception {
+		//out.println(name);
+		String source = """
+			package Wat;
+			class %s extends %s {
 				static {
 					System.out.println("hello");
 				}
-				public Test() {
+				Vm vm;
+				public %1$s(Vm vm, %2$s watClass) {
+					vm.super(watClass);
+					this.vm = vm;
+					System.out.println("world");
+				}
+				@Override public String toString() { return "{%1$s" + vm.reverseMap(map) + "}"; }
+			}
+			""".formatted(name, nome2);
+		out.println(source);
+		var cname = "src/Wat/%s.java".formatted(name);
+		//out.println(name);
+		// Save source in .java file.
+		Files.write(new File(cname).toPath(), source.getBytes("cp1252"));
+
+		// Compile source file.
+		ToolProvider.getSystemJavaCompiler().run(null, null, null, cname, "-d", "bin", "--enable-preview", "-source", "19", "-Xlint:unchecked" );
+
+		// Load and instantiate compiled class.
+		Class<?> cls = Class.forName("Wat."+name); // Should print "hello".
+		//out.println(cls.getConstructors().length);
+		//for (var c: cls.getConstructors()) out.println(c);
+		Vm vm = new Vm();
+		Vm.WatClass wc = vm.new WatClass(null);
+		Object instance = cls.getConstructor(Vm.class, Vm.WatClass.class).newInstance(vm, wc); // Should print "world".
+		System.out.println(instance); // Should print "Wat.Test@hashcode".
+	}
+	*/
+	
+	/*
+	static void dynamicCompilation2() throws Exception {
+		String source = """
+			package Wat;
+			class Test<T extends Vm.WatClass> extends Vm.WatClass<T> {
+				static {
+					System.out.println("hello");
+				}
+				public Test(Vm vm, T watClass) {
+					vm.super(watClass);
 					System.out.println("world");
 				}
 			}
@@ -57,7 +246,39 @@ public class Prova {
 
 		// Compile source file.
 		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-		compiler.run(null, null, null, name, "-d", "bin");
+		compiler.run(null, null, null, name, "-d", "bin", "--enable-preview", "-source", "19", "-Xlint:unchecked" );
+
+		// Load and instantiate compiled class.
+		Class<?> cls = Class.forName("Wat.Test"); // Should print "hello".
+		out.println(cls.getConstructors().length);
+		for (var c: cls.getConstructors()) out.println(c);
+		Vm vm = new Vm();
+		Vm.WatClass wc = vm.new WatClass(null);
+		Object instance = cls.getConstructor(Vm.class, Vm.WatClass.class).newInstance(vm, wc); // Should print "world".
+		System.out.println(instance); // Should print "Wat.Test@hashcode".
+	}
+	*/
+
+	static void dynamicCompilation() throws Exception {
+		String source = """
+			package Wat;
+			class Test {			
+				static {
+					System.out.println("hello");
+				}
+				public Test() {
+					super();
+					System.out.println("world");
+				}
+			}
+			""";
+		// Save source in .java file.
+		var name = "src/Wat/Test.java";
+		Files.write(new File(name).toPath(), source.getBytes("cp1252"));
+
+		// Compile source file.
+		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+		compiler.run(null, null, null, name, "-d", "bin", "--enable-preview", "-source", "19" );
 
 		// Load and instantiate compiled class.
 		Class<?> cls = Class.forName("Wat.Test"); // Should print "hello".

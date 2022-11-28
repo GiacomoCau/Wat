@@ -33,6 +33,7 @@ import static java.lang.System.out;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -57,6 +58,8 @@ import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
+
+import javax.tools.ToolProvider;
 
 /* Abbreviations:
 	c: cons
@@ -98,6 +101,10 @@ import java.util.function.Supplier;
 
 public class Vm {
 
+	static {
+	    for (File file: new File("bin/Ext").listFiles()) file.delete();
+	    for (File file: new File("src/Ext").listFiles()) file.delete();
+	}
 
 	boolean dotco = true;
 	boolean doasrt = true;
@@ -218,7 +225,7 @@ public class Vm {
 	
 	abstract class Intern {
 		String name;
-		Intern(String name) { this.name = name; }
+		Intern(String name) { this.name = name; /*name.intern();*/ }
 		public String toString() { return name; }
 		public int hashCode() { return Objects.hashCode(name); }
 		public boolean equals(Object o) {
@@ -250,7 +257,7 @@ public class Vm {
 		Object setCar(Object car) { return this.car = car; }
 		Object setCdr(Object cdr) { return this.cdr = cdr; }
 	}
-	class List extends Cons {
+	public class List extends Cons {
 		List(Object car, List cdr) { super(car, cdr); }
 		@Override public List cdr() { return (List) cdr; }
 		List setCdr(List cdr) { return (List)(this.cdr = cdr); }
@@ -315,7 +322,8 @@ public class Vm {
 	Env env(Env parent) { return new Env<Symbol>(parent); }
 	
 	
-	// Classes and Objects 
+	// Classes and Objects
+	/* TODO sostituiti dai seguenti
 	class WatClass extends Env<Symbol> {
 		WatClass(WatClass watClass) { super(watClass); }
 		@Override public String toString() { return "{WatClass" + reverseMap(map) + "}"; }
@@ -338,6 +346,77 @@ public class Vm {
 		if (sc instanceof WatClass swc && c instanceof WatClass wc) return swc.isSubClass(wc);
 		if (c instanceof Class jc) return jc.isInstance(sc);
 		return false;
+	}
+	*/
+	public static class StdObj extends LinkedHashMap<Keyword, Object> {
+		private static final long serialVersionUID = 1L;
+		public StdObj(List list) {
+	        for (var l=list; l!=null; l=l.cdr()) {
+	        	var car = l.car; if (!(car instanceof Keyword key)) throw new Error("not a keyword: " + car + " in: " + list); 
+	        	l = l.cdr(); if (l == null) throw new Error("a value expected in: " + list);
+	        	put(key, l.car);
+	        }
+		}
+		@Override public String toString() { return "{StdObj" + reverseMap(this) + "}"; }
+	}
+	/*
+	class Loader extends ClassLoader {
+	    @Override public Class<?> findClass(String name) throws ClassNotFoundException {
+	    	try {
+		    	if (!name.startsWith("Ext."))
+		    		return super.findClass(name); // Class.forName(name);
+		        File file = new File("bin/" + name.replaceAll("\\.", "/") + ".class");
+		        try (FileInputStream fis = new FileInputStream(file)) {
+		            byte[] bytes = fis.readAllBytes();
+		            return defineClass(name, bytes, 0, bytes.length);
+		        }
+	    	}
+			catch (IOException e) {
+				e.printStackTrace();
+			}
+			return null;
+	    }
+	}
+	Loader loader = new Loader();
+	*/
+	Class extend(Symbol className, Class superClass) {
+		try {
+			Class.forName("Ext." + className);
+			return error("class " + className + " just defined!");
+		}
+		catch (ClassNotFoundException e) {
+			try {
+				String source = """
+					package Ext;
+					import Wat.Vm;
+					public class %1$s extends %2$s {
+						private static final long serialVersionUID = 1L;
+						public %1$s(Vm.List l) { super(l); }
+						@Override public String toString() { return "{%1$s" + Vm.reverseMap(this) + "}"; }
+					}
+					""".formatted(className, superClass == null ? "Vm.StdObj" : superClass.getCanonicalName())
+				;
+				var classPath = "src/Ext/%s.java".formatted(className);
+				Files.write(new File(classPath).toPath(), source.getBytes("cp1252"));
+				ToolProvider.getSystemJavaCompiler().run(null, null, null, classPath, "-d", "bin", "--enable-preview", "-source", "19", "-Xlint:unchecked" );
+				return Class.forName("Ext." + className);
+				//return new Loader().findClass("Ext." + className);
+			}
+			catch (Throwable t) {
+				return error("defining class " + className, t);
+			}
+		}
+	}
+	Map<Class, Map<Symbol,Object>> methods = new LinkedHashMap();
+	Object addMethod(Class cls, Symbol name, Object method) {
+		return methods.computeIfAbsent(cls, k-> new LinkedHashMap()).put(name, method);
+	}
+	Object getMethod(Class cls, Symbol name) {
+		do {
+			var ms = methods.get(cls); if (ms == null) continue;
+			var m = ms.get(name); if (m != null) return m;
+		} while ((cls = cls.getSuperclass()) != null);
+		return error("method " + name + " not found!");
 	}
 	
 	/* TODO in alternativa ai precedenti
@@ -445,6 +524,11 @@ public class Vm {
 			var xe = env(this.e);
 			var dbg = dbg(e, this, o);
 			return pipe(dbg, ()-> bind(xe, dbg, p, o), $-> bind(xe, dbg, ep, e), $$-> tco(()-> begin.combine(xe, x)));
+			/* TODO in alternativa al precedente
+			return pipe(dbg, ()-> bind(xe, dbg, p, o), $-> bind(xe, dbg, ep, e),
+				$$-> x == null ? inert : tco(x.cdr == null ? evaluate(e, x.car) : ()-> begin.begin(null, xe, x))
+			);
+			//*/
 		}
 		public String toString() { return "{Opv " + Vm.this.toString(p) + " " + Vm.this.toString(ep) + " " + Vm.this.toString(x) + /*" " + e +*/ "}"; }
 	}
@@ -717,7 +801,9 @@ public class Vm {
 	class JFun implements Combinable {
 		Object jfun; JFun(Object jfun) { this.jfun = jfun; };
 		@SuppressWarnings("preview")
-		public Object combine(Env e, List o) { return pipe(dbg(e, this, o), ()-> {
+		public Object combine(Env e, List o) {
+			return pipe(dbg(e, this, o),
+				()-> {
 					try {
 						return switch (jfun) {
 							case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
@@ -833,7 +919,7 @@ public class Vm {
 		}
 		throw exc;
 	}
-	class Error extends RuntimeException {
+	static class Error extends RuntimeException {
 		private static final long serialVersionUID = 1L;
 		public Error(Throwable cause) { super(cause); }
 		public Error(String message) { super(message); }
@@ -1026,7 +1112,7 @@ public class Vm {
 			default-> o.toString();
 		};
 	}
-	String reverseMap(Map map) {
+	public static String reverseMap(Map map) {
 		var sb = new StringBuilder(); map.entrySet().forEach(e-> sb.insert(0, " " + e)); return sb.toString();
 	}
 	
@@ -1105,19 +1191,32 @@ public class Vm {
 					}),
 					// Object System
 					//$("%def", "%classOf", (Function<WatObj,WatClass>) lo-> lo.watClass),
+					/*
 					$("%def", "%addMethod", (ArgsList) o-> ((WatClass) o.car()).put(o.car(1), o.car(2))),
 					$("%def", "%getMethod", (BiFunction<WatClass,Symbol,Combinable>) (lc,n)-> (Combinable) lc.get(n).value),
+					*/
+					$("%def", "%addMethod", (ArgsList) o-> addMethod(o.car(), o.car(1), o.car(2))),
+					$("%def", "%getMethod", (BiFunction<Class,Symbol,Object>) this::getMethod),
 					//$("%def", "%setSlot", (ArgsList) o-> ((WatObject) o.car()).put(o.car(1), o.car(2))),
 					//$("%def", "%getSlot", (BiFunction<WatObject,Keyword,Object>) (lo,n)-> lo.get(n)),
 					//$("%def", "%makeInstance", (BiFunction<LClass,List,LObject>) (lc,l)-> new LObject(lc, listToArray(l))),
 					//$("%def", "%makeInstance", (ArgsList) o-> new WatObject(o.car(), listToArray(o.cdr()))),
 					//$("%def", "%makeInstance", (ArgsList) o-> new WatObject(o.car(), o.cdr())),
+					/*
 					$("%def", "%obj", (ArgsList) o-> new WatObj(o.car(), o.cdr())),
+					*/
+					//$("%def", "%obj", (ArgsList) Obj::new),
+					$("%def", "%obj", (ArgsList) o-> uncked(()-> ((Class<? extends StdObj>) o.car()).getDeclaredConstructor(List.class).newInstance(o.cdr()))),
 					//$("%def", "%makeClass", (BiFunction<String,LClass,LClass>) (n, lc)-> new LClass(n, lc)),
 					//$("%def", "%makeClass", (BiFunction<String,WatClass,WatClass>) WatClass::new),
 					//$("%def", "%makeClass", (Function<WatClass,WatClass>) WatClass::new),
+					/*
 					$("%def", "%class", (Function<WatClass,WatClass>) WatClass::new),
 					$("%def", "%subClass?", (BiFunction<Object,Object,Boolean>) this::isSubclass),
+					*/
+					//$("%def", "%class", (BiFunction<Symbol, Class, Class>) this::extend),
+					$("%def", "%class", (ArgsList) o-> extend(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr()))),
+					$("%def", "%subClass?", (BiFunction<Class,Class,Boolean>) (cl,sc)-> sc.isAssignableFrom(cl)),
 					/*
 					$("%def", "%type?", (BiFunction<Object,Object,Boolean>) (o,c)-> {
 						if (o instanceof WatObj wo && c instanceof WatClass wc) return wo.watClass.isSubClass(wc);
@@ -1125,8 +1224,12 @@ public class Vm {
 						return false;
 					}),
 					*/
+					/*
 					$("%def", "%type?",  (BiFunction<Object,Object,Boolean>) (o,c)-> isSubclass(o instanceof WatObj wo ? wo.watClass : o, c)),
 					$("%def", "%classOf", (Function<Object,Object>) (o)-> o instanceof WatObj wo ? wo.watClass : o.getClass()),
+					*/
+					$("%def", "%type?",  (BiFunction<Object,Class,Boolean>) (o,c)-> o == null ? c == null : c.isAssignableFrom(o.getClass())),
+					$("%def", "%classOf", (Function<Object,Object>) Object::getClass),
 					// Utilities
 					$("%def", "%list", new ArgsList() {
 						@Override public Object apply(List o) { return o; }
@@ -1247,7 +1350,7 @@ public class Vm {
 				}
 				catch (Throwable t) {
 					if (prstk) t.printStackTrace(out);
-					else out.println(t.getClass().getSimpleName() + ": " + t.getMessage());
+					else out.println("{" + t.getClass().getSimpleName() + ": " + t.getMessage() + "}");
 				}
 			}
 		}
