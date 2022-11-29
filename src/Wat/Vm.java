@@ -526,7 +526,7 @@ public class Vm {
 			return pipe(dbg, ()-> bind(xe, dbg, p, o), $-> bind(xe, dbg, ep, e), $$-> tco(()-> begin.combine(xe, x)));
 			/* TODO in alternativa al precedente
 			return pipe(dbg, ()-> bind(xe, dbg, p, o), $-> bind(xe, dbg, ep, e),
-				$$-> x == null ? inert : tco(x.cdr == null ? evaluate(e, x.car) : ()-> begin.begin(null, xe, x))
+				$$-> x == null ? inert : tco(()-> x.cdr == null ? evaluate(e, x.car) : begin.begin(null, xe, x))
 			);
 			//*/
 		}
@@ -538,11 +538,22 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			return pipe(dbg(e, this, o), ()-> mapCar(car-> evaluate(e, car), o), args-> tco(()-> cmb.combine(e, (List) args))); 
 		}
-		public String toString() { return "{Apv " + Vm.this.toString(cmb) + "}"; }
+		public String toString() {
+			return "{Apv " + Vm.this.toString(cmb) + "}";
+		}
 		Combinable unwrap() { return cmb; }
 	}
-	Object wrap(Object arg) { return arg instanceof Apv || isjFun(arg) ? arg : arg instanceof JFun jFun ? jFun.jfun : arg instanceof Combinable cmb ? new Apv(cmb) : error("cannot wrap: " + arg); }
-	<T> T unwrap(Object arg) { return arg instanceof Apv apv ? (T) apv.cmb : isjFun(arg) ? (T) new JFun(arg) : error("cannot unwrap: " + arg); }
+	Object wrap(Object arg) {
+		return arg instanceof Apv || isjFun(arg) ? arg 
+		//: arg instanceof JFun jFun ? jFun.jfun
+		: arg instanceof Combinable cmb ? new Apv(cmb)
+		: error("cannot wrap: " + arg);
+	}
+	<T> T unwrap(Object arg) {
+		return arg instanceof Apv apv ? (T) apv.cmb
+		: isjFun(arg) ? (T) new JFun(arg)
+		: error("cannot unwrap: " + arg);
+	}
 	//Apv lambda(Object p, Object e, List b) { return new Apv(new Opv(p, ignore, b, evaluate(theEnvironment, e))); }
 	
 	
@@ -800,6 +811,7 @@ public class Vm {
 	interface EnvArgsList extends BiFunction<Env,List,Object> {}
 	class JFun implements Combinable {
 		Object jfun; JFun(Object jfun) { this.jfun = jfun; };
+		String name; JFun(String name, Object jfun) { this(jfun); this.name = name; };
 		@SuppressWarnings("preview")
 		public Object combine(Env e, List o) {
 			return pipe(dbg(e, this, o),
@@ -834,6 +846,7 @@ public class Vm {
 			);
 		}
 		public String toString() {
+			if (name != null) return name;
 			var intefaces = Arrays.stream(jfun.getClass().getInterfaces()).map(i-> Vm.this.toString(i)).collect(joining(" "));
 			return "{JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "}"; }
 	}
@@ -1127,41 +1140,22 @@ public class Vm {
 					// Basics
 					$("%def", "%vau", new Vau()),
 					$("%def", "%eval", wrap(new Eval())),
-					$("%def", "%makeEnvironment", new ArgsList() {
-						@Override public Object apply(List o) { return env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car()); }
-						@Override public String toString() { return "%MakeEnvironment"; }
-					}),
-					$("%def", "%wrap", new Function<Object, Object>() {
-						@Override public Object apply(Object t) { return wrap(t); }
-						@Override public String toString() { return "%Wrap"; }
-					}),
-					$("%def", "%unwrap", new Function<Object, Object>() {
-						@Override public Object apply(Object t) { return unwrap(t); }
-						@Override public String toString() { return "%Unwrap"; }
-					}),
-					$("%def", "%bound?", (BiFunction<Symbol,Env,Boolean>) (s, e)-> e.isBound(s)),
-					$("%def", "%apply", (ArgsList) o-> combine(o.cdr(1) != null ? o.car(2) : env(null), unwrap(o.car()), o.car(1))),
-					$("%def", "%applyn", (ArgsList) o-> combine(env(null), unwrap(o.car()), o.cdr())),
-					//$("%def", "%resetEnvironment", (Supplier) ()-> theEnvironment = env(theEnvironment.parent)),
-					$("%def", "%resetEnvironment", (Supplier) ()-> { theEnvironment.map.clear(); return theEnvironment; }),
-					$("%def", "%pushEnvironment", (Supplier) ()-> theEnvironment = env(theEnvironment)),
-					$("%def", "%popEnvironment", (Supplier) ()-> theEnvironment = theEnvironment.parent),
+					$("%def", "%makeEnvironment", wrap(new JFun("%MakeEnvironment", (ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car())))),
+					$("%def", "%wrap", wrap(new JFun("%Wrap", (Function<Object, Object>) t-> wrap(t)))),
+					$("%def", "%unwrap", wrap(new JFun("%Unwrap", (Function<Object, Object>) t-> unwrap(t)))),
+					$("%def", "%bound?", wrap(new JFun("%Bound?", (BiFunction<Symbol,Env,Boolean>) (s, e)-> e.isBound(s)))),
+					$("%def", "%apply", wrap(new JFun("%Apply", (ArgsList) o-> combine(o.cdr(1) != null ? o.car(2) : env(null), unwrap(o.car()), o.car(1))))),
+					$("%def", "%applyn", wrap(new JFun("%Applyn", (ArgsList) o-> combine(env(null), unwrap(o.car()), o.cdr())))),
+					$("%def", "%resetEnvironment", wrap(new JFun("%ResetEnvironment", (Supplier) ()-> { theEnvironment.map.clear(); return theEnvironment; }))),
+					$("%def", "%pushEnvironment", wrap(new JFun("%PushEnvironment", (Supplier) ()-> theEnvironment = env(theEnvironment)))),
+					$("%def", "%popEnvironment", wrap(new JFun("%PopEnvironment", (Supplier) ()-> theEnvironment = theEnvironment.parent))),
 					// Values
-					$("%def", "%cons", new BiFunction<Object, Object, Object>() {
-						@Override public Object apply(Object car, Object cdr) { return cons(car,cdr);	}
-						@Override public String toString() { return "%Cons"; }
-					}),
-					$("%def", "%cons?", new Function<Object, Boolean>() {
-						@Override public Boolean apply(Object obj) { return obj instanceof Cons; }
-						@Override public String toString() { return "%Cons?"; }
-					}),
-					$("%def", "%nil?", new Function<Object, Boolean>() {
-						@Override public Boolean apply(Object obj) { return obj == null; }
-						@Override public String toString() { return "%Nil?"; }
-					}),
-					$("%def", "%string->symbol", (Function<String, Symbol>) this::symbol),
-					$("%def", "%symbol?", (Function<Object, Boolean>) obj-> obj instanceof Symbol),
-					$("%def", "%symbolName", (Function<Intern, String>) i-> i.name),
+					$("%def", "%cons", wrap(new JFun("%Cons", (BiFunction<Object, Object, Object>) (car,cdr)-> cons(car,cdr)))),
+					$("%def", "%cons?", wrap(new JFun("%Cons?", (Function<Object, Boolean>) obj-> obj instanceof Cons))),
+					$("%def", "%nil?", wrap(new JFun("%Nil?", (Function<Object, Boolean>) obj-> obj == null))),
+					$("%def", "%string->symbol", wrap(new JFun("%String->symbol", (Function<String, Symbol>) this::symbol))),
+					$("%def", "%symbol?", wrap(new JFun("%Symbol?", (Function<Object, Boolean>) obj-> obj instanceof Symbol))),
+					$("%def", "%symbolName", wrap(new JFun("%SymbolName", (Function<Intern, String>) i-> i.name))),
 					// First-order Control
 					$("%def", "%if", new If()),
 					$("%def", "%loop", new Loop()),
@@ -1172,31 +1166,28 @@ public class Vm {
 					$("%def", "%takeSubcont", wrap(new TakeSubcont())),
 					$("%def", "%pushPrompt", new PushPrompt()),
 					$("%def", "%pushPromptSubcont", wrap(new PushPromptSubcont())),
-					$("%def", "%pushSubcontBarrier", (BiFunction<Object,Env,Object>) (o, e)-> pushSubcontBarrier(null, e, o)),
+					$("%def", "%pushSubcontBarrier", wrap(new JFun("%PushSubcontBarrier", (BiFunction<Object,Env,Object>) (o, e)-> pushSubcontBarrier(null, e, o)))),
 					// Dynamically-scoped Variables
-					$("%def", "%dNew", (Function<Object,DVar>) DVar::new),
-					$("%def", "%dVal", (ArgsList) o-> { DVar dv = o.car(); return checkO("%dVal", o, 1, 2) == 1 ? dv.val : (dv.val=o.car(1)); }),
+					$("%def", "%dNew", wrap(new JFun("%DNew", (Function<Object,DVar>) DVar::new))),
+					$("%def", "%dVal", wrap(new JFun("%DVal", (ArgsList) o-> { DVar dv = o.car(); return checkO("%dVal", o, 1, 2) == 1 ? dv.val : (dv.val=o.car(1)); }))),
 					$("%def", "%dDef", new DDef()),
 					$("%def", "%dLet", new DLet()),
 					// Errors
 					$("%def", "%rootPrompt", rootPrompt),
-					$("%def", "%error", (Function<String, Object>) this::error),
+					$("%def", "%error", wrap(new JFun("%Error", (Function<String, Object>) this::error))),
 					// Java Interface
-					$("%def", "%jinvoke", (Function<String,Object>) this::jInvoke),
-					$("%def", "%jgetset", (Function<String,Object>) this::jGetSet),
+					$("%def", "%jinvoke", wrap(new JFun("%Jinvoke", (Function<String,Object>) this::jInvoke))),
+					$("%def", "%jgetset", wrap(new JFun("%Jgetset", (Function<String,Object>) this::jGetSet))),
 					//$("%def", "%instanceof?", (BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o)),
-					$("%def", "%instanceof?", new BiFunction<Object,Class,Boolean>() {
-						@Override public Boolean apply(Object o, Class c) { return c.isInstance(o); }
-						@Override public String toString() { return "%Instanceof?"; }
-					}),
+					$("%def", "%instanceof?", wrap(new JFun("%Instanceof?", (BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o)))),
 					// Object System
 					//$("%def", "%classOf", (Function<WatObj,WatClass>) lo-> lo.watClass),
 					/*
 					$("%def", "%addMethod", (ArgsList) o-> ((WatClass) o.car()).put(o.car(1), o.car(2))),
 					$("%def", "%getMethod", (BiFunction<WatClass,Symbol,Combinable>) (lc,n)-> (Combinable) lc.get(n).value),
 					*/
-					$("%def", "%addMethod", (ArgsList) o-> addMethod(o.car(), o.car(1), o.car(2))),
-					$("%def", "%getMethod", (BiFunction<Class,Symbol,Object>) this::getMethod),
+					$("%def", "%addMethod", wrap(new JFun("%AddMethod", (ArgsList) o-> addMethod(o.car(), o.car(1), o.car(2))))),
+					$("%def", "%getMethod", wrap(new JFun("%GetMethod", (BiFunction<Class,Symbol,Object>) this::getMethod))),
 					//$("%def", "%setSlot", (ArgsList) o-> ((WatObject) o.car()).put(o.car(1), o.car(2))),
 					//$("%def", "%getSlot", (BiFunction<WatObject,Keyword,Object>) (lo,n)-> lo.get(n)),
 					//$("%def", "%makeInstance", (BiFunction<LClass,List,LObject>) (lc,l)-> new LObject(lc, listToArray(l))),
@@ -1206,7 +1197,7 @@ public class Vm {
 					$("%def", "%obj", (ArgsList) o-> new WatObj(o.car(), o.cdr())),
 					*/
 					//$("%def", "%obj", (ArgsList) Obj::new),
-					$("%def", "%obj", (ArgsList) o-> uncked(()-> ((Class<? extends StdObj>) o.car()).getDeclaredConstructor(List.class).newInstance(o.cdr()))),
+					$("%def", "%obj", wrap(new JFun("%Obj", (ArgsList) o-> uncked(()-> ((Class<? extends StdObj>) o.car()).getDeclaredConstructor(List.class).newInstance(o.cdr()))))),
 					//$("%def", "%makeClass", (BiFunction<String,LClass,LClass>) (n, lc)-> new LClass(n, lc)),
 					//$("%def", "%makeClass", (BiFunction<String,WatClass,WatClass>) WatClass::new),
 					//$("%def", "%makeClass", (Function<WatClass,WatClass>) WatClass::new),
@@ -1215,8 +1206,8 @@ public class Vm {
 					$("%def", "%subClass?", (BiFunction<Object,Object,Boolean>) this::isSubclass),
 					*/
 					//$("%def", "%class", (BiFunction<Symbol, Class, Class>) this::extend),
-					$("%def", "%class", (ArgsList) o-> extend(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr()))),
-					$("%def", "%subClass?", (BiFunction<Class,Class,Boolean>) (cl,sc)-> sc.isAssignableFrom(cl)),
+					$("%def", "%class", wrap(new JFun("%Class", (ArgsList) o-> extend(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr()))))),
+					$("%def", "%subClass?", wrap(new JFun("%SubClass", (BiFunction<Class,Class,Boolean>) (cl,sc)-> sc.isAssignableFrom(cl)))),
 					/*
 					$("%def", "%type?", (BiFunction<Object,Object,Boolean>) (o,c)-> {
 						if (o instanceof WatObj wo && c instanceof WatClass wc) return wo.watClass.isSubClass(wc);
@@ -1228,58 +1219,41 @@ public class Vm {
 					$("%def", "%type?",  (BiFunction<Object,Object,Boolean>) (o,c)-> isSubclass(o instanceof WatObj wo ? wo.watClass : o, c)),
 					$("%def", "%classOf", (Function<Object,Object>) (o)-> o instanceof WatObj wo ? wo.watClass : o.getClass()),
 					*/
-					$("%def", "%type?",  (BiFunction<Object,Class,Boolean>) (o,c)-> o == null ? c == null : c.isAssignableFrom(o.getClass())),
-					$("%def", "%classOf", (Function<Object,Object>) Object::getClass),
+					$("%def", "%type?",  wrap(new JFun("%Type", (BiFunction<Object,Class,Boolean>) (o,c)-> o == null ? c == null : c.isAssignableFrom(o.getClass())))),
+					$("%def", "%classOf", wrap(new JFun("%ClassOf", (Function<Object,Object>) Object::getClass))),
 					// Utilities
-					$("%def", "%list", new ArgsList() {
-						@Override public Object apply(List o) { return o; }
-						@Override public String toString() { return "%List"; }						
-					}),
-					$("%def", "%list*", new ArgsList() {
-						@Override public Object apply(List o) { return listStar(o); }
-						@Override public String toString() { return "%List*"; }						
-					}),
-					$("%def", "%len", (Function<List,Integer>) this::len),
-					$("%def", "%list->array", (Function<List,Object[]>) this::array),
-					$("%def", "%array->list", (BiFunction<Boolean,Object[],Object>) this::list),
-					$("%def", "%reverse", (Function<List,List>) this::reverse),
-					$("%def", "%append", (BiFunction<List,Object,Object>) this::append),
+					$("%def", "%list", wrap(new JFun("%List", (ArgsList) o-> o))),
+					$("%def", "%list*", wrap(new JFun("%List*", (ArgsList) o-> listStar(o)))),
+					$("%def", "%len", wrap(new JFun("%Len", (Function<List,Integer>) this::len))),
+					$("%def", "%list->array", wrap(new JFun("%List->array", (Function<List,Object[]>) this::array))),
+					$("%def", "%array->list", wrap(new JFun("%Array->list", (BiFunction<Boolean,Object[],Object>) this::list))),
+					$("%def", "%reverse", wrap(new JFun("%Reverse", (Function<List,List>) this::reverse))),
+					$("%def", "%append", wrap(new JFun("%Append", (BiFunction<List,Object,Object>) this::append))),
 					// 
 					//$("%def", "%+", (BinaryOperator) (a,b)-> a instanceof Number n1 && b instanceof Number n2 ? binOp(Pls, n1, n2) : toString(a) + toString(b)),
-					$("%def", "%+", new BinaryOperator() {
-						@Override public Object apply(Object a, Object b) {
-							return a instanceof Number n1 && b instanceof Number n2 ? binOp(Pls, n1, n2) : Vm.this.toString(a) + Vm.this.toString(b);
-						}
-						@Override public String toString() { return "%+"; }						
-					}),
-					$("%def", "%*", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Pwr, a, b)),
-					$("%def", "%-", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Mns, a, b)),
-					$("%def", "%/", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Dvd, a, b)),
-					$("%def", "%%", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Rst, a, b)),
+					$("%def", "%+", wrap(new JFun("%+", (BinaryOperator) (a,b)-> a instanceof Number n1 && b instanceof Number n2 ? binOp(Pls, n1, n2) : Vm.this.toString(a) + Vm.this.toString(b)))),
+					$("%def", "%*", wrap(new JFun("%*", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Pwr, a, b)))),
+					$("%def", "%-", wrap(new JFun("%-", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Mns, a, b)))),
+					$("%def", "%/", wrap(new JFun("%/", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Dvd, a, b)))),
+					$("%def", "%%", wrap(new JFun("%%", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Rst, a, b)))),
 					//
-					$("%def", "%!", (Function<Boolean,Boolean>) a-> !a),
-					$("%def", "%<", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Ls, a, b)),
-					$("%def", "%>", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Gt, a, b)),
-					$("%def", "%<=", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Le, a, b)),
-					$("%def", "%>=", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Ge, a, b)),
+					$("%def", "%!", wrap(new JFun("%!", (Function<Boolean,Boolean>) a-> !a))),
+					$("%def", "%<", wrap(new JFun("%<", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Ls, a, b)))),
+					$("%def", "%>", wrap(new JFun("%>", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Gt, a, b)))),
+					$("%def", "%<=", wrap(new JFun("%<=", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Le, a, b)))),
+					$("%def", "%>=", wrap(new JFun("%>=", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Ge, a, b)))),
 					//
-					$("%def", "%~", (Function<Integer,Integer>) a-> ~a),
-					$("%def", "%&", (BiFunction<Number,Number,Object>) (a,b)-> binOp(And, a, b)),
-					$("%def", "%|", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Or, a, b)),
-					$("%def", "%^", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Xor, a, b)),
-					$("%def", "%<<", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Sl, a, b)),
-					$("%def", "%>>", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr, a, b)),
-					$("%def", "%>>>", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr0, a, b)),
+					$("%def", "%~", wrap(new JFun("%~", (Function<Integer,Integer>) a-> ~a))),
+					$("%def", "%&", wrap(new JFun("%&", (BiFunction<Number,Number,Object>) (a,b)-> binOp(And, a, b)))),
+					$("%def", "%|", wrap(new JFun("%|", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Or, a, b)))),
+					$("%def", "%^", wrap(new JFun("%^", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Xor, a, b)))),
+					$("%def", "%<<", wrap(new JFun("%<<", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Sl, a, b)))),
+					$("%def", "%>>", wrap(new JFun("%>>", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr, a, b)))),
+					$("%def", "%>>>", wrap(new JFun("%>>>", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr0, a, b)))),
 					//
-					$("%def", "%==", new BiFunction<Object,Object,Boolean>(){
-						@Override public Boolean apply(Object a, Object b) { return a == b;	}
-						@Override public String toString() { return "%=="; }						
-					}),
-					$("%def", "%!=", (BiFunction<Object,Object,Boolean>) (a,b)-> a != b),
-					$("%def", "%eq?", new BiFunction<Object,Object,Boolean>(){
-						@Override public Boolean apply(Object a, Object b) { return Vm.this.equals(a, b);	}
-						@Override public String toString() { return "%Eq?"; }						
-					}),
+					$("%def", "%==", wrap(new JFun("%==", (BiFunction<Object,Object,Boolean>) (a,b)-> a == b))),
+					$("%def", "%!=", wrap(new JFun("%!=", (BiFunction<Object,Object,Boolean>) (a,b)-> a != b))),
+					$("%def", "%eq?", wrap(new JFun("%Eq?", (BiFunction<Object,Object,Boolean>) (a,b)-> Vm.this.equals(a, b)))),
 					//
 					$("%def", "%quote", $("%vau", $("arg"), ignore, "arg")),
 					$("%def", "%theEnvironment", $("%vau", null, "env", "env")),
@@ -1287,19 +1261,19 @@ public class Vm {
 						$("%wrap", $("%eval", $("%list*", "%vau", "formals", ignore, "body"), "env")))),
 					//$("%def", "%jambda", jFun((ArgsList) o-> lambda(o.car(), o.car(1), o.cdr(1)))),
 					//
-					$("%def", "assert", jFun((EnvArgsList) (e,o)-> { checkO("assert", o, 1, 2); return vmAssert(e,array(o)); } )),
-					$("%def", "test", jFun((EnvArgsList) (e,o)-> { checkO("test", o, 2, 3); return vmAssert(e,toString(o.car()), o.car(1), array(o.cdr(1))); } )),
-					$("%def", "this", jFun((Supplier)() -> this)),
-					$("%def", "toString", (Function<Object,String>) obj-> toString(obj)),
-					$("%def", "log", (ArgsList) o-> log(array(o))),
-					$("%def", "print", (ArgsList) o-> print(array(o))),
-					$("%def", "write", (ArgsList) o-> write(array(o))),
-					$("%def", "load", (Function<String, Object>) nf-> uncked(()-> eval(readString(nf)))),
-					$("%def", "dotco", (ArgsList) o-> { if (checkO("dotco", o, 0, 1, Boolean.class) == 0) return dotco; dotco=o.car(); return inert; }),
-					$("%def", "doasrt", (ArgsList) o-> { if (checkO("doasrt", o, 0, 1, Boolean.class) == 0) return doasrt; doasrt=o.car(); return inert; }),
-					$("%def", "prtrc", (ArgsList) o-> { if (checkO("prtrc", o, 0, 1, Integer.class) == 0) return prtrc; prtrc=o.car(); start=level-3; return inert; }),
-					$("%def", "prenv", (ArgsList) o-> { if (checkO("prenv", o, 0, 1, Integer.class) == 0) return prenv; prenv=o.car(); return inert; }),
-					$("%def", "prstk", (ArgsList) o-> { if (checkO("prstk", o, 0, 1, Boolean.class) == 0) return prstk; prstk=o.car(); return inert; })
+					$("%def", "assert", new JFun("Assert", (EnvArgsList) (e,o)-> { checkO("assert", o, 1, 2); return vmAssert(e,array(o)); } )),
+					$("%def", "test", new JFun("Test", (EnvArgsList) (e,o)-> { checkO("test", o, 2, 3); return vmAssert(e,toString(o.car()), o.car(1), array(o.cdr(1))); } )),
+					$("%def", "this", new JFun("This", (Supplier)() -> this)),
+					$("%def", "toString", wrap(new JFun("ToString", (Function<Object,String>) obj-> toString(obj)))),
+					$("%def", "log", wrap(new JFun("Log", (ArgsList) o-> log(array(o))))),
+					$("%def", "print", wrap(new JFun("Print", (ArgsList) o-> print(array(o))))),
+					$("%def", "write", wrap(new JFun("Write", (ArgsList) o-> write(array(o))))),
+					$("%def", "load", wrap(new JFun("Load", (Function<String, Object>) nf-> uncked(()-> eval(readString(nf)))))),
+					$("%def", "dotco", wrap(new JFun("Dotco", (ArgsList) o-> { if (checkO("dotco", o, 0, 1, Boolean.class) == 0) return dotco; dotco=o.car(); return inert; }))),
+					$("%def", "doasrt",  wrap(new JFun("Doasrt", (ArgsList) o-> { if (checkO("doasrt", o, 0, 1, Boolean.class) == 0) return doasrt; doasrt=o.car(); return inert; }))),
+					$("%def", "prtrc", wrap(new JFun("Prtrc", (ArgsList) o-> { if (checkO("prtrc", o, 0, 1, Integer.class) == 0) return prtrc; prtrc=o.car(); start=level-3; return inert; }))),
+					$("%def", "prenv", wrap(new JFun("Prenv", (ArgsList) o-> { if (checkO("prenv", o, 0, 1, Integer.class) == 0) return prenv; prenv=o.car(); return inert; }))),
+					$("%def", "prstk", wrap(new JFun("Prstk", (ArgsList) o-> { if (checkO("prstk", o, 0, 1, Boolean.class) == 0) return prstk; prstk=o.car(); return inert; })))
 					//$("%def", "prenv", (ArgsList) o-> checkO("prenv", o, 0, 1, Boolean.class) == 0 ? prenv : inert(prenv=o.car()))
 				)
 			)
@@ -1472,5 +1446,7 @@ public class Vm {
 		print("start time: " + (currentTimeMillis() - milli));
 		repl();
 		//*/
+		
+		//out.println(wrap(new JFun("%+", null)));
 	}
 }
