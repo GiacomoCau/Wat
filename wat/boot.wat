@@ -20,7 +20,7 @@
 ($define! list->array %list->array)
 ($define! loop %loop)
 ($define! make-environment %makeEnvironment)
-($define! nil? %nil?)
+($define! nil? %null?)
 ($define! not !)
 ($define! reverse-list %reverseList)
 ($define! root-prompt %rootPrompt)

@@ -12,6 +12,7 @@ import static Wat.Utility.getField;
 import static Wat.Utility.isInstance;
 import static Wat.Utility.read;
 import static Wat.Utility.reorg;
+import static Wat.Utility.stackDeep;
 import static Wat.Utility.uncked;
 import static Wat.Utility.Binop.And;
 import static Wat.Utility.Binop.Dvd;
@@ -196,7 +197,7 @@ public class Vm {
 	
 	// Trace Log
 	int level=0, start=0; String indent = "|  ";
-	String indent() { return indent.repeat((level-start)); 	}
+	String indent() { return indent.repeat((level-start)) + "|" + stackDeep() + ":  " ; 	}
 	
 	
 	// Evaluation Core
@@ -381,8 +382,11 @@ public class Vm {
 	*/
 	Class extend(Symbol className, Class superClass) {
 		try {
-			Class.forName("Ext." + className);
-			return error("class " + className + " just defined!");
+			if (!className.name.matches("[a-zA-Z$_.]+")) return error("invalid class name: " + className);
+			if (superClass != null && !StdObj.class.isAssignableFrom(superClass)) return error("invalid extendible " + superClass);
+			var c = Class.forName("Ext." + className);
+			out.println("Warning: class " + className + " just defined!");
+			return c;
 		}
 		catch (ClassNotFoundException e) {
 			try {
@@ -407,6 +411,8 @@ public class Vm {
 			}
 		}
 	}
+	
+	// Methods
 	Map<Class, Map<Symbol,Object>> methods = new LinkedHashMap();
 	Object addMethod(Class cls, Symbol name, Object method) {
 		return methods.computeIfAbsent(cls, k-> new LinkedHashMap()).put(name, method);
@@ -807,6 +813,7 @@ public class Vm {
 	
 	// Java Native Interface
 	interface ArgsList extends Function<List,Object> {}
+	/*  TODO sostituito dal seguente 
 	interface EnvArgsList extends BiFunction<Env,List,Object> {}
 	class JFun implements Combinable {
 		Object jfun; JFun(Object jfun) { this.jfun = jfun; };
@@ -848,15 +855,61 @@ public class Vm {
 			var intefaces = Arrays.stream(jfun.getClass().getInterfaces()).map(i-> Vm.this.toString(i)).collect(joining(" "));
 			return "{JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "}"; }
 	}
+	*/
+	@SuppressWarnings("preview")
+	class JFun implements Combinable {
+		String name; ArgsList jfun; 
+		JFun(String name, Object jfun) { this(jfun); this.name = name; };
+		JFun(Object jfun) {
+			this.jfun = switch (jfun) {
+				case Supplier s-> o->{ checkO(jfun, o, 0); return s.get(); };  
+				case ArgsList a-> a;  
+				case Function f-> o->{ checkO(jfun, o, 1); return f.apply(o.car()); };  
+				case BiFunction f-> o->{ checkO(jfun, o, 2); return f.apply(o.car(), o.car(1)); };
+				case Field f-> o-> uncked(()->{ if (checkO(jfun, o, 1, 2) == 1) return f.get(o.car()); f.set(o.car(), o.car(1)); return inert; });
+				case Method mt-> o->{
+					var pc = mt.getParameterCount();
+					if (!mt.isVarArgs()) checkO(jfun, o, pc+1); else checkO(jfun, o, pc, -1);
+					return uncked(()-> mt.invoke(o.car(), reorg(mt, array(o.cdr()))));
+				};
+				case Constructor c-> o->{
+					checkO(jfun, o, c.getParameterCount());
+					return uncked(()-> c.newInstance(reorg(c, array(o))));
+				};
+				default -> error("not a combine " + jfun);
+			};
+		}
+		public Object combine(Env e, List o) {
+			return pipe(dbg(e, this, o),
+				()-> {
+					try {
+						return jfun.apply(o);
+					}
+					catch (Value | Error exc) {
+						throw exc;
+					}
+					catch (Throwable exc) {
+						return error("jfun error: " + exc.getMessage(), exc);
+					}
+				}
+			);
+		}
+		public String toString() {
+			if (name != null) return name;
+			var intefaces = Arrays.stream(jfun.getClass().getInterfaces()).map(i-> Vm.this.toString(i)).collect(joining(" "));
+			return "{JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "}"; }
+	}
 	boolean isjFun(Object obj) {
 		return isInstance(obj, Supplier.class, Function.class, BiFunction.class, Executable.class, Field.class);
 	}
+	/* TODO non più necessari
 	JFun jFun(Object obj) {
 		return obj instanceof JFun jfun ? jfun : isjFun(obj) ? new JFun(obj) : error("no a jFun: " + obj);
 	}
 	Object jWrap(Object obj) {
 		return wrap(jFun(obj));
 	}
+	*/
 	@SuppressWarnings("preview")
 	Object jInvoke(String name) {
 		if (name == null) return error("method name is null");
@@ -874,21 +927,21 @@ public class Vm {
 			Executable executable = getExecutable(o0 instanceof Class cl ? cl : o0.getClass(), name, classes);
 			if (executable == null) return error("not found " + executable(name, classes) + " of: " + toString(o0));
 			if (!name.equals("new") && (!name.equals("getConstructor") || o0 == Class.class) && o0 instanceof Class && stream(args).allMatch(a-> a instanceof Class))
-				return executable;
+				return wrap(new JFun(name, executable));
 			try {
 				args = reorg(executable, args);
-				return switch (executable) { 
-					case Method m-> m.invoke(o0, args);
-					case Constructor c-> c.newInstance(args);
-				};
+				return apply(
+					v-> isjFun(v) ? wrap(new JFun(name, v)) : v,
+					switch (executable) { 
+						case Method m-> m.invoke(o0, args);
+						case Constructor c-> c.newInstance(args);
+					}
+				);
 			}
 			catch (Exception exc) {
 				return error("error executing " + executable(name, args) + " of: " + toString(o0) + " with: " + toString(args), exc);
 			}
 		};
-	}
-	private String executable(String name, Object[] args) {
-		return (name.equals("new") ? "constructor" : "method: " + name) + toString(list(args));
 	}
 	Object jGetSet(String name) {
 		if (name == null) return error("field name is null");
@@ -913,7 +966,7 @@ public class Vm {
 	
 	
 	// Error handling
-	Object rootPrompt = new Object() { public String toString() { return "%rootPrompt"; }};
+	Object rootPrompt = new Object() { public String toString() { return "%RootPrompt"; }};
 	Object pushRootPrompt(Object x) { return list(new PushPrompt(), rootPrompt, x); }
 	<T> T error(String msg) {
 		return error(msg, null);
@@ -1028,10 +1081,20 @@ public class Vm {
 		if (h == null) return o;
 		return cons(h.car(), append(h.cdr(), o));
 	}
+	/* TODO sostituito dai seguenti
 	Object listStar(List h) {
 		if (h == null) return null;
 		if (h.cdr == null) return h.car;
 		return cons(h.car(), listStar(h.cdr()));
+	}
+	//*/
+	Object listStar(List h) {
+		return h == null ? null : listStar1(h);
+	}
+	Object listStar1(List h) {
+		var car = h.car;
+		var cdr = h.cdr();
+		return cdr == null ? car : cons(car, listStar(cdr));
 	}
 	<T> T print(Object ... os) {
 		for (var o: os) out.print(toString(o)); out.println();
@@ -1167,6 +1230,9 @@ public class Vm {
 	public static String reverseMap(Map map) {
 		var sb = new StringBuilder(); map.entrySet().forEach(e-> sb.insert(0, " " + e)); return sb.toString();
 	}
+	private String executable(String name, Object[] args) {
+		return (name.equals("new") ? "constructor" : "method: " + name) + toString(list(args));
+	}
 	
 	
 	// Bootstrap
@@ -1184,14 +1250,14 @@ public class Vm {
 					$("%def", "%unwrap", wrap(new JFun("%Unwrap", (Function<Object, Object>) t-> unwrap(t)))),
 					$("%def", "%bound?", wrap(new JFun("%Bound?", (BiFunction<Symbol,Env,Boolean>) (s, e)-> e.isBound(s)))),
 					$("%def", "%apply", wrap(new JFun("%Apply", (ArgsList) o-> combine(o.cdr(1) != null ? o.car(2) : env(null), unwrap(o.car()), o.car(1))))),
-					$("%def", "%applyn", wrap(new JFun("%Applyn", (ArgsList) o-> combine(env(null), unwrap(o.car()), o.cdr())))),
+					$("%def", "%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(null), unwrap(o.car()), o.cdr())))),
 					$("%def", "%resetEnvironment", wrap(new JFun("%ResetEnvironment", (Supplier) ()-> { theEnvironment.map.clear(); return theEnvironment; }))),
 					$("%def", "%pushEnvironment", wrap(new JFun("%PushEnvironment", (Supplier) ()-> theEnvironment = env(theEnvironment)))),
 					$("%def", "%popEnvironment", wrap(new JFun("%PopEnvironment", (Supplier) ()-> theEnvironment = theEnvironment.parent))),
 					// Values
 					$("%def", "%cons", wrap(new JFun("%Cons", (BiFunction<Object, Object, Object>) (car,cdr)-> cons(car,cdr)))),
 					$("%def", "%cons?", wrap(new JFun("%Cons?", (Function<Object, Boolean>) obj-> obj instanceof Cons))),
-					$("%def", "%nil?", wrap(new JFun("%Nil?", (Function<Object, Boolean>) obj-> obj == null))),
+					$("%def", "%null?", wrap(new JFun("%Null?", (Function<Object, Boolean>) obj-> obj == null))),
 					$("%def", "%string->symbol", wrap(new JFun("%String->symbol", (Function<String, Symbol>) this::symbol))),
 					$("%def", "%symbol?", wrap(new JFun("%Symbol?", (Function<Object, Boolean>) obj-> obj instanceof Symbol))),
 					$("%def", "%symbolName", wrap(new JFun("%SymbolName", (Function<Intern, String>) i-> i.name))),

@@ -68,6 +68,10 @@ public class Utility {
 		}
 	}
 	
+	public static int stackDeep() {
+		return new Throwable().getStackTrace().length;
+	}
+	
 	public static List toList(Object... objects) {
 		return stream(objects).toList();
 	}

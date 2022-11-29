@@ -47,7 +47,7 @@
 ($define! list->array %list->array)
 ($define! loop %loop)
 ($define! makeEnvironment %makeEnvironment)
-($define! nil? %nil?)
+($define! nil? %null?)
 ($define! not !)
 ($define! reverseList %reverse)
 ($define! rootPrompt %rootPrompt)
