@@ -182,7 +182,7 @@ public class Vm {
 	// Basic Forms
 	class Inert { public String toString() { return "#inert"; }};
 	public Inert inert = new Inert();
-	//<T> T inert(Object value) { return (T) inert; }
+	//Inert inert(Object value) { return inert; }
 	
 	class Ignore { public String toString() { return "#ignore"; }};
 	public Ignore ignore = new Ignore();
@@ -545,7 +545,6 @@ public class Vm {
 	}
 	Object wrap(Object arg) {
 		return arg instanceof Apv || isjFun(arg) ? arg 
-		//: arg instanceof JFun jFun ? jFun.jfun
 		: arg instanceof Combinable cmb ? new Apv(cmb)
 		: error("cannot wrap: " + arg);
 	}
@@ -821,7 +820,6 @@ public class Vm {
 							case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
 							case ArgsList a-> a.apply(o);  
 							case Function f-> { checkO(jfun, o, 1); yield f.apply(o.car()); }  
-							case EnvArgsList f-> f.apply(e, o);
 							case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(o.car(), o.car(1)); }
 							case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; }
 							case Method mt-> {
@@ -851,7 +849,7 @@ public class Vm {
 			return "{JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "}"; }
 	}
 	boolean isjFun(Object obj) {
-		return isInstance(obj, Supplier.class /*, ArgsList.class*/, Function.class/*, EnvArgsList.class*/, BiFunction.class, Executable.class, Field.class);
+		return isInstance(obj, Supplier.class, Function.class, BiFunction.class, Executable.class, Field.class);
 	}
 	JFun jFun(Object obj) {
 		return obj instanceof JFun jfun ? jfun : isjFun(obj) ? new JFun(obj) : error("no a jFun: " + obj);
@@ -1058,6 +1056,7 @@ public class Vm {
 		for (int i=0; i<a.length; i+=1) if (!equals(a[i], b[i])) return false;
 		return true;
 	}
+	/* TODO sostituito dal seguente
 	boolean vmAssert(String str, Object objs) throws Exception {
 		var expr = cons(begin, parseBytecode(parse(str)));
 		return vmAssert(theEnvironment, objs instanceof Throwable ? $(expr) : $(expr, parseBytecode(objs))); 
@@ -1085,6 +1084,46 @@ public class Vm {
 		}
 		return false;
 	}
+	*/
+	boolean vmAssert(String str, Object objs) throws Exception {
+		List expr = cons(begin, parseBytecode(parse(str)));
+		return vmAssert.combine(theEnvironment,  objs instanceof Throwable ? expr : cons(expr, parseBytecode(objs))); 
+	}
+	class Assert implements Combinable {
+		public Boolean combine(Env env, List o) {
+			if (!doasrt) return true;
+			checkO(this, o, 1, 2); // o = (x)|(x v)
+			return test.combine(env, cons(null, o));
+		}
+		public String toString() { return "Assert"; }
+	}
+	Assert vmAssert = new Assert();
+	class Test implements Combinable {
+		public Boolean combine(Env env, List o) {
+			if (!doasrt) return true;
+			var len = checkO(this, o, 2, 3); // o = (name x)|(name x v)
+			var name = eIfnull(o.car(), n-> "test "+ n + ": ");
+			var expr = o.car(1);
+			try {
+				env = env(env);
+				var val = pushSubcontBarrier(null, env, pushRootPrompt(expr));
+				if (len == 2) print(name, expr, " should throw but is ", val);
+				else {
+					var expt = o.car(2);
+					if (Vm.this.equals(val, pushSubcontBarrier(null, env, pushRootPrompt(expt)))) return true;
+					print(name, expr, " should be ", expt, " but is ", val);
+				}
+			}
+			catch (Throwable t) {
+				if (len == 2) return true;
+				if (prstk) t.printStackTrace(out);
+				else print(name, expr, " throw ", t);
+			}
+			return false;
+		}
+		public String toString() { return "Test"; }
+	}
+	Test test = new Test();
 	
 	
 	// Bytecode parser
@@ -1261,8 +1300,10 @@ public class Vm {
 						$("%wrap", $("%eval", $("%list*", "%vau", "formals", ignore, "body"), "env")))),
 					//$("%def", "%jambda", jFun((ArgsList) o-> lambda(o.car(), o.car(1), o.cdr(1)))),
 					//
-					$("%def", "assert", new JFun("Assert", (EnvArgsList) (e,o)-> { checkO("assert", o, 1, 2); return vmAssert(e,array(o)); } )),
-					$("%def", "test", new JFun("Test", (EnvArgsList) (e,o)-> { checkO("test", o, 2, 3); return vmAssert(e,toString(o.car()), o.car(1), array(o.cdr(1))); } )),
+					//$("%def", "assert", new JFun("Assert", (EnvArgsList) (e,o)-> { checkO("assert", o, 1, 2); return vmAssert(e,array(o)); } )),
+					//$("%def", "test", new JFun("Test", (EnvArgsList) (e,o)-> { checkO("test", o, 2, 3); return vmAssert(e,toString(o.car()), o.car(1), array(o.cdr(1))); } )),
+					$("%def", "assert", vmAssert),
+					$("%def", "test", test),
 					$("%def", "this", new JFun("This", (Supplier)() -> this)),
 					$("%def", "toString", wrap(new JFun("ToString", (Function<Object,String>) obj-> toString(obj)))),
 					$("%def", "log", wrap(new JFun("Log", (ArgsList) o-> log(array(o))))),
