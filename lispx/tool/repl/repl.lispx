@@ -54,7 +54,7 @@
           ;; it demos well and makes designers of other languages
           ;; squirt blood from their eyes.
           (typecase condition
-            ((Error :type 'unbound)
+            ((Error :type 'unbound-symbol)
              (let ((symbol (slot-value condition 'symbol))
                    (env (slot-value condition 'environment)))
                (restart-case ((continue (lambda () (eval symbol env))

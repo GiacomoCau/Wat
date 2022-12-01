@@ -496,7 +496,8 @@
      (push-prompt 'p1
        (push-subcont-barrier
          (take-subcont 'p1 sk)))
-     PromptNotFoundError :prompt 'p1)))
+     PromptNotFoundError :prompt 'p1)
+    #f))
 
 (defsuite dynamics
 

@@ -40,7 +40,7 @@
   (deftest |SIGNALS-ERROR returns false if the expression signals another condition type.|
     (signals-error
      x
-     MatchError)
+     Error :type 'match)
     #f))
 
 (defsuite assert
@@ -156,7 +156,7 @@
   (deftest the.3
     (signals-error
      (the #t #f)
-     TypeError :datum #t :expected-type 'Symbol))
+     TypeError :datum #t :expected-type 'Intern))
 
   (deftest the.4
     (signals-error
@@ -375,7 +375,7 @@
   (deftest boundp.7
     (signals-error
      (boundp 'x 33)
-     TypeError :datum 33 :expected-type 'Environment))
+     TypeError :datum 33 :expected-type 'Env))
 
   (deftest boundp.8
     (signals-error
@@ -469,25 +469,28 @@
     #inert)
 
   (deftest def.2
-    (def :key :key)
-    :key)
+    (signals-error
+     (def :key :key)
+     TypeError :datum :key :expected-type '(or Symbol Cons)))
 
   (deftest def.2b
     (signals-error
      (def :key :key2)
-     MatchError :definiend :key :value :key2))
+     TypeError :datum :key :expected-type '(or Symbol Cons)))
 
   (deftest def.3
-    (def #ignore 2)
-    2)
+    (signals-error
+      (def #ignore 2)
+    TypeError :datum #ignore :expected-type '(or Symbol Cons)))
 
   (deftest def.4
     (def x 1)
     1)
 
   (deftest def.5
-    (def () ())
-    ())
+    (signals-error
+      (def () ())
+    TypeError :datum #null :expected-type '(or Symbol Cons)))
 
   (deftest def.6
     (signals-error
@@ -502,7 +505,7 @@
   (deftest def.8
     (signals-error
      (def #t 12)
-     TypeError :datum #t :expected-type '(or Symbol Ignore List)))
+     TypeError :datum #t :expected-type '(or Symbol Cons)))
 
   (deftest def.9
     (def x 1 "docstring")
@@ -553,8 +556,8 @@
 
   (deftest lambda.4
     (signals-error
-     ((lambda #t))
-     TypeError :datum #t :expected-type '(or Symbol Ignore List))))
+     (lambda #t)
+     TypeError :datum #t :expected-type '(or Null Ignore Symbol Cons))))
 
 (defsuite defun
 
@@ -584,7 +587,7 @@
   (deftest defun.5
     (signals-error
      (defun #t ())
-     TypeError :datum #t :expected-type 'Symbol))
+     TypeError :datum #t :expected-type '(or Symbol Cons)))
 
   (deftest defun.6
     (typep (defun foo ()) Function)))
@@ -747,7 +750,7 @@
   (deftest symbol-name.6
     (signals-error
      (symbol-name 12)
-     TypeError :datum 12 :expected-type 'Symbol)))
+     TypeError :datum 12 :expected-type 'Intern)))
 
 (defsuite variable-symbol
 
@@ -771,7 +774,7 @@
   (deftest variable-symbol.6
     (signals-error
      (variable-symbol 5)
-     TypeError :datum 5 :expected-type 'Symbol)))
+     TypeError :datum 5 :expected-type 'Intern)))
 
 (defsuite function-symbol
 
@@ -795,7 +798,7 @@
   (deftest function-symbol.6
     (signals-error
      (function-symbol 5)
-     TypeError :datum 5 :expected-type 'Symbol)))
+     TypeError :datum 5 :expected-type 'Intern)))
 
 (defsuite class-symbol
 
@@ -819,7 +822,7 @@
   (deftest class-symbol.6
     (signals-error
      (class-symbol 5)
-     TypeError :datum 5 :expected-type 'Symbol)))
+     TypeError :datum 5 :expected-type 'Intern)))
 
 (defsuite keyword-symbol
 
@@ -843,7 +846,7 @@
   (deftest keyword-symbol.6
     (signals-error
      (keyword-symbol 5)
-     TypeError :datum 5 :expected-type 'Symbol)))
+     TypeError :datum 5 :expected-type 'Intern)))
 
 (defsuite wrap
 
@@ -859,7 +862,7 @@
   (deftest wrap.3
     (signals-error
      (wrap 33)
-     TypeError :datum 33 :expected-type 'Operator)))
+     TypeError :datum 33 :expected-type 'Combinable)))
 
 (defsuite unwrap
 
@@ -875,7 +878,7 @@
   (deftest unwrap.3
     (signals-error
      (unwrap 33)
-     TypeError :datum 33 :expected-type 'Function)))
+     TypeError :datum 33 :expected-type 'Apv)))
 
 (defsuite if
 
@@ -1426,7 +1429,7 @@
      (typep #f Boolean)
      (typep 12 Integer)
      (typep "foo" String)
-     (typep #null Nil)
+     (typep #null Null)
      (typep Object Class)))
 
   (deftest typep.2
@@ -1483,7 +1486,7 @@
   (deftest apply.5
     (signals-error
      (apply 12 '())
-     TypeError :datum 12 :expected-type 'Function)))
+     TypeError :datum 12 :expected-type 'Apv)))
 
 (defsuite find-class
 
@@ -1504,7 +1507,7 @@
   (deftest find-class.3
     (signals-error
      (find-class "string" (the-environment))
-     TypeError :datum "string" :expected-type 'Symbol))
+     TypeError :datum "string" :expected-type 'Intern))
 
   (deftest find-class.4
     (signals-error
@@ -1533,7 +1536,7 @@
   (deftest make-environment.3
     (signals-error
      (make-environment 12)
-     TypeError :datum 12 :expected-type 'Environment)))
+     TypeError :datum 12 :expected-type '(or Null Env))))
 
 (defsuite cxxr
 
@@ -1761,7 +1764,7 @@
   (deftest mapcar.6
     (signals-error
      (mapcar 12 '(1))
-     TypeError :datum 12 :expected-type 'Operator)))
+     TypeError :datum 12 :expected-type 'Combinable)))
 
 (defsuite reduce
 
@@ -1811,12 +1814,12 @@
   (deftest mapc.3
     (signals-error
      (mapc "foo" '(1 2 3))
-     TypeError :datum "foo" :expected-type 'Operator))
+     TypeError :datum "foo" :expected-type 'Combinable))
 
   (deftest mapc.4
     (signals-error
      (mapc (lambda (x) x) "foo")
-     TypeError :datum "foo" :expected-type 'cons))
+     TypeError :datum "foo" :expected-type 'Cons))
 
   (deftest mapc.5
     (let ((ct 0))
@@ -1859,7 +1862,7 @@
   (deftest mapcan.6
     (signals-error
      (mapcan 12 '(1))
-     TypeError :datum 12 :expected-type 'Operator))
+     TypeError :datum 12 :expected-type 'Combinable))
 
   (deftest mapcan.7
     (mapcan (lambda (x) (if (typep x Integer) (list x) #null))
@@ -1899,7 +1902,7 @@
   (deftest dolist.6
     (signals-error
      (dolist ("not-a-symbol" '(1 2 3)))
-    TypeError :datum "not-a-symbol" :expected-type '(or Symbol Ignore List)))
+    TypeError :datum '("not-a-symbol") :expected-type '(or Null Ignore Symbol)))
 
   (deftest dolist.7
     (let ((ct 0))
@@ -1937,7 +1940,7 @@
   (deftest nth.3
     (signals-error
      (nth #t '(1 2))
-     TypeError :datum #t :expected-type 'Number))
+     TypeError :datum #t :expected-type 'Integer))
 
   (deftest nth.3a
     (signals-error
@@ -1960,7 +1963,7 @@
   (deftest nth.7
     (signals-error
      (nth 2 '(1 2))
-     TypeError :datum '() :expected-type 'Cons)))
+     TypeError :datum () :expected-type 'Cons)))
 
 (defsuite reverse
 
@@ -1972,7 +1975,7 @@
   (deftest reverse.2
     (signals-error
      (reverse "foo")
-     TypeError :datum "foo" :expected-type 'List))
+     TypeError :datum "foo" :expected-type '(or Null List)))
 
   (deftest reverse.3
     (signals-error
@@ -2006,7 +2009,7 @@
   (deftest append.3
     (signals-error
      (append 1 '())
-     TypeError :datum 1 :expected-type 'List))
+     TypeError :datum 1 :expected-type '(or Null List)))
 
   (deftest append.4
     (append '() '())
@@ -2065,12 +2068,12 @@
   (deftest nthcdr.3
     (signals-error
      (nthcdr "foo" '())
-     TypeError :datum "foo" :expected-type 'Number))
+     TypeError :datum "foo" :expected-type 'Integer))
 
   (deftest nthcdr.4
     (signals-error
      (nthcdr 12 "foo")
-     TypeError :datum "foo" :expected-type 'List))
+     TypeError :datum "foo" :expected-type 'Cons))
 
   (deftest nthcdr.5
     (nthcdr 0 '())
@@ -2134,12 +2137,12 @@
   (deftest list-subseq.4
     (signals-error
      (subseq '() "a" 2)
-     TypeError :datum "a" :expected-type 'Number))
+     TypeError :datum "a" :expected-type 'Integer))
 
   (deftest list-subseq.5
     (signals-error
      (subseq '() 1 "b")
-     TypeError :datum "b" :expected-type 'Number))
+     TypeError :datum "b" :expected-type 'Integer))
 
   (deftest list-subseq.6
     (signals-error
@@ -2207,12 +2210,12 @@
   (deftest string-subseq.4
     (signals-error
      (subseq "" "a" 2)
-     TypeError :datum "a" :expected-type 'Number))
+     TypeError :datum "a" :expected-type 'Integer))
 
   (deftest string-subseq.5
     (signals-error
      (subseq "foo" 1 "b")
-     TypeError :datum "b" :expected-type 'Number))
+     TypeError :datum "b" :expected-type 'Integer))
 
   (deftest string-subseq.6
     (signals-error
@@ -2297,7 +2300,7 @@
   (deftest list-elt.3a
     (signals-error
      (elt '() 1)
-     TypeError :datum '() :expected-type 'Cons))
+     UnboundMethodError :class Null :method-name 'elt))
 
   (deftest list-elt.5
     (elt '(1 2) 0)
@@ -2396,7 +2399,7 @@
   (deftest remove-if.4
     (signals-error
      (remove-if 1 '(1 2))
-     TypeError :datum 1 :expected-type 'Operator))
+     TypeError :datum 1 :expected-type 'Combinable))
 
   (deftest remove-if.5
     (remove-if (lambda (item) (= 1 item)) '(1 2 3 1 2 3))
@@ -2519,12 +2522,12 @@
   (deftest make-instance.3
     (signals-error
      (make-instance 3)
-     TypeError :datum 3 :expected-type 'StandardClass))
+     TypeError :datum 3 :expected-type '(or Box Obj)))
 
   (deftest make-instance.4
     (signals-error
      (make-instance Object)
-     TypeError :datum Object :expected-type 'StandardClass))
+     TypeError :datum Object :expected-type '(or Box Obj)))
 
   (deftest make-instance.5
     (signals-error
@@ -2555,12 +2558,12 @@
   (deftest slot-value.1
     (signals-error
      (slot-value "foo" 'x)
-     TypeError :datum "foo" :expected-type 'StandardObject))
+     TypeError :datum "foo" :expected-type 'Obj))
 
   (deftest slot-value.1a
     (signals-error
      (slot-value (make-instance StandardObject) "x")
-     TypeError :datum "x" :expected-type 'Symbol))
+     TypeError :datum "x" :expected-type 'Intern))
 
   (deftest slot-value.2
     (signals-error
@@ -2575,12 +2578,12 @@
   (deftest set-slot-value.1
     (signals-error
      (set-slot-value "foo" 'x 1)
-     TypeError :datum "foo" :expected-type 'StandardObject))
+     TypeError :datum "foo" :expected-type 'Obj))
 
   (deftest set-slot-value.1a
     (signals-error
      (set-slot-value (make-instance StandardObject) "x" 1)
-     TypeError :datum "x" :expected-type 'Symbol))
+     TypeError :datum "x" :expected-type 'Intern))
 
   (deftest set-slot-value.2
     (signals-error
@@ -2595,12 +2598,12 @@
   (deftest slot-bound-p.1
     (signals-error
      (slot-bound-p "foo" 'x)
-     TypeError :datum "foo" :expected-type 'StandardObject))
+     TypeError :datum "foo" :expected-type 'Obj))
 
   (deftest slot-bound-p.1a
     (signals-error
      (slot-bound-p (make-instance StandardObject) "x")
-     TypeError :datum "x" :expected-type 'Symbol))
+     TypeError :datum "x" :expected-type 'Intern))
 
   (deftest slot-bound-p.2
     (signals-error
@@ -2655,7 +2658,7 @@
   (deftest let.8
     (signals-error
      (let ((#t 1)))
-     TypeError :datum #t :expected-type '(or Symbol Ignore List))))
+     TypeError :datum '(#t) :expected-type '(or Null Ignore Symbol))))
 
 (defsuite let*
 
@@ -2683,7 +2686,7 @@
   (deftest let*.5
     (signals-error
      (let* ((#t 1)))
-     TypeError :datum #t :expected-type '(or Symbol Ignore List))))
+     TypeError :datum '(#t) :expected-type '(or Null Ignore Symbol))))
 
 (defsuite flet
 
@@ -3117,7 +3120,7 @@
   (deftest set.7
     (signals-error
      (set 33 x y)
-     TypeError :datum 33 :expected-type 'Environment)))
+     TypeError :datum 33 :expected-type 'Env)))
 
 (defsuite class-name
 
@@ -3155,7 +3158,7 @@
   (deftest subclassp.4
     (signals-error
      (subclassp "foo" Object)
-     TypeError :datum "foo" :expected-type 'class))
+     TypeError :datum "foo" :expected-type 'Class))
 
   (deftest subclassp.5
     (and (subclassp Object Object)
@@ -3209,7 +3212,7 @@
   (deftest %make-standard-class.2
     (signals-error
      (%make-standard-class 'Foo Object)
-     TypeError :datum Object :expected-type 'StandardClass))
+     TypeError :datum Object :expected-type '(or Box Obj)))
 
   (deftest %make-standard-class.3
     (signals-error

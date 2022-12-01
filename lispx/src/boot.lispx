@@ -51,7 +51,7 @@
 
 (%def defmacro
   (macro (name parameter-tree . forms)
-    (list %def (%function-symbol name)
+    (list %def name
           (%list* macro parameter-tree forms)))
   ;"Define a macro with the given NAME, PARAMETER-TREE, and FORMS.
   ;|$(fn (name parameter-tree . forms))
@@ -61,7 +61,7 @@
 (defmacro defexpr (name parameter-tree environment-parameter . forms)
   "Define a fexpr with the given NAME, PARAMETER-TREE,
   |ENVIRONMENT-PARAMETER, and FORMS."
-  (list %def (%function-symbol name)
+  (list %def name
         (%list* vau parameter-tree environment-parameter forms)))
 
 (defmacro def (definiend-tree value . docstring?)
@@ -82,7 +82,7 @@
 
 (defmacro defun (name parameter-tree . forms)
   "Define a function with the given NAME, PARAMETER-TREE, and FORMS."
-  (list def (%function-symbol name)
+  (list def name
         (%list* lambda parameter-tree forms)))
 
 ;;; Built-Ins
@@ -445,7 +445,7 @@
 
 (defun assert (boolean)
   "Signal an error if the BOOLEAN is false.  Otherwise return void."
-  (unless boolean (error (make-instance AssertionError))))
+  (unless boolean (error (make-instance AssertionError :type 'assertion :datum boolean :expected-type 'Boolean))))
 
 (defun compose (f g)
   "Compose two functions, creating a new function equivalent to (G (F ...))."
@@ -743,7 +743,7 @@
   "Signal a `type-error' if the OBJECT is not an instance of the CLASS."
   (if (typep object class)
       object
-      (error (make-type-error object (class-name class)))))
+      (error (make-type-error object (%intern (class-name class))))))
 
 (defexpr the (class-name object) env
   "Shorthand for `assert-type'.  Signal a `type-error' if the OBJECT
@@ -758,7 +758,7 @@
 (defmethod length ((seq List))
   (%list-length seq))
 
-(defmethod length ((seq Nil))
+(defmethod length ((seq Null))
   (%list-length seq))
 
 (defgeneric elt (sequence index)
@@ -776,7 +776,7 @@
 (defmethod subseq ((seq List) start . end?)
   (%list-subseq seq start (optional end?)))
 
-(defmethod subseq ((seq Nil) start . end?)
+(defmethod subseq ((seq Null) start . end?)
   (%list-subseq seq start (optional end?)))
 
 (defmethod subseq ((seq String) start . end?)
@@ -910,7 +910,7 @@
 (defmacro push-subcont-barrier forms
   "Push a continuation barrier that prevents the FORMS from capturing
   |any continuations to the outside."
-  (list %push-subcont-barrier (list* lambda () forms)))
+  (list* %push-subcont-barrier (%makeEnv) forms))
 
 ;;; Coroutines
 

@@ -13,20 +13,69 @@
 (prtrc 1)
 (bndres 1)
 
+(%def Null #null)
+(%def Box &Wat.Vm$Box)
+(%def Boolean &java.lang.Boolean)
+(%def Built-in-class &java.lang.Class)
+(%def Class &java.lang.Class)
+(%def Cons &Wat.Vm$Cons)
+(%def Environment &Wat.Vm$Env)
+(%def Fexpr &Wat.Vm$Opv)
+(%def Function &Wat.Vm$Apv)
+(%def Intern &Wat.Vm$Intern)
+(%def Integer &java.lang.Integer)
+(%def List &Wat.Vm$List)
+(%def Number &java.lang.Number)
+(%def Object &java.lang.Object)
+(%def Symbol &Wat.Vm$Symbol)
+(%def Keyword &Wat.Vm$Keyword)
+(%def Obj &Wat.Vm$Obj)
+(%def Operator &Wat.Vm$Combinable)
+(%def StandardClass &java.lang.Class)
+(%def String &java.lang.String)
+(%def Throwable &java.lang.Throwable)
+(%def Inert &Wat.Vm$Inert)
+(%def Ignore &Wat.Vm$Ignore)
+(%def Operator &Wat.Vm$Combinable)
+(%def Utility &Wat.Utility)
+
+(%def StandardObject &Wat.Vm$Obj)
+(%def Dynamic &Wat.Vm$DVar)
+(%def Condition &Wat.Vm$Condition)
+(%def Error &Wat.Vm$Error)
+
+(%def TypeError Error)
+(%def MatchError Error)
+(%def UnboundSymbolError Error)
+(%def OutOfBoundsError Error)
+(%def AssertionError Error)
+(%def UnboundSlotError Error)
+(%def UnboundMethodError Error)
+(%def PromptNotFoundError Error)
+
 (%def \ %\)
 
-(%def %->symbol  (\ (i) (%intern (.name i))))
-(%def %->keyword (\ (i) (%intern (%$ ":" (.name i)))))
+(%def %zero? (\ (v) (%== v 0)))
+(%def %inert? (\ (v) (%== v #inert)))
+
+(%def %the (\ (class value)
+  (if (%instanceof? class Class)
+    (if (%instanceof? value class) value
+      (%error (%$ "" "not a {:expected-type}: {:datum}") :type 'type :datum value :expected-type (%intern (@getSimpleName class))) )
+    (%error (%$ "" "not a {:expected-type}: {:datum}") :type 'type :datum class :expected-type (%intern (@getSimpleName Class))) )))
+
+(%def %className (\ (class) (@getCanonicalName (%the Class class))))
+(%def %className (\ (class) (@getSimpleName (%the Class class))))
+
+(%def %->symbol  (\ (i) (%symbol (%internName i))))
+(%def %->keyword (\ (i) (%keyword (%internName i))))
 
 (%def %= %eq?)
 (%def %assert assert)
 (%def %add-method %addMethod)
 (%def %boundp %bound?)
-(%def %car (\ ((x . #ignore)) x))
-(%def %cdr (\ ((#ignore . x)) x))
-(%def %class-name (\ (c) (@getCanonicalName c)))
-(%def %class-name (\ (c) (@getSimpleName c)))
-(%def %class-of (\ (o) (%if (%null? o) o (%classOf o))))
+(%def %class-name %className)
+(%def %class-of %classOf)
 (%def %class-symbol %->symbol)
 (%def %eq %==)
 (%def %find-method %getMethod)
@@ -34,8 +83,8 @@
 (%def %keyword-symbol %->keyword)
 (%def %length %len) 
 (%def %list-length %len)
-(%def %nth (\ (i l) (@car l i)))
-(%def %nthcdr (\ (i l) (%if (%== i 0) l (@cdr l (%- i 1)))))
+(%def %nth (\ (i l) (%the Integer i) (@car (%the Cons l) i)))
+(%def %nthcdr (\ (i l) (%the Integer i) (%if (%zero? i) l (@cdr (%the Cons l) (%- i 1)))))
 (%def %make-environment %makeEnv)
 (%def %make-instance %obj)
 (%def %make-standard-class (\ (name superclass) (%class name superclass)))
@@ -44,14 +93,15 @@
 (%def %push-delim-subcont %pushPromptSubcont)
 (%def %push-prompt (%wrap %pushPrompt))
 (%def %push-subcont-barrier %pushSubcontBarrier)
-(%def %symbol-name (\ (i) (%def name (.name i)) (%if (@startsWith name ":") (@substring name 1) name)))
-;(%def %symbol-name (\ (i) (%def name (.name i)) (@substring name (%if (@startsWith name ":") 1 0))))
+(%def %symbol-name %internName)
 (%def %subclassp %subClass?)
 (%def %take-subcont %takeSubcont)
 (%def %test test)
-(%def %typep %type?)
+(%def %typep (\ (object class) (%type? object (%if (%null? class) class (%the Class class)))))
+;(%def %typep %type?) ; TODO assert-type.3 va male verificare
 (%def %unwind-protect %finally)
 (%def %variable-symbol %->symbol)
+;(%def %wrap ((\ (%wrap) (\ (op) (%wrap (%the Operator op)))) %wrap) )
 
 (%def list* %list*)
 
@@ -65,43 +115,9 @@
   ;(log "panic:" e)
   (%throw #ignore e) ))
 
-(%def Nil #null)
-(%def Box &Wat.Vm$Box)
-(%def Boolean &java.lang.Boolean)
-(%def Built-in-class &java.lang.Class)
-(%def Class &java.lang.Class)
-(%def Cons &Wat.Vm$Cons)
-(%def Fexpr &Wat.Vm$Opv)
-(%def Function &Wat.Vm$Apv)
-(%def Integer &java.lang.Integer)
-(%def List &Wat.Vm$List)
-(%def Number &java.lang.Number)
-(%def Object &java.lang.Object)
-(%def Symbol &Wat.Vm$Symbol)
-(%def StandardClass &java.lang.Class)
-(%def String &java.lang.String)
-(%def Throwable &java.lang.Throwable)
-(%def Inert &Wat.Vm$Inert)
-(%def Ignore &Wat.Vm$Ignore)
-(%def Operator &Wat.Vm$Opv)
-(%def Utility &Wat.Utility)
-
-(%def StandardObject &Wat.Vm$Obj)
-(%def Dynamic &Wat.Vm$DVar)
-(%def Condition &Wat.Vm$Condition)
-(%def Error &Wat.Vm$Error)
-(%def TypeError Error)
-(%def MatchError Error)
-(%def UnboundSymbolError Error)
-(%def OutOfBoundsError Error)
-(%def AssertionError Error)
-(%def UnboundSlotError Error)
-(%def UnboundMethodError Error)
-(%def PromptNotFoundError Error)
-
-(%def %take (\ (i l) (%if (%== i 0) #null (%cons (%car l) (%take (%- i 1) (%cdr l))))))
-(%def %list-subseq (\ (l s e)	(%def tail (%nthcdr s l)) (%if (%== e #inert) tail (%take (%- e s) tail))))
-(%def %string-subseq (\ (seq start end) (%if (%== end #inert) (@substring seq start) (@substring seq start end))))
+(%def %take (\ (i l) (%if (%zero? i) #null (%cons (%car l) (%take (%- i 1) (%cdr l))))))
+(%def %list-subseq (\ (l s e) (%the Integer s) (%if (%! (%inert? e)) (%the Integer e)) (%def tail (%nthcdr s l)) (%if (%inert? e) tail (%take (%- e s) tail))))
+(%def %string-subseq (\ (seq start end) (%if (%inert? end) (@substring (%the String seq) (%the Integer start)) (@substring (%the String seq) (%the Integer start) (%the Integer end)))))
 
 (load "lispx/src/boot.lispx")
 
@@ -111,12 +127,51 @@
 (def %progv (\ (var val body)
   ((%wrap %dLet) (cons var val) body) ))
 
-(defmacro %slot-value (obj slot)
-   (list obj (list %->keyword slot)))
-(defmacro %set-slot-value (obj slot value)
-   (list obj (list %->keyword slot) value))
-(defmacro %slot-bound-p (obj slot)
-   (list (list %jInvoke "isBound") obj (list %->keyword slot)))
+;(defmacro %slot-value (obj slot)
+;   (list (list '%the 'StandardObject obj) (list '%the 'Intern slot)) )
+(def %slot-value (\ (obj slot)
+  ((%the StandardObject obj) (%the Intern slot)) ))
+
+;(defmacro %set-slot-value (obj slot value)
+;   (list (list '%the 'StandardObject obj) (list '%the 'Intern slot) value) )
+(def %set-slot-value (\ (obj slot value)
+  ((%the StandardObject obj) (%the Intern slot) value) ))
+
+;(defmacro %slot-bound-p (obj slot)
+;  (list (%jInvoke "isBound") (list '%the 'StandardObject obj) (list '%the 'Intern slot)) )
+(def %slot-bound-p (\ (obj slot)
+  (@isBound (%the StandardObject obj) (%the Intern slot)) ))
+
+   
+; vedi signals-error più avanti o in test-util per codice simile
+(def checkSlot 
+  (\ (c slot-specs)
+    (loop-let next ((slot-specs slot-specs))
+      (if (%null? slot-specs) #t
+        (let (((name value . rest-slot-specs) slot-specs))
+          (if (or (%! (%slot-bound-p c name)) (%! (%= (slot-value c name) value))) #f
+            (next rest-slot-specs) ))))))
+
+(defun lispx::make-typecase-with-default-function (default)
+  (vau (keyform . clauses) env
+    (let ((key (eval keyform env)))
+      (loop-let -typecase- ((clauses clauses))
+        (if (null clauses) (default key)
+          (let* ( (((test . forms) . rest-clauses) clauses)
+                  (symbol? (%symbol? test))
+                  (class-name (if symbol? test (car test)))
+                  (class (find-class class-name env)) )
+            (if (and (typep key class) (or symbol? (checkSlot key (mapcar (\ (c) (eval c env)) (cdr test)))))
+              (eval (list* progn forms) env)
+              (-typecase- rest-clauses) )))))))
+
+(def typecase (lispx::make-typecase-with-default-function (\ (#ignore) #inert)))
+(def etypecase (lispx::make-typecase-with-default-function (\ (key) (error (make-type-error key Object)))))
+
+;(typecase (%obj StandardObject :a 3) ((Error) #t)) ;-> #inert
+;(typecase (%obj StandardObject :a 3) (StandardObject #t)) ;-> #t
+;(typecase (%obj StandardObject :a 3) ((StandardObject) #t))  
+;(typecase (%obj UnboundSymbolError :type 'unbound) ((UnboundSymbolError :type 'unbound) "ok"))
 
 (load "lispx/src/cond-sys.lispx")
 ;(load "lispx/src/stream.lispx")
@@ -136,10 +191,26 @@
 (defexpr defsuite (name . forms) env
   (eval (list* progn forms) env) )
 
-(defmacro signals-error (form condition-class . slot-specs)
-  (list %catch #ignore
-    (list '\ () form #f)
-    (list '\ '(r) (list 'typep 'r condition-class)) ))
+(def userBreak error)
+
+(defexpr signals-error (form condition-class . slot-specs) env
+  (let ((class (find-class condition-class env)))
+    (block exit
+      (handler-case 
+        ( (StandardObject
+            (lambda (obj)
+              (if (typep obj class)
+                (progn
+                  (loop-let -check-slots- ((slot-specs slot-specs))
+                    (when (not (null slot-specs))
+                      (let (((name value . rest-slot-specs) slot-specs))
+                        (unless (= (slot-value obj name) (eval value env))
+                          (return-from exit #f))
+                        (-check-slots- rest-slot-specs) )))
+                  (return-from exit #t) )
+                (return-from exit #f) ))))
+        (eval form env) )
+      #f )))
 
 ;(load "lispx/test/test-util-test.lispx") ;; mai
 (load "lispx/test/boot-test.lispx")
@@ -179,4 +250,5 @@
 (def uprint print)
 (def repl:%display-prompt
   (\ (level) (if (eq level 0) "* " (%$ level "]"))) )
+(repl:run)
 |#

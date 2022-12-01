@@ -40,6 +40,16 @@ import Wat.Vm.Symbol;
 
 public class Prova {
 	
+	public static void main(String[] args) {
+		//out.println(Boolean.TRUE == true);
+		//out.println(Boolean.FALSE == true);
+		//out.println(new Object() == true);
+		//Object obj = null; out.println(obj == true);
+		//out.println(Utility.equals(0, null, false, 0));
+		var f = (Function<Number, Object>) a-> a;
+		out.println(f.getClass().getTypeParameters()[0]);
+	} 
+
 	//class $ {}
 
 	//record Key(Object ... a) {

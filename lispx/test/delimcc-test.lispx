@@ -28,10 +28,6 @@
   (handler-case ((PromptNotFoundError (lambda #ignore #f)))
     (take-subcont prompt k (push-delim-subcont prompt k #t))))
 
-; handler-case %catch solo exit (#trow) del proprio block
-(defun prompt-set-p (prompt)
-  (%catch #ignore (\ () (take-subcont prompt k (push-delim-subcont prompt k #t))) (\ (e) #f)))
-
 ;; The actual tests.
 
 (defsuite caml-shift
