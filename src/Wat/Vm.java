@@ -67,7 +67,7 @@ import javax.tools.ToolProvider;
 	x, cln: expression
 	op: operator
 	o, os: operands
-	o0, o1, ..: operand 0, 1, .. 
+	o0, o1, ..: operand 0, 1, ..
 	cmb: combiner
 	opv: operative combiner
 	apv: applicative combiner
@@ -78,7 +78,7 @@ import javax.tools.ToolProvider;
 	arg: argument
 	args: arguments
 	e: environment
-	eo: environment operand 
+	eo: environment operand
 	ep: environment parameter
 	xe: extended environment
 	k, nxt: continuation
@@ -95,9 +95,10 @@ import javax.tools.ToolProvider;
 	key: keyword
 	cmt: comment
 	dbg: debugging information
-	err: Error
-	v, val: Value
-	thw: Throwable
+	err: error
+	v, val: value
+	res: result
+	thw: throwable
  */
 
 public class Vm {
@@ -243,11 +244,10 @@ public class Vm {
 		Cons(Object car, Object cdr) { this.car = car; this.cdr = cdr; }
 		public String toString() { return "(" + toString(this) + ")"; }
 		private String toString(Cons c) {
-			if (c.cdr == null) return null2brkt(c.car);
-			if (c.cdr instanceof Cons cc) return null2brkt(c.car) + " " + toString(cc);
-			return null2brkt(c.car) + " . " + Vm.this.toString(true, c.cdr);
+			if (c.cdr == null) return Vm.this.toString(c.car);
+			if (c.cdr instanceof Cons cc) return Vm.this.toString(c.car) + " " + toString(cc);
+			return Vm.this.toString(c.car) + " . " + Vm.this.toString(true, c.cdr);
 		}
-		private String null2brkt(Object o) { return o == null ? "()" : Vm.this.toString(true, o); }
 		public boolean equals(Object o) {
 			return this == o || o instanceof Cons c && Vm.this.equals(this.car,  c.car) && Vm.this.equals(this.cdr,  c.cdr);
 		}
@@ -627,8 +627,8 @@ public class Vm {
 			var test = o.car();
 			return pipe(dbg(e, this, o), ()-> evaluate(e, test), res-> istrue(res)
 				? tco(()-> evaluate(e, o.car(1)))
-				: o.cdr(1) == null ? inert : tco(()-> evaluate(e, o.car(2))))
-			;
+				: o.cdr(1) == null ? inert : tco(()-> evaluate(e, o.car(2)))
+			);
 		}
 		private boolean istrue(Object res) {
 			//return res != null && res instanceof Boolean b && b;
@@ -927,9 +927,17 @@ public class Vm {
 			Executable executable = getExecutable(o0 instanceof Class cl ? cl : o0.getClass(), name, classes);
 			if (executable == null) return error("not found " + executable(name, classes) + " of: " + toString(o0));
 			if (!name.equals("new") && (!name.equals("getConstructor") || o0 == Class.class) && o0 instanceof Class && stream(args).allMatch(a-> a instanceof Class))
+				return executable;
+				/* TODO in alternativa al precedente da verificare
 				return wrap(new JFun(name, executable));
+				*/
 			try {
 				args = reorg(executable, args);
+				return switch (executable) { 
+						case Method m-> m.invoke(o0, args);
+						case Constructor c-> c.newInstance(args);
+				};
+				/* TODO in alternativa al precedente da verificare
 				return apply(
 					v-> isjFun(v) ? wrap(new JFun(name, v)) : v,
 					switch (executable) { 
@@ -937,6 +945,7 @@ public class Vm {
 						case Constructor c-> c.newInstance(args);
 					}
 				);
+				*/
 			}
 			catch (Exception exc) {
 				return error("error executing " + executable(name, args) + " of: " + toString(o0) + " with: " + toString(args), exc);
@@ -1245,22 +1254,23 @@ public class Vm {
 					// Basics
 					$("%def", "%vau", new Vau()),
 					$("%def", "%eval", wrap(new Eval())),
-					$("%def", "%makeEnvironment", wrap(new JFun("%MakeEnvironment", (ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car())))),
+					$("%def", "%makeEnv", wrap(new JFun("%MakeEnv", (ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car())))),
 					$("%def", "%wrap", wrap(new JFun("%Wrap", (Function<Object, Object>) t-> wrap(t)))),
 					$("%def", "%unwrap", wrap(new JFun("%Unwrap", (Function<Object, Object>) t-> unwrap(t)))),
 					$("%def", "%bound?", wrap(new JFun("%Bound?", (BiFunction<Symbol,Env,Boolean>) (s, e)-> e.isBound(s)))),
 					$("%def", "%apply", wrap(new JFun("%Apply", (ArgsList) o-> combine(o.cdr(1) != null ? o.car(2) : env(null), unwrap(o.car()), o.car(1))))),
 					$("%def", "%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(null), unwrap(o.car()), o.cdr())))),
-					$("%def", "%resetEnvironment", wrap(new JFun("%ResetEnvironment", (Supplier) ()-> { theEnvironment.map.clear(); return theEnvironment; }))),
-					$("%def", "%pushEnvironment", wrap(new JFun("%PushEnvironment", (Supplier) ()-> theEnvironment = env(theEnvironment)))),
-					$("%def", "%popEnvironment", wrap(new JFun("%PopEnvironment", (Supplier) ()-> theEnvironment = theEnvironment.parent))),
+					$("%def", "%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnvironment.map.clear(); return theEnvironment; }))),
+					$("%def", "%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnvironment = env(theEnvironment)))),
+					$("%def", "%popEnv", wrap(new JFun("%PopEnv", (Supplier) ()-> theEnvironment = theEnvironment.parent))),
 					// Values
 					$("%def", "%cons", wrap(new JFun("%Cons", (BiFunction<Object, Object, Object>) (car,cdr)-> cons(car,cdr)))),
 					$("%def", "%cons?", wrap(new JFun("%Cons?", (Function<Object, Boolean>) obj-> obj instanceof Cons))),
 					$("%def", "%null?", wrap(new JFun("%Null?", (Function<Object, Boolean>) obj-> obj == null))),
 					$("%def", "%string->symbol", wrap(new JFun("%String->symbol", (Function<String, Symbol>) this::symbol))),
 					$("%def", "%symbol?", wrap(new JFun("%Symbol?", (Function<Object, Boolean>) obj-> obj instanceof Symbol))),
-					$("%def", "%symbolName", wrap(new JFun("%SymbolName", (Function<Intern, String>) i-> i.name))),
+					$("%def", "%keyword?", wrap(new JFun("%Keyword?", (Function<Object, Boolean>) obj-> obj instanceof Symbol))),
+					$("%def", "%internName", wrap(new JFun("%InternName", (Function<Intern, String>) i-> i.name))),
 					// First-order Control
 					$("%def", "%if", new If()),
 					$("%def", "%loop", new Loop()),
@@ -1274,15 +1284,15 @@ public class Vm {
 					$("%def", "%pushSubcontBarrier", wrap(new JFun("%PushSubcontBarrier", (BiFunction<Object,Env,Object>) (o, e)-> pushSubcontBarrier(null, e, o)))),
 					// Dynamically-scoped Variables
 					$("%def", "%dNew", wrap(new JFun("%DNew", (Function<Object,DVar>) DVar::new))),
-					$("%def", "%dVal", wrap(new JFun("%DVal", (ArgsList) o-> { DVar dv = o.car(); return checkO("%dVal", o, 1, 2) == 1 ? dv.val : (dv.val=o.car(1)); }))),
+					$("%def", "%dVal", wrap(new JFun("%DVal", (ArgsList) o-> { DVar dv = o.car(); return checkO("%DVal", o, 1, 2) == 1 ? dv.val : (dv.val=o.car(1)); }))),
 					$("%def", "%dDef", new DDef()),
 					$("%def", "%dLet", new DLet()),
 					// Errors
 					$("%def", "%rootPrompt", rootPrompt),
 					$("%def", "%error", wrap(new JFun("%Error", (Function<String, Object>) this::error))),
 					// Java Interface
-					$("%def", "%jinvoke", wrap(new JFun("%Jinvoke", (Function<String,Object>) this::jInvoke))),
-					$("%def", "%jgetset", wrap(new JFun("%Jgetset", (Function<String,Object>) this::jGetSet))),
+					$("%def", "%jInvoke", wrap(new JFun("%JInvoke", (Function<String,Object>) this::jInvoke))),
+					$("%def", "%jGetSet", wrap(new JFun("%JGetSet", (Function<String,Object>) this::jGetSet))),
 					//$("%def", "%instanceof?", (BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o)),
 					$("%def", "%instanceof?", wrap(new JFun("%Instanceof?", (BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o)))),
 					// Object System

@@ -1,3 +1,4 @@
+;
 
 (assert (%quote (a b)) '(a b))
 
@@ -75,3 +76,5 @@
 (assert (%catch #ignore (%begin (%def x 0) (%loop (%begin (%if (%== x 10) (%throw #ignore x) (%def x (%+ x 1))))))) 10)
 (assert (%catch #ignore (%begin (%def x 0) (%loop (%if (%== x 10) (%throw #ignore x) (%def x (%+ x 1)))))) 10)
 (assert (%catch #ignore (%begin (%def x 0) (%loop (%if (%== x 10) (%throw #ignore x)) (%def x (%+ x 1))))) 10)
+
+(%def testTco (%lambda (n) (%if (%<= n 0) n (testTco (%- n 1)))))

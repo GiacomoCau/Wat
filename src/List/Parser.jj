@@ -223,8 +223,8 @@ Object Elt() throws Exception: {
 	|	t=<UString>	{ return t.image; }
 	|	t=<Prim>	{ return classForName(t.image.substring(1)); }	
 	|	t=<ClsId>	{ return classForName(t.image.substring(1)); }	
-	|   t=<GetSet>  { return $("%jgetset", $("wat-string", t.image.substring(1))); } 
-	|   t=<Invoke>  { return $("%jinvoke", $("wat-string", t.image.substring(1))); } 
+	|   t=<GetSet>  { return $("%jGetSet", $("wat-string", t.image.substring(1))); } 
+	|   t=<Invoke>  { return $("%jInvoke", $("wat-string", t.image.substring(1))); } 
 	|	t=<Kwd>     { return t.image; }
 	|	t=<Id>      { return t.image; }  	
 	//|	t=<Id> ["::" t2=<Id>] {	return t2 == null ? t.image : $("%eval", $("%quote", t2.image), t.image); }  	

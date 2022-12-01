@@ -1,24 +1,24 @@
 |#
 	Field
 	
-		field = (@getField class fieldName)
-		field = (.fieldName class) = (@getField class fieldName)
+		field = (@getField class fieldName) = ((@getField Class String) class fieldName)
+		field = (.fieldName class) = (@getField class fieldName) 
 	
 	Method
 	
-		method = (@getMethod class methodName ... class)
+		method = (@getMethod class methodName ... class) = ((@getMethod Class String ... Class) class methodName ... class)
 		method = (@methodName class ... class) = (@getMethod class methodName ... class)
 	
 	Constructor
 		
-		constructor = (@getConstructor class ... class)
+		constructor = (@getConstructor class ... class) = ((@getConstructor Class ... Class) class ... class)   
 		constructor = (@new class ... class) = (@getConstructor class ... class)
 	
 	Object
 		object = (@newInstance constructor class ... args)
 		
 		object = (constructor class ... args) = (@newInstance constructor class ... args)
-		object = (@new class ... args) = ((@new class (getClasses ... args)) ... args)
+		object = (@new class ... args) = ((@new class (getClasses ... args)) class ... args)
 	
 	Call
 		value = (@invoke method object ... args)
