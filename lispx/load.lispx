@@ -1,0 +1,120 @@
+; sostituzioni nei .lispx
+; #^ -> ''
+; #' -> ''
+; #void -> #inert
+; #nil -> #null
+
+; boot.lispx
+; commentare stringhe in eccesso nelle (%def name expr "..."), troppi parametri per la %def!
+; commentare definizione list*, l'apply crea problemi con l'environment vuoto
+; commentare definizione assert
+; commentare ;;; Sequences
+
+(%resetEnvironment)
+
+(%def %->symbol  (%lambda (i) (%def name (.name i)) (@new &Wat.Vm$Symbol  (this) (%if (@startsWith name ":") (@substring name 1) name))))
+(%def %->keyword (%lambda (i) (%def name (.name i)) (@new &Wat.Vm$Keyword (this) (%if (@startsWith name ":") name (@substring (+ ":" (.name i)) 1)) )))
+
+(%def %= %eq?) ; 
+(%def %assert assert)
+(%def %add-method %addMethod)
+(%def %boundp %bound?)
+(%def %car (%lambda ((x . #ignore)) x))
+(%def %cdr (%lambda ((#ignore . x)) x))
+(%def %class-name (%lambda (c) ((@getCanonicalName c) c)))
+(%def %class-of (%lambda (o) (%if (%null? o) o (%classOf o))))
+(%def %class-symbol %->symbol)
+(%def %eq %==)
+(%def %find-method %getMethod)
+(%def %function-symbol %->symbol)
+(%def %keyword-symbol %->keyword)
+(%def %length %len) 
+(%def %list-length %len)
+(%def %nth (%lambda (i l) (@car l i)))
+(%def %nthcdr (%lambda (i l) (%if (%== i 0) l (@cdr l (%- i 1)))))
+(%def %make-instance %obj)
+(%def %make-environment %makeEnvironment)
+(%def %make-standard-class %class)
+(%def %progn %begin)
+(%def %push-delim-subcont %pushPromptSubcont)
+(%def %push-prompt %pushPrompt)
+(%def %push-subcont-barrier %pushSubcontBarrier)
+(%def %symbol-name (%lambda (i) (%def name (.name i)) (%if (@startsWith name ":") (@substring name 1) name)))
+(%def %subclassp %subClass?)
+(%def %take-subcont %takeSubcont)
+(%def %test test)
+(%def %typep %type?)
+(%def %variable-symbol %->symbol)
+
+(%def list* %list*) 
+
+;(%def boolean &java.lang.Boolean)
+;(%def number &java.lang.Number)
+;(%def object &java.lang.Object)
+;(%def list &&Wat.Vm$List) ; conflict with list method
+
+(%def Boolean &java.lang.Boolean)
+(%def Built-in-class &java.lang.Class)
+(%def Class &java.lang.Class)
+(%def Cons &Wat.Vm$Cons)
+(%def Error &Wat.Vm$Error)
+(%def Fexpr &Wat.Vm$Opv)
+(%def Function &Wat.Vm$Apv)
+(%def Integer &java.lang.Integer)
+(%def List &Wat.Vm$List)
+(%def Nil #null)
+(%def Number &java.lang.Number)
+(%def Object &java.lang.Object)
+(%def Symbol &Wat.Vm$Cons)
+(%def Standard-class &java.lang.Class)
+(%def Standard-object &Wat.Vm$StdObj)
+(%def String &java.lang.String)
+
+
+(%def %take (%lambda (i l) (%if (%== i 0) #null (%cons (%car l) (%take (%- i 1) (%cdr l))))))
+(%def %list-subseq (%lambda (l s e)	(%def tail (%nthcdr s l)) (%if (%== e #inert) tail (%take (%- e s) tail))))
+(%def %string-subseq (%lambda (seq start end) (%if (%== end #inert) (@substring seq start) (@substring seq start end))))
+
+(load "lispx/boot.lispx")
+
+(defmacro assert (v)
+  (list unless (list %assert v #t)
+    (list throw #ignore (list @new &Wat.Vm$Error "assert error!")) ))
+
+;(load "lispx/cond-sys.lispx")
+;(load "lispx/stream.lispx")
+;(load "lispx/read.lispx")
+;(load "lispx/print.lispx")
+;(load "lispx/js.lispx")
+
+
+
+; test-util.lispx
+; commentare tutto e bastano queste definizioni
+
+;(load "lispx/test/test-util.lispx")
+
+(defmacro deftest (name expression . expected?)
+  (list %test name expression (optional expected? #t)))
+
+(defmacro deftest* (name . forms)
+  (list deftest name (list* prog1 #t forms)) )
+
+(defexpr defsuite (name . forms) env
+  (eval (list* progn forms) env) )
+
+(defmacro signals-error (form condition-class . slot-specs)
+  (list %catch #ignore
+    (list lambda () form #f)
+    (list lambda '(r) (list  %instanceof? 'r &java.lang.Throwable)) ))
+    
+;(load "lispx/test/test-util-test.lispx")
+(load "lispx/test/boot-test.lispx")
+;(load "lispx/test/cond-sys-test.lispx")
+;(load "lispx/test/control-test.lispx")
+;(load "lispx/test/delimcc-test.lispx")
+;(load "lispx/test/stream-test.lispx")
+;(load "lispx/test/read-test.lispx")
+;(load "lispx/test/print-test.lispx")
+;(load "lispx/test/js-test.lispx")
+;(load "lispx/test/hierarchy-test.lispx")
