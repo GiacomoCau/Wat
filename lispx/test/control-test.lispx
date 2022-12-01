@@ -554,11 +554,10 @@
     (progn
       (defdynamic *foo*)
       (assert (= (dynamic *foo*) #inert))
-      (assert (= (slot-value *foo* 'value) #inert))
       (assert (typep *foo* Dynamic))
-      (assert (typep *foo* StandardObject))
+      (assert (typep *foo* Box))
       (assert (typep *foo* Object))
-      (assert (subclassp Dynamic StandardObject))
+      (assert (subclassp Dynamic Box))
       (assert (subclassp Dynamic Object)))
     #inert)
 

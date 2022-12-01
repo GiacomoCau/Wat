@@ -65,7 +65,7 @@
   (deftest to-js-boolean.2
     (signals-error
      (to-js-boolean 12)
-     type-error :datum 12 :expected-type 'boolean))
+     type-error :datum 12 :expected-type 'Boolean))
 
   (deftest to-js-boolean.3
     (signals-error
@@ -103,7 +103,7 @@
   (deftest to-js-number.2
     (signals-error
      (to-js-number #t)
-     type-error :datum #t :expected-type 'number))
+     type-error :datum #t :expected-type 'Number))
 
   (deftest to-js-number.3
     (signals-error
@@ -138,7 +138,7 @@
   (deftest to-js-string.2
     (signals-error
      (to-js-string #t)
-     type-error :datum #t :expected-type 'string))
+     type-error :datum #t :expected-type 'String))
 
   (deftest to-js-string.3
     (signals-error
@@ -173,7 +173,7 @@
   (deftest to-js-function.2
     (signals-error
      (to-js-function 12)
-     type-error :datum 12 :expected-type 'operator)))
+     type-error :datum 12 :expected-type 'Operator)))
 
 (defsuite apply-js-function
 
@@ -229,7 +229,7 @@
   (deftest js-lambda.3
     (signals-error
      (js-lambda 12)
-     type-error :datum 12 :expected-type '(or symbol ignore list)))
+     type-error :datum 12 :expected-type '(or Symbol Ignore List)))
 
   (deftest js-lambda.4
     (call-js-function (js-lambda ()))
@@ -243,7 +243,7 @@
     (signals-error
      (push-prompt 'foo
        (call-js-function (js-lambda () (take-subcont 'foo k))))
-     prompt-not-found-error :prompt 'foo)))
+     PromptNotFoundError :prompt 'foo)))
 
 (defsuite js-global
 
@@ -262,7 +262,7 @@
   (deftest js-global.4
     (signals-error
      (js-global 12)
-     type-error :datum 12 :expected-type 'string)))
+     type-error :datum 12 :expected-type 'String)))
 
 (defsuite js-new
 
@@ -301,7 +301,7 @@
   (deftest js-get.4
     (signals-error
      (js-get 12 'bar)
-     type-error :datum 'bar :expected-type 'string)))
+     type-error :datum 'bar :expected-type 'String)))
 
 (defsuite js-arrays
 
@@ -340,7 +340,7 @@
     (deftest list-to-js-array.3
       (signals-error
        (list-to-js-array 12)
-       type-error :datum 12 :expected-type 'list))
+       type-error :datum 12 :expected-type 'List))
 
     (deftest js-array-to-list.1
       (signals-error
@@ -417,7 +417,7 @@
   (deftest apply-js-method.6
     (signals-error
      (apply-js-method "foo" 12 (list))
-     type-error :datum 12 :expected-type 'string)))
+     type-error :datum 12 :expected-type 'String)))
 
 (defsuite call-js-method
 
@@ -449,7 +449,7 @@
   (deftest call-js-method.6
     (signals-error
      (call-js-method "foo" 12)
-     type-error :datum 12 :expected-type 'string)))
+     type-error :datum 12 :expected-type 'String)))
 
 (defsuite js-method
 
@@ -555,7 +555,7 @@
   (deftest sleep.3
     (signals-error
      (sleep "foo")
-     type-error :datum "foo" :expected-type 'number)))
+     type-error :datum "foo" :expected-type 'Number)))
 
 (defsuite sync
 

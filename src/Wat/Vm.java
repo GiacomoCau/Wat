@@ -65,6 +65,7 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaFileObject;
@@ -123,16 +124,16 @@ public class Vm {
 
 	boolean dotco = true; // do tco
 	boolean doasrt = true; // do assert
-	boolean ctapv = false; // applicative catch & throw
+	boolean ctapv = true; // applicative catch & throw
 	boolean instr = false; // intern string
 	boolean prstk = false; // print stack
 	boolean prwrn = true; // print warning
-	boolean aquote = true; // auto quote list
+	boolean aquote = false; // auto quote list
 	
-	int prtrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
+	int prtrc = 1; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
 	int ttrue = 0; // type true: 0:true, 1:!false, 2:!(or false null), 3:!(or false null inert), 4:!(or false null inert zero)
 	int prenv = 3; // print environment
-	int bndres = 0; // bind result: 0:inert 1:rhs 2:prev
+	int bndres = 1; // bind result: 0:inert 1:rhs 2:prev
 	private Object bndres(Object o) {
 		return switch (o) {
 			case null-> bndres;
@@ -328,7 +329,7 @@ public class Vm {
 		}
 		Object lookup(K key) {
 			var lookup = get(key);
-			if (!lookup.isBound) return error("unbound symbol: " + key);
+			if (!lookup.isBound) return error("unbound symbol: {symbol}", "type", symbol("unbound"), "symbol", key, "environment", this);
 			if (prtrc >= 6) print("  lookup: ", lookup.value); return lookup.value;
 		}
 		boolean isParent(Env other) {
@@ -364,8 +365,12 @@ public class Vm {
 		}
 		public String toString() { return "{" + getClass().getSimpleName() + " " + Vm.this.toString(value) + "}"; }
 	}
-	public class Obj implements ArgsList {
+	public class Obj extends RuntimeException implements ArgsList {
+		private static final long serialVersionUID = 1L;
 		Map<String,Object> map = new LinkedHashMap();
+		public Obj(String msg, Object ... objs) { super(msg); put(objs); }
+		public Obj(String msg, Throwable t, Object ... objs) { super(msg, t); put(objs); }
+		public Obj(Throwable t, Object ... objs) { super(t); put(objs); }
 		public Obj(Object ... objs) { put(objs); }
 		public Object get(Object key) { return map.get(toKey(key)); }
 		boolean isBound(Object key) { return map.containsKey(toKey(key)); }
@@ -388,6 +393,8 @@ public class Vm {
 		@Override public String toString() {
 			var field = map.toString().substring(1);
 			return "{&" + getClass().getCanonicalName() // or .getSimpleName()?
+				+ eIfnull(getMessage(), m-> " " + Vm.this.toString(true, m))
+				+ eIfnull(getCause(), t-> " " + t.getClass().getSimpleName())
 				+ (field.length() == 1 ? field : " " + field) ;
 		}
 		@Override public Object apply(List o) {
@@ -409,6 +416,24 @@ public class Vm {
 			    }; 
 			};
 		}
+		private static final Pattern keyword = Pattern.compile("\\{(.+?)\\}");
+		@Override public String getMessage() {
+			var msg = super.getMessage(); if (msg == null) return null;
+			var matcher = keyword.matcher(msg); if (!matcher.find()) return msg;
+			var sb = new StringBuffer(); do {
+				String s = matcher.group(1), k = toKey(s); var v = map.get(k);
+				matcher.appendReplacement(sb, Vm.this.toString(v != null || map.containsKey(k) ? v :  "{"+ s +"}" ));
+			} while(matcher.find());
+			matcher.appendTail(sb);
+			return sb.toString();
+		}
+	}
+	public class Condition extends Obj {
+		private static final long serialVersionUID = 1L;
+		public Condition(Object ... objs) { super(objs); }
+		public Condition(Throwable cause, Object ... objs) { super(cause, objs); }
+		public Condition(String message, Object ... objs) { super(message, objs); }
+		public Condition(String message, Throwable cause, Object ... objs) { super(message, cause, objs); }
 	}
 	Class extend(Symbol className, Class superClass) {
 		try {
@@ -435,17 +460,27 @@ public class Vm {
 			    	java.util.List.of("-d", "bin", "--enable-preview", "-source", ""+version().feature(), "-Xlint:unchecked" ),
 			    	null,
 			    	java.util.List.of(
-				    	new JavaStringFile("Ext." + className, """
+				    	new JavaStringFile("Ext." + className, ( """
 							package Ext;
 							import Wat.Vm;
 							public class %s extends %s {
-								public %1$s(Vm vm, %s o) { %s; }
+							"""
+							+  eIf(isBox, """
+								public %1$s(Vm vm, String s, %3$s o) { %4$ss, o); }
+				    			public %1$s(Vm vm, Throwable t, %3$s o) { %4$st, o); }
+				    			public %1$s(Vm vm, String s, Throwable t, %3$s o) {	%4$ss, t, o); }
+							""" )
+							/* + eIf(!isBox || Condition.class.isAssignableFrom(superClass), """
+				    	 	 	public %1$s(Vm vm, %3$s o) { %4$so); }
+				    	 	""" ) */
+							+ """
+				    	 	 	 public %1$s(Vm vm, %3$s o) { %4$so); }
 							}
-							""".formatted(
+							""").formatted(
 								className,
 								isObj ? "Vm.Obj" : superClass.getCanonicalName(),
 								isBox ? "Object" : "Object ... ", 
-								isObj || superClass == Box.class ? "vm.super(o)" : "super(vm, o)"
+								isObj || Utility.equals(superClass, Condition.class, Error.class, Box.class) ? "vm.super(" : "super(vm, "
 							)
 						)
 			    	)
@@ -1035,24 +1070,20 @@ public class Vm {
 	// Error handling
 	Object rootPrompt = new Object() { public String toString() { return "%RootPrompt"; }};
 	Object pushRootPrompt(Object x) { return list(new PushPrompt(), rootPrompt, x); }
-	<T> T error(String msg) { return error(new Error(msg)); }
-	<T> T error(Throwable cause) { return error(new Error(cause)); }
-	<T> T error(String msg, Throwable cause) { return error(new Error(msg, cause)); }
+	<T> T error(String msg, Object ... objs) { return error(new Error(msg, objs)); }
+	<T> T error(Throwable cause, Object ... objs) { return error(new Error(cause, objs)); }
+	<T> T error(String msg, Throwable cause, Object ... objs) { return error(new Error(msg, cause, objs)); }
 	<T> T error(Error err) {
 		var userBreak = theEnv.get(symbol("userBreak")).value;
 		if (userBreak == null) throw err;
 		return (T) pipe(dbg(theEnv, "userBreak", err), ()-> getTco(evaluate(theEnv, list(userBreak, err)))); 
 	}
-	class Error extends RuntimeException {
+	public class Error extends Condition {
 		private static final long serialVersionUID = 1L;
-		public Error(Throwable cause) { super(cause); }
-		public Error(String message) { super(message); }
-		public Error(String message, Throwable cause) { super(message, cause); }
-		@Override public String toString() {
-			return "{&" + getClass().getCanonicalName() // or .getSimpleName()?
-				+ eIfnull(getCause(), t-> " " + t.getClass().getSimpleName())
-				+ eIfnull(getMessage(), m-> " " + Vm.this.toString(m)) + "}";
-		}
+		public Error(Object ... objs) { super(objs); }
+		public Error(Throwable cause, Object ... objs) { super(cause, objs); }
+		public Error(String message, Object ... objs) { super(message, objs); }
+		public Error(String message, Throwable cause, Object ... objs) { super(message, cause, objs); }
 	}
 	class Value extends RuntimeException {
 		private static final long serialVersionUID = 1L;
@@ -1492,7 +1523,7 @@ public class Vm {
 	public void main() throws Exception {
 		//*
 		var milli = currentTimeMillis();
-		loadText("lsp/load.lsp");
+		loadText("lispx/load.lispx");
 		print("start time: " + (currentTimeMillis() - milli));
 		repl();
 		//*/

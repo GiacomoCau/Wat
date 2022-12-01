@@ -16,7 +16,7 @@
     ;; below.
     (restart-case ((repl-abort (lambda () #| nothing to do here, just unwind |#)))
       (repl:%display-prompt (dynamic repl:*debug-level*))
-      (print (eval (read) repl:+environment+)))))
+      (print (eval (read (dynamic repl:*debug-level*)) repl:+environment+)))))
 
 (defun repl:run-debugger-loop (condition k)
   "Run a debug REPL.  Prints a banner and then runs a normal REPL."
@@ -28,8 +28,9 @@
           (unless (eq (slot-value restart 'restart-name) 'repl-abort)
             (print (slot-value restart 'restart-name))))
         (compute-restarts condition))
-  (uprint "Backtrace:")
-  (%print-stacktrace k)
+  (when (prstk)
+    (uprint "Backtrace:")
+    (%print-stacktrace k) )
   (repl:run))
 
 ;; Overwrite built-in `invoke-debugger'.  This gets called for all
@@ -53,14 +54,14 @@
           ;; it demos well and makes designers of other languages
           ;; squirt blood from their eyes.
           (typecase condition
-            (UnboundSymbolError
+            ((Error :type 'unbound)
              (let ((symbol (slot-value condition 'symbol))
                    (env (slot-value condition 'environment)))
                (restart-case ((continue (lambda () (eval symbol env))
                                         :associated-conditions (list condition))
                               (use-value (lambda (value) value)
                                          :associated-conditions (list condition))
-                              (store-value (lambda (value) (eval (list def symbol value) env))
+                              (store-value (lambda (value) (eval (list 'def symbol value) env))
                                            :associated-conditions (list condition)))
                  (repl:run-debugger-loop condition k))))
             (Object

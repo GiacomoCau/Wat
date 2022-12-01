@@ -851,15 +851,15 @@
   (def value (eval (optional value-and-docstring?) env)) ; treating 2-elt list as option
   (if (boundp name env)
       (set-dynamic (eval name env) value)
-      (eval (list def name (make-instance Dynamic :value value)) env)))
+      (eval (list def name (make-instance Dynamic value)) env)))
 
 (defun dynamic (dynamic-variable)
   "Return the current value of the DYNAMIC-VARIABLE."
-  (slot-value dynamic-variable 'value))
+  (dynamic-variable))
 
 (defun set-dynamic (dynamic-variable value)
   "Set the current value of the DYNAMIC-VARIABLE."
-  (set-slot-value dynamic-variable 'value value))
+  (dynamic-variable value))
 
 (defexpr dynamic-let (bindings . forms) env
   "Evaluate the FORMS with the dynamic variables specified by BINDINGS

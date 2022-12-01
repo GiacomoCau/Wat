@@ -14,8 +14,9 @@
 (bndres 1)
 
 (%def \ %\)
-(%def %->symbol  (\ (i) (@intern vm (%if (%instanceof? i &Wat.Vm$Keyword) (@substring (.name i) 1) (.name i)))))
-(%def %->keyword (\ (i) (@intern vm (%if (%instanceof? i &Wat.Vm$Keyword) (.name i) (%$ ":" (.name i))))))
+
+(%def %->symbol  (\ (i) (%intern (.name i))))
+(%def %->keyword (\ (i) (%intern (%$ ":" (.name i)))))
 
 (%def %= %eq?)
 (%def %assert assert)
@@ -104,6 +105,9 @@
 
 (load "lispx/src/boot.lispx")
 
+(def unwind-protect %unwind-protect)
+(def take-subcont %take-subcont)
+
 (def %progv (\ (var val body)
   ((%wrap %dLet) (cons var val) body) ))
 
@@ -138,10 +142,32 @@
     (list '\ '(r) (list 'typep 'r condition-class)) ))
 
 ;(load "lispx/test/test-util-test.lispx") ;; mai
-;(load "lispx/test/boot-test.lispx")
-;(load "lispx/test/cond-sys-test.lispx")
-;(load "lispx/test/delimcc-test.lispx")
-;(load "lispx/test/control-test.lispx")
+(load "lispx/test/boot-test.lispx")
+(load "lispx/test/cond-sys-test.lispx")
+(load "lispx/test/delimcc-test.lispx")
+(load "lispx/test/control-test.lispx")
+
+#|
+(defun runFiber (thunk . values)
+  (loop-let -run- ((result (fiber (thunk))) (values values))
+    (if (typep result YieldRecord)
+        (cons (slot-value result 'value)
+              (if (null values)
+                (-run- (fiber-resume result) #null)
+                (-run- (fiber-resume result (car values)) (cdr values)) ))
+        (list result))))
+
+(run-fiber (\() (fiber-yield 1) (fiber-yield 2) 3)) -> (1 2 3)
+
+(run-fiber-with-values (\() (if (fiber-yield 1) 2 3)) (#t)) -> (1 2)
+(run-fiber-with-values (\() (if (fiber-yield 1) 2 3)) (#f)) -> (1 3)
+(run-fiber-with-values (\() (if (fiber-yield 1) (fiber-yield 2) 3)) #t) -> {Error ... 
+
+(runFiber (\() (if (fiber-yield 1) (fiber-yield 2) 3)) #t) -> (1 2 #inert)
+(runFiber (\() (if (fiber-yield 1) (fiber-yield 2) 3)) #t 4) -> (1 2 4)
+(runFiber (\() ((\ (a b) (+ a b)) (fiber-yield 1) (fiber-yield 2)) ) 3 4) -> (1 2 7)
+|#
+
 ;(load "lispx/test/stream-test.lispx")
 ;(load "lispx/test/read-test.lispx")
 ;(load "lispx/test/print-test.lispx")

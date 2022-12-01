@@ -68,7 +68,7 @@
   |slots of the signalled condition."
   (let ((class (find-class condition-class env)))
     (block exit
-      (handler-case ((object (lambda (c)
+      (handler-case ((StandardObject (lambda (c)
                                (if (typep c class)
                                    (progn
                                      (loop-let -check-slots- ((slot-specs slot-specs))

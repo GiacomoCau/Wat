@@ -341,7 +341,7 @@
   |restart name.  The PAYLOAD? is only used for restart handlers, and
   |always nil for condition handlers."))
 
-(defmethod lispx::handler-applicable-p ((handler ConditionHandler) condition)
+(defmethod lispx::handler-applicable-p ((handler ConditionHandler) condition #null)
   "A condition handler is applicable if the condition is an instance
   |of its condition class."
   (typep condition (slot-value handler 'condition-class)))

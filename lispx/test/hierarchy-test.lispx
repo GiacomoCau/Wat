@@ -7,10 +7,10 @@
       (loop-let -test-classes- ((classes classes) (superclass Object))
         (dolist (c classes #t)
           (etypecase c
-            (symbol
+            (Symbol
              (let ((class (find-class c env)))
                (assert (subclassp class superclass))))
-            (cons
+            (Cons
              (let ((class (find-class (car c) env)))
                (assert (subclassp class superclass))
                (-test-classes- (cdr c) class))))))))

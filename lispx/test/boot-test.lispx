@@ -1407,7 +1407,7 @@
      MatchError))
 
   (deftest /.2
-    (/ 10)
+    (/ 10d)
     0.1)
 
   (deftest /.3
@@ -1899,9 +1899,7 @@
   (deftest dolist.6
     (signals-error
      (dolist ("not-a-symbol" '(1 2 3)))
-     TypeError
-     :datum "not-a-symbol"
-     :expected-type '(or Symbol Ignore List)))
+    TypeError :datum "not-a-symbol" :expected-type '(or Symbol Ignore List)))
 
   (deftest dolist.7
     (let ((ct 0))

@@ -13,7 +13,7 @@
 (defmacro push-subcont (k . forms)
   "We don't have `push-subcont' but for these tests we can emulate it
   |with a `push-delim-subcont' that pushes an unused prompt."
-  (list* push-delim-subcont ''unused-prompt k forms))
+  (list* push-delim-subcont #ignore k forms))
 
 (defun shift (p f)
   "The `shift' operator, adapted from the file `delimcc.ml'."
@@ -27,6 +27,10 @@
   |(Note that this leads to stack growth, i.e. leaks.)"
   (handler-case ((PromptNotFoundError (lambda #ignore #f)))
     (take-subcont prompt k (push-delim-subcont prompt k #t))))
+
+; handler-case %catch solo exit (#trow) del proprio block
+(defun prompt-set-p (prompt)
+  (%catch #ignore (\ () (take-subcont prompt k (push-delim-subcont prompt k #t))) (\ (e) #f)))
 
 ;; The actual tests.
 

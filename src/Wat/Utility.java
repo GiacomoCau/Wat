@@ -544,16 +544,19 @@ public class Utility {
 	}
 	
 	static public String read() throws IOException {
-		return read(in);
+		return read(0);
 	}
-	static public String read(InputStream in) throws IOException {
+	static public String read(int lv) throws IOException {
+		return read(lv, in);
+	}
+	static public String read(int lv, InputStream in) throws IOException {
 		var s = new StringBuilder();
 		int open = 0, close = 0;
 		boolean inEscape = false, inString = false, inUSymbol = false, inComment=false, sMlComment=false, inMlComment=false, eMlComment=false;
 		do {
 			//out.println("loop");
 			var oc = close-open;
-			if (in.available() == 0) out.print(oc==0 ? "> " : "%+d%s> ".formatted(oc, oc>0 ? "(" : ")"));
+			if (in.available() == 0) out.print((lv == 0 ? "" : lv + "|") + (oc==0 ? "> " : "%+d%s> ".formatted(oc, oc>0 ? "(" : ")")));
 			for (int c; (c = in.read()) != '\n' || inString || inUSymbol || inMlComment;) {
 				//out.printf("%d %c \n",c, c==-1?' ':c);
 				if (c == -1) return "";

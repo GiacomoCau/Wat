@@ -9,7 +9,7 @@
 (defsuite string-input-streams
 
   (deftest make-string-input-stream.1
-    (typep (make-string-input-stream "foo") String-input-stream))
+    (typep (make-string-input-stream "foo") StringInputStream))
 
   (deftest make-string-input-stream.2
     (signals-error
@@ -19,7 +19,7 @@
   (deftest make-string-input-stream.3
     (signals-error
      (make-string-input-stream 12)
-     type-error :datum 12 :expected-type 'string))
+     type-error :datum 12 :expected-type 'String))
 
   (deftest with-standard-input-from-string.1
     (with-standard-input-from-string "foo")
@@ -36,7 +36,7 @@
 (defsuite string-output-streams
 
   (deftest make-string-output-stream.1
-    (typep (make-string-output-stream) String-output-stream))
+    (typep (make-string-output-stream) StringOutputStream))
 
   (deftest with-standard-output-to-string.1
     (with-standard-output-to-string (print "foo") (print "bar"))
@@ -59,7 +59,7 @@
   (deftest get-output-stream-string.3
     (signals-error
      (get-output-stream-string 1)
-     type-error :datum 1 :expected-type 'string-output-stream)))
+     type-error :datum 1 :expected-type 'StringOutputStream)))
 
 (defsuite fresh-line
 

@@ -52,7 +52,7 @@
   (deftest read.3b
     (signals-error
      (with-standard-input-from-string "" (read (dynamic *standard-input*) 12))
-     type-error :datum 12 :expected-type 'boolean))
+     type-error :datum 12 :expected-type 'Boolean))
 
   (deftest read.4
     (with-standard-input-from-string "1 2 3"
