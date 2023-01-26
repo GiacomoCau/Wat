@@ -37,9 +37,14 @@ public class Utility {
 	public static <T> T[] $(T... objects) {
 		return objects;
 	}
-	 */
+	*/
 	
-	static <T,R> R apply(Function<T,R> f, T a) {
+	public static <T> boolean equals(T v, T ... a) {
+		for (T e: a) if (v.equals(e)) return true;
+		return false;
+	}
+	
+	public static <T,R> R apply(Function<T,R> f, T a) {
 		return f.apply(a);
 	}
 	
@@ -402,8 +407,9 @@ public class Utility {
 				}
 				if (publicMember) break;
 			}
-		} while (classe != Class.class && (classe = classe.getSuperclass() == null ? Class.class: classe.getSuperclass()) != null);
+		} while ((classe = classe.getSuperclass()) != null);
 		
+		if (trace) out.println("f: " + executables.size());
 		switch (executables.size()) {
 			case 0: throw new RuntimeException(toString(name, argumentsClass) + " non trovato in " + classe);
 			case 1: return (T) executables.get(0);

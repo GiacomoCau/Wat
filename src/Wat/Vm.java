@@ -49,7 +49,6 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -758,9 +757,9 @@ public class Vm {
 	
 	
 	// Dynamic Variables
-	class DVar {
+	/*public*/ class DVar {
 		Object val;
-		DVar(Object val) { this.val = val; }
+		/*public*/ DVar(Object val) { this.val = val; }
 		public String toString() { return "{DVar " + val + "}"; }
 	}
 	class DDef implements Combinable {
@@ -813,49 +812,6 @@ public class Vm {
 	
 	// Java Native Interface
 	interface ArgsList extends Function<List,Object> {}
-	/*  TODO sostituito dal seguente 
-	interface EnvArgsList extends BiFunction<Env,List,Object> {}
-	class JFun implements Combinable {
-		Object jfun; JFun(Object jfun) { this.jfun = jfun; };
-		String name; JFun(String name, Object jfun) { this(jfun); this.name = name; };
-		@SuppressWarnings("preview")
-		public Object combine(Env e, List o) {
-			return pipe(dbg(e, this, o),
-				()-> {
-					try {
-						return switch (jfun) {
-							case Supplier s-> { checkO(jfun, o, 0); yield s.get(); }  
-							case ArgsList a-> a.apply(o);  
-							case Function f-> { checkO(jfun, o, 1); yield f.apply(o.car()); }  
-							case BiFunction f-> { checkO(jfun, o, 2); yield f.apply(o.car(), o.car(1)); }
-							case Field f-> { checkO(jfun, o, 1, 2); if (len(o) <= 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; }
-							case Method mt-> {
-								var pc = mt.getParameterCount();
-								if (!mt.isVarArgs()) checkO(jfun, o, pc+1); else checkO(jfun, o, pc, -1);
-								yield mt.invoke(o.car(), reorg(mt, array(o.cdr())));
-							}
-							case Constructor c-> {
-								checkO(jfun, o, c.getParameterCount());
-								yield c.newInstance(reorg(c, array(o)));
-							}
-							default -> error("not a combine " + jfun);
-						};
-					}
-					catch (Value | Error exc) {
-						throw exc;
-					}
-					catch (Throwable exc) {
-						return error("jfun error: " + exc.getMessage(), exc);
-					}
-				}
-			);
-		}
-		public String toString() {
-			if (name != null) return name;
-			var intefaces = Arrays.stream(jfun.getClass().getInterfaces()).map(i-> Vm.this.toString(i)).collect(joining(" "));
-			return "{JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "}"; }
-	}
-	*/
 	@SuppressWarnings("preview")
 	class JFun implements Combinable {
 		String name; ArgsList jfun; 
@@ -880,8 +836,7 @@ public class Vm {
 			};
 		}
 		public Object combine(Env e, List o) {
-			return pipe(dbg(e, this, o),
-				()-> {
+			return pipe(dbg(e, this, o), ()-> {
 					try {
 						return jfun.apply(o);
 					}
@@ -896,20 +851,13 @@ public class Vm {
 		}
 		public String toString() {
 			if (name != null) return name;
-			var intefaces = Arrays.stream(jfun.getClass().getInterfaces()).map(i-> Vm.this.toString(i)).collect(joining(" "));
-			return "{JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "}"; }
+			var intefaces = stream(jfun.getClass().getInterfaces()).map(i-> Vm.this.toString(i)).collect(joining(" "));
+			return "{JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "}";
+		}
 	}
 	boolean isjFun(Object obj) {
 		return isInstance(obj, Supplier.class, Function.class, BiFunction.class, Executable.class, Field.class);
 	}
-	/* TODO non più necessari
-	JFun jFun(Object obj) {
-		return obj instanceof JFun jfun ? jfun : isjFun(obj) ? new JFun(obj) : error("no a jFun: " + obj);
-	}
-	Object jWrap(Object obj) {
-		return wrap(jFun(obj));
-	}
-	*/
 	@SuppressWarnings("preview")
 	Object jInvoke(String name) {
 		if (name == null) return error("method name is null");
@@ -918,19 +866,14 @@ public class Vm {
 			Object o0 = o.car();
 			if (o0 == null) return error("receiver is null");
 			Object[] args = array(o, 1);
-			//Executable executable = getExecutable(name.equals("new") ? (Class) o0 : o0.getClass(), name,  getClasses(args));
-			// (@new class classes)   -> class.getConstructor(classes) -> constructor
-			// (@new class objects)   -> class.getConstructor(classes).newInstance(objects) -> constructor.newInstance(objects)
-			// (@<name> class classes)  -> class.getMethod(name, classes) -> method
-			// (@<name> object objects) -> object.getClass().getMethod(name, getClasses(objects)).invocke(object, objects) -> method.invoke(object, objects)
+			// (@new class . objects)   -> class.getConstructor(getClasses(objects)).newInstance(objects) -> constructor.newInstance(objects)
+			// (@<name> object . objects) -> object.getClass().getMethod(name, getClasses(objects)).invocke(object, objects) -> method.invoke(object, objects)
+			// (@getConstructor class . classes) -> class.getConstructor(classes) -> constructor
+			// (@getMethod class name . classes) -> class.getMethod(name, classes) -> method
+			// (@getField class name) -> class.getField(name, classes) -> field
 			var classes = getClasses(args);
-			Executable executable = getExecutable(o0 instanceof Class cl ? cl : o0.getClass(), name, classes);
+			Executable executable = getExecutable(name.startsWith("new") ? (Class) o0 : o0.getClass(), name, classes);
 			if (executable == null) return error("not found " + executable(name, classes) + " of: " + toString(o0));
-			if (!name.equals("new") && (!name.equals("getConstructor") || o0 == Class.class) && o0 instanceof Class && stream(args).allMatch(a-> a instanceof Class))
-				return executable;
-				/* TODO in alternativa al precedente da verificare
-				return wrap(new JFun(name, executable));
-				*/
 			try {
 				args = reorg(executable, args);
 				return switch (executable) { 
@@ -948,7 +891,7 @@ public class Vm {
 				*/
 			}
 			catch (Exception exc) {
-				return error("error executing " + executable(name, args) + " of: " + toString(o0) + " with: " + toString(args), exc);
+				return error("error executing " + executable(name, args) + " of: " + toString(o0) + " with: " + toString(list(args)), exc);
 			}
 		};
 	}
@@ -957,12 +900,10 @@ public class Vm {
 		return (ArgsList) o-> {
 			var len = checkO("jGetSet", o, 1, 2); 
 			var o0 = o.car();
-			// (.<name> class)        -> class.getField(name) -> field
 			// (.<name> object)       -> object.getclass().getField(name).get(object) -> field.get(object) 
 			// (.<name> object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
-			Field field = getField(o0 instanceof Class cl ? cl : o0.getClass(), name);
+			Field field = getField(o0 instanceof Class ? (Class) o0 : o0.getClass(), name);
 			if (field == null) return error("not found field: " + name + " in: " + toString(o0));
-			if (o0 instanceof Class) return field;
 			try {
 				if (len == 1) return field.get(o0);
 				field.set(o0, o.car(1)); return inert;

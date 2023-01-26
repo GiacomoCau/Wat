@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
@@ -26,7 +27,10 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
+import javax.tools.JavaFileObject;
+import javax.tools.SimpleJavaFileObject;
 import javax.tools.ToolProvider;
 
 import List.Parser;
@@ -37,7 +41,65 @@ public class Prova {
 	
 	//class $ {}
 
+	record Key(Object ... a) {
+	}
+	
 	public static void main(String[] args) throws Exception {
+		var key = new Key(1, " ", true);
+		var v = key.a[1];
+		//extend2("Ooo", null);
+		Box.class.getConstructor(null);
+		Box.class.getConstructor(null);
+		out.println(Box.class); // -> Wat.Prova$Box
+		out.println(Box.class.getSuperclass()); // -> Object
+		out.println(Box.class.getClass()); // -> Class
+		out.println(Box.class.getClass().getClass()); // -> Class
+		out.println(Box.class.getClass().getSuperclass()); // -> Object
+		out.println(Box.class.getClass().getSuperclass().getClass()); // -> Class
+		out.println(Box.class.getClass().getSuperclass().getClass().getClass()); // -> Class
+		new Box(1).get();
+	}
+
+	public static void extend2(String className, Class superClass){
+		class JavaStringFile extends SimpleJavaFileObject {
+		    final String code;
+		    JavaStringFile(String name, String code) {
+		        super(URI.create("string:///" + name.replace('.','/') + Kind.SOURCE.extension), Kind.SOURCE); this.code = code;
+		    }
+		    @Override public CharSequence getCharContent(boolean ignoreEncodingErrors) { return code; }
+		}
+	    var diagnostics = new DiagnosticCollector<JavaFileObject>();
+	    var task =	ToolProvider.getSystemJavaCompiler().getTask(
+	    	null, null, diagnostics,
+	    	java.util.List.of("-d", "bin", "--enable-preview", "-source", "19", "-Xlint:unchecked" ),
+	    	null,
+	    	java.util.List.of(
+		    	new JavaStringFile("Ext.Xxx", """
+					package Ext;
+					import Wat.Vm;
+					/*public*/ class %1$s extends %2$s {
+						private static final long serialVersionUID = 1L;
+						public %1$s(Vm.List l) { super(l); }
+						@Override public String toString() { return "{%1$s" + Vm.reverseMap(this) + "}"; }
+					}
+					""".formatted(className, superClass == null ? "Vm.StdObj" : superClass.getCanonicalName())
+				)
+	    	)
+	    );
+	    if (!task.call()) System.out.println(diagnostics.getDiagnostics());
+	}
+
+	static void stackLength() {
+		out.println(new Throwable().getStackTrace().length);
+	}
+
+	static void nullKey() {
+		var m = new LinkedHashMap();
+		m.put(null, 3);
+		out.println(m.get(null));
+	}
+	
+	static void watObject() throws IllegalAccessException, NoSuchFieldException {
 		//dynamicCompilation3("Test2", "Vm.WatClass");
 		//dynamicCompilation3("Test3", "Test2");
 		
@@ -119,11 +181,9 @@ public class Prova {
 		ToolProvider.getSystemJavaCompiler().run(null, null, null, classPath, "-d", "bin", "--enable-preview", "-source", "19", "-Xlint:unchecked" );
 		return Class.forName("Wat."+className);
 	}
-
-	
-	
 	
 	static class WatObj {
+		@SuppressWarnings("unused")
 		private static Map<Symbol, Object> methods = new LinkedHashMap();
 		<T extends WatObj> Object  getMethod(Symbol name) {
 			 for(Class cls = this.getClass();;cls = cls.getSuperclass()) {
