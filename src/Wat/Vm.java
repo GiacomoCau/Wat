@@ -204,21 +204,20 @@ public class Vm {
 	@SuppressWarnings("preview")
 	<T> T evaluate(Env e, Object o) {
 		if (prtrc >= 3) print("evaluate: ", indent(), o, "   ", e);
-		T v;
-		try {
-			level+=1;
+		T v; try {
+			level += 1;
 			v = getTco(
 				switch (o) {
 					case null, default-> o;
 					case Symbol s-> pipe(dbg(e, o), ()-> e.lookup(s));
 					case List c-> {
-						var ee=e; yield pipe(dbg(e, o), ()-> evaluate(ee, c.car), op-> combine(ee, op, c.cdr()));
+						var ee=e; yield pipe(dbg(ee, o), ()-> evaluate(ee, c.car), op-> combine(ee, op, c.cdr()));
 					}
 				}
 			);
 		}
 		finally {
-			level-=1;
+			level -= 1;
 		}
 		if (prtrc >= 4) print("  return: ", indent(), v); 
 		return v;
@@ -226,7 +225,7 @@ public class Vm {
 	
 	abstract class Intern {
 		String name;
-		Intern(String name) { this.name = name; /*name.intern();*/ }
+		Intern(String name) { this.name = name; }
 		public String toString() { return name; }
 		public int hashCode() { return Objects.hashCode(name); }
 		public boolean equals(Object o) {
@@ -818,17 +817,17 @@ public class Vm {
 		JFun(String name, Object jfun) { this(jfun); this.name = name; };
 		JFun(Object jfun) {
 			this.jfun = switch (jfun) {
-				case Supplier s-> o->{ checkO(jfun, o, 0); return s.get(); };  
+				case Supplier s-> o-> { checkO(jfun, o, 0); return s.get(); };  
 				case ArgsList a-> a;  
-				case Function f-> o->{ checkO(jfun, o, 1); return f.apply(o.car()); };  
-				case BiFunction f-> o->{ checkO(jfun, o, 2); return f.apply(o.car(), o.car(1)); };
-				case Field f-> o-> uncked(()->{ if (checkO(jfun, o, 1, 2) == 1) return f.get(o.car()); f.set(o.car(), o.car(1)); return inert; });
-				case Method mt-> o->{
+				case Function f-> o-> { checkO(jfun, o, 1); return f.apply(o.car()); };  
+				case BiFunction f-> o-> { checkO(jfun, o, 2); return f.apply(o.car(), o.car(1)); };
+				case Field f-> o-> uncked(()-> { if (checkO(jfun, o, 1, 2) == 1) return f.get(o.car()); f.set(o.car(), o.car(1)); return inert; });
+				case Method mt-> o-> {
 					var pc = mt.getParameterCount();
 					if (!mt.isVarArgs()) checkO(jfun, o, pc+1); else checkO(jfun, o, pc, -1);
 					return uncked(()-> mt.invoke(o.car(), reorg(mt, array(o.cdr()))));
 				};
-				case Constructor c-> o->{
+				case Constructor c-> o-> {
 					checkO(jfun, o, c.getParameterCount());
 					return uncked(()-> c.newInstance(reorg(c, array(o))));
 				};
@@ -866,11 +865,11 @@ public class Vm {
 			Object o0 = o.car();
 			if (o0 == null) return error("receiver is null");
 			Object[] args = array(o, 1);
-			// (@new class . objects)   -> class.getConstructor(getClasses(objects)).newInstance(objects) -> constructor.newInstance(objects)
-			// (@<name> object . objects) -> object.getClass().getMethod(name, getClasses(objects)).invocke(object, objects) -> method.invoke(object, objects)
+			// (@new class . objects)            -> class.getConstructor(getClasses(objects)).newInstance(objects) -> constructor.newInstance(objects)
+			// (@<name> object . objects)        -> object.getClass().getMethod(name, getClasses(objects)).invocke(object, objects) -> method.invoke(object, objects)
 			// (@getConstructor class . classes) -> class.getConstructor(classes) -> constructor
 			// (@getMethod class name . classes) -> class.getMethod(name, classes) -> method
-			// (@getField class name) -> class.getField(name, classes) -> field
+			// (@getField class name)            -> class.getField(name, classes) -> field
 			var classes = getClasses(args);
 			Executable executable = getExecutable(name.startsWith("new") ? (Class) o0 : o0.getClass(), name, classes);
 			if (executable == null) return error("not found " + executable(name, classes) + " of: " + toString(o0));
@@ -881,13 +880,19 @@ public class Vm {
 						case Constructor c-> c.newInstance(args);
 				};
 				/* TODO in alternativa al precedente da verificare
-				return apply(
-					v-> isjFun(v) ? wrap(new JFun(name, v)) : v,
+				return apply(v-> isjFun(v) ? wrap(new JFun(name, v)) : v,
 					switch (executable) { 
 						case Method m-> m.invoke(o0, args);
 						case Constructor c-> c.newInstance(args);
 					}
 				);
+				//*/
+				/* TODO in alternativa al precedente da verificare
+				Object v = switch (executable) { 
+					case Method m-> m.invoke(o0, args);
+					case Constructor c-> c.newInstance(args);
+				};
+				return isjFun(v) ? wrap(new JFun(name, v)) : v;
 				*/
 			}
 			catch (Exception exc) {
