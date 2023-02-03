@@ -399,6 +399,7 @@ public class Vm {
 					""".formatted(className, superClass == null ? "Vm.StdObj" : superClass.getCanonicalName())
 				;
 				var classPath = "src/Ext/%s.java".formatted(className);
+				//var file = new File(classPath); file.deleteOnExit(); new File(classPath.replace("src","bin")).deleteOnExit();
 				Files.write(new File(classPath).toPath(), source.getBytes("cp1252"));
 				ToolProvider.getSystemJavaCompiler().run(null, null, null, classPath, "-d", "bin", "--enable-preview", "-source", "19", "-Xlint:unchecked" );
 				return Class.forName("Ext." + className);
@@ -1331,7 +1332,7 @@ public class Vm {
 					$("%def", "log", wrap(new JFun("Log", (ArgsList) o-> log(array(o))))),
 					$("%def", "print", wrap(new JFun("Print", (ArgsList) o-> print(array(o))))),
 					$("%def", "write", wrap(new JFun("Write", (ArgsList) o-> write(array(o))))),
-					$("%def", "load", wrap(new JFun("Load", (Function<String, Object>) nf-> uncked(()-> eval(readString(nf)))))),
+					$("%def", "load", wrap(new JFun("Load", (Function<String, Object>) nf-> uncked(()-> loadText(nf))))),
 					$("%def", "dotco", wrap(new JFun("Dotco", (ArgsList) o-> { if (checkO("dotco", o, 0, 1, Boolean.class) == 0) return dotco; dotco=o.car(); return inert; }))),
 					$("%def", "doasrt",  wrap(new JFun("Doasrt", (ArgsList) o-> { if (checkO("doasrt", o, 0, 1, Boolean.class) == 0) return doasrt; doasrt=o.car(); return inert; }))),
 					$("%def", "prtrc", wrap(new JFun("Prtrc", (ArgsList) o-> { if (checkO("prtrc", o, 0, 1, Integer.class) == 0) return prtrc; prtrc=o.car(); start=level-3; return inert; }))),
@@ -1361,21 +1362,28 @@ public class Vm {
 	}
 	public void compile(String fileName) throws Exception {
 		try (var oos = new ObjectOutputStream(new FileOutputStream("build/" + fileName))) {
-			oos.writeObject(parse(readString(fileName)));
+			oos.writeObject(parse(readText(fileName)));
 		}
 	}
-	public String readString(String fileName) throws IOException {
-		if (prtrc >= 1) print("\n--------:  " + fileName);
+	public String readText(String fileName) throws IOException {
 		return Files.readString(Paths.get(fileName), Charset.forName("cp1252"));
-	} 
-	public Object exec(String fileName) throws Exception {
-		return exec(readBytecode(fileName));
 	}
 	public Object readBytecode(String fileName) throws Exception {
-		if (prtrc >= 1) print("\n--------:  " + fileName);
 		try (var ois = new ObjectInputStream(new FileInputStream("build/" + fileName))) {
 			return ois.readObject();
 		}
+	}
+	public Object loadText(String fileName) throws Exception {
+		if (prtrc >= 1) print("\n--------: " + fileName);
+		var v = eval(readText(fileName));
+		if (prtrc > 1) print("--------: " + fileName + " end\n");
+		return v;
+	}
+	public Object loadBytecode(String fileName) throws Exception {
+		if (prtrc >= 1) print("\n--------: " + fileName);
+		var v = exec(readBytecode(fileName));
+		if (prtrc > 1) print("--------:  "  + fileName + " end\n");
+		return v;
 	}
 	@SuppressWarnings("preview")
 	public void repl() throws Exception {
@@ -1497,15 +1505,14 @@ public class Vm {
 		//print("inizio");
 		var milli = currentTimeMillis();
 		//*
-		eval(readString("testVm.lsp"));
-		eval(readString("boot.lsp"));
-		eval(readString("test.lsp"));
-		eval(readString("testJni.lsp"));
-		eval(readString("testOos.lsp"));
+		loadText("testVm.lsp");
+		loadText("boot.lsp");
+		loadText("test.lsp");
+		loadText("testJni.lsp");
+		loadText("testOos.lsp");
 		//*/
-		//eval(readString("wat/boot.wat"));
-		//eval(readString("wat/test.wat"));
-		//eval(readString("lispx/load.lispx"));
+		//loadText("wat/boot.wat");
+		//loadText("wat/test.wat");
 		print("start time: " + (currentTimeMillis() - milli));
 		repl();
 		//*/
