@@ -102,11 +102,6 @@ import javax.tools.ToolProvider;
 
 public class Vm {
 
-	static {
-	    for (File file: new File("bin/Ext").listFiles()) file.delete();
-	    for (File file: new File("src/Ext").listFiles()) file.delete();
-	}
-
 	boolean dotco = true;
 	boolean doasrt = true;
 	boolean ctapv = false;
@@ -399,8 +394,10 @@ public class Vm {
 					""".formatted(className, superClass == null ? "Vm.StdObj" : superClass.getCanonicalName())
 				;
 				var classPath = "src/Ext/%s.java".formatted(className);
-				//var file = new File(classPath); file.deleteOnExit(); new File(classPath.replace("src","bin")).deleteOnExit();
-				Files.write(new File(classPath).toPath(), source.getBytes("cp1252"));
+				var file = new File(classPath);
+				file.deleteOnExit();
+				new File(classPath.replace("src", "bin").replace("java", "class")).deleteOnExit();
+				Files.write(file.toPath(), source.getBytes("cp1252"));
 				ToolProvider.getSystemJavaCompiler().run(null, null, null, classPath, "-d", "bin", "--enable-preview", "-source", "19", "-Xlint:unchecked" );
 				return Class.forName("Ext." + className);
 				//return new Loader().findClass("Ext." + className);
@@ -875,6 +872,7 @@ public class Vm {
 			Executable executable = getExecutable(name.startsWith("new") ? (Class) o0 : o0.getClass(), name, classes);
 			if (executable == null) return error("not found " + executable(name, classes) + " of: " + toString(o0));
 			try {
+				//executable.setAccessible(true);
 				args = reorg(executable, args);
 				return switch (executable) { 
 						case Method m-> m.invoke(o0, args);
@@ -1327,7 +1325,7 @@ public class Vm {
 					//$("%def", "test", new JFun("Test", (EnvArgsList) (e,o)-> { checkO("test", o, 2, 3); return vmAssert(e,toString(o.car()), o.car(1), array(o.cdr(1))); } )),
 					$("%def", "assert", vmAssert),
 					$("%def", "test", test),
-					$("%def", "this", new JFun("This", (Supplier)() -> this)),
+					$("%def", "vm", this),
 					$("%def", "toString", wrap(new JFun("ToString", (Function<Object,String>) obj-> toString(obj)))),
 					$("%def", "log", wrap(new JFun("Log", (ArgsList) o-> log(array(o))))),
 					$("%def", "print", wrap(new JFun("Print", (ArgsList) o-> print(array(o))))),
@@ -1399,7 +1397,7 @@ public class Vm {
 				}
 			}
 		}
-		print("finito");
+		print("\nfinito");
 	}
 	
 	

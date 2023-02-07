@@ -1,4 +1,4 @@
-|#
+#|
 	Field
 	
 		field = (@getField class fieldName) = ((@getField Class String) class fieldName)
@@ -37,7 +37,7 @@
 		
 		void = (field object value) = (@set field object value)
 		void = (.fieldName object value) = ((.fieldName (@getClass object)) object value)
-#|
+|#
 
 ;(prtrc 2)
 
@@ -105,7 +105,7 @@ box
 ((@getField &Wat.Prova$Box "i") (@new &Wat.Prova$Box 3))
 
 ; recupero ed esecuzione costruttore innerclass Wat.Vm$DVar (vanno resi public classe e costruttore)!
-;((@getConstructor &Wat.Vm$DVar (@getClass (this)) &java.lang.Object) (this) 1)
+;((@getConstructor &Wat.Vm$DVar (@getClass vm) &java.lang.Object) vm 1)
 
 ; recupero dei costruttori di &Wat.Prova$Box
 (@getConstructors &Wat.Prova$Box)

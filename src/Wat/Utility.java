@@ -609,11 +609,14 @@ public class Utility {
 	static public String read(InputStream in) throws IOException {
 		var s = new StringBuilder();
 		int open = 0, close = 0;
-		boolean inEscape = false, inString = false, inUString = false, inComment=false, sMlComment=false, inMlComment=false, eMlComment=false;
+		boolean inEscape = false, inString = false, inUSymbol = false, inComment=false, sMlComment=false, inMlComment=false, eMlComment=false;
 		do {
+			//out.println("loop");
 			var oc = close-open;
 			if (in.available() == 0) out.print(oc==0 ? "> " : "%+d%s> ".formatted(oc, oc>0 ? "(" : ")"));
-			for (int c; (c = in.read()) != '\n' || inString || inUString || inMlComment;) {
+			for (int c; (c = in.read()) != '\n' || inString || inUSymbol || inMlComment;) {
+				//out.printf("%d %c \n",c, c==-1?' ':c);
+				if (c == -1) return "";
 				if (inEscape) {
 					inEscape = false;
 				}
@@ -621,33 +624,35 @@ public class Utility {
 					case '\\'-> inEscape = true;
 					case '"'-> inString = false;
 				}
-				else if (inUString) switch (c) {
-					case '|'-> inUString = false;
+				else if (inUSymbol) switch (c) {
+					case '|'-> inUSymbol = false;
 				}
 				else if (inComment) switch (c) {
 					case '"'-> inString = true;
 					case '\n'-> inComment = false;
 				}
 				else if (eMlComment) switch (c) {
-					case '|'-> inMlComment = eMlComment = false;
+					case '#'-> inMlComment = eMlComment = false;
+					default -> inUSymbol = !(eMlComment = false);
 				}
 				else if (inMlComment) switch (c) {
 					case '"'-> inString = true;
 					case ';'-> inComment = true;
-					case '#'-> eMlComment = true;
+					case '|'-> eMlComment = true;
 				}
 				else if (sMlComment) switch (c) {
-					case '#'-> inMlComment = !(sMlComment = false);
-					default -> inUString = !(sMlComment = false);
+					case '|'-> inMlComment = !(sMlComment = false);
+					default -> sMlComment = false;
 				}
 				else switch (c) {
 					case '"'-> inString = true;
+					case '|'-> inUSymbol = true;
 					case ';'-> inComment = true;
-					case '|'-> sMlComment = true;
+					case '#'-> sMlComment = true;
 					case '('-> open += 1;
 					case ')'-> close += 1;
 				}
-				if (c >= 32 || inUString) s.append((char) c);
+				if (c >= 32 || inUSymbol) s.append((char) c);
 			}
 			if (inComment) { inComment = false; }
 			s.append('\n'); 

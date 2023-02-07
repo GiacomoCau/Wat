@@ -207,7 +207,7 @@
 
 (assert (unwrap ($vau () #ignore)))
 
-|#
+#|
 (let ((obj (object ("x" 1))))
   (set (.x obj) 2)
   (assertEqual 2 (.x obj))
@@ -218,7 +218,7 @@
 (assertEqual &x #undefined)
 (set &x 2)
 (assertEqual &x 2)
-#|
+|#
 
 (assert (* 1 2 3 4) 24)
 (assert (*) 1)
@@ -252,9 +252,9 @@
 
 (exit "finito")
 
-|#
+#|
 (let ((x (cell 0)))
   (while (< (ref x) 10)
     (++ (ref x)))
   (assertEqual 10 (ref x)) )
-#|
+|#

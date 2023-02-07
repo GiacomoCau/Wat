@@ -146,9 +146,9 @@ SKIP:	// white spaces
 // test: a |# "b" "\\\"" "#|" #||##|c |# "d" #|e -> ["a" "c" "e"]
 // test: a |#"b"#|c |#"d"#|e - > ["a" "c" "e"] -> necessari i blanck dopo gli id!
 SKIP:	// white spaces
-{	"|#" : MLC | ";" : CMT | < (" " | "\t" | "\r" | "\n")+  >
+{	"#|" : MLC | ";" : CMT | < (" " | "\t" | "\r" | "\n")+  >
 }
-<MLC> SKIP: { "#|" : DEFAULT }
+<MLC> SKIP: { "|#" : DEFAULT }
 <MLC> MORE: { "\"" : SMLC | ";" : CMLC | < ~[] > }
 <SMLC> SKIP: { "\"" : MLC } 
 
@@ -184,7 +184,7 @@ TOKEN:	// literals
 |	< Double: (<sNat> | <Integer> "." (<d09>)+) (<exp>)? >
 |	< # exp: ["e","E"] <Integer> >
 |	< String:	"\"" ( "\\\"" | ~["\""] )* "\"" >
-|	< UString:	"|" ~["#", "|"] ( ~["|"] )* "|" >
+|	< USymbol:	"|" ~["|"] ( ~["|"] )* "|" >
 //|	< # sChr: ~["\"","\n","\r","\f","\b","\t"] | "\\" ["\"","n","r","f","b","t"] >
 //|	< # sChr: "\\" ["\""] | ~["\""] >
 }
@@ -197,8 +197,8 @@ TOKEN:	// identifiers
 |	< # jvid: ( <jvf> | "_" <jvn>) ( <jvn> )* >
 |	< # jvf: "$" | <letter> >
 |   < # jvn: "_" | <jvf> | <digit> >
-|   < Kwd: ":" (<Id>)+ >
-|	< Id: <first> ( <first> | "." | <digit> )* >
+|   < Kwd: ":" (<Sym>)+ >
+|	< Sym: <first> ( <first> | "." | <digit> )* >
 |	< # first: <letter> | <special> > 
 |	< # special: [ "-", "&", "!", "=", ">", "<", "%", "+", "?", "/", "\\", "*", "$", "_", "@", "|", "~", "^", ":"] >  // why not also , "\\"  
 |	< # letter: [ "A"-"Z", "a"-"z" ] >
@@ -220,14 +220,14 @@ Object Elt() throws Exception: {
 	|	t=<Double>	{ return java.lang.Double.parseDouble(t.image); }
 	|	t=<String>	{ return $("wat-string", toStringTokenImage(t.image)); }
 	//|	t=<UString>	{ return $("wat-string", t.image); }
-	|	t=<UString>	{ return t.image; }
+	|	t=<USymbol>	{ return t.image; }
 	|	t=<Prim>	{ return classForName(t.image.substring(1)); }	
 	|	t=<ClsId>	{ return classForName(t.image.substring(1)); }	
 	|   t=<GetSet>  { return $("%jGetSet", $("wat-string", t.image.substring(1))); } 
 	|   t=<Invoke>  { return $("%jInvoke", $("wat-string", t.image.substring(1))); } 
 	|	t=<Kwd>     { return t.image; }
-	|	t=<Id>      { return t.image; }  	
-	//|	t=<Id> ["::" t2=<Id>] {	return t2 == null ? t.image : $("%eval", $("%quote", t2.image), t.image); }  	
+	|	t=<Sym>      { return t.image; }  	
+	//|	t=<Sym> ["::" t2=<Sym>] {	return t2 == null ? t.image : $("%eval", $("%quote", t2.image), t.image); }  	
 	|	"'" o=Elt() { return $("%quote", o); }
 	|	"(" ( o=Elt(){ l.add(o); } )+ [ "." o2=Elt() ] ")" {
 		if (o2 != null && !isNil(o2)) { l.add( "." ); l.add( o2 ); };

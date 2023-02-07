@@ -25,7 +25,7 @@
   
 ($define! ~ %~)
 ($define! & %&)
-;($define! | %|) ;; TODO lo vedrebbe come uneascaped symbol!
+;($define! | %|) ;; TODO lo vedrebbe come unescaped symbol!
 ($define! ^ %^)
 ($define! << %<<)
 ($define! >> %>>)
@@ -99,12 +99,12 @@
 
 (defineMacro (expand macro) (list 'dlet '((evm #f)) macro))
 
-|#
+#|
 (defineMacro (let2 bindings . body) (list* (list* '\ (mapList car bindings) body) (mapList cadr bindings) ))
 (let2 ((a 1) (b 2)) (+ a b))
 (dlet ((evm #f)) (let2 ((a 1) (b 2)) (+ a b)))
 (expand (let2 ((a 1) (b 2)) (+ a b)))
-#|
+|#
 
 (defineMacro (defineOperative (name . params) envparam . body)
   (list $define! name (list* $vau params envparam body)) )
@@ -382,7 +382,7 @@
     (assert (dval *y*) 2) )
   #t )
     
-|#
+#|
   (deftest dynamic.1
     (progn
       (defdynamic *foo*)
@@ -394,7 +394,7 @@
       (assert (subclassp #^dynamic #^standard-object))
       (assert (subclassp #^dynamic #^object)))
     #void)
-#|
+|#
 
 (test set-dynamic.1
   (begin
@@ -437,7 +437,7 @@
   '(2 2) )
 
 
-|#
+#|
 ;;;; Prototypes
 
 (defineOperative (definePrototype name superName propNames) env
@@ -458,7 +458,7 @@
 
 (define (putMethod ctor name fun)
   (set ((jsGetter name) (.prototype ctor)) fun))
-#|
+|#
 
 
 ;;;; Modules
@@ -534,7 +534,7 @@
 (define - (negativeOp - 0))
 (define / (negativeOp / 1))
 
-|#
+#|
 (define % (%jsBinop "%"))
 (define not (%jsUnop "!"))
 (define typeof (%jsUnop "typeof"))
@@ -631,7 +631,7 @@
     (if (type? option Some)
         (eval (list (list lambda (list optionName) then) (.value option)) env)
         (eval else env) )))
-#|
+|#
 
 
 ;;;; Error break routine, called by VM to print stacktrace and throw
@@ -644,7 +644,7 @@
     (log "--" k) )
   (takeSubcont rootPrompt k
   	(printFrame k) (pushPrompt rootPrompt (pushSubcont k) )) ;old need 2+ vau args
-    ;(pushPrompt rootPrompt (pushSubcont k (printFrame k) )) ;ok with 3+ vau args
+    ;(pushPrompt rootPrompt (pushSubcont k (printFrame k) )) ;new with 3+ vau args
 )
 
 (define (userBreak err)
