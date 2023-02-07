@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -41,15 +42,23 @@ public class Prova {
 	
 	//class $ {}
 
-	record Key(Object ... a) {
+	//record Key(Object ... a) {
+	static class Key { Object[] a; Key(Object ... a) { this.a = a; }
+		@Override public boolean equals(Object obj) { return obj instanceof Object[] b && Arrays.deepEquals(a, b); }
+		@Override public int hashCode() { return Arrays.deepHashCode(a); }
 	}
 	
 	public static void main(String[] args) throws Exception {
-		var key = new Key(1, " ", true);
-		var v = key.a[1];
+		var map = new HashMap<Key,Object>();
+		out.println(new Key(1, " ", true).equals(new Key(1, " ", true)));
+		map.put(new Key(1, " ", true), 2);
+		out.println(map.containsKey(new Key(1, " ", true)));
+	}
+
+	public static void box() throws NoSuchMethodException {
 		//extend2("Ooo", null);
-		Box.class.getConstructor(null);
-		Box.class.getConstructor(null);
+		Box.class.getConstructor((Class[]) null);
+		Box.class.getConstructor((Class[]) null);
 		out.println(Box.class); // -> Wat.Prova$Box
 		out.println(Box.class.getSuperclass()); // -> Object
 		out.println(Box.class.getClass()); // -> Class

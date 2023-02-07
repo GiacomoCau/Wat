@@ -25,7 +25,7 @@
   
 ($define! ~ %~)
 ($define! & %&)
-;($define! | %|) ;; TODO lo vede come uneascaped string!
+;($define! | %|) ;; TODO lo vedrebbe come uneascaped symbol!
 ($define! ^ %^)
 ($define! << %<<)
 ($define! >> %>>)
@@ -66,6 +66,7 @@
 ($define! list %list)
 ($define! $lambda ($vau (formals . body) env (wrap (eval (list* $vau formals #ignore body) env))))
 ($define! $lambda %lambda)
+($define! \ %lambda)
 ($define! theEnvironment ($vau () e e))
 ($define! theEnvironment %theEnvironment)
 
@@ -78,6 +79,15 @@
       ($vau operands env
         (eval (eval (cons expander operands) (makeEnvironment)) env) ))))
 
+(def evm (dnew #t))
+
+($define! makeMacro
+  (wrap
+    ($vau (expander) #ignore
+      ($vau operands env
+      	(def expr (eval (cons expander operands) (makeEnvironment)))
+        (if (dval evm) (eval expr env) expr) ))))
+
 ($define! macro
   (makeMacro
     ($vau (params . body) #ignore
@@ -86,6 +96,15 @@
 ($define! defineMacro
   (macro ((name . params) . body)
     (list $define! name (list* macro params body)) ))
+
+(defineMacro (expand macro) (list 'dlet '((evm #f)) macro))
+
+|#
+(defineMacro (let2 bindings . body) (list* (list* '\ (mapList car bindings) body) (mapList cadr bindings) ))
+(let2 ((a 1) (b 2)) (+ a b))
+(dlet ((evm #f)) (let2 ((a 1) (b 2)) (+ a b)))
+(expand (let2 ((a 1) (b 2)) (+ a b)))
+#|
 
 (defineMacro (defineOperative (name . params) envparam . body)
   (list $define! name (list* $vau params envparam body)) )
