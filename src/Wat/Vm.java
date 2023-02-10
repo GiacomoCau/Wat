@@ -118,7 +118,6 @@ public class Vm {
 			this.f = f; this.nxt = next; this.dbg = dbg;
 		}
 		public String toString() { return "{Continuation %s}".formatted(dbg); }
-		//Object apply(Env e, Apv apv0) { return apply(()-> evaluate(e, cons(apv0, null))); } // for tco?
 		Object apply(Env e, Apv apv0) { return apply(()-> combine(e, apv0, null)); }
 		Object apply(Supplier s) { return f.apply(new Resumption(nxt, s));}
 	}
@@ -317,31 +316,6 @@ public class Vm {
 	
 	
 	// Classes and Objects
-	/* TODO sostituiti dai seguenti
-	class WatClass extends Env<Symbol> {
-		WatClass(WatClass watClass) { super(watClass); }
-		@Override public String toString() { return "{WatClass" + reverseMap(map) + "}"; }
-		boolean isSubClass(WatClass other) { return isParent(other); }
-	}
-	class WatObj extends LinkedHashMap<Keyword, Object> {
-		private static final long serialVersionUID = 1L;
-		WatClass watClass;
-		WatObj(WatClass watClass, List list) {
-			this.watClass = watClass;
-	        for (var l=list; l!=null; l=l.cdr()) {
-	        	var car = l.car; if (!(car instanceof Keyword key)) throw new Error("not a keyword: " + car + " in: " + list); 
-	        	l = l.cdr(); if (l == null) throw new Error("a value expected in: " + list);
-	        	put(key, l.car);
-	        }
-		}
-		@Override public String toString() { return "{WatObject" + reverseMap(this) + "}"; }
-	}
-	Boolean isSubclass (Object sc, Object c) {
-		if (sc instanceof WatClass swc && c instanceof WatClass wc) return swc.isSubClass(wc);
-		if (c instanceof Class jc) return jc.isInstance(sc);
-		return false;
-	}
-	*/
 	public static class StdObj extends LinkedHashMap<Keyword, Object> {
 		private static final long serialVersionUID = 1L;
 		public StdObj(List list) {
@@ -353,26 +327,6 @@ public class Vm {
 		}
 		@Override public String toString() { return "{StdObj" + reverseMap(this) + "}"; }
 	}
-	/*
-	class Loader extends ClassLoader {
-	    @Override public Class<?> findClass(String name) throws ClassNotFoundException {
-	    	try {
-		    	if (!name.startsWith("Ext."))
-		    		return super.findClass(name); // Class.forName(name);
-		        File file = new File("bin/" + name.replaceAll("\\.", "/") + ".class");
-		        try (FileInputStream fis = new FileInputStream(file)) {
-		            byte[] bytes = fis.readAllBytes();
-		            return defineClass(name, bytes, 0, bytes.length);
-		        }
-	    	}
-			catch (IOException e) {
-				e.printStackTrace();
-			}
-			return null;
-	    }
-	}
-	Loader loader = new Loader();
-	*/
 	Class extend(Symbol className, Class superClass) {
 		try {
 			if (!className.name.matches("[a-zA-Z$_.]+")) return error("invalid class name: " + className);
@@ -400,13 +354,13 @@ public class Vm {
 				Files.write(file.toPath(), source.getBytes("cp1252"));
 				ToolProvider.getSystemJavaCompiler().run(null, null, null, classPath, "-d", "bin", "--enable-preview", "-source", "19", "-Xlint:unchecked" );
 				return Class.forName("Ext." + className);
-				//return new Loader().findClass("Ext." + className);
 			}
 			catch (Throwable t) {
 				return error("defining class " + className, t);
 			}
 		}
 	}
+	
 	
 	// Methods
 	Map<Class, Map<Symbol,Object>> methods = new LinkedHashMap();
@@ -419,70 +373,7 @@ public class Vm {
 			var m = ms.get(name); if (m != null) return m;
 		} while ((cls = cls.getSuperclass()) != null);
 		return error("method " + name + " not found!");
-	}
-	
-	/* TODO in alternativa ai precedenti
-	// Environment
-	class WatRootObj<K> extends LinkedHashMap<K,Object> {
-		private static final long serialVersionUID = 1L;
-	}
-	class Env<K> extends WatRootObj<K> {
-		private static final long serialVersionUID = 1L;
-		Env parent; Env(Env parent) { this.parent = parent; }
-		record Lookup(boolean isBound, Object value) {}
-		Lookup get(String name) {
-			for (var env=this; env!=null; env=env.parent) {
-				Object res = ((WatRootObj) env).get(name);
-				if (res != null || env.containsKey(name)) return new Lookup(true, res);
-			}
-			return new Lookup(false, null);
-		};
-		boolean set(K name, Object value) {
-			for (var env=this; env!=null; env=env.parent)
-				if (env.containsKey(name)) { env.put(name, value); return true; }
-			return false;
-		};
-		public Object put(K name, Object value) {
-			if (trace) print("    bind: ", name, "=", value, " in: ", this); super.put(name, value); return null; 
-		}
-		public String toString() {
-			var isThenv = this == theEnvironment;
-			return "{" + eIf(!isThenv, "The-") + "Env" + eIf(isThenv && !prenv, ()-> reverseMap(this)) + eIf(parent == null, ()-> " " + parent) + "}";
-		}
-		Object lookup(K name) {
-			var lookup = get(name); if (!lookup.isBound)
-				return error("unbound: " + name);
-			if (trace) print("  lookup: ", lookup.value); return lookup.value;
-		}
-		boolean isBound(K name) { return get(name).isBound; }
-		boolean isParent(Env other) {
-			Env env = this; do if (env == other) return true; while ((env = env.parent) != null);
-			return false;
-		};
-	}
-	Env env(Env parent) { return new Env<Symbol>(parent); }
-	
-	// Class and Object
-	class WatClass extends Env<Symbol> {
-		private static final long serialVersionUID = 1L;
-		WatClass(WatClass watClass) { super(watClass); }
-		@Override public String toString() { return "{WatClass" + reverseMap(this) + "}"; }
-		boolean isSubClass(WatClass other) { return isParent(other); }
-	}
-	class WatObj extends WatRootObj<Keyword> {
-		private static final long serialVersionUID = 1L;
-		WatClass watClass;
-		WatObj(WatClass watClass, List list) {
-			this.watClass = watClass;
-			for (var l=list; l!=null; l=l.cdr()) {
-				var car = l.car; if (!(car instanceof Keyword key)) throw new Error("not a keyword: " + car + " in: " + list); 
-				l = l.cdr(); if (l == null) throw new Error("a value expected in: " + list);
-				put(key, l.car);
-			}
-		}
-		@Override public String toString() { return "{WatObject" + reverseMap(this) + "}"; }
-	}
-	//*/
+	}	
 	
 	
 	// Bind
@@ -514,7 +405,6 @@ public class Vm {
 		if (prtrc >= 5) print(" combine: ", indent(), op, " ", o /*, "   ", e*/);
 		if (op instanceof Combinable cmb) return cmb.combine(e, o);
 		// per default le jFun nude sono considerate applicative
-		//if (isjFun(op)) return ((Combinable) jWrap(op)).combine(e, o);
 		if (isjFun(op)) return (T) new Apv(new JFun(op)).combine(e, o);
 		return error("not a combiner: " + toString(op) + " in: " + cons(op, o));
 	}
@@ -627,11 +517,7 @@ public class Vm {
 			);
 		}
 		private boolean istrue(Object res) {
-			//return res != null && res instanceof Boolean b && b;
-			//if (res == null) return false; if (!(res instanceof Boolean b)) return error("not a boolean."); return b;
 			return res == null ? false : res instanceof Boolean b ? b : error("not a boolean.");
-			//return res != null && (!(res instanceof Boolean b) || b);
-			//return !(res == null || res instanceof Boolean b && !b);
 		}
 		public String toString() { return "%If"; }
 	}
@@ -732,8 +618,6 @@ public class Vm {
 			var prt = o.car();
 			var o1 = o.car(1); if (!(o1 instanceof Continuation k)) return error("not a continuation: " + o1); 
 			var o2 = o.car(2); if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2);
-			//return pushPrompt(null, e, dbg(e, this, o), prt, ()-> k.apply(()-> evaluate(e, cons(apv0, null)))); // for tco?
-			//return pushPrompt(null, e, dbg(e, this, o), prt, ()-> k.apply(()-> Vm.this.combine(e, apv0, null)));
 			return pushPrompt(null, e, dbg(e, this, o), prt, ()-> k.apply(e, apv0));
 		}
 		public String toString() { return "%PushPromptSubcont"; }
@@ -1035,13 +919,6 @@ public class Vm {
 		if (h == null) return o;
 		return cons(h.car(), append(h.cdr(), o));
 	}
-	/* TODO sostituito dai seguenti
-	Object listStar(List h) {
-		if (h == null) return null;
-		if (h.cdr == null) return h.car;
-		return cons(h.car(), listStar(h.cdr()));
-	}
-	//*/
 	Object listStar(List h) {
 		return h == null ? null : listStar1(h);
 	}
@@ -1073,35 +950,6 @@ public class Vm {
 		for (int i=0; i<a.length; i+=1) if (!equals(a[i], b[i])) return false;
 		return true;
 	}
-	/* TODO sostituito dal seguente
-	boolean vmAssert(String str, Object objs) throws Exception {
-		var expr = cons(begin, parseBytecode(parse(str)));
-		return vmAssert(theEnvironment, objs instanceof Throwable ? $(expr) : $(expr, parseBytecode(objs))); 
-	}
-	boolean vmAssert(Env env, Object ... objs) {
-		return vmAssert(env, (String) null, objs[0], objs.length == 1 ? $() : $(objs[1])); 
-	}
-	boolean vmAssert(Env env, String name, Object expr, Object ... objs) {
-		if (!doasrt) return true;
-		name = eIfnull(name, n-> "test "+ n + ": ");
-		try {
-			env = env(env);
-			var val = pushSubcontBarrier(null, env, pushRootPrompt(expr));
-			if (objs.length == 0) print(name, expr, " should throw but is ", val);
-			else {
-				var expt = objs[0];
-				if (equals(val, pushSubcontBarrier(null, env, pushRootPrompt(expt)))) return true;
-				print(name, expr, " should be ", expt, " but is ", val);
-			}
-		}
-		catch (Throwable t) {
-			if (objs.length == 0) return true;
-			if (prstk) t.printStackTrace(out);
-			else print(name, expr, " throw ", t);
-		}
-		return false;
-	}
-	*/
 	boolean vmAssert(String str, Object objs) throws Exception {
 		List expr = cons(begin, parseBytecode(parse(str)));
 		return vmAssert.combine(theEnvironment,  objs instanceof Throwable ? expr : cons(expr, parseBytecode(objs))); 
@@ -1238,47 +1086,13 @@ public class Vm {
 					// Java Interface
 					$("%def", "%jInvoke", wrap(new JFun("%JInvoke", (Function<String,Object>) this::jInvoke))),
 					$("%def", "%jGetSet", wrap(new JFun("%JGetSet", (Function<String,Object>) this::jGetSet))),
-					//$("%def", "%instanceof?", (BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o)),
 					$("%def", "%instanceof?", wrap(new JFun("%Instanceof?", (BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o)))),
 					// Object System
-					//$("%def", "%classOf", (Function<WatObj,WatClass>) lo-> lo.watClass),
-					/*
-					$("%def", "%addMethod", (ArgsList) o-> ((WatClass) o.car()).put(o.car(1), o.car(2))),
-					$("%def", "%getMethod", (BiFunction<WatClass,Symbol,Combinable>) (lc,n)-> (Combinable) lc.get(n).value),
-					*/
 					$("%def", "%addMethod", wrap(new JFun("%AddMethod", (ArgsList) o-> addMethod(o.car(), o.car(1), o.car(2))))),
 					$("%def", "%getMethod", wrap(new JFun("%GetMethod", (BiFunction<Class,Symbol,Object>) this::getMethod))),
-					//$("%def", "%setSlot", (ArgsList) o-> ((WatObject) o.car()).put(o.car(1), o.car(2))),
-					//$("%def", "%getSlot", (BiFunction<WatObject,Keyword,Object>) (lo,n)-> lo.get(n)),
-					//$("%def", "%makeInstance", (BiFunction<LClass,List,LObject>) (lc,l)-> new LObject(lc, listToArray(l))),
-					//$("%def", "%makeInstance", (ArgsList) o-> new WatObject(o.car(), listToArray(o.cdr()))),
-					//$("%def", "%makeInstance", (ArgsList) o-> new WatObject(o.car(), o.cdr())),
-					/*
-					$("%def", "%obj", (ArgsList) o-> new WatObj(o.car(), o.cdr())),
-					*/
-					//$("%def", "%obj", (ArgsList) Obj::new),
 					$("%def", "%obj", wrap(new JFun("%Obj", (ArgsList) o-> uncked(()-> ((Class<? extends StdObj>) o.car()).getDeclaredConstructor(List.class).newInstance(o.cdr()))))),
-					//$("%def", "%makeClass", (BiFunction<String,LClass,LClass>) (n, lc)-> new LClass(n, lc)),
-					//$("%def", "%makeClass", (BiFunction<String,WatClass,WatClass>) WatClass::new),
-					//$("%def", "%makeClass", (Function<WatClass,WatClass>) WatClass::new),
-					/*
-					$("%def", "%class", (Function<WatClass,WatClass>) WatClass::new),
-					$("%def", "%subClass?", (BiFunction<Object,Object,Boolean>) this::isSubclass),
-					*/
-					//$("%def", "%class", (BiFunction<Symbol, Class, Class>) this::extend),
 					$("%def", "%class", wrap(new JFun("%Class", (ArgsList) o-> extend(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr()))))),
 					$("%def", "%subClass?", wrap(new JFun("%SubClass", (BiFunction<Class,Class,Boolean>) (cl,sc)-> sc.isAssignableFrom(cl)))),
-					/*
-					$("%def", "%type?", (BiFunction<Object,Object,Boolean>) (o,c)-> {
-						if (o instanceof WatObj wo && c instanceof WatClass wc) return wo.watClass.isSubClass(wc);
-						if (c instanceof Class jc) return jc.isInstance(o);
-						return false;
-					}),
-					*/
-					/*
-					$("%def", "%type?",  (BiFunction<Object,Object,Boolean>) (o,c)-> isSubclass(o instanceof WatObj wo ? wo.watClass : o, c)),
-					$("%def", "%classOf", (Function<Object,Object>) (o)-> o instanceof WatObj wo ? wo.watClass : o.getClass()),
-					*/
 					$("%def", "%type?",  wrap(new JFun("%Type", (BiFunction<Object,Class,Boolean>) (o,c)-> o == null ? c == null : c.isAssignableFrom(o.getClass())))),
 					$("%def", "%classOf", wrap(new JFun("%ClassOf", (Function<Object,Object>) Object::getClass))),
 					// Utilities
@@ -1321,8 +1135,6 @@ public class Vm {
 						$("%wrap", $("%eval", $("%list*", "%vau", "formals", ignore, "body"), "env")))),
 					//$("%def", "%jambda", jFun((ArgsList) o-> lambda(o.car(), o.car(1), o.cdr(1)))),
 					//
-					//$("%def", "assert", new JFun("Assert", (EnvArgsList) (e,o)-> { checkO("assert", o, 1, 2); return vmAssert(e,array(o)); } )),
-					//$("%def", "test", new JFun("Test", (EnvArgsList) (e,o)-> { checkO("test", o, 2, 3); return vmAssert(e,toString(o.car()), o.car(1), array(o.cdr(1))); } )),
 					$("%def", "assert", vmAssert),
 					$("%def", "test", test),
 					$("%def", "vm", this),
@@ -1406,115 +1218,13 @@ public class Vm {
 		new Vm().main();
 	}
 	public void main() throws Exception {
-		/*
-		print(parseBytecode("a"));
-		print(parseBytecode("#ignore"));
-		print(parseBytecode($()));
-		print(parseBytecode($("a")));
-		print(parseBytecode($("a", "b")));
-		print(parseBytecode($("a", "b", ".", $())));
-		print(parseBytecode($("a", "b", ".", "c")));
-		print(parseBytecode($("a", $("b"), ".", "c")));
-		print(parseBytecode($("wat-string", "string")));
-		//*/
-		/*
-		print(list());
-		print(list("a"));
-		print(list("a", "b"));
-		print(arrayToList(true));
-		print(arrayToList(true, "a"));
-		print(arrayToList(true, "a", "b"));
-		print(listStar());
-		print(listStar("a"));
-		print(listStar("a", "b"));
-		print(arrayToList(false));
-		print(arrayToList(false, "a"));
-		print(arrayToList(false, "a", "b"));
-		//*/
-		/*
-		print(listToListStar(1)); // -> 1 
-		print(listToListStar(nil)); // -> ()
-		print(listToListStar(list())); // -> ()
-		print(listToListStar(list(1, 2))); // -> (1 . 2)
-		print(listToListStar(list(1, 2, 3))); // -> (1 2 . 3)
-		//print(listToListStar(listStar(1, 2))); // -> not a proper list
-		//print(listToListStar(listStar(1, 2, 3))); // -> not a proper list
-		//print(listToListStar(listStar(1, 2, 3, 4))); // -> not a proper list
-		//*/
-		//print(equals(listToArray(list(1,2,3,4)), new Object[] {1,2,3,4})); // -> true
-		//print(parseBytecode(parse("(%cons 1 2)"))); // -> ((%cons 1 2))
-		/*
-		var Throw = new Throwable();
-		vmAssert("1", 1);
-		vmAssert("1 2 3", 3);
-		vmAssert("(%cons 1 2)", $(1,".",2));
-		vmAssert("(%list 1 2 3)", $("%list",1,2,3));
-		vmAssert("(%list* 1 2 3 4)", $("%list*",1,2,3,4));
-		vmAssert("(%array->list #t (%list->array (%list 1 2 3 4)))", $("%list",1,2,3,4));
-		vmAssert("(%array->list #f (%list->array (%list 1 2 3 4)))", $("%list*",1,2,3,4));
-		vmAssert("(%reverseList (%list 1 2 3 4))", $("%list",4,3,2,1));
-		
-		vmAssert("(+ 1 2)", 3);
-		vmAssert("(* 3 2)", 6);
-		vmAssert("(* (* 3 2) 2)", 12);
-		
-		vmAssert("((%vau a #ignore a) 1 2)", $("%list",1,2));
-		vmAssert("((%vau (a b) #ignore b) 1 2)", 2);
-		vmAssert("((%vau (a . b) #ignore b) 1 2 3)", $("%list",2,3));
-		vmAssert("(%def x (%list 1)) x", $("%list",1));
-		vmAssert("(%def x 1) ((%wrap(%vau (a) #ignore a)) x)", 1);
-		
-		vmAssert("(%def () 1) a", Throw);
-		vmAssert("(%def a (%list 1)) a", $("%list", 1));
-		vmAssert("(%def (a) (%list 1)) a", 1);
-		vmAssert("(%def a (%list 1 2 3)) a", $("%list",1,2,3));
-		vmAssert("(%def (a) 1 2 3) a", Throw);
-		vmAssert("(%def 2 1)", Throw);
-		vmAssert("(%def (a) (%list 1)) a", 1);
-		vmAssert("(%def (a b) (%list 1 2)) a b", 2);
-		vmAssert("(%def (a . b) (%list 1 2 3)) a b", $("%list",2,3)); 
-		
-		vmAssert("(%vau (a . 12) #ignore 0)", Throw);
-		vmAssert("(%def (a b 12) 1)", Throw);
-		
-		vmAssert("(%quote (a b c))", $("%quote", $("a","b","c")));
-		
-		vmAssert("(%def 2 1)", Throw);
-		vmAssert("(%def a 1) a", 1);
-		vmAssert("(%def (a . b) (%list 1 2 3)) a b", $("%list",2,3));
-		vmAssert("(%def define %def) (define a 1) a", 1);
-		vmAssert("(%def $define! %def) ($define! a 1) a", 1);
-		vmAssert("(%def $define! %def) $define!", theEnvironment.get("%def").value);
-		vmAssert("(%if #t 1 2)", 1);
-		vmAssert("(%if #f 1 2)", 2);
-		vmAssert("(%if #null 1 2)", 2);
-		//*/
-		/*
-		eval("""
-			(assert (%def a 1) #inert)
-			(assert (%def a)         ) ;throw
-		""");
-		//*/
-		
-		//exec(parse(readString("boot.wat")));
-		//compile("boot.wat");
-		//exec(readBytecode("boot.wat"));
-		//*
-		//print("inizio");
 		var milli = currentTimeMillis();
-		//*
 		loadText("testVm.lsp");
 		loadText("boot.lsp");
 		loadText("test.lsp");
 		loadText("testJni.lsp");
 		loadText("testOos.lsp");
-		//*/
-		//loadText("wat/boot.wat");
-		//loadText("wat/test.wat");
 		print("start time: " + (currentTimeMillis() - milli));
 		repl();
-		//*/
-		
-		//out.println(wrap(new JFun("%+", null)));
 	}
 }
