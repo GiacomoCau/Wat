@@ -61,6 +61,8 @@ import java.util.function.Supplier;
 
 import javax.tools.ToolProvider;
 
+// java.exe -cp bin --enable-preview Wat.Vm
+
 /* Abbreviations:
 	c: cons
 	x, cln: expression
@@ -101,6 +103,11 @@ import javax.tools.ToolProvider;
  */
 
 public class Vm {
+
+	static {
+	    for (File file: new File("bin/Ext").listFiles()) file.delete();
+	    for (File file: new File("src/Ext").listFiles()) file.delete();
+	}
 
 	boolean dotco = true;
 	boolean doasrt = true;
