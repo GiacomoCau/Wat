@@ -236,9 +236,10 @@ public class Vm {
 		Cons(Object car, Object cdr) { this.car = car; this.cdr = cdr; }
 		public String toString() { return "(" + toString(this) + ")"; }
 		private String toString(Cons c) {
-			if (c.cdr == null) return Vm.this.toString(c.car);
-			if (c.cdr instanceof Cons cc) return Vm.this.toString(c.car) + " " + toString(cc);
-			return Vm.this.toString(c.car) + " . " + Vm.this.toString(true, c.cdr);
+			var car = Vm.this.toString(c.car);
+			if (c.cdr == null) return car;
+			if (c.cdr instanceof Cons cdr) return car + " " + toString(cdr);
+			return car + " . " + Vm.this.toString(true, c.cdr);
 		}
 		public boolean equals(Object o) {
 			return this == o || o instanceof Cons c && Vm.this.equals(this.car,  c.car) && Vm.this.equals(this.cdr,  c.cdr);
@@ -363,9 +364,9 @@ public class Vm {
 	
 	
 	// Methods
-	Map<Class, Map<Symbol,Object>> methods = new LinkedHashMap();
+	Map<Class, Map<Symbol,Object>> methods = new LinkedHashMap<>();
 	Object addMethod(Class cls, Symbol name, Object method) {
-		return methods.computeIfAbsent(cls, k-> new LinkedHashMap()).put(name, method);
+		return methods.computeIfAbsent(cls, k-> new LinkedHashMap<>()).put(name, method);
 	}
 	Object getMethod(Class cls, Symbol name) {
 		do {
