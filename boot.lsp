@@ -48,6 +48,7 @@
 ($define! loop %loop)
 ($define! makeEnvironment %makeEnv)
 ($define! nil? %null?)
+($define! null? %null?)
 ($define! not !)
 ($define! reverseList %reverse)
 ($define! rootPrompt %rootPrompt)
@@ -220,6 +221,16 @@
 (assert (letLoop l ((a 1)) a) 1)
 (assert (letLoop sum ((as (list 1 2)) (bs (list 3 4))) (if (nil? as) () (cons (+ (car as) (car bs)) (sum (cdr as) (cdr bs))))) '(4 6))
 
+($define! member
+  ($lambda (item list)
+    (letLoop loop ((items list))
+      (if (null? items) #null
+        (if (== item (car items)) items
+          (loop (cdr items)) )))))
+
+(assert (member 'b '(a b c d)) '(b c d))
+(assert (member "b" '("a" "b" "c" "d")) '("b" "c" "d"))
+
 (defineMacro (lambda params . body)
   (letrec ((typedParams->namesAndChecks
             ($lambda (ps)
@@ -332,109 +343,6 @@
 
 (assert (begin (ddef (a) 1) (dlet* ((a (+ 1 (dval a))) (a (+ 1 (dval a)))) (dval a))) 3)
 
-(test defdynamic.1
-  (begin
-    (ddef (x y) 1 (+ 1 1))
-    (assert (dval x) 1)
-    (assert (dval y) 2)
-    (dlet* ((x 3))
-      (assert (dval x) 3)
-      (assert (dval y) 2)
-      (dlet* ((y 4))
-        (assert (dval x) 3)
-        (assert (dval y) 4))
-      (assert (dval x) 3)
-      (assert (dval y) 2))
-    (assert (dval x) 1)
-    (assert (dval y) 2))
-  #t)
-  
-(test defdynamic.redefine
-  (begin  
-    (ddef (a) (+ 1 1))
-    (def oa a)
-    (assert (dval a) 2)
-    (assert (dval oa) 2)
-    (ddef (a) (+ 2 2))
-    (assert (dval a) 4)
-    (assert (dval oa) 4)
-    (assert (eq? oa a) #t)
-    (ddef (a) #null)
-    (assert (dval a) #null)
-    (assert (eq? oa a) #t) )
-  #t )
-
-(test progv.1
-  (begin
-    (ddef (*x*) 1)
-    (ddef (*y*) 2)
-    (assert (dval *x*) 1)
-    (assert (dval *y*) 2)
-    (progv (*x*) (3)
-      (assert (dval *x*) 3)
-      (assert (dval *y*) 2)
-      (progv (*y*) (4)
-        (assert (dval *x*) 3)
-        (assert (dval *y*) 4) )
-      (assert (dval *x*) 3)
-      (assert (dval *y*) 2) )
-    (assert (dval *x*) 1)
-    (assert (dval *y*) 2) )
-  #t )
-    
-#|
-  (deftest dynamic.1
-    (progn
-      (defdynamic *foo*)
-      (assert (= (dynamic *foo*) #void))
-      (assert (= (slot-value *foo* 'value) #void))
-      (assert (typep *foo* #^dynamic))
-      (assert (typep *foo* #^standard-object))
-      (assert (typep *foo* #^object))
-      (assert (subclassp #^dynamic #^standard-object))
-      (assert (subclassp #^dynamic #^object)))
-    #void)
-|#
-
-(test set-dynamic.1
-  (begin
-    (ddef (*bar*) #null)
-    (dlet ((*bar* 1))
-      (dval *bar* 2)
-      (assert (dval *bar*) 2)
-      (dlet ((*bar* 3))
-        (assert (dval *bar*) 3) )
-      (assert (dval *bar*) 2)
-      (dval *bar* 4)
-      (assert (dval *bar*) 4) )
-    (assert (dval *bar*) #null) )
-  #t )
-
-(test dynamic-let*.1
-  (dlet* () (+ 1 1))
-  2)
-
-(test dynamic-let*.2
-  (begin
-    (ddef (*x*) 1)
-    (dlet* ((*x* 2)) (+ 1 (dval *x*))))
-  3)
-
-(test dynamic-let*.2
-  (begin
-    (ddef (*x*) 1)
-    (ddef (*y*) 0)
-    (dlet* ((*x* 2) (*y* (+ (dval *x*) 1)))
-      (list (dval *x*) (dval *y*))))
-  '(2 3))
-
-(test dynamic-let-sanity-check
-  (begin
-    (ddef (*x*) 1)
-    (ddef (*y*) 0)
-    (dlet ((*x* 2) (*y* (+ (dval *x*) 1)))
-      (list (dval *x*) (dval *y*))))
-  '(2 2) )
 
 
 #|

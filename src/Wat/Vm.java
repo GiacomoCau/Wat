@@ -243,7 +243,7 @@ public class Vm {
 		Cons(Object car, Object cdr) { this.car = car; this.cdr = cdr; }
 		public String toString() { return "(" + toString(this) + ")"; }
 		private String toString(Cons c) {
-			var car = Vm.this.toString(c.car);
+			var car = Vm.this.toString(true, c.car);
 			if (c.cdr == null) return car;
 			if (c.cdr instanceof Cons cdr) return car + " " + toString(cdr);
 			return car + " . " + Vm.this.toString(true, c.cdr);
@@ -1000,14 +1000,19 @@ public class Vm {
 	
 	
 	// Bytecode parser
+	Map<String,Intern> interns = new LinkedHashMap<>();
+	Intern intern(String name) {
+		return interns.computeIfAbsent(name, n-> n.startsWith(":") ? keyword(n) : symbol(n));
+	}
+	
 	Object parseBytecode(Object o) {
-		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore"-> ignore; default-> s.startsWith(":") ? keyword(s) : symbol(s); };
+		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore"-> ignore; default-> intern(s/*.intern()*/ ); };
 		if (o instanceof Object[] a) return parseBytecode(a);
 		return o;
 	}
 	Object parseBytecode(Object ... objs) {
 		if (objs.length == 0) return null;
-		if (objs.length == 2 && objs[0] != null && objs[0].equals("wat-string")) return objs[1];
+		if (objs.length == 2 && objs[0] != null && objs[0].equals("wat-string")) return objs[1]; //((String) objs[1]).intern();
 		int i = objs.length - 1;
 		Object tail = null; 
 		if (i > 1 && objs[i-1] != null && objs[i-1].equals(".")) { tail = parseBytecode(objs[i]); i-=2; }
@@ -1071,6 +1076,7 @@ public class Vm {
 					$("%def", "%string->symbol", wrap(new JFun("%String->symbol", (Function<String, Symbol>) this::symbol))),
 					$("%def", "%symbol?", wrap(new JFun("%Symbol?", (Function<Object, Boolean>) obj-> obj instanceof Symbol))),
 					$("%def", "%keyword?", wrap(new JFun("%Keyword?", (Function<Object, Boolean>) obj-> obj instanceof Symbol))),
+					$("%def", "%intern", wrap(new JFun("%Intern", (Function<String, Intern>) s-> intern(s)))),
 					$("%def", "%internName", wrap(new JFun("%InternName", (Function<Intern, String>) i-> i.name))),
 					// First-order Control
 					$("%def", "%if", new If()),
