@@ -37,7 +37,7 @@
 ($define! cons %cons)
 ($define! cons? %cons?)
 ($define! ddef %dDef)
-($define! dnew %dNew)
+($define! dvar %dVar)
 ($define! dval %dVal)
 ($define! eq? %eq?)
 ($define! error %error)
@@ -80,7 +80,7 @@
       ($vau operands env
         (eval (eval (cons expander operands) (makeEnvironment)) env) ))))
 
-(def evm (dnew #t))
+(def evm (dvar #t))
 
 ($define! makeMacro
   (wrap
@@ -229,7 +229,7 @@
           (loop (cdr items)) )))))
 
 (assert (member 'b '(a b c d)) '(b c d))
-(assert (member "b" '("a" "b" "c" "d")) '("b" "c" "d"))
+;(assert (member "b" '("a" "b" "c" "d")) '("b" "c" "d")) ; solo se String interned!
 
 (defineMacro (lambda params . body)
   (letrec ((typedParams->namesAndChecks
@@ -312,13 +312,14 @@
   (list* (list setter getter) newVal args))
 
 
-;;;; Delimited dynamic binding
+;;;; Dynamic Binding
 
 (defineOperative (progv dyns vals . forms) env
   (eval
     (list* %dLet 
-      (eval (list* list dyns) env)
-      (eval (list* list vals) env)
+      (cons
+        (eval (list* list dyns) env)
+        (eval (list* list vals) env) )
       forms )
     env ))
 
@@ -326,9 +327,10 @@
 
 (defineOperative (dlet bindings . forms) env
   (eval
-    (list* %dLet 
-      (mapList (%lambda ((name #ignore))  (eval name env)) bindings)
-      (mapList (%lambda ((#ignore value)) (eval value env)) bindings)
+    (list* %dLet
+      (cons
+        (mapList (%lambda ((name #ignore))  (eval name env)) bindings)
+        (mapList (%lambda ((#ignore value)) (eval value env)) bindings) )
       forms )
     env ))
 
@@ -342,7 +344,6 @@
       (list* dlet* (cdr bindings) body) )))
 
 (assert (begin (ddef (a) 1) (dlet* ((a (+ 1 (dval a))) (a (+ 1 (dval a)))) (dval a))) 3)
-
 
 
 #|
@@ -497,6 +498,7 @@
 (define (log x . xs)
   (apply @log (list* &console x xs))
   x)
+
 
 ;;;; Cells
 

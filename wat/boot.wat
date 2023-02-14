@@ -11,7 +11,7 @@
 ($define! catch-tag %catch)
 ($define! cons %cons)
 ($define! cons? %cons?)
-($define! dnew %dNew)
+($define! dvar %dVar)
 ($define! dref %dRef)
 ($define! error %error)
 ($define! eval %eval)
@@ -257,7 +257,7 @@
              (list %dLet name value (process-bindings rest-bs)) )))
     env ))
 
-(assert (begin (define a (dnew 1)) (dlet ((a 2)) (assert (dref a) 2)) (dref a)) 1)
+(assert (begin (define a (dvar 1)) (dlet ((a 2)) (assert (dref a) 2)) (dref a)) 1)
 
 |#
 ;;;; Prototypes

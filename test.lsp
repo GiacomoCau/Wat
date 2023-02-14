@@ -18,7 +18,8 @@
 (assert (begin 1) 1)
 (assert (begin 1 2) 2)
 
-;;;; Delimited Dynamic Binding Tests
+
+;;;; Delimited Control Operators Tests
 
 ;; adapted from 
 
@@ -186,6 +187,9 @@
             1)))
      100)
   135)
+
+
+;;;; Dynamic Binding Tests
 
 (test defdynamic.1
   (begin

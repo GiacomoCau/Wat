@@ -678,9 +678,10 @@ public class Vm {
 	}
 	class DLet implements Combinable {
 		public Object combine(Env e, List o) {
-			checkO(this, o, 3, -1); // o = ((var ...) (val ...) x ...)
-			var vars = array(o.car());
-			var vals = array(o.car(1));
+			checkO(this, o, 2, -1); // o = (((var ...) val ...) x ...)
+			List car = o.car();
+			var vars = array(car.car());
+			var vals = array(car.cdr());
 			if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
 			var olds = new Object[vals.length];
 			for (int i=0; i<vars.length; i+=1) {
@@ -689,7 +690,7 @@ public class Vm {
 				dvar.val = vals[i];
 			}
 			try {
-				List x = o.cdr(1); return pipe(dbg(e, this, x), ()-> getTco(begin.combine(e, x)));
+				List x = o.cdr(); return pipe(dbg(e, this, x), ()-> getTco(begin.combine(e, x)));
 			}
 			finally {
 				for (int i=0; i<vars.length; i+=1) ((DVar) vars[i]).val = olds[i];
@@ -784,7 +785,7 @@ public class Vm {
 					case Constructor c-> c.newInstance(args);
 				};
 				return isjFun(v) ? wrap(new JFun(name, v)) : v;
-				*/
+				//*/
 			}
 			catch (Exception exc) {
 				return error("error executing " + executable(name, args) + " of: " + toString(o0) + " with: " + toString(list(args)), exc);
@@ -1090,7 +1091,7 @@ public class Vm {
 					$("%def", "%pushPromptSubcont", wrap(new PushPromptSubcont())),
 					$("%def", "%pushSubcontBarrier", wrap(new JFun("%PushSubcontBarrier", (BiFunction<Object,Env,Object>) (o, e)-> pushSubcontBarrier(null, e, o)))),
 					// Dynamically-scoped Variables
-					$("%def", "%dNew", wrap(new JFun("%DNew", (Function<Object,DVar>) DVar::new))),
+					$("%def", "%dVar", wrap(new JFun("%DVar", (Function<Object,DVar>) DVar::new))),
 					$("%def", "%dVal", wrap(new JFun("%DVal", (ArgsList) o-> { DVar dv = o.car(); return checkO("%DVal", o, 1, 2) == 1 ? dv.val : (dv.val=o.car(1)); }))),
 					$("%def", "%dDef", new DDef()),
 					$("%def", "%dLet", new DLet()),
@@ -1108,13 +1109,13 @@ public class Vm {
 					$("%def", "%class", wrap(new JFun("%Class", (ArgsList) o-> extend(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr()))))),
 					$("%def", "%subClass?", wrap(new JFun("%SubClass", (BiFunction<Class,Class,Boolean>) (cl,sc)-> sc.isAssignableFrom(cl)))),
 					$("%def", "%type?",  wrap(new JFun("%Type", (BiFunction<Object,Class,Boolean>) (o,c)-> o == null ? c == null : c.isAssignableFrom(o.getClass())))),
-					$("%def", "%classOf", wrap(new JFun("%ClassOf", (Function<Object,Object>) Object::getClass))),
+					$("%def", "%classOf", wrap(new JFun("%ClassOf", (Function<Object,Class>) Object::getClass))),
 					// Utilities
 					$("%def", "%list", wrap(new JFun("%List", (ArgsList) o-> o))),
-					$("%def", "%list*", wrap(new JFun("%List*", (ArgsList) o-> listStar(o)))),
+					$("%def", "%list*", wrap(new JFun("%List*", (ArgsList) this::listStar))),
 					$("%def", "%len", wrap(new JFun("%Len", (Function<List,Integer>) this::len))),
 					$("%def", "%list->array", wrap(new JFun("%List->array", (Function<List,Object[]>) this::array))),
-					$("%def", "%array->list", wrap(new JFun("%Array->list", (BiFunction<Boolean,Object[],Object>) this::list))),
+					$("%def", "%array->list", wrap(new JFun("%Array->list", (BiFunction<Boolean,Object[],List>) this::list))),
 					$("%def", "%reverse", wrap(new JFun("%Reverse", (Function<List,List>) this::reverse))),
 					$("%def", "%append", wrap(new JFun("%Append", (BiFunction<List,Object,Object>) this::append))),
 					// 
@@ -1200,13 +1201,13 @@ public class Vm {
 	public Object loadText(String fileName) throws Exception {
 		if (prtrc >= 1) print("\n--------: " + fileName);
 		var v = eval(readText(fileName));
-		if (prtrc > 1) print("--------: " + fileName + " end\n");
+		if (prtrc > 1) print("--------: " + fileName + " end");
 		return v;
 	}
 	public Object loadBytecode(String fileName) throws Exception {
 		if (prtrc >= 1) print("\n--------: " + fileName);
 		var v = exec(readBytecode(fileName));
-		if (prtrc > 1) print("--------:  "  + fileName + " end\n");
+		if (prtrc > 1) print("--------: "  + fileName + " end");
 		return v;
 	}
 	@SuppressWarnings("preview")
