@@ -244,7 +244,7 @@
 (define-macro (set (getter . args) new-val)
   (list* (list setter getter) new-val args))
 
-;;;; Delimited dynamic binding
+;;;; Dynamic Binding
 
 ;; Evaluate right hand sides before binding all dynamic variables at once.
 (define-operative (dlet bindings . body) env
@@ -356,7 +356,7 @@
 (define - (negative-op - 0))
 (define / (negative-op / 1))
 
-|#
+#|
 (define % (%js-binop "%"))
 (define not (%js-unop "!"))
 (define typeof (%js-unop "typeof"))
@@ -436,11 +436,9 @@
 (define-operative (time expr) env
   (let ((n (@getTime (new Date)))
         (result (eval expr env)))
-    (log (+ "time " expr ": " (- (@getTime (new Date)) n) "ms"))
+    (log ($ "time " expr ": " (- (@getTime (new Date)) n) "ms"))
     result ))
-#|
 
-|#
 ;;;; Options
 
 (define-prototype Option Object ())
@@ -453,7 +451,7 @@
     (if (type? option Some)
         (eval (list (list lambda (list option-name) then) (.value option)) env)
         (eval else env) )))
-#|
+|#
 
 ;;;; Error break routine, called by VM to print stacktrace and throw
 

@@ -55,7 +55,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
-import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -211,9 +210,10 @@ public class Vm {
 				switch (o) {
 					case null, default-> o;
 					case Symbol s-> pipe(dbg(e, o), ()-> e.lookup(s));
-					case List c-> {
-						var ee=e; yield pipe(dbg(ee, o), ()-> evaluate(ee, c.car), op-> combine(ee, op, c.cdr()));
+					case List l-> {
+						var ee=e; yield pipe(dbg(ee, o), ()-> evaluate(ee, l.car), op-> combine(ee, op, l.cdr()));
 					}
+					case Cons c-> error("not a proper list: " + c);
 				}
 			);
 		}
@@ -472,14 +472,26 @@ public class Vm {
 			checkO(this, o, 2); // o = (pt arg)
 			var pt = o.car();
 			if (!(pt instanceof Symbol)) {
-				if (!(pt instanceof Cons)) return error("not a symbol: " + pt + " in: " + cons(this, o));
+				if (!(pt instanceof Cons)) return error("not a symbol or parameter tree: " + pt + " in: " + cons(this, o));
 				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
 			}
-			var arg = o.car(1);
 			var dbg = dbg(e, this, o);
-			return pipe(dbg, ()-> evaluate(e, arg), res-> bind(e, dbg, pt, res));
+			return pipe(dbg, ()-> evaluate(e, o.car(1)), res-> bind(e, dbg, pt, res));
 		}
 		public String toString() { return "%Def"; }
+	};
+	class DefStar implements Combinable  {
+		public Object combine(Env e, List o) {
+			checkO(this, o, 1, -1); // o = (pt arg ...)
+			var pt = o.car();
+			if (!(pt instanceof Symbol)) {
+				if (!(pt instanceof Cons)) return error("not a symbol or parameter tree: " + pt + " in: " + cons(this, o));
+				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
+			}
+			var dbg = dbg(e, this, o);
+			return pipe(dbg, ()-> mapCar(car-> evaluate(e, car), o.cdr()), res-> bind(e, dbg, pt, res));
+		}
+		public String toString() { return "%Def*"; }
 	};
 	class Eval implements Combinable  {
 		public Object combine(Env e, List o) {
@@ -1003,7 +1015,7 @@ public class Vm {
 	// Bytecode parser
 	Map<String,Intern> interns = new LinkedHashMap<>();
 	Intern intern(String name) {
-		return interns.computeIfAbsent(name, n-> n.startsWith(":") ? keyword(n) : symbol(n));
+		return interns.computeIfAbsent(name, n-> n.startsWith(":") && n.length() > 1 ? keyword(n) : symbol(n));
 	}
 	
 	Object parseBytecode(Object o) {
@@ -1060,6 +1072,7 @@ public class Vm {
 				$("%begin",
 					// Basics
 					$("%def", "%vau", new Vau()),
+					$("%def", "%def*", new DefStar()),
 					$("%def", "%eval", wrap(new Eval())),
 					$("%def", "%makeEnv", wrap(new JFun("%MakeEnv", (ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car())))),
 					$("%def", "%wrap", wrap(new JFun("%Wrap", (Function<Object, Object>) t-> wrap(t)))),
@@ -1076,7 +1089,7 @@ public class Vm {
 					$("%def", "%null?", wrap(new JFun("%Null?", (Function<Object, Boolean>) obj-> obj == null))),
 					$("%def", "%string->symbol", wrap(new JFun("%String->symbol", (Function<String, Symbol>) this::symbol))),
 					$("%def", "%symbol?", wrap(new JFun("%Symbol?", (Function<Object, Boolean>) obj-> obj instanceof Symbol))),
-					$("%def", "%keyword?", wrap(new JFun("%Keyword?", (Function<Object, Boolean>) obj-> obj instanceof Symbol))),
+					$("%def", "%keyword?", wrap(new JFun("%Keyword?", (Function<Object, Boolean>) obj-> obj instanceof Keyword))),
 					$("%def", "%intern", wrap(new JFun("%Intern", (Function<String, Intern>) s-> intern(s)))),
 					$("%def", "%internName", wrap(new JFun("%InternName", (Function<Intern, String>) i-> i.name))),
 					// First-order Control
@@ -1119,8 +1132,8 @@ public class Vm {
 					$("%def", "%reverse", wrap(new JFun("%Reverse", (Function<List,List>) this::reverse))),
 					$("%def", "%append", wrap(new JFun("%Append", (BiFunction<List,Object,Object>) this::append))),
 					// 
-					//$("%def", "%+", (BinaryOperator) (a,b)-> a instanceof Number n1 && b instanceof Number n2 ? binOp(Pls, n1, n2) : toString(a) + toString(b)),
-					$("%def", "%+", wrap(new JFun("%+", (BinaryOperator) (a,b)-> a instanceof Number n1 && b instanceof Number n2 ? binOp(Pls, n1, n2) : Vm.this.toString(a) + Vm.this.toString(b)))),
+					$("%def", "%$", wrap(new JFun("%$", (BiFunction<Object,Object,String>) (a,b)-> Vm.this.toString(a) + Vm.this.toString(b)))),
+					$("%def", "%+", wrap(new JFun("%+", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Pls, a, b)))),
 					$("%def", "%*", wrap(new JFun("%*", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Pwr, a, b)))),
 					$("%def", "%-", wrap(new JFun("%-", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Mns, a, b)))),
 					$("%def", "%/", wrap(new JFun("%/", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Dvd, a, b)))),
@@ -1150,9 +1163,9 @@ public class Vm {
 						$("%wrap", $("%eval", $("%list*", "%vau", "formals", ignore, "body"), "env")))),
 					//$("%def", "%jambda", jFun((ArgsList) o-> lambda(o.car(), o.car(1), o.cdr(1)))),
 					//
-					$("%def", "assert", vmAssert),
-					$("%def", "test", test),
 					$("%def", "vm", this),
+					$("%def", "test", test),
+					$("%def", "assert", vmAssert),
 					$("%def", "toString", wrap(new JFun("ToString", (Function<Object,String>) obj-> toString(obj)))),
 					$("%def", "log", wrap(new JFun("Log", (ArgsList) o-> log(array(o))))),
 					$("%def", "print", wrap(new JFun("Print", (ArgsList) o-> print(array(o))))),

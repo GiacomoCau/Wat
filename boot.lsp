@@ -11,6 +11,7 @@
 ($define! == %==)
 ($define! != %!=)
 
+($define! $ %$)
 ($define! + %+)
 ($define! * %*)
 ($define! - %-)
@@ -31,14 +32,15 @@
 ($define! >> %>>)
 ($define! >>> %>>>)
 
+($define! \ %lambda)
 ($define! array->list %array->list)
 ($define! begin %begin)
 ($define! catchTag %catch)
 ($define! cons %cons)
 ($define! cons? %cons?)
 ($define! ddef %dDef)
-($define! dvar %dVar)
 ($define! dval %dVal)
+($define! dvar %dVar)
 ($define! eq? %eq?)
 ($define! error %error)
 ($define! eval %eval)
@@ -67,7 +69,6 @@
 ($define! list %list)
 ($define! $lambda ($vau (formals . body) env (wrap (eval (list* $vau formals #ignore body) env))))
 ($define! $lambda %lambda)
-($define! \ %lambda)
 ($define! theEnvironment ($vau () e e))
 ($define! theEnvironment %theEnvironment)
 
@@ -106,6 +107,8 @@
 (dlet ((evm #f)) (let2 ((a 1) (b 2)) (+ a b)))
 (expand (let2 ((a 1) (b 2)) (+ a b)))
 |#
+
+(defineMacro (def* pt . args) (list 'def pt (list* 'list args)) )
 
 (defineMacro (defineOperative (name . params) envparam . body)
   (list $define! name (list* $vau params envparam body)) )
@@ -179,6 +182,12 @@
   ($lambda (f init lst)
     (if (nil? lst) init
         (foldList f (f init (car lst)) (cdr lst)) )))
+
+($define! splitList
+  ($lambda (n lst)
+    (letLoop loop ((n n) (h ()) (t lst))
+      (if (or (null? t)(<= n 0)) (cons (reverseList h) t)
+        (loop (- n 1) (cons (car t) h) (cdr t))))))
 
 (defineMacro (let bindings . body)
   (if (symbol? bindings)
@@ -428,11 +437,19 @@
 
 (assert (* 1 2 3) 6)
 
+(define $
+  (let ((vm$ $))
+    (lambda args
+      (foldList vm$ "" args) )))
+
+(assert ($ 1 2 3) "123")
+
 (define +
-  (let ((vm+ +))
-	(lambda args
-	  (if (nil? args) 0 ;; Can't simply use 0 as unit or it won't work with strings
-	      (foldList vm+ (car args) (cdr args)) ))))
+  (let ((vm+ %+))
+    (lambda args
+      (foldList vm+ 0 args) )))
+
+(assert (+ 1 2 3) 6)
 
 (define (negativeOp binop unit)
   (lambda (arg1 . rest)
@@ -525,7 +542,7 @@
 (defineOperative (time expr) env
   (let ((n (@getTime (new Date)))
         (result (eval expr env)))
-    (log (+ "time " expr ": " (- (@getTime (new Date)) n) "ms"))
+    (log ($ "time " expr ": " (- (@getTime (new Date)) n) "ms"))
     result ))
 
 
