@@ -193,7 +193,7 @@
 
 (test defdynamic.1
   (begin
-    (ddef (x y) 1 (+ 1 1))
+    (ddef* (x y) 1 (+ 1 1))
     (assert (dval x) 1)
     (assert (dval y) 2)
     (dlet* ((x 3))
@@ -210,23 +210,22 @@
   
 (test defdynamic.redefine
   (begin  
-    (ddef (a) (+ 1 1))
+    (ddef a (+ 1 1))
     (def oa a)
     (assert (dval a) 2)
     (assert (dval oa) 2)
-    (ddef (a) (+ 2 2))
+    (ddef a (+ 2 2))
     (assert (dval a) 4)
     (assert (dval oa) 4)
     (assert (eq? oa a) #t)
-    (ddef (a) #null)
+    (ddef a #null)
     (assert (dval a) #null)
     (assert (eq? oa a) #t) )
   #t )
 
 (test progv.1
   (begin
-    (ddef (*x*) 1)
-    (ddef (*y*) 2)
+    (ddef* (*x* *y*) 1 2)
     (assert (dval *x*) 1)
     (assert (dval *y*) 2)
     (progv (*x*) (3)
@@ -257,7 +256,7 @@
 
 (test set-dynamic.1
   (begin
-    (ddef (*bar*) #null)
+    (ddef *bar* #null)
     (dlet ((*bar* 1))
       (dval *bar* 2)
       (assert (dval *bar*) 2)
@@ -275,22 +274,20 @@
 
 (test dynamic-let*.2
   (begin
-    (ddef (*x*) 1)
+    (ddef *x* 1)
     (dlet* ((*x* 2)) (+ 1 (dval *x*))))
   3)
 
 (test dynamic-let*.2
   (begin
-    (ddef (*x*) 1)
-    (ddef (*y*) 0)
+    (ddef* (*x* *y*) 1 0)
     (dlet* ((*x* 2) (*y* (+ (dval *x*) 1)))
       (list (dval *x*) (dval *y*))))
   '(2 3))
 
 (test dynamic-let-sanity-check
   (begin
-    (ddef (*x*) 1)
-    (ddef (*y*) 0)
+    (ddef* (*x* *y*) 1 0)
     (dlet ((*x* 2) (*y* (+ (dval *x*) 1)))
       (list (dval *x*) (dval *y*))))
   '(2 2) )

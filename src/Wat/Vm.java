@@ -183,7 +183,7 @@ public class Vm {
 	// Basic Forms
 	class Inert { public String toString() { return "#inert"; }};
 	public Inert inert = new Inert();
-	//Inert inert(Object value) { return inert; }
+	Inert inert(Object value) { return inert; }
 	
 	class Ignore { public String toString() { return "#ignore"; }};
 	public Ignore ignore = new Ignore();
@@ -534,6 +534,7 @@ public class Vm {
 			return pipe(dbg(e, this, o), ()-> evaluate(e, test), res-> istrue(res)
 				? tco(()-> evaluate(e, o.car(1)))
 				: o.cdr(1) == null ? inert : tco(()-> evaluate(e, o.car(2)))
+				//: o.cdr(1) == null ? inert : tco(()-> begin.combine(e, o.cdr(1)))
 			);
 		}
 		private boolean istrue(Object res) {
@@ -658,12 +659,29 @@ public class Vm {
 	
 	
 	// Dynamic Variables
-	/*public*/ class DVar {
-		Object val;
-		/*public*/ DVar(Object val) { this.val = val; }
-		public String toString() { return "{DVar " + val + "}"; }
+	class Box implements ArgsList {
+		Object value;
+		Box (Object val) { this.value = val; }
+		public Object apply(List o) { return checkO(this, o, 0, 1) == 0 ? value : inert(value = o.car()); }
+		public String toString() { return "{" + getClass().getSimpleName() + " " + value + "}"; }
 	}
+	class DVar extends Box { DVar(Object val) { super(val); }}
 	class DDef implements Combinable {
+		public Object combine(Env e, List o) {
+			checkO(this, o, 2, Symbol.class, null); // o = (var val)
+			var var = o.car();
+			var lookup = e.get(var);
+			if (lookup.isBound && !(lookup.value instanceof DVar)) return error("not a dinamic variable: " + var);
+			DVar dVar = (DVar) lookup.value;
+			return pipe(dbg(e, this, o), ()-> evaluate(e, o.car(1)), val-> {
+					if (dVar != null) dVar.value = val; else bind(e, null, var, new DVar(val));
+					return inert;
+				}
+			);
+		}
+		public String toString() { return "%DDef"; }
+	}
+	class DDefStar implements Combinable {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 2, -1); // o = ((var ...) vals ...)
 			var vars = array(o.car(), Symbol.class);
@@ -684,9 +702,9 @@ public class Vm {
 			);
 		}
 		private void dSet(Dbg dbg, DVar dvar, Symbol var, Object val) {
-			if (dvar != null) dvar.val = val; else bind(dbg.e, dbg, var, new DVar(val));
+			if (dvar != null) dvar.value = val; else bind(dbg.e, dbg, var, new DVar(val));
 		}
-		public String toString() { return "%DDef"; }
+		public String toString() { return "%DDef*"; }
 	}
 	class DLet implements Combinable {
 		public Object combine(Env e, List o) {
@@ -698,14 +716,14 @@ public class Vm {
 			var olds = new Object[vals.length];
 			for (int i=0; i<vars.length; i+=1) {
 				if (!(vars[i] instanceof DVar dvar)) return error("not a dinamic variable: " + vars[i]);
-				olds[i] = dvar.val;
-				dvar.val = vals[i];
+				olds[i] = dvar.value;
+				dvar.value = vals[i];
 			}
 			try {
 				List x = o.cdr(); return pipe(dbg(e, this, x), ()-> getTco(begin.combine(e, x)));
 			}
 			finally {
-				for (int i=0; i<vars.length; i+=1) ((DVar) vars[i]).val = olds[i];
+				for (int i=0; i<vars.length; i+=1) ((DVar) vars[i]).value = olds[i];
 			}
 		}
 		public String toString() { return "%DLet"; }
@@ -780,8 +798,8 @@ public class Vm {
 				//executable.setAccessible(true);
 				args = reorg(executable, args);
 				return switch (executable) { 
-						case Method m-> m.invoke(o0, args);
-						case Constructor c-> c.newInstance(args);
+					case Method m-> m.invoke(o0, args);
+					case Constructor c-> c.newInstance(args);
 				};
 				/* TODO in alternativa al precedente da verificare
 				return apply(v-> isjFun(v) ? wrap(new JFun(name, v)) : v,
@@ -1104,9 +1122,11 @@ public class Vm {
 					$("%def", "%pushPromptSubcont", wrap(new PushPromptSubcont())),
 					$("%def", "%pushSubcontBarrier", wrap(new JFun("%PushSubcontBarrier", (BiFunction<Object,Env,Object>) (o, e)-> pushSubcontBarrier(null, e, o)))),
 					// Dynamically-scoped Variables
+					$("%def", "%box", wrap(new JFun("%Box", (Function<Object,Box>) Box::new))),
 					$("%def", "%dVar", wrap(new JFun("%DVar", (Function<Object,DVar>) DVar::new))),
-					$("%def", "%dVal", wrap(new JFun("%DVal", (ArgsList) o-> { DVar dv = o.car(); return checkO("%DVal", o, 1, 2) == 1 ? dv.val : (dv.val=o.car(1)); }))),
+					$("%def", "%dVal", wrap(new JFun("%DVal", (ArgsList) o-> { DVar dv = o.car(); return checkO("%DVal", o, 1, 2) == 1 ? dv.value : (dv.value=o.car(1)); }))),
 					$("%def", "%dDef", new DDef()),
+					$("%def", "%dDef*", new DDefStar()),
 					$("%def", "%dLet", new DLet()),
 					// Errors
 					$("%def", "%rootPrompt", rootPrompt),
@@ -1233,7 +1253,7 @@ public class Vm {
 				}
 				catch (Throwable t) {
 					if (prstk) t.printStackTrace(out);
-					else out.println("{" + t.getClass().getSimpleName() + ": " + t.getMessage() + "}");
+					else out.println("{" + t.getClass().getSimpleName() + " " + t.getMessage() + "}");
 				}
 			}
 		}

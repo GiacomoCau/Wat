@@ -39,12 +39,14 @@
 ($define! cons %cons)
 ($define! cons? %cons?)
 ($define! ddef %dDef)
+($define! ddef* %dDef*)
 ($define! dval %dVal)
 ($define! dvar %dVar)
 ($define! eq? %eq?)
 ($define! error %error)
 ($define! eval %eval)
 ($define! if %if)
+($define! instanceof? %instanceof?)
 ($define! list* %list*)
 ($define! list->array %list->array)
 ($define! loop %loop)
@@ -72,6 +74,8 @@
 ($define! theEnvironment ($vau () e e))
 ($define! theEnvironment %theEnvironment)
 
+($define! DVar &Wat.Vm$DVar)
+($define! Symbol &Wat.Vm$Symbol)
 
 ;;;; Macro
 
@@ -102,10 +106,69 @@
 (defineMacro (expand macro) (list 'dlet '((evm #f)) macro))
 
 #|
-(defineMacro (let2 bindings . body) (list* (list* '\ (mapList car bindings) body) (mapList cadr bindings) ))
+(defineMacro (let2 bindings . body) (list* (list* '\ (map car bindings) body) (map cadr bindings) ))
+(defineMacro* let2 (bindings . body) (list* (list* '\ (map car bindings) body) (map cadr bindings) ))
 (let2 ((a 1) (b 2)) (+ a b))
 (dlet ((evm #f)) (let2 ((a 1) (b 2)) (+ a b)))
 (expand (let2 ((a 1) (b 2)) (+ a b)))
+(defineMacro (->* m n) (list 'defineMacro (list (string->symbol ($ m *)) . ) (splitList
+
+(defineOperative (ddef var val) env
+  (if (! (instanceof? var Symbol)) (error ($ "not a symbol: " var)))
+  (let ((val (eval val env)) (dv (.value (@get env var))))
+    (cond
+      ((null? dv) (@put env var (dvar val)))
+      ((instanceof? dv DVar) (dv val))
+      (else (error ($ "not null or dynamic value: " var))) )
+    #inert ))
+
+(defineOperative (ddef* var* . val*) env
+  (forEach (\ (var) (unless (instanceof? var Symbol) (error ($ "not a symbol: " var)))) var*)
+  (let loop 
+    ((var* var*) (val* (map (\ (val) (eval val env)) val*)) (lkp* (map (\ (var) (.value (@get env var))) var*)) )
+    (unless (null? var*)
+      (let1 (dv (car lkp*))
+        (cond
+          ((null? dv) (@put env (car var*) (dvar (car val*))))
+          ((instanceof? dv DVar) (dv (car val*)))
+          (else (error ($ "not null or a dynamic value: " (car var*)))) )
+        (loop (cdr var*) (cdr val*) (cdr lkp*)) ))))
+      
+(defineOperative (%dlet (var* . val*) . body) env
+  (def val* (map (\ (val) (eval val env)) val*))
+  (def var* (map (\ (var) (.value (@get env var))) var*))
+  (def old* (map (\ (var) (var)) var*))
+  (let loop ((var* var*) (val* val*))
+    (unless (null? var*)
+      ((car var*) (car val*))
+      (loop (cdr var*) (cdr val*))))
+  (finally
+    (eval (list* 'begin body) env)
+    (let loop ((var* var*) (old* old*))
+      (unless (null? var*)
+        ((car var*) (car old*))
+        (loop (cdr var*) (cdr old*)) ))))
+
+(defineMacro (progv dyns vals . forms)
+  (list* '%dlet (cons dyns vals) forms) )
+
+(defineMacro (dlet bindings . forms)
+  (list* '%dlet
+    (cons
+      (map (\ ((name #ignore))  name) bindings)
+      (map (\ ((#ignore value)) value) bindings) )
+    forms ))
+
+(ddef d 1)
+d
+(d)
+(dval d)
+(.value d)
+(ddef* (d e) 2 3) e
+(dlet! ((d e) 4 5) (print (+ (d) (e)))) e
+(progv (d) (3) (print d))
+(dlet ((d 3)) (print d))
+      
 |#
 
 (defineMacro (def* pt . args) (list 'def pt (list* 'list args)) )
@@ -113,6 +176,12 @@
 (defineMacro (defineOperative (name . params) envparam . body)
   (list $define! name (list* $vau params envparam body)) )
 
+($define! defineMacro*
+  (macro (name params . body)
+    (list $define! name (list* macro params body)) ))
+
+(defineMacro* defineOperative* (name params envparam . body)
+  (list $define! name (list* $vau params envparam body)) )
 
 ;;;; Wrap incomplete VM forms
 
@@ -124,7 +193,7 @@
 
 (assert (catch (throw)) #inert)
 (assert (catch (throw 1)) 1)
-(assert (catch (throw 1) (%lambda (x) 2)) 2)
+(assert (catch (throw 1) (\ (x) (+ x 1))) 2)
 
 (defineOperative (finally protected . cleanup) env
   (eval (list %finally protected (list* begin cleanup)) env) )
@@ -156,20 +225,20 @@
 
 ;;;; Important macros and functions
 
-($define! mapList
+($define! map
   ($lambda (f lst)
     (if (nil? lst) ()
-        (cons (f (car lst)) (mapList f (cdr lst))) )))
+        (cons (f (car lst)) (map f (cdr lst))) )))
 
-(assert (mapList car  '((a 1)(b 2))) '(a b))
-(assert (mapList cdr  '((a 1)(b 2))) '((1) (2)))
-(assert (mapList cadr '((a 1)(b 2))) '(1 2))
-(assert (($vau l e (list* '$define! (mapList car l) (list (list 'quote (mapList cadr l))))) (a 1)(b 2)) '($define! (a b) (quote (1 2))))
+(assert (map car  '((a 1)(b 2))) '(a b))
+(assert (map cdr  '((a 1)(b 2))) '((1) (2)))
+(assert (map cadr '((a 1)(b 2))) '(1 2))
+(assert (($vau l e (list* '$define! (map car l) (list (list 'quote (map cadr l))))) (a 1)(b 2)) '($define! (a b) (quote (1 2))))
 
-($define! listForEach
+($define! forEach
   ($lambda (f lst)
     (if (nil? lst) ()
-        (begin (f (car lst)) (listForEach f (cdr lst))) )))
+        (begin (f (car lst)) (forEach f (cdr lst))) )))
 
 ($define! listKeep
   ($lambda (p lst)
@@ -185,20 +254,27 @@
 
 ($define! splitList
   ($lambda (n lst)
-    (letLoop loop ((n n) (h ()) (t lst))
-      (if (or (null? t)(<= n 0)) (cons (reverseList h) t)
+    (let loop ((n n) (h ()) (t lst))
+      (if (or (null? t) (<= n 0)) (cons (reverseList h) (list t))
         (loop (- n 1) (cons (car t) h) (cdr t))))))
+
+($define! resizeList
+  ($lambda (n lst)
+    (let loop ((n n) (h ()) (t lst))
+      (if (or (null?) (<= n 1)) (reverseList (cons t h))
+        (loop (- n 1) (cons (car t) h) (cdr t))))))
+
 
 (defineMacro (let bindings . body)
   (if (symbol? bindings)
       (list* letLoop bindings body)
-      (list* (list* $lambda (mapList car bindings) body)
-             (mapList cadr bindings) )))
+      (list* (list* $lambda (map car bindings) body)
+             (map cadr bindings) )))
 
-(defineMacro (let bindings . body)
-  (list*
-    (list* $lambda (mapList car bindings) body)
-    (mapList cadr bindings) ))
+(defineMacro (let1 binding . body)
+  (list
+    (list* '$lambda (list (car binding)) body)
+    (cadr binding) ))
     
 (assert (let ((a 1)) a) 1)
 
@@ -215,8 +291,8 @@
 (defineMacro (letrec bindings . body)
   (list* let ()
          (list $define!
-               (mapList car bindings)
-               (list* list (mapList cadr bindings)))
+               (map car bindings)
+               (list* list (map cadr bindings)))
          body))
 
 (assert (letrec ( (a 1)) a) 1)
@@ -224,8 +300,8 @@
 
 (defineMacro (letLoop name bindings . body)
   (list letrec
-    (list (list name (list* $lambda (mapList car bindings) body)))
-    (list* name (mapList cadr bindings) )))
+    (list (list name (list* $lambda (map car bindings) body)))
+    (list* name (map cadr bindings) )))
 
 (assert (letLoop l ((a 1)) a) 1)
 (assert (letLoop sum ((as (list 1 2)) (bs (list 3 4))) (if (nil? as) () (cons (+ (car as) (car bs)) (sum (cdr as) (cdr bs))))) '(4 6))
@@ -270,8 +346,7 @@
 ;;;; Simple control
 
 (defineOperative (cond . clauses) env
-  (if (nil? clauses)
-      #inert
+  (if (nil? clauses) #inert
       (let ((((test . body) . clauses) clauses))
         (if (eval test env)
             (apply (wrap begin) body env)
@@ -312,7 +387,7 @@
           (return))))))
 
 (defineMacro (when test . body)
-  (list if test (list* begin body) #null))
+  (list if test (list* begin body)))
 
 (defineMacro (unless test . body)
   (list* when (list not test) body))
@@ -332,18 +407,18 @@
       forms )
     env ))
 
-(assert (begin (ddef (a) 1) (progv (a) (2) (assert (dval a) 2)) (assert (dval a) 1)) #t)
+(assert (begin (ddef a 1) (progv (a) (2) (assert (dval a) 2)) (assert (dval a) 1)) #t)
 
 (defineOperative (dlet bindings . forms) env
   (eval
     (list* %dLet
       (cons
-        (mapList (%lambda ((name #ignore))  (eval name env)) bindings)
-        (mapList (%lambda ((#ignore value)) (eval value env)) bindings) )
+        (map (%lambda ((name #ignore))  (eval name env)) bindings)
+        (map (%lambda ((#ignore value)) (eval value env)) bindings) )
       forms )
     env ))
 
-(assert (begin (ddef (a b) 1 2) (dlet ((a 2)) (assert (dval a) 2)) (dval b)) 2)
+(assert (begin (ddef* (a b) 1 2) (dlet ((a 2)) (assert (dval a) 2)) (dval b)) 2)
 
 (defineMacro (dlet* bindings . body)
   (if (nil? bindings)
@@ -352,7 +427,7 @@
 	  (list (car bindings))
       (list* dlet* (cdr bindings) body) )))
 
-(assert (begin (ddef (a) 1) (dlet* ((a (+ 1 (dval a))) (a (+ 1 (dval a)))) (dval a))) 3)
+(assert (begin (ddef* (a) 1) (dlet* ((a (+ 1 (dval a))) (a (+ 1 (dval a)))) (dval a))) 3)
 
 
 #|
@@ -362,7 +437,7 @@
   (eval (list $define! name (makePrototype name superName propNames env)) env))
 
 (define (makePrototype name superName propNames env)
-  (let ((p (apply %jsMakePrototype (list* (symbolName name) (mapList symbolName propNames))))
+  (let ((p (apply %jsMakePrototype (list* (symbolName name) (map symbolName propNames))))
         (super (eval superName env)))
     (set (.prototype p) (@create &Object (.prototype super)))
     (set (.constructor (.prototype p)) super)
@@ -405,7 +480,7 @@
 
 (defineOperative (import module imports) env
   (let* ((m (eval module env))
-         (values (mapList ($lambda (import) (eval import m)) imports)))
+         (values (map ($lambda (import) (eval import m)) imports)))
     (eval (list $define! imports (list* list values)) env) ))
 
 (assert (begin (defineModule m (x) (define x 10)) (import m (x)) x) 10)
@@ -477,7 +552,7 @@
 
 (defineOperative (object . pairs) env
   (let ((obj (%jsMakeObject)))
-    (mapList ($lambda ((name value))
+    (map ($lambda ((name value))
                 (set ((jsGetter (eval name env)) obj) (eval value env)))
               pairs)
     obj))
@@ -534,7 +609,7 @@
 
 ;; ugh
 (define (mapArray fun (arr Array))
-  (list->array (mapList fun (array->list arr))) )
+  (list->array (map fun (array->list arr))) )
 
 (define (arrayKeep pred (arr Array))
   (list->array (listKeep pred (array->list arr))) )
