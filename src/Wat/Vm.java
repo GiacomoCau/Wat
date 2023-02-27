@@ -310,7 +310,6 @@ public class Vm {
 			var lookup = get(name); if (!lookup.isBound) return error("unbound: " + name);
 			if (prtrc >= 6) print("  lookup: ", lookup.value); return lookup.value;
 		}
-		boolean isBound(K name) { return get(name).isBound; }
 		boolean isParent(Env other) {
 			/* TODO sostituito dal seguente
 			Env env = this; do if (env == other) return true; while ((env = env.parent) != null);
@@ -387,7 +386,7 @@ public class Vm {
 	// Bind
 	Object bind(Env e, Dbg dbg, Object lhs, Object rhs) {
 		var msg = bind(e, lhs, rhs); if (msg == null) return inert;
-		return error(msg + " for bind: " + toString(lhs) + eIfnull(dbg,()-> " of: " + cons(dbg.op, dbg.os)) + " with: " + rhs);
+		return error(msg + " for bind: " + toString(lhs) + eIfnull(dbg,()-> " of: " + cons(dbg.op, list(dbg.os))) + " with: " + rhs);
 	}
 	@SuppressWarnings("preview")
 	Object bind(Env e, Object lhs, Object rhs) {
@@ -537,10 +536,12 @@ public class Vm {
 				//: o.cdr(1) == null ? inert : tco(()-> begin.combine(e, o.cdr(1)))
 			);
 		}
-		private boolean istrue(Object res) {
-			return res == null ? false : res instanceof Boolean b ? b : error("not a boolean.");
-		}
 		public String toString() { return "%If"; }
+	}
+	boolean istrue(Object res) {
+		return res instanceof Boolean b ? b : error("not a boolean.");
+		//return res instanceof Boolean b ? b : res != null; // or #inert or 0 or ""  or [] or ... !?
+		// ((rec (for . l) (when l (print (car l)) (apply for (cdr l)))) 1 2 3 4)
 	}
 	class Loop implements Combinable  {
 		public Object combine(Env e, List o) {
@@ -1095,7 +1096,7 @@ public class Vm {
 					$("%def", "%makeEnv", wrap(new JFun("%MakeEnv", (ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car())))),
 					$("%def", "%wrap", wrap(new JFun("%Wrap", (Function<Object, Object>) t-> wrap(t)))),
 					$("%def", "%unwrap", wrap(new JFun("%Unwrap", (Function<Object, Object>) t-> unwrap(t)))),
-					$("%def", "%bound?", wrap(new JFun("%Bound?", (BiFunction<Symbol,Env,Boolean>) (s, e)-> e.isBound(s)))),
+					$("%def", "%bound?", wrap(new JFun("%Bound?", (BiFunction<Symbol,Env,Boolean>) (s, e)-> e.get(s).isBound))),
 					$("%def", "%apply", wrap(new JFun("%Apply", (ArgsList) o-> combine(o.cdr(1) != null ? o.car(2) : env(null), unwrap(o.car()), o.car(1))))),
 					$("%def", "%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(null), unwrap(o.car()), o.cdr())))),
 					$("%def", "%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnvironment.map.clear(); return theEnvironment; }))),
@@ -1160,6 +1161,7 @@ public class Vm {
 					$("%def", "%%", wrap(new JFun("%%", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Rst, a, b)))),
 					//
 					$("%def", "%!", wrap(new JFun("%!", (Function<Boolean,Boolean>) a-> !a))),
+					//$("%def", "%!", wrap(new JFun("%!", (Function<Object,Boolean>) a-> !istrue(a)))),
 					$("%def", "%<", wrap(new JFun("%<", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Ls, a, b)))),
 					$("%def", "%>", wrap(new JFun("%>", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Gt, a, b)))),
 					$("%def", "%<=", wrap(new JFun("%<=", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Le, a, b)))),
