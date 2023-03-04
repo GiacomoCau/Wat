@@ -3,88 +3,105 @@
 ;; ``72. An adequate bootstrap is a contradiction in terms.''
 
 ;; Rename %def
+
 (%def def %def)
 (%def $define! %def)
 
+
 ;; Rename bindings that will be used as provided by VM
 
-($define! == %==)
-($define! != %!=)
+(def == %==)
+(def != %!=)
 
-($define! $ %$)
-($define! + %+)
-($define! * %*)
-($define! - %-)
-($define! / %/)
-($define! % %%)
+(def $ %$)
+(def + %+)
+(def * %*)
+(def - %-)
+(def / %/)
+(def % %%)
   
-($define! ! %!)
-($define! < %<)
-($define! > %>)
-($define! <= %<=)
-($define! >= %>=)
+(def ! %!)
+(def < %<)
+(def > %>)
+(def <= %<=)
+(def >= %>=)
   
-($define! ~ %~)
-($define! & %&)
-;($define! | %|) ;; TODO lo vedrebbe come unescaped symbol!
-($define! ^ %^)
-($define! << %<<)
-($define! >> %>>)
-($define! >>> %>>>)
+(def ~ %~)
+(def & %&)
+;(def | %|) ;; TODO lo vedrebbe come unescaped symbol!
+(def ^ %^)
+(def << %<<)
+(def >> %>>)
+(def >>> %>>>)
 
-($define! \ %lambda)
-($define! array->list %array->list)
-($define! begin %begin)
-($define! car %car)
-($define! cadr %cadr)
-($define! cdr %cdr)
-($define! catchTag %catch)
-($define! cons %cons)
-($define! cons? %cons?)
-;($define! ddef %dDef)
-;($define! ddef* %dDef*)
-($define! dval %dVal)
-($define! dvar %dVar)
-($define! eq? %eq?)
-($define! error %error)
-($define! eval %eval)
-($define! finally %finally)
-($define! if %if)
-($define! instanceof? %instanceof?)
-($define! list* %list*)
-($define! list->array %list->array)
-($define! loop %loop)
-($define! makeEnvironment %makeEnv)
-($define! nil? %null?)
-($define! null? %null?)
-($define! not !)
-($define! reverse %reverse)
-($define! rootPrompt %rootPrompt)
-($define! string->symbol %string->symbol)
-($define! symbolName %internName)
-($define! symbol? %symbol?)
-($define! throwTag %throw)
-($define! unwrap %unwrap)
-($define! wrap %wrap)
+(def \ %lambda)
+(def array->list %array->list)
+(def begin %begin)
+(def catchTag %catch)
+(def cons %cons)
+(def cons? %cons?)
+;(def ddef %dDef)
+;(def ddef* %dDef*)
+(def dval %dVal)
+(def dvar %dVar)
+(def eq? %eq?)
+(def error %error)
+(def eval %eval)
+(def finally %finally)
+(def if %if)
+(def instanceof? %instanceof?)
+(def list* %list*)
+(def list->array %list->array)
+(def loop %loop)
+(def makeEnvironment %makeEnv)
+(def nil? %null?)
+(def null? %null?)
+(def not !)
+(def reverse %reverse)
+(def rootPrompt %rootPrompt)
+(def string->symbol %string->symbol)
+(def symbolName %internName)
+(def symbol? %symbol?)
+(def throwTag %throw)
+(def unwrap %unwrap)
+(def wrap %wrap)
 
-;; Important utilities
-($define! $vau %vau)
-($define! quote ($vau (x) #ignore x))
-($define! quote %quote)
-($define! list (wrap ($vau elts #ignore elts)))
-($define! list %list)
-($define! $lambda ($vau (formals . body) env (wrap (eval (list* $vau formals #ignore body) env))))
-($define! $lambda %lambda)
-($define! theEnvironment ($vau () e e))
-($define! theEnvironment %theEnvironment)
 
-($define! DVar &Wat.Vm$DVar)
-($define! Symbol &Wat.Vm$Symbol)
+;;;; Important utilities
+
+(def $vau %vau)
+(def quote ($vau (x) #ignore x))
+(def quote %quote)
+(def list (wrap ($vau elts #ignore elts)))
+(def list %list)
+(def $lambda ($vau (formals . body) env (wrap (eval (list* $vau formals #ignore body) env))))
+(def $lambda %lambda)
+(def theEnvironment ($vau () e e))
+(def theEnvironment %theEnvironment)
+(def zero? (\ (n) (== n 0)))
+
+(def DVar &Wat.Vm$DVar)
+(def Symbol &Wat.Vm$Symbol)
+
+
+;;;; List utilities
+
+(def compose (\ (f g) (\ (arg) (f (g arg)))))
+
+(def car (\ ((x . #ignore)) x))
+(def car %car)
+(def cdr (\ ((#ignore . x)) x))
+(def cdr %cdr)
+(def caar (compose car car))
+(def cadr (compose car cdr))
+(def cdar (compose cdr car))
+(def cddr (compose cdr cdr))
+
 
 ;;;; Macro
 
 #| TODO sostituito dalla seguente, eliminare
-($define! makeMacro
+(def makeMacro
   (wrap
     ($vau (expander) #ignore
       ($vau operands env
@@ -93,7 +110,7 @@
 
 (def evm (dvar #t))
 
-($define! makeMacro
+(def makeMacro
   (wrap
     ($vau (expander) #ignore
       ($vau operands env
@@ -102,7 +119,7 @@
         (def expr (eval (cons expander operands) (makeEnvironment)))
         (if !evm expr (eval expr env)) ))))
 
-($define! macro
+(def macro
   (makeMacro
     ($vau (params . body) #ignore
       (list 'makeMacro (list* '$vau params #ignore body)) )))
@@ -116,22 +133,22 @@
   (macro (name params . body)
     (list $define! name (list* macro params body)) ))
 |#
-($define! defineMacro
+(def defMacro
   (macro (lhs . rhs)
     (if (symbol? lhs)
-      (list '$define! lhs (list* 'macro (car rhs) (cdr rhs)))
-      (list '$define! (car lhs) (list* 'macro (cdr lhs) rhs)) )))
+      (list 'def lhs (list* 'macro (car rhs) (cdr rhs)))
+      (list 'def (car lhs) (list* 'macro (cdr lhs) rhs)) )))
 
-(defineMacro (expand macro)
+(defMacro (expand macro)
   (list 'begin (list 'evm #f) (list 'finally macro (list 'evm #t))) )
 
-(assert (expand (defineMacro (a b) (+ b 1))) '($define! a (macro (b) (+ b 1))))
-(assert (expand (defineMacro a (b) (+ b 1))) '($define! a (macro (b) (+ b 1))))
+(assert (expand (defMacro (a b) (list '+ b 1))) '(def a (macro (b) (list (%quote +) b 1))))
+(assert (expand (defMacro a (b) (list '+ b 1))) '(def a (macro (b) (list (%quote +) b 1))))
 
-(defineMacro (def* pt . args)
+(defMacro (def* pt . args)
   (list 'def pt (list* 'list args)) )
 
-(defineMacro (def\ lhs . rhs)
+(defMacro (def\ lhs . rhs)
   (if (symbol? lhs)
     (list 'def lhs (list* '\ (car rhs) (cdr rhs)))
     (list 'def (car lhs) (list* '\ (cdr lhs) rhs)) ))
@@ -140,19 +157,20 @@
 (assert (expand (def\ (a b) (+ 1 b))) '(def a (\ (b) (+ 1 b))) )
 
 #| TODO sostituita dalla seguente, eliminare
-(defineMacro (def*\ lhs* . rhs*)
+(defMacro (def*\ lhs* . rhs*)
   (list* 'def*
     (map  car lhs*)
     (map* (\ (lhs rhs) (list* '\ (cdr lhs) rhs)) lhs* rhs*) )) 
 |#
-(defineMacro (def*\ lhs* . rhs*)
+(defMacro (def*\ lhs* . rhs*)
   (list* 'def*
     (map  (\ (lhs) (if (symbol? lhs) lhs (car lhs))) lhs*)
     (map* (\ (lhs rhs) (if (symbol? lhs) (list* '\ (car rhs) (cdr rhs)) (list* '\ (cdr lhs) rhs))) lhs* rhs*) )) 
 
-; manca map
-;(assert (expand (def*\ ((a p) (b n)) (+ p 1) (+ n 1))) '(def* (a b) (\ (p) + p 1) (\ (n) + n 1)) )
-;(assert (expand (def*\ (a b) ((p) + p 1) ((n) + n 1))) '(def* (a b) (\ (p) + p 1) (\ (n) + n 1)) )
+#| unbound map map* apply
+(assert (expand (def*\ ((a n) (b n)) (+ n 1) (+ n 1))) '(def* (a b) (\ (n) + n 1) (\ (n) + n 1)) )
+(assert (expand (def*\ (a b) ((n) + n 1) ((n) + n 1))) '(def* (a b) (\ (n) + n 1) (\ (n) + n 1)) )
+;|#
 
 #| TODO sostituite dalla seguente, eliminare
 (defineMacro (defineOperative (name . params) envparam . body)
@@ -161,70 +179,59 @@
 (defineMacro* defineOperative* (name params envparam . body)
   (list $define! name (list* $vau params envparam body)) )
 |#
-(defineMacro (defineOperative lhs . rhs)
+(defMacro (defOperative lhs . rhs)
   (if (symbol? lhs)
-    (list '$define! lhs (list* '$vau (car rhs) (cadr rhs) (cddr rhs)))
-    (list '$define! (car lhs) (list* '$vau (cdr lhs) (car rhs) (cdr rhs))) ))
+    (list 'def lhs (list* '$vau (car rhs) (cadr rhs) (cddr rhs)))
+    (list 'def (car lhs) (list* '$vau (cdr lhs) (car rhs) (cdr rhs))) ))
+
+(assert (expand (defOperative (a b) env (eval (list '+ b 1) env))) '(def a ($vau (b) env (eval (list (%quote +) b 1) env))))
+(assert (expand (defOperative a (b) env (eval (list '+ b 1) env))) '(def a ($vau (b) env (eval (list (%quote +) b 1) env))))
 
 
 ;;;; Wrap incomplete VM forms
 
-(defineMacro (catch x . handler)
-  (list* catchTag #ignore x handler))
+(defMacro (catch x . handler)
+  (list* 'catchTag #ignore x handler))
 
-(defineMacro (throw . x)
-  (list* throwTag #ignore x))
+(defMacro (throw . x)
+  (list* 'throwTag #ignore x))
 
 (assert (catch (throw)) #inert)
 (assert (catch (throw 1)) 1)
 (assert (catch (throw 1) (\ (x) (+ x 1))) 2)
 
-(defineOperative (finally protected . cleanup) env
-  (eval (list %finally protected (list* begin cleanup)) env) )
+(defOperative (finally protected . cleanup) env
+  (eval (list '%finally protected (list* 'begin cleanup)) env) )
 
-(defineMacro (takeSubcont prompt k . body)
-  (list %takeSubcont prompt (list* $lambda (list k) body)) )
+(defMacro (takeSubcont prompt k . body)
+  (list '%takeSubcont prompt (list* '\ (list k) body)) )
 
-(defineOperative (pushPrompt prompt . body) env
-  (eval (list %pushPrompt (eval prompt env) (list* begin body)) env) )
+(defOperative (pushPrompt prompt . body) env
+  (eval (list '%pushPrompt (eval prompt env) (list* 'begin body)) env) )
 
-(defineMacro (pushPromptSubcont p k . body)
-  (list %pushPromptSubcont p k (list* $lambda () body)) )
+(defMacro (pushPromptSubcont p k . body)
+  (list '%pushPromptSubcont p k (list* '\ () body)) )
 
-(defineMacro (pushSubcont k . body)
-  (list %pushPromptSubcont #ignore k (list* $lambda () body)) )
+(defMacro (pushSubcont k . body)
+  (list '%pushPromptSubcont #ignore k (list* '\ () body)) )
 
-
-;;;; List utilities
-
-(def\ (compose f g) (\ (arg) (f (g arg))))
-
-;($define! car ($lambda ((x . #ignore)) x))
-;($define! cdr ($lambda ((#ignore . x)) x))
-($define! caar (compose car car))
-($define! cadr (compose car cdr))
-($define! cdar (compose cdr car))
-($define! cddr (compose cdr cdr))
-
-(def\ (apply appv args . optEnv)
-  (if (%instanceof? appv &java.util.function.Function)
-      (@apply appv (list->array args))
-      (eval (cons (unwrap appv) args)
-            (if (nil? optEnv) (makeEnvironment) (car optEnv)) )))
-
-(def\ (zero? n) (== n 0))
 
 ;;;; Important macros and functions
 
-($define! map
-  ($lambda (f lst)
-    (if (null? lst) ()
-        (cons (f (car lst)) (map f (cdr lst))) )))
+(def\ (map f lst)
+  (if (null? lst) ()
+    (cons (f (car lst)) (map f (cdr lst))) ))
 
 (assert (map car  '((a 1)(b 2))) '(a b))
 (assert (map cdr  '((a 1)(b 2))) '((1) (2)))
 (assert (map cadr '((a 1)(b 2))) '(1 2))
 (assert (($vau l e (list* 'def (map car l) (list (list 'quote (map cadr l))))) (a 1)(b 2)) '(def (a b) (quote (1 2))))
+
+(def\ (apply appv args . optEnv)
+  (if (%instanceof? appv &java.util.function.Function)
+    (@apply appv (list->array args))
+    (eval (cons (unwrap appv) args)
+      (if (nil? optEnv) (makeEnvironment) (car optEnv)) )))
 
 #| definizioni alternative di map*
 (def\ (map* f . lst*)
@@ -246,13 +253,12 @@
 
 (assert (map* (\ (a b) (+ a b)) '(1 2) '(3 4)) '(4 6))
 
-($define! forEach
-  ($lambda (f lst)
-    (unless (null? lst)
-      (f (car lst))
-      (forEach f (cdr lst)) )))
+(def\ (forEach f lst)
+  (unless (null? lst)
+    (f (car lst))
+    (forEach f (cdr lst)) ))
 
-#| definizione alternative di forEach*
+#| definizione alternativa di forEach*
 (def\ (forEach* f . lst*)
   (unless (null? (car lst*))
     (apply f (map car lst*))
@@ -267,64 +273,63 @@
 
 ;(forEach* (\ (a b) (log a b)) '(1 2) '(3 4))
 
-($define! filter
-  ($lambda (p lst)
-    (if (nil? lst) ()
-        (if (p (car lst))
-            (cons (car lst) (filter p (cdr lst)))
-            (filter p (cdr lst)) ))))
+(def\ (filter p lst)
+  (if (nil? lst) ()
+    (if (p (car lst))
+      (cons (car lst) (filter p (cdr lst)))
+      (filter p (cdr lst)) )))
 
-($define! reduce
-  ($lambda (f init lst)
-    (if (nil? lst) init
-        (reduce f (f init (car lst)) (cdr lst)) )))
+(def\ (reduce f init lst)
+  (if (nil? lst) init
+    (reduce f (f init (car lst)) (cdr lst)) ))
 
-($define! split
-  ($lambda (n lst)
-    (let loop ((n n) (h ()) (t lst))
-      (if (or (null? t) (<= n 0)) (cons (reverse h) (list t))
+(def\ (split n lst)
+  (let loop ((n n) (h ()) (t lst))
+    (if (or (null? t) (<= n 0)) (cons (reverse h) (list t))
+      (loop (- n 1) (cons (car t) h) (cdr t)) )))
+
+(def\ (resize n lst)
+  (let loop ((n n) (h ()) (t lst))
+    (if (null? t) (reverse h)
+      (if (<= n 1)
+        (reverse (cons (if (null? (cdr t)) (car t) t) h))
         (loop (- n 1) (cons (car t) h) (cdr t)) ))))
 
-($define! resize
-  ($lambda (n lst)
-    (let loop ((n n) (h ()) (t lst))
-      (if (null? t) (reverse h)
-        (if (<= n 1)
-          (reverse (cons (if (null? (cdr t)) (car t) t) h))
-          (loop (- n 1) (cons (car t) h) (cdr t)) )))))
 
-(defineMacro (let bindings . body)
+;;;; Lexical bindings
+
+(defMacro (let bindings . body)
   (if (symbol? bindings)
       (list* 'letLoop bindings body)
       (list* (list* '\ (map car bindings) body)
              (map cadr bindings) )))
 
-(defineMacro (let1 binding . body)
+(defMacro (let1 binding . body)
   (list
-    (list* '$lambda (list (car binding)) body)
+    (list* '\ (list (car binding)) body)
     (cadr binding) ))
     
 (assert (let ((a 1)) a) 1)
 
-(defineMacro (let* bindings . body)
+(defMacro (let* bindings . body)
   (if (nil? bindings)
-      (list* let () body)
-      (list let
+      (list* 'let () body)
+      (list 'let
         (list (car bindings))
-        (list* let* (cdr bindings) body) )))
+        (list* 'let* (cdr bindings) body) )))
 
 (assert (let* () 1) 1)
 (assert (let* ((a 1)(b a)) b) 1)
 
-(defineMacro (rec lhs . rhs)
-  (if (null? rhs) (list rec 'rec lhs)
+(defMacro (rec lhs . rhs)
+  (if (null? rhs) (list 'rec 'rec lhs)
     (if (symbol? lhs) (list (list '\ () (list 'def lhs (car rhs)) lhs))
       (list (list '\ () (list 'def (car lhs) (list* '\ (cdr lhs) rhs)) (car lhs))) )))
 
 (assert ((rec (\ (l) (if (null? l) "" ($ (car l) (rec (cdr l)))))) '(1 2 3)) "123")
 (assert ((rec (\ l (if (null? l) "" ($ (car l) (apply rec (cdr l)))))) 1 2 3) "123")
 
-(defineMacro (rec lhs . rhs)
+(defMacro (rec lhs . rhs)
   (def fn (if (symbol? lhs) lhs (car lhs)))
   (list (list '\ () (list 'def fn #inert) (list* 'def\ lhs rhs) fn)) )
 
@@ -333,17 +338,15 @@
 (assert ((rec (f . l) (if (null? l) "" ($ (car l) (apply f (cdr l))))) 1 2 3) "123")
 (assert ((rec f l     (if (null? l) "" ($ (car l) (apply f (cdr l))))) 1 2 3) "123")
 
-(defineMacro (letrec bindings . body)
+(defMacro (letrec bindings . body)
   (list* 'let ()
     (list* 'def* (map car bindings) (map (\ (b) #inert) bindings))
     (list* 'def* (map car bindings) (map cadr bindings))
     body ))
 
-(assert (letrec ( (a 1)) a) 1)
-(assert (letrec ( (a (\ () 1)) ) (a)) 1)
 (assert (letrec ( (even? (\ (n) (if (== n 0) #t (odd? (- n 1))))) (odd? (\ (n) (if (== n 0) #f (even? (- n 1))))) ) (even? 88)) #t)
 
-(defineMacro (letrec\ bindings . body)
+(defMacro (letrec\ bindings . body)
   (list* 'let ()
     (list* 'def* (map (\ (lhs) (if (symbol? (car lhs)) (car lhs) (caar lhs))) bindings) (map (\ (b) #inert) bindings))
     (list* 'def*\ (map car bindings) (map cdr bindings))
@@ -354,12 +357,11 @@
 
 (def labels letrec\)
 
-(defineMacro (letLoop name bindings . body)
+(defMacro (letLoop name bindings . body)
   (list 'letrec
     (list (list name (list* '\ (map car bindings) body)))
     (list* name (map cadr bindings)) ))
 
-(assert (letLoop l ((a 1)) a) 1)
 (assert (letLoop sum ((as (list 1 2)) (bs (list 3 4))) (if (nil? as) () (cons (+ (car as) (car bs)) (sum (cdr as) (cdr bs))))) '(4 6))
 
 #| definizione alternativa di member
@@ -376,9 +378,10 @@
          (loop (cdr items)) )))
    lst ))
 
-; manca cond a rec 
 (assert (member 'b '(a b c d)) '(b c d))
-;(assert (member "b" '("a" "b" "c" "d")) '("b" "c" "d")) ; solo se String interned!
+#| solo se String interned!
+(assert (member "b" '("a" "b" "c" "d")) '("b" "c" "d"))
+|#
 
 (def\ (assoc item lst)
   ((rec (loop items)
@@ -387,9 +390,14 @@
          (loop (cdr items)))))
    lst ))
 
-(defineMacro (lambda params . body)
+(assert (assoc 'b '((a 1) (b 2) (c 3) (d 4))) '(b 2))
+
+
+;;;; Type parameters check lambda
+
+(defMacro (lambda params . body)
   (letrec ((typedParams->namesAndChecks
-            ($lambda (ps)
+            (\ (ps)
               (if (cons? ps)
                   (let* (((p . restPs) ps)
                          ((names . checks) (typedParams->namesAndChecks restPs)))
@@ -400,17 +408,17 @@
                         (cons (cons p names) checks) ))
                   (cons ps ()) ))))
     (let ( ((untypedNames . typeChecks) (typedParams->namesAndChecks params)) )
-      (list* $lambda untypedNames (list* begin typeChecks) body) )))
+      (list* '\ untypedNames (list* 'begin typeChecks) body) )))
 
-(defineMacro (define lhs . rhs)
-  (if (cons? lhs)
-    (list $define! (car lhs) (list* lambda (cdr lhs) rhs))
-    (list $define! lhs (car rhs))))
+(defMacro (define lhs . rhs)
+  (if (symbol? lhs)
+    (list 'def lhs (car rhs))
+    (list 'def (car lhs) (list* 'lambda (cdr lhs) rhs)) ))
 
 
 ;;;; Simple control
 
-(defineOperative (cond . clauses) env
+(defOperative (cond . clauses) env
   (if (nil? clauses) #inert
       (let ((((test . body) . clauses) clauses))
         (if (eval test env)
@@ -419,7 +427,7 @@
 
 (define else #t)
 
-(defineOperative (and . x) e
+(defOperative (and . x) e
   (cond ((nil? x)         #t)
         ((nil? (cdr x))   (eval (car x) e))
         ((eval (car x) e) (apply (wrap and) (cdr x) e))
@@ -427,7 +435,7 @@
 
 (def && and)
 
-(defineOperative (or . x) e
+(defOperative (or . x) e
   (cond ((nil? x)         #f)
         ((nil? (cdr x))   (eval (car x) e))
         ((eval (car x) e) #t)
@@ -435,71 +443,71 @@
 
 (def || or)
 
-(define (callWithEscape fun)
+(def\ (callWithEscape fun)
   (let ((fresh (list #null)))
-    (catch (fun ($lambda optArg (throw (list fresh optArg))))
-      ($lambda (exc)
+    (catch (fun (\ optArg (throw (list fresh optArg))))
+      (\ (exc)
         (if (and (cons? exc) (eq? fresh (car exc)))
             (let ((optArg (cadr exc)))
               (if (cons? optArg) (car optArg) #null))
             (throw exc))))))
 
-(defineMacro (label name . body)
-  (list callWithEscape (list* $lambda (list name) body)))
+(defMacro (label name . body)
+  (list 'callWithEscape (list* '\ (list name) body)))
 
-(defineOperative (while test . body) env
-  (let ((body (list* begin body)))
+(defOperative (while test . body) env
+  (let ((body (list* 'begin body)))
     (label return
       (loop
         (if (eval test env)
           (eval body env)
           (return))))))
 
-(defineMacro (when test . body)
-  (list if test (list* begin body)))
+(defMacro (when test . body)
+  (list 'if test (list* 'begin body)))
 
-(defineMacro (unless test . body)
-  (list* when (list not test) body))
+(defMacro (unless test . body)
+  (list* 'when (list 'not test) body))
 
-(defineMacro (set (getter . args) newVal)
-  (list* (list setter getter) newVal args))
+(defMacro (set (getter . args) newVal)
+  (list* (list 'setter getter) newVal args))
 
 
 ;;;; Dynamic Binding
 
 #| TODO sostituite dalle seguenti, eliminare
-(defineOperative (progv dyns vals . forms) env
+(defOperative (progv dyns vals . forms) env
   (eval
-    (list* %dLet 
+    (list* '%dLet 
       (cons
-        (eval (list* list dyns) env)
-        (eval (list* list vals) env) )
+        (eval (list* 'list dyns) env)
+        (eval (list* 'list vals) env) )
       forms )
     env ))
 
 (assert (begin (ddef a 1) (progv (a) (2) (assert (dval a) 2)) (assert (dval a) 1)) #t)
 
-(defineOperative (dlet bindings . forms) env
+(defOperative (dlet bindings . forms) env
   (eval
-    (list* %dLet
+    (list* '%dLet
       (cons
-        (map (%lambda ((name #ignore))  (eval name env)) bindings)
-        (map (%lambda ((#ignore value)) (eval value env)) bindings) )
+        (map (\ ((name #ignore))  (eval name env)) bindings)
+        (map (\ ((#ignore value)) (eval value env)) bindings) )
       forms )
     env ))
 
 (assert (begin (ddef* (a b) 1 2) (dlet ((a 2)) (assert (dval a) 2)) (dval b)) 2)
 
-(defineMacro (dlet* bindings . body)
+(defMacro (dlet* bindings . body)
   (if (nil? bindings)
-    (list* begin body)
-    (list dlet
+    (list* 'begin body)
+    (list 'dlet
 	  (list (car bindings))
-      (list* dlet* (cdr bindings) body) )))
+      (list* 'dlet* (cdr bindings) body) )))
 
 (assert (begin (ddef* (a) 1) (dlet* ((a (+ 1 (dval a))) (a (+ 1 (dval a)))) (dval a))) 3)
 
-(defineOperative (ddef var val) env
+(defOperative (ddef var val) env
   (if (! (instanceof? var Symbol)) (error ($ "not a symbol: " var)))
   (let ((val (eval val env)) (dv (.value (@get env var))))
     (cond
@@ -508,7 +516,7 @@
       (else (error ($ "not null or dynamic value: " var))) )
     #inert ))
 
-(defineOperative (ddef* var* . val*) env
+(defOperative (ddef* var* . val*) env
   (forEach (\ (var) (unless (instanceof? var Symbol) (error ($ "not a symbol: " var)))) var*)
   (let loop 
     ((var* var*) (val* (map (\ (val) (eval val env)) val*)) (lkp* (map (\ (var) (.value (@get env var))) var*)) )
@@ -520,7 +528,7 @@
           (else (error ($ "not null or a dynamic value: " (car var*)))) )
         (loop (cdr var*) (cdr val*) (cdr lkp*)) ))))
       
-(defineOperative (%dlet (var* . val*) . body) env
+(defOperative (%dlet (var* . val*) . body) env
   (def val* (map (\ (val) (eval val env)) val*))
   (def var* (map (\ (var) (.value (@get env var))) var*))
   (def old* (map (\ (var) (var)) var*))
@@ -535,10 +543,10 @@
         ((car var*) (car old*))
         (loop (cdr var*) (cdr old*)) ))))
 
-(defineMacro (progv dyns vals . forms)
+(defMacro (progv dyns vals . forms)
   (list* '%dlet (cons dyns vals) forms) )
 
-(defineMacro (dlet bindings . forms)
+(defMacro (dlet bindings . forms)
   (list* '%dlet
     (cons
       (map (\ ((name #ignore))  name) bindings)
@@ -610,19 +618,19 @@ d
 ;((d\ (d e) (print e)) 4 5)     
 ;((d\ (d e)) 6 7)
 
-(defineMacro (ddef var val)
+(defMacro (ddef var val)
   (list (list 'd\ (list var)) val) )
 
-(defineMacro (ddef* var* . val*)
+(defMacro (ddef* var* . val*)
   (list* (list 'd\ var*) val*) )
 
-(defineMacro (progv var* val* . body)
+(defMacro (progv var* val* . body)
   (list* (list* 'd\ var* body) val*) )
 
-(defineMacro (dlet bindings . body)
+(defMacro (dlet bindings . body)
   (list* (list* 'd\ (map car bindings) body) (map cadr bindings)) )  
 
-(defineMacro (dlet* bindings . body)
+(defMacro (dlet* bindings . body)
   (if (nil? bindings)
     (list* begin body)
     (list dlet
@@ -645,178 +653,178 @@ d
 #|
 ;;;; Prototypes
 
-(defineOperative (definePrototype name superName propNames) env
-  (eval (list $define! name (makePrototype name superName propNames env)) env))
+(defOperative (defPrototype name superName propNames) env
+  (eval (list 'def name (makePrototype name superName propNames env)) env))
 
-(define (makePrototype name superName propNames env)
+(def\ (makePrototype name superName propNames env)
   (let ((p (apply %jsMakePrototype (list* (symbolName name) (map symbolName propNames))))
         (super (eval superName env)))
     (set (.prototype p) (@create &Object (.prototype super)))
     (set (.constructor (.prototype p)) super)
     p ))
 
-(defineMacro (defineGeneric (name . #ignore))
-  (list $define! name (lambda args (apply ((jsGetter name) (car args)) args))))
+(defMacro (defineGeneric (name . #ignore))
+  (list 'def name (lambda args (apply ((jsGetter name) (car args)) args))))
 
-(defineMacro (defineMethod (name (self ctor) . args) . body)
-  (list putMethod ctor (symbolName name) (list* lambda (list* self args) body)))
+(defMacro (defineMethod (name (self ctor) . args) . body)
+  (list 'putMethod ctor (symbolName name) (list* 'lambda (list* self args) body)))
 
-(define (putMethod ctor name fun)
+(def\ (putMethod ctor name fun)
   (set ((jsGetter name) (.prototype ctor)) fun))
 |#
 
 
 ;;;; Modules
 
-(defineOperative (provide symbols . body) env
+(defOperative (provide symbols . body) env
   (eval
-    (list $define! symbols
-      (list let ()
-        (list* begin body)
-        (list* list symbols) ))
+    (list 'def symbols
+      (list 'let ()
+        (list* 'begin body)
+        (list* 'list symbols) ))
     env ))
 
 (assert (begin (provide (x) (define x 10)) x) 10)
 
-(defineOperative (module exports . body) env
+(defOperative (module exports . body) env
   (let ((menv (makeEnvironment env)))
-    (eval (list* provide exports body) menv)
+    (eval (list* 'provide exports body) menv)
     (makeEnvironment menv) ))
 
 (assert (begin (define m (module (x) (define x 10))) (eval 'x m)) 10)
 
-(defineMacro (defineModule name exports . body)
-  (list $define! name (list* module exports body)) )
+(defMacro (defModule name exports . body)
+  (list 'def name (list* 'module exports body)) )
 
-(assert (begin (defineModule m (x) (define x 10)) (eval 'x m)) 10)
+(assert (begin (defModule m (x) (define x 10)) (eval 'x m)) 10)
 
-(defineOperative (import module imports) env
+(defOperative (import module imports) env
   (let* ((m (eval module env))
-         (values (map ($lambda (import) (eval import m)) imports)))
-    (eval (list $define! imports (list* list values)) env) ))
+         (values (map (\ (import) (eval import m)) imports)))
+    (eval (list 'def imports (list* list values)) env) ))
 
-(assert (begin (defineModule m (x) (define x 10)) (import m (x)) x) 10)
+(assert (begin (defModule m (x) (define x 10)) (import m (x)) x) 10)
 
 
 ;;;; JavaScript
 
-(define (relationalOp %binop)
+(def\ (relationalOp %binop)
   (let ((binop %binop))
-    (letrec ((op (lambda (arg1 arg2 . rest)
+    (letrec ((op (\ (arg1 arg2 . rest)
                    (if (binop arg1 arg2)
                        (if (nil? rest) #t
                            (apply op (list* arg2 rest)))
                        #f))))
       op)))
 
-(define == (relationalOp ==))
-(define < (relationalOp <))
-(define > (relationalOp >))
-(define <= (relationalOp <=))
-(define >= (relationalOp >=))
+(def == (relationalOp ==))
+(def < (relationalOp <))
+(def > (relationalOp >))
+(def <= (relationalOp <=))
+(def >= (relationalOp >=))
 
-(define (!= . args) (not (apply == args)))
+(def\ (!= . args) (not (apply == args)))
 
-(define (positiveOp binop unit)
+(def\ (positiveOp binop unit)
   (\ args (reduce binop unit args)))
 
-(define $ (positiveOp $ ""))
-(define + (positiveOp + 0))
-(define * (positiveOp * 1))
+(def $ (positiveOp $ ""))
+(def + (positiveOp + 0))
+(def * (positiveOp * 1))
 
 (assert ($ 1 2 3) "123")
 (assert (+ 1 2 3) 6)
 (assert (* 1 2 3) 6)
 
-(define (negativeOp binop unit)
-  (lambda (arg1 . rest)
+(def\ (negativeOp binop unit)
+  (\ (arg1 . rest)
     (if (nil? rest)
       (binop unit arg1)
       (reduce binop arg1 rest) )))
 
-(define - (negativeOp - 0))
-(define / (negativeOp / 1))
+(def - (negativeOp - 0))
+(def / (negativeOp / 1))
 
-#|
-(define % (%jsBinop "%"))
-(define not (%jsUnop "!"))
-(define typeof (%jsUnop "typeof"))
-(define in (%jsBinop "in"))
-(define instanceof (%jsBinop "instanceof"))
+#| TODO da rivedere
+(def % (%jsBinop "%"))
+(def not (%jsUnop "!"))
+(def typeof (%jsUnop "typeof"))
+(def in (%jsBinop "in"))
+(def instanceof (%jsBinop "instanceof"))
 
-(define bitand (%jsBinop "&"))
-(define bitor (%jsBinop "|"))
-(define bitxor (%jsBinop "^"))
-(define bitnot (%jsUnop "~"))
-(define bitshiftl (%jsBinop "<<"))
-(define bitshiftr (%jsBinop ">>"))
-(define bitshiftr0 (%jsBinop ">>>"))
+(def bitand (%jsBinop "&"))
+(def bitor (%jsBinop "|"))
+(def bitxor (%jsBinop "^"))
+(def bitnot (%jsUnop "~"))
+(def bitshiftl (%jsBinop "<<"))
+(def bitshiftr (%jsBinop ">>"))
+(def bitshiftr0 (%jsBinop ">>>"))
 
-(defineOperative (object . pairs) env
+(defOperative (object . pairs) env
   (let ((obj (%jsMakeObject)))
-    (map ($lambda ((name value))
+    (map (\ ((name value))
                 (set ((jsGetter (eval name env)) obj) (eval value env)))
               pairs)
     obj))
 
-(define (elt object key)
+(def\ (elt object key)
   ((jsGetter key) object))
 
 (set (setter elt)
   (lambda (newVal object key)
     (set ((jsGetter key) object) newVal) ))
 
-(define (array . args) (list->array args))
+(def\ (array . args) (list->array args))
 
-(define (jsCallback fun)
-  (%jsFunction ($lambda args (pushPrompt rootPrompt (apply fun args)))) )
+(def\ (jsCallback fun)
+  (%jsFunction (\ args (pushPrompt rootPrompt (apply fun args)))) )
 
-(defineMacro (jsLambda params . body)
-  (list jsCallback (list* lambda params body)))
+(defMacro (jsLambda params . body)
+  (list 'jsCallback (list* 'lambda params body)))
 
-(defineMacro (type? obj type)
-  (list %type? obj type (symbolName type)))
+(defMacro (type? obj type)
+  (list '%type? obj type (symbolName type)))
 
-(defineMacro (the type obj)
-  (list if (list type? obj type) obj (list error (list + obj " is not a: " type))) )
+(defMacro (the type obj)
+  (list 'if (list 'type? obj type) obj (list 'error (list '$ obj " is not a: " type))) )
 
-(define Array &Array)
-(define Boolean &Boolean)
-(define Date &Date)
-(define Function &Function)
-(define Number &Number)
-(define Object &Object)
-(define RegExp &RegExp)
-(define String &String)
+(def Array &Array)
+(def Boolean &Boolean)
+(def Date &Date)
+(def Function &Function)
+(def Number &Number)
+(def Object &Object)
+(def RegExp &RegExp)
+(def String &String)
 
-(define (log x . xs)
+(def\ (log x . xs)
   (apply @log (list* &console x xs))
   x)
 
 
 ;;;; Cells
 
-(definePrototype Cell Object (value))
-(define (cell value) (new Cell value))
-(define (ref (c Cell)) (.value c))
+(defPrototype Cell Object (value))
+(def\ (cell value) (new Cell value))
+(def\ (ref (c Cell)) (.value c))
 (set (setter ref) (lambda (newVal (c Cell)) (set (.value c) newVal)))
 
-(defineMacro (++ place)
-  (list set place (list + place 1)) )
-(defineMacro (-- place)
-  (list set place (list - place 1)) )
+(defMacro (++ place)
+  (list 'set place (list '+ place 1)) )
+(defMacro (-- place)
+  (list 'set place (list '- place 1)) )
 
 
 ;;;; Utilities
 
 ;; ugh
-(define (mapArray fun (arr Array))
+(def\ (mapArray fun (arr Array))
   (list->array (map fun (array->list arr))) )
 
-(define (filterArray pred (arr Array))
+(def\ (filterArray pred (arr Array))
   (list->array (filter pred (array->list arr))) )
 
-(defineOperative (time expr) env
+(defOperative (time expr) env
   (let ((n (@getTime (new Date)))
         (result (eval expr env)))
     (log ($ "time " expr ": " (- (@getTime (new Date)) n) "ms"))
@@ -825,23 +833,23 @@ d
 
 ;;;; Options
 
-(definePrototype Option Object ())
-(definePrototype Some Option (value))
-(definePrototype None Option ())
-(define (some value) (new Some value))
-(define none (new None))
-(defineOperative (ifOption (optionName optionExpr) then else) env
+(defPrototype Option Object ())
+(defPrototype Some Option (value))
+(defPrototype None Option ())
+(def\ (some value) (new Some value))
+(def\ none (new None))
+(defOperative (ifOption (optionName optionExpr) then else) env
   (let ((option (the Option (eval optionExpr env))))
     (if (type? option Some)
-        (eval (list (list lambda (list optionName) then) (.value option)) env)
+        (eval (list (list 'lambda (list optionName) then) (.value option)) env)
         (eval else env) )))
 |#
 
 
 ;;;; Error break routine, called by VM to print stacktrace and throw
 
-(define (printStacktrace)
-  (define (printFrame k)
+(def\ (printStacktrace)
+  (def\ (printFrame k)
     ;(log "--" k)
     (if (!= (.next k) #null)
       (printFrame (.next k)) )
@@ -851,7 +859,7 @@ d
     ;(pushPrompt rootPrompt (pushSubcont k (printFrame k) )) ;new with 3+ vau args
 )
 
-(define (userBreak err)
+(def\ (userBreak err)
   ;(log "==" err)
   (when (stack) (log "++" err) (printStacktrace))
   (throw err) )
