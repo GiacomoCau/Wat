@@ -1103,6 +1103,9 @@ public class Vm {
 					$("%def", "%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnvironment = env(theEnvironment)))),
 					$("%def", "%popEnv", wrap(new JFun("%PopEnv", (Supplier) ()-> theEnvironment = theEnvironment.parent))),
 					// Values
+					$("%def", "%car", wrap(new JFun("%Car", (Function<Cons, Object>) Cons::car))),
+					$("%def", "%cdr", wrap(new JFun("%Car", (Function<Cons, Object>) Cons::cdr))),
+					$("%def", "%cadr", wrap(new JFun("%Car", (Function<Cons, Object>) c-> c.car(1)))),
 					$("%def", "%cons", wrap(new JFun("%Cons", (BiFunction<Object, Object, Object>) (car,cdr)-> cons(car,cdr)))),
 					$("%def", "%cons?", wrap(new JFun("%Cons?", (Function<Object, Boolean>) obj-> obj instanceof Cons))),
 					$("%def", "%null?", wrap(new JFun("%Null?", (Function<Object, Boolean>) obj-> obj == null))),

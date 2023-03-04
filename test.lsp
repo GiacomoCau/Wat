@@ -337,7 +337,7 @@
 (assert (/ 5) (/ 1 5))
 (assert (/ 54 2 3) 9)
 
-(assert (toString (reverseList (list 3 2 1))) (toString (list 1 2 3)))
+(assert (toString (reverse (list 3 2 1))) (toString (list 1 2 3)))
 
 (assert (log "logging" 1 2 3) "logging")
 
