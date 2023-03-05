@@ -100,14 +100,6 @@
 
 ;;;; Macro
 
-#| TODO sostituito dalla seguente, eliminare
-(def makeMacro
-  (wrap
-    ($vau (expander) #ignore
-      ($vau operands env
-        (eval (eval (cons expander operands) (makeEnvironment)) env) ))))
-|#
-
 (def evm (dvar #t))
 
 (def makeMacro
@@ -124,23 +116,18 @@
     ($vau (params . body) #ignore
       (list 'makeMacro (list* '$vau params #ignore body)) )))
 
-#| TODO sostituite dalla seguente, eliminare
-($define! defineMacro
-  (macro ((name . params) . body)
-    (list $define! name (list* macro params body)) ))
-
-($define! defineMacro*
-  (macro (name params . body)
-    (list $define! name (list* macro params body)) ))
-|#
 (def defMacro
   (macro (lhs . rhs)
     (if (symbol? lhs)
       (list 'def lhs (list* 'macro (car rhs) (cdr rhs)))
       (list 'def (car lhs) (list* 'macro (cdr lhs) rhs)) )))
 
+#| sostituito dal seguente, eliminare
 (defMacro (expand macro)
   (list 'begin (list 'evm #f) (list 'finally macro (list 'evm #t))) )
+|#
+(defMacro (expand macro)
+  (list 'begin (list 'evm #f) macro))
 
 (assert (expand (defMacro (a b) (list '+ b 1))) '(def a (macro (b) (list (%quote +) b 1))))
 (assert (expand (defMacro a (b) (list '+ b 1))) '(def a (macro (b) (list (%quote +) b 1))))
@@ -156,29 +143,16 @@
 (assert (expand (def\ a (b) (+ 1 b))) '(def a (\ (b) (+ 1 b))) )
 (assert (expand (def\ (a b) (+ 1 b))) '(def a (\ (b) (+ 1 b))) )
 
-#| TODO sostituita dalla seguente, eliminare
 (defMacro (def*\ lhs* . rhs*)
   (list* 'def*
-    (map  car lhs*)
-    (map* (\ (lhs rhs) (list* '\ (cdr lhs) rhs)) lhs* rhs*) )) 
-|#
-(defMacro (def*\ lhs* . rhs*)
-  (list* 'def*
-    (map  (\ (lhs) (if (symbol? lhs) lhs (car lhs))) lhs*)
-    (map* (\ (lhs rhs) (if (symbol? lhs) (list* '\ (car rhs) (cdr rhs)) (list* '\ (cdr lhs) rhs))) lhs* rhs*) )) 
+    (map (\ (lhs) (if (symbol? lhs) lhs (car lhs))) lhs*)
+    (map (\ (lhs rhs) (if (symbol? lhs) (list* '\ (car rhs) (cdr rhs)) (list* '\ (cdr lhs) rhs))) lhs* rhs*) )) 
 
 #| unbound map map* apply
 (assert (expand (def*\ ((a n) (b n)) (+ n 1) (+ n 1))) '(def* (a b) (\ (n) + n 1) (\ (n) + n 1)) )
 (assert (expand (def*\ (a b) ((n) + n 1) ((n) + n 1))) '(def* (a b) (\ (n) + n 1) (\ (n) + n 1)) )
-;|#
-
-#| TODO sostituite dalla seguente, eliminare
-(defineMacro (defineOperative (name . params) envparam . body)
-  (list $define! name (list* $vau params envparam body)) )
-
-(defineMacro* defineOperative* (name params envparam . body)
-  (list $define! name (list* $vau params envparam body)) )
 |#
+
 (defMacro (defOperative lhs . rhs)
   (if (symbol? lhs)
     (list 'def lhs (list* '$vau (car rhs) (cadr rhs) (cddr rhs)))
@@ -218,60 +192,42 @@
 
 ;;;; Important macros and functions
 
-(def\ (map f lst)
-  (if (null? lst) ()
-    (cons (f (car lst)) (map f (cdr lst))) ))
-
-(assert (map car  '((a 1)(b 2))) '(a b))
-(assert (map cdr  '((a 1)(b 2))) '((1) (2)))
-(assert (map cadr '((a 1)(b 2))) '(1 2))
-(assert (($vau l e (list* 'def (map car l) (list (list 'quote (map cadr l))))) (a 1)(b 2)) '(def (a b) (quote (1 2))))
-
 (def\ (apply appv args . optEnv)
-  (if (%instanceof? appv &java.util.function.Function)
+  (if (instanceof? appv &java.util.function.Function)
     (@apply appv (list->array args))
     (eval (cons (unwrap appv) args)
       (if (nil? optEnv) (makeEnvironment) (car optEnv)) )))
 
-#| definizioni alternative di map*
-(def\ (map* f . lst*)
-  (if (null? (car lst*)) ()
-    (cons (apply f (map car lst*)) (apply map* (cons f (map cdr lst*))) )))
+(defMacro (rec lhs . rhs)
+  (def fn (if (symbol? lhs) lhs (car lhs)))
+  (list (list '\ () (list 'def fn #inert) (list* 'def\ lhs rhs) fn)) )
 
-(def\ (map* f . lst*)
-  (letrec ((map* (\ (lst*) (if (null? (car lst*)) () (cons (apply f (map car lst*)) (map* (map cdr lst*))))))) 
-  (map* lst*) ))
+(assert ((rec (f l)   (if (null? l) "" ($ (car l) (f (cdr l))))) '(1 2 3)) "123")
+(assert ((rec f (l)   (if (null? l) "" ($ (car l) (f (cdr l))))) '(1 2 3)) "123")
+(assert ((rec (f . l) (if (null? l) "" ($ (car l) (apply f (cdr l))))) 1 2 3) "123")
+(assert ((rec f l     (if (null? l) "" ($ (car l) (apply f (cdr l))))) 1 2 3) "123")
 
-(def\ (map* f . lst*)
-    ((rec (\ (lst*) (if (null? (car lst*)) () (cons (apply f (map car lst*)) (rec (map cdr lst*)))))) lst*) )
+(def\ (map f . lst*)
+  (if (null? lst*) (error "none list"))
+  (if (null? (cdr lst*))
+    ((rec (map lst) (if (null? lst) #null (cons (f (car lst)) (map (cdr lst))) )) (car lst*))
+    ((rec (map* lst*) (if (null? (car lst*)) #null (cons (apply f (map car lst*)) (map* (map cdr lst*))) )) lst*) ))
+
+(assert (map car  '((a 1)(b 2))) '(a b))
+(assert (map cdr  '((a 1)(b 2))) '((1) (2)))
+(assert (map cadr '((a 1)(b 2))) '(1 2))
+(assert (map (\ (a b) (+ a b)) '(1 2) '(3 4)) '(4 6))
+
+(def\ (forEach f . lst*)
+  (if (null? lst*) (error "none list"))
+  (if (null? (cdr lst*))
+    ((rec (forEach lst) (unless (null? lst) (f (car lst)) (forEach (cdr lst)))) (car lst*))
+    ((rec (forEach* lst*) (unless (null? (car lst*)) (apply f (map car lst*)) (forEach* (map cdr lst*)) )) lst*) ))
+  
+#|
+(forEach (\ (a) (log a)) '(1 2))
+(forEach (\ (a b) (log a b)) '(1 2) '(3 4))
 |#
-(def\ (map* f . lst*)
-  (def\ (map* lst*)
-    (if (null? (car lst*)) #null
-      (cons (apply f (map car lst*)) (map* (map cdr lst*))) ))
-  (map* lst*) )
-
-(assert (map* (\ (a b) (+ a b)) '(1 2) '(3 4)) '(4 6))
-
-(def\ (forEach f lst)
-  (unless (null? lst)
-    (f (car lst))
-    (forEach f (cdr lst)) ))
-
-#| definizione alternativa di forEach*
-(def\ (forEach* f . lst*)
-  (unless (null? (car lst*))
-    (apply f (map car lst*))
-    (apply forEach* (cons f (map cdr lst*))) ))
-|#
-(def\ (forEach* f . lst*)
-  (def\ (forEach* lst*)
-    (unless (null? (car lst*))
-      (apply f (map car lst*))
-      (forEach* (map cdr lst*)) ))
-  (forEach* lst*) )
-
-;(forEach* (\ (a b) (log a b)) '(1 2) '(3 4))
 
 (def\ (filter p lst)
   (if (nil? lst) ()
@@ -280,8 +236,7 @@
       (filter p (cdr lst)) )))
 
 (def\ (reduce f init lst)
-  (if (nil? lst) init
-    (reduce f (f init (car lst)) (cdr lst)) ))
+  ((rec (reduce init lst) (if (nil? lst) init (reduce (f init (car lst)) (cdr lst)) )) init lst) )
 
 (def\ (split n lst)
   (let loop ((n n) (h ()) (t lst))
@@ -321,23 +276,6 @@
 (assert (let* () 1) 1)
 (assert (let* ((a 1)(b a)) b) 1)
 
-(defMacro (rec lhs . rhs)
-  (if (null? rhs) (list 'rec 'rec lhs)
-    (if (symbol? lhs) (list (list '\ () (list 'def lhs (car rhs)) lhs))
-      (list (list '\ () (list 'def (car lhs) (list* '\ (cdr lhs) rhs)) (car lhs))) )))
-
-(assert ((rec (\ (l) (if (null? l) "" ($ (car l) (rec (cdr l)))))) '(1 2 3)) "123")
-(assert ((rec (\ l (if (null? l) "" ($ (car l) (apply rec (cdr l)))))) 1 2 3) "123")
-
-(defMacro (rec lhs . rhs)
-  (def fn (if (symbol? lhs) lhs (car lhs)))
-  (list (list '\ () (list 'def fn #inert) (list* 'def\ lhs rhs) fn)) )
-
-(assert ((rec (f l)   (if (null? l) "" ($ (car l) (f (cdr l))))) '(1 2 3)) "123")
-(assert ((rec f (l)   (if (null? l) "" ($ (car l) (f (cdr l))))) '(1 2 3)) "123")
-(assert ((rec (f . l) (if (null? l) "" ($ (car l) (apply f (cdr l))))) 1 2 3) "123")
-(assert ((rec f l     (if (null? l) "" ($ (car l) (apply f (cdr l))))) 1 2 3) "123")
-
 (defMacro (letrec bindings . body)
   (list* 'let ()
     (list* 'def* (map car bindings) (map (\ (b) #inert) bindings))
@@ -364,18 +302,11 @@
 
 (assert (letLoop sum ((as (list 1 2)) (bs (list 3 4))) (if (nil? as) () (cons (+ (car as) (car bs)) (sum (cdr as) (cdr bs))))) '(4 6))
 
-#| definizione alternativa di member
 (def\ (member item lst)
-  (let loop ((items lst))
-    (if (null? items) #null
-      (if (== item (car items)) items
-        (loop (cdr items)) ))))
-|#
-(def\ (member item lst)
-  ((rec (loop items)
-     (if (null? items) #null
-       (if (== item (car items)) items
-         (loop (cdr items)) )))
+  ((rec (loop lst)
+     (if (null? lst) #null
+       (if (== item (car lst)) lst
+         (loop (cdr lst)) )))
    lst ))
 
 (assert (member 'b '(a b c d)) '(b c d))
@@ -384,10 +315,10 @@
 |#
 
 (def\ (assoc item lst)
-  ((rec (loop items)
-     (if (null? items) #null
-       (if (== item (caar items)) (car items)
-         (loop (cdr items)))))
+  ((rec (loop lst)
+     (if (null? lst) #null
+       (if (== item (caar lst)) (car lst)
+         (loop (cdr lst)))))
    lst ))
 
 (assert (assoc 'b '((a 1) (b 2) (c 3) (d 4))) '(b 2))
@@ -497,104 +428,6 @@
     env ))
 
 (assert (begin (ddef* (a b) 1 2) (dlet ((a 2)) (assert (dval a) 2)) (dval b)) 2)
-
-(defMacro (dlet* bindings . body)
-  (if (nil? bindings)
-    (list* 'begin body)
-    (list 'dlet
-	  (list (car bindings))
-      (list* 'dlet* (cdr bindings) body) )))
-
-(assert (begin (ddef* (a) 1) (dlet* ((a (+ 1 (dval a))) (a (+ 1 (dval a)))) (dval a))) 3)
-
-(defOperative (ddef var val) env
-  (if (! (instanceof? var Symbol)) (error ($ "not a symbol: " var)))
-  (let ((val (eval val env)) (dv (.value (@get env var))))
-    (cond
-      ((null? dv) (@put env var (dvar val)))
-      ((instanceof? dv DVar) (dv val))
-      (else (error ($ "not null or dynamic value: " var))) )
-    #inert ))
-
-(defOperative (ddef* var* . val*) env
-  (forEach (\ (var) (unless (instanceof? var Symbol) (error ($ "not a symbol: " var)))) var*)
-  (let loop 
-    ((var* var*) (val* (map (\ (val) (eval val env)) val*)) (lkp* (map (\ (var) (.value (@get env var))) var*)) )
-    (unless (null? var*)
-      (let1 (dv (car lkp*))
-        (cond
-          ((null? dv) (@put env (car var*) (dvar (car val*))))
-          ((instanceof? dv DVar) (dv (car val*)))
-          (else (error ($ "not null or a dynamic value: " (car var*)))) )
-        (loop (cdr var*) (cdr val*) (cdr lkp*)) ))))
-      
-(defOperative (%dlet (var* . val*) . body) env
-  (def val* (map (\ (val) (eval val env)) val*))
-  (def var* (map (\ (var) (.value (@get env var))) var*))
-  (def old* (map (\ (var) (var)) var*))
-  (let loop ((var* var*) (val* val*))
-    (unless (null? var*)
-      ((car var*) (car val*))
-      (loop (cdr var*) (cdr val*))))
-  (finally
-    (eval (list* 'begin body) env)
-    (let loop ((var* var*) (old* old*))
-      (unless (null? var*)
-        ((car var*) (car old*))
-        (loop (cdr var*) (cdr old*)) ))))
-
-(defMacro (progv dyns vals . forms)
-  (list* '%dlet (cons dyns vals) forms) )
-
-(defMacro (dlet bindings . forms)
-  (list* '%dlet
-    (cons
-      (map (\ ((name #ignore))  name) bindings)
-      (map (\ ((#ignore value)) value) bindings) )
-    forms ))
-
-(ddef d 1)
-d
-(d)
-(dval d)
-(.value d)
-(ddef* (d e) 2 3) e
-(%dlet ((d e) 4 5) (print (+ (d) (e)))) e
-(progv (d) (3) (print d))
-(dlet ((d 3)) (print d))
-
-(def xdef
-  (%vau (var) #ignore
-    (wrap
-      ($vau (val) env
-        (def dv (.value (@get env var)))
-        (cond
-          ((null? dv) (@put env var (dvar val)))
-          ((instanceof? dv DVar) (dv val))
-          (else (error ($ "not null or a dynamic value: " var))) )
-        #inert ))))
-
-(def xdef
-  (%vau (var) #ignore
-    (wrap
-      ($vau (val) env
-        (def dv (.value (@get env var)))
-        (if (! (or (null? dv) (instanceof? dv DVar))) (error ($ "not null or a dynamic value: " var)))
-        (if (null? dv) (@put env var (dvar val)) (dv val))
-        #inert ))))
-
-((xdef d) 1)
-
-(def xdef*
-  (%vau var* #ignore
-    (wrap
-      ($vau val* env
-        (def dv* (map (\ (var) (let1 (dv (.value (@get env var))) (if (or (null? dv) (instanceof? dv DVar)) dv (error ($ "not null or a dynamic value: " var))))) var*))
-        (let loop ((dv* dv*) (var* var*) (val* val*))
-          (unless (null? dv*) ((\ (dv var val) (if (null? dv) (@put env var (dvar val)) (dv val))) (car dv*) (car var*) (car val*)))
-          (loop (cdr dv*) (cdr var*) (cdr val*)) ))))))
-
-((xdef d e) 2 3)
 |#
 
 (def d\
@@ -609,11 +442,11 @@ d
               (error ($ "not " (if (null? body) "unbound or " "") "a dynamic value: " var)) )))
         (def dv* (map ckdvar var*))
         (unless (null? body) (def old* (map (\ (dv) (dv)) dv*)))
-        (forEach* (\ (dv var val) (if (instanceof? dv DVar) (dv val) (@put env var (dvar val)) )) dv* var* val*)
+        (forEach (\ (dv var val) (if (instanceof? dv DVar) (dv val) (@put env var (dvar val)) )) dv* var* val*)
         (unless (null? body)
           (finally
             (eval (list* 'begin body) env) 
-            (forEach* (\ (dv old) (dv old)) dv* old*) ))))))
+            (forEach (\ (dv old) (dv old)) dv* old*) ))))))
 
 ;((d\ (d e) (print e)) 4 5)     
 ;((d\ (d e)) 6 7)
@@ -632,10 +465,10 @@ d
 
 (defMacro (dlet* bindings . body)
   (if (nil? bindings)
-    (list* begin body)
-    (list dlet
+    (list* 'begin body)
+    (list 'dlet
 	  (list (car bindings))
-      (list* dlet* (cdr bindings) body) )))
+      (list* 'dlet* (cdr bindings) body) )))
       
 (def a (dvar 1))
 (assert (expand (ddef a 1)) '((d\ (a)) 1))
