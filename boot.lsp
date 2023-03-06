@@ -53,7 +53,7 @@
 (def list* %list*)
 (def list->array %list->array)
 (def loop %loop)
-(def makeEnvironment %makeEnv)
+(def makeEnv %makeEnv)
 (def nil? %null?)
 (def null? %null?)
 (def not !)
@@ -76,8 +76,8 @@
 (def list %list)
 (def $lambda ($vau (formals . body) env (wrap (eval (list* $vau formals #ignore body) env))))
 (def $lambda %lambda)
-(def theEnvironment ($vau () e e))
-(def theEnvironment %theEnvironment)
+(def theEnv ($vau () e e))
+(def theEnv %theEnv)
 
 (def car (\ ((x . #ignore)) x))
 (def car %car)
@@ -106,7 +106,7 @@
       ($vau operands env
         (def !evm (! (evm)))
         (if !evm (evm #t))
-        (def expr (eval (cons expander operands) (makeEnvironment)))
+        (def expr (eval (cons expander operands) (makeEnv)))
         (if !evm expr (eval expr env)) ))))
 
 (def macro
@@ -189,7 +189,7 @@
   (if (instanceof? appv &java.util.function.Function)
     (@apply appv (list->array args))
     (eval (cons (unwrap appv) args)
-      (if (nil? optEnv) (makeEnvironment) (car optEnv)) )))
+      (if (nil? optEnv) (makeEnv) (car optEnv)) )))
 
 (defMacro (rec lhs . rhs)
   (def fn (if (symbol? lhs) lhs (car lhs)))
@@ -523,9 +523,9 @@
 (assert (begin (provide (x) (define x 10)) x) 10)
 
 (defVau (module exports . body) env
-  (let ((menv (makeEnvironment env)))
+  (let ((menv (makeEnv env)))
     (eval (list* 'provide exports body) menv)
-    (makeEnvironment menv) ))
+    (makeEnv menv) ))
 
 (assert (begin (define m (module (x) (define x 10))) (eval 'x m)) 10)
 

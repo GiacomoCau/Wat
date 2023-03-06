@@ -111,6 +111,7 @@ public class Vm {
 	boolean dotco = true;
 	boolean doasrt = true;
 	boolean ctapv = false;
+	boolean instr = false;
 	
 	int prtrc = 0; // 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
 	int prenv = 3;
@@ -452,7 +453,7 @@ public class Vm {
 		: isjFun(arg) ? (T) new JFun(arg)
 		: error("cannot unwrap: " + arg);
 	}
-	//Apv lambda(Object p, Object e, List b) { return new Apv(new Opv(p, ignore, b, evaluate(theEnvironment, e))); }
+	//Apv lambda(Object p, Object e, List b) { return new Apv(new Opv(p, ignore, b, evaluate(theEnv, e))); }
 	
 	
 	// Built-in Combiners
@@ -851,13 +852,13 @@ public class Vm {
 	}
 	<T> T error(String msg, Throwable cause) {
 		var exc = new Error(msg, cause); 
-		var userBreak = theEnvironment.get("userBreak").value;
+		var userBreak = theEnv.get("userBreak").value;
 		if (userBreak != null) {
 			// con l'attuale userBbreak se stack is true viene tornata una sospension per il takeSubcont (o un tco)
-			var res = evaluate(theEnvironment, list(userBreak, exc));
-			//var res = pipe(dbg(theEnvironment, userBreak, exc), ()-> evaluate(theEnvironment, list(userBreak, exc))); // for ?
+			var res = evaluate(theEnv, list(userBreak, exc));
+			//var res = pipe(dbg(theEnv, userBreak, exc), ()-> evaluate(theEnv, list(userBreak, exc))); // for ?
 			// per l'esecuzione della throw anche se userbreak non lo facesse
-			if (res instanceof Suspension s) return (T) s.suspend(dbg(theEnvironment, "throw", exc), rr-> { throw exc; });
+			if (res instanceof Suspension s) return (T) s.suspend(dbg(theEnv, "throw", exc), rr-> { throw exc; });
 		}
 		throw exc;
 	}
@@ -992,7 +993,7 @@ public class Vm {
 	}
 	boolean vmAssert(String str, Object objs) throws Exception {
 		List expr = cons(begin, parseBytecode(parse(str)));
-		return vmAssert.combine(theEnvironment,  objs instanceof Throwable ? expr : cons(expr, parseBytecode(objs))); 
+		return vmAssert.combine(theEnv,  objs instanceof Throwable ? expr : cons(expr, parseBytecode(objs))); 
 	}
 	class Assert implements Combinable {
 		public Boolean combine(Env env, List o) {
@@ -1038,13 +1039,13 @@ public class Vm {
 	}
 	
 	Object parseBytecode(Object o) {
-		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore"-> ignore; default-> intern(s/*.intern()*/ ); };
+		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore"-> ignore; default-> intern(instr ? s.intern() : s); };
 		if (o instanceof Object[] a) return parseBytecode(a);
 		return o;
 	}
 	Object parseBytecode(Object ... objs) {
 		if (objs.length == 0) return null;
-		if (objs.length == 2 && objs[0] != null && objs[0].equals("wat-string")) return objs[1]; //((String) objs[1]).intern();
+		if (objs.length == 2 && objs[0] != null && objs[0].equals("wat-string")) return instr ? ((String) objs[1]).intern() : objs[1];
 		int i = objs.length - 1;
 		Object tail = null; 
 		if (i > 1 && objs[i-1] != null && objs[i-1].equals(".")) { tail = parseBytecode(objs[i]); i-=2; }
@@ -1083,10 +1084,10 @@ public class Vm {
 	
 	
 	// Bootstrap
-	Env theEnvironment=env(null); {
-		bind(theEnvironment, null, symbol("%def"), new Def());
-		bind(theEnvironment, null, symbol("%begin"), begin);
-		evaluate(theEnvironment,
+	Env theEnv=env(null); {
+		bind(theEnv, null, symbol("%def"), new Def());
+		bind(theEnv, null, symbol("%begin"), begin);
+		evaluate(theEnv,
 			parseBytecode(
 				$("%begin",
 					// Basics
@@ -1099,9 +1100,9 @@ public class Vm {
 					$("%def", "%bound?", wrap(new JFun("%Bound?", (BiFunction<Symbol,Env,Boolean>) (s, e)-> e.get(s).isBound))),
 					$("%def", "%apply", wrap(new JFun("%Apply", (ArgsList) o-> combine(o.cdr(1) != null ? o.car(2) : env(null), unwrap(o.car()), o.car(1))))),
 					$("%def", "%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(null), unwrap(o.car()), o.cdr())))),
-					$("%def", "%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnvironment.map.clear(); return theEnvironment; }))),
-					$("%def", "%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnvironment = env(theEnvironment)))),
-					$("%def", "%popEnv", wrap(new JFun("%PopEnv", (Supplier) ()-> theEnvironment = theEnvironment.parent))),
+					$("%def", "%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; }))),
+					$("%def", "%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnv = env(theEnv)))),
+					$("%def", "%popEnv", wrap(new JFun("%PopEnv", (Supplier) ()-> theEnv = theEnv.parent))),
 					// Values
 					$("%def", "%car", wrap(new JFun("%Car", (Function<Cons, Object>) Cons::car))),
 					$("%def", "%cdr", wrap(new JFun("%Car", (Function<Cons, Object>) Cons::cdr))),
@@ -1136,6 +1137,7 @@ public class Vm {
 					$("%def", "%rootPrompt", rootPrompt),
 					$("%def", "%error", wrap(new JFun("%Error", (Function<String, Object>) this::error))),
 					// Java Interface
+					$("%def", "%jFun?", wrap(new JFun("%JFun?", (Function<Object,Boolean>) this::isjFun))),
 					$("%def", "%jInvoke", wrap(new JFun("%JInvoke", (Function<String,Object>) this::jInvoke))),
 					$("%def", "%jGetSet", wrap(new JFun("%JGetSet", (Function<String,Object>) this::jGetSet))),
 					$("%def", "%instanceof?", wrap(new JFun("%Instanceof?", (BiFunction<Object,Class,Boolean>) (o,c)-> c.isInstance(o)))),
@@ -1145,7 +1147,7 @@ public class Vm {
 					$("%def", "%obj", wrap(new JFun("%Obj", (ArgsList) o-> uncked(()-> ((Class<? extends StdObj>) o.car()).getDeclaredConstructor(List.class).newInstance(o.cdr()))))),
 					$("%def", "%class", wrap(new JFun("%Class", (ArgsList) o-> extend(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr()))))),
 					$("%def", "%subClass?", wrap(new JFun("%SubClass", (BiFunction<Class,Class,Boolean>) (cl,sc)-> sc.isAssignableFrom(cl)))),
-					$("%def", "%type?",  wrap(new JFun("%Type", (BiFunction<Object,Class,Boolean>) (o,c)-> o == null ? c == null : c.isAssignableFrom(o.getClass())))),
+					$("%def", "%type?",  wrap(new JFun("%Type?", (BiFunction<Object,Class,Boolean>) (o,c)-> o == null ? c == null : c.isAssignableFrom(o.getClass())))),
 					$("%def", "%classOf", wrap(new JFun("%ClassOf", (Function<Object,Class>) Object::getClass))),
 					// Utilities
 					$("%def", "%list", wrap(new JFun("%List", (ArgsList) o-> o))),
@@ -1183,7 +1185,7 @@ public class Vm {
 					$("%def", "%eq?", wrap(new JFun("%Eq?", (BiFunction<Object,Object,Boolean>) (a,b)-> Vm.this.equals(a, b)))),
 					//
 					$("%def", "%quote", $("%vau", $("arg"), ignore, "arg")),
-					$("%def", "%theEnvironment", $("%vau", null, "env", "env")),
+					$("%def", "%theEnv", $("%vau", null, "env", "env")),
 					$("%def", "%lambda", $("%vau", $("formals", ".", "body"), "env",
 						$("%wrap", $("%eval", $("%list*", "%vau", "formals", ignore, "body"), "env")))),
 					//$("%def", "%jambda", jFun((ArgsList) o-> lambda(o.car(), o.car(1), o.cdr(1)))),
@@ -1205,14 +1207,14 @@ public class Vm {
 				)
 			)
 		);
-		theEnvironment = env(theEnvironment);
+		theEnv = env(theEnv);
 	}
 	
 	
 	// API
 	public Object exec(Object bytecode) {
 		var wrapped = pushRootPrompt(cons(new Begin(true), parseBytecode(bytecode)));
-		return pushSubcontBarrier(null, theEnvironment, wrapped);
+		return pushSubcontBarrier(null, theEnv, wrapped);
 	}
 	public Object call(String funName, Object ... args) {
 		return exec(list(symbol(funName), parseBytecode(args)));

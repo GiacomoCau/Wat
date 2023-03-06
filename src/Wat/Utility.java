@@ -419,8 +419,12 @@ public class Utility {
 				Float bestCost = Float.MAX_VALUE;
 				for (var executable: executables) {
 					var cost = getTotalTransformationCost(executable, argumentsClass);
-					if (cost >= bestCost) continue;
-					if (cost == bestCost) throw new RuntimeException("I " + (name.equals("new") ? "costruttori" : "metodi") + " " + bestMatch + " and " + executable + " has equal cost: " + bestCost);
+					if (cost > bestCost) continue;
+					if (cost == bestCost) {
+						if (executable.getDeclaringClass() == bestMatch.getDeclaringClass())
+							throw new RuntimeException("I " + (name.equals("new") ? "costruttori" : "metodi") + " " + bestMatch + " and " + executable + " has equal cost: " + bestCost);
+						if (executable.getDeclaringClass().isAssignableFrom(bestMatch.getDeclaringClass())) continue;
+					}
 					bestCost = cost;
 					bestMatch = executable;
 				}
