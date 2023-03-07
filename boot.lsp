@@ -84,7 +84,6 @@
 (def cdr (\ ((#ignore . x)) x))
 (def cdr %cdr)
 
-(def zero? (\ (n) (== n 0)))
 (def compose (\ (f g) (\ (arg) (f (g arg)))))
 
 (def caar (compose car car))
@@ -114,10 +113,10 @@
     ($vau (params . body) #ignore
       (list 'makeMacro (list* '$vau params #ignore body)) )))
 
-; defMacro def\ defVau rec def*\ e labels permettono la definizione con una doppia sintassi
-;    (name (parametro ...) body ...)
-;    ((name parametro ...) body ...)
-; ma solo rec letrec e labels inizializzano le definizioni prima di valutarne il valore
+; defMacro def\ defVau rec def*\ e labels permettono le definizioni con le seguenti due sintassi
+;    (name parameters . body)
+;    ((name . parameters) . body)
+; ma solo rec letrec e labels inizializzano a #inert le definizioni prima di valutarne il valore
 
 (def defMacro
   (macro (lhs . rhs)
@@ -132,8 +131,8 @@
 (defMacro (expand macro)
   (list 'begin (list 'evm #f) macro))
 
-(assert (expand (defMacro (a b) (list '+ b 1))) '(def a (macro (b) (list (%quote +) b 1))))
-(assert (expand (defMacro a (b) (list '+ b 1))) '(def a (macro (b) (list (%quote +) b 1))))
+(assert (expand (defMacro (succ n) (list '+ n 1))) '(def succ (macro (n) (list (%quote +) n 1))))
+(assert (expand (defMacro succ (n) (list '+ n 1))) '(def succ (macro (n) (list (%quote +) n 1))))
 
 (defMacro (def* lhs . rhs)
   (list 'def lhs (list* 'list rhs)) )
@@ -143,17 +142,26 @@
     (list 'def lhs (list* '\ (car rhs) (cdr rhs)))
     (list 'def (car lhs) (list* '\ (cdr lhs) rhs)) ))
 
-(assert (expand (def\ a (b) (+ 1 b))) '(def a (\ (b) (+ 1 b))) )
-(assert (expand (def\ (a b) (+ 1 b))) '(def a (\ (b) (+ 1 b))) )
+(assert (expand (def\ succ (n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
+(assert (expand (def\ (succ n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
 
 (defMacro (defVau lhs . rhs)
   (if (symbol? lhs)
     (list 'def lhs (list* '$vau (car rhs) (cadr rhs) (cddr rhs)))
     (list 'def (car lhs) (list* '$vau (cdr lhs) (car rhs) (cdr rhs))) ))
 
-(assert (expand (defVau (a b) env (eval (list '+ b 1) env))) '(def a ($vau (b) env (eval (list (%quote +) b 1) env))))
-(assert (expand (defVau a (b) env (eval (list '+ b 1) env))) '(def a ($vau (b) env (eval (list (%quote +) b 1) env))))
+(assert (expand (defVau (succ n) env (eval (list '+ n 1) env))) '(def succ ($vau (n) env (eval (list (%quote +) n 1) env))))
+(assert (expand (defVau succ (n) env (eval (list '+ n 1) env))) '(def succ ($vau (n) env (eval (list (%quote +) n 1) env))))
 
+
+;;;; Basic value test
+
+(def\ (ifnull? a b) (if (null? a) b a))
+(def\ (zero? n) (== n 0))
+(def\ (ifzero? a b) (if (zero? a) b a))
+(def\ (inert? a) (== a #inert))
+(def\ (ifinert? a b) (if (inert? a) b a))
+ 
 
 ;;;; Wrap incomplete VM forms
 
@@ -216,8 +224,8 @@
     (map (\ (lhs) (if (symbol? lhs) lhs (car lhs))) lhs*)
     (map (\ (lhs rhs) (if (symbol? lhs) (list* '\ (car rhs) (cdr rhs)) (list* '\ (cdr lhs) rhs))) lhs* rhs*) )) 
 
-(assert (expand (def*\ ((a n) (b n)) (+ n 1) (+ n 1))) '(def* (a b) (\ (n) + n 1) (\ (n) + n 1)) )
-(assert (expand (def*\ (a b) ((n) + n 1) ((n) + n 1))) '(def* (a b) (\ (n) + n 1) (\ (n) + n 1)) )
+(assert (expand (def*\ ((a n) (b n)) ((+ n 1)) ((+ n 1)))) '(def* (a b) (\ (n) (+ n 1)) (\ (n) (+ n 1))) )
+(assert (expand (def*\ (a b) ((n) (+ n 1)) ((n) (+ n 1)))) '(def* (a b) (\ (n) (+ n 1)) (\ (n) (+ n 1))) )
 
 
 ;;;; Lexical bindings
@@ -253,7 +261,7 @@
     (list* 'def* (map car bindings) (map cadr bindings))
     body ))
 
-(assert (letrec ( (even? (\ (n) (if (== n 0) #t (odd? (- n 1))))) (odd? (\ (n) (if (== n 0) #f (even? (- n 1))))) ) (even? 88)) #t)
+(assert (letrec ( (even? (\ (n) (if (zero? n) #t (odd? (- n 1))))) (odd? (\ (n) (if (zero? n) #f (even? (- n 1))))) ) (even? 88)) #t)
 
 (defMacro (labels bindings . body)
   (list* 'let ()
@@ -261,8 +269,8 @@
     (list* 'def*\ (map car bindings) (map cdr bindings))
     body ))
 
-(assert (labels ( ((even? n) (if (== n 0) #t (odd? (- n 1)))) ((odd? n) (if (== n 0) #f (even? (- n 1)))) ) (even? 88) ) #t)
-(assert (labels ( (even? (n) (if (== n 0) #t (odd? (- n 1)))) (odd? (n) (if (== n 0) #f (even? (- n 1)))) ) (even? 88) ) #t)
+(assert (labels ( ((even? n) (if (zero? n) #t (odd? (- n 1)))) ((odd? n) (if (== n 0) #f (even? (- n 1)))) ) (even? 88) ) #t)
+(assert (labels ( (even? (n) (if (zero? n) #t (odd? (- n 1)))) (odd? (n) (if (== n 0) #f (even? (- n 1)))) ) (even? 88) ) #t)
 
 (defMacro (letLoop name bindings . body)
   (list 'letrec
@@ -292,6 +300,18 @@
 
 (assert (assoc 'b '((a 1) (b 2) (c 3) (d 4))) '(b 2))
 
+(def\ (get? key lst)
+  ((rec (loop lst) 
+     (if (null? lst) #null
+       (let1 ((k v . lst) lst)
+         (if (== k key) (list v) (loop lst)))))
+   lst ))
+
+(def\ (opt? val def) (if (!= val #null) (car val) def)) 
+
+(assert (get? :b '(:a 1 :b 2 :c 3 :d 4)) '(2)) 
+(assert (opt? (get? :b '(:a 1 :b 2 :c 3 :d 4)) 10) 2)
+(assert (opt? (get? :f '(:a 1 :b 2 :c 3 :d 4)) 10) 10)
 
 ;;;; Type parameters check lambda
 
@@ -344,24 +364,30 @@
 (def || or)
 
 (def\ (callWithEscape fun)
-  (let ((fresh (list #null)))
-    (catch (fun (\ optArg (throw (list fresh optArg))))
+  (let1 (fresh (list #null))
+    (catch (fun (\ opt? (throw (list fresh opt?))))
       (\ (exc)
-        (if (and (cons? exc) (eq? fresh (car exc)))
-            (let ((optArg (cadr exc)))
-              (if (cons? optArg) (car optArg) #null))
-            (throw exc))))))
+        (if (and (cons? exc) (== (car exc) fresh))
+          (let1 (opt? (cadr exc)) (if (cons? opt?) (car opt?)))
+          (throw exc))))))
 
 (defMacro (label name . body)
   (list 'callWithEscape (list* '\ (list name) body)))
 
+(assert (label return (return)) #inert)
+(assert (label return (return 3)) 3)
+
 (defVau (while test . body) env
   (let ((body (list* 'begin body)))
-    (label return
+    (label break
+      (%bind env 'break break)
       (loop
         (if (eval test env)
           (eval body env)
-          (return))))))
+          (break) )))))
+          
+(assert (let1 (c 2) (while (> c 0) (def c (- c 1))) c) 0)
+(assert (let1 (c 2) (while #t (if (zero? c) (break (+ 5 5)) (def c (- c 1))))) 10)
 
 (defMacro (when test . body)
   (list 'if test (list* 'begin body)))
@@ -371,6 +397,21 @@
 
 (defMacro (set (getter . args) newVal)
   (list* (list 'setter getter) newVal args))
+
+#|
+(def\ switchDefaultFunction (default)
+  ($vau (keyform . clauses) env
+    (let1 (key (eval keyform env))
+      (let typecase ((clauses clauses))
+        (if (null? clauses) (default key)
+          (let1 (((className . forms) . clauses) clauses)
+            (if (type? key (@get env (string->symbol className)))
+              (eval (list* 'begin forms) env)
+              (typecase clauses) )))))))
+
+(def typecase (switchDefaultFunction (lambda (#ignore) #inert))
+(def etypecase (switchDefaultFunction (lambda (key) (error (make-type-error key Object))))
+|#
 
 
 ;;;; List utilities
@@ -406,6 +447,7 @@
       (if (<= n 1)
         (reverse (cons (if (null? (cdr t)) (car t) t) h))
         (loop (- n 1) (cons (car t) h) (cdr t)) ))))
+
 
 ;;;; Dynamic Binding
 

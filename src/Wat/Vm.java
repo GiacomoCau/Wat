@@ -573,7 +573,7 @@ public class Vm {
 							throw thw instanceof Error err ? err : new Error(thw);
 						}
 						return (ctapv ? hdl : evaluate(e, hdl)) instanceof Apv apv1 && args(apv1) == 1
-							? getTco(Vm.this.combine(e, apv1, list(thw instanceof Value val ? val.value : thw)))
+							? getTco(Vm.this.combine(e, unwrap(apv1), list(thw instanceof Value val ? val.value : thw)))
 							: error("not a one arg applicative combiner: " + hdl)
 						; 
 					}
@@ -1098,6 +1098,7 @@ public class Vm {
 					$("%def", "%wrap", wrap(new JFun("%Wrap", (Function<Object, Object>) t-> wrap(t)))),
 					$("%def", "%unwrap", wrap(new JFun("%Unwrap", (Function<Object, Object>) t-> unwrap(t)))),
 					$("%def", "%bound?", wrap(new JFun("%Bound?", (BiFunction<Symbol,Env,Boolean>) (s, e)-> e.get(s).isBound))),
+					$("%def", "%bind", wrap(new JFun("%Bind", (ArgsList) o-> ((Env) o.car()).put(o.car(1), o.car(2))))),
 					$("%def", "%apply", wrap(new JFun("%Apply", (ArgsList) o-> combine(o.cdr(1) != null ? o.car(2) : env(null), unwrap(o.car()), o.car(1))))),
 					$("%def", "%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(null), unwrap(o.car()), o.cdr())))),
 					$("%def", "%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; }))),
