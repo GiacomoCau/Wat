@@ -111,14 +111,14 @@ public class Vm {
 	    for (File file: new File("bin/Ext").listFiles()) file.delete();
 	}
 
-	boolean dotco = true;
-	boolean doasrt = true;
-	boolean ctapv = false;
-	boolean instr = false;
+	boolean dotco = true; // do tco
+	boolean doasrt = true; // do assert
+	boolean ctapv = false; // catch & throw applicative
+	boolean instr = false; // intern string
 	
-	int prtrc = 0; // 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
-	int prenv = 3;
-	boolean prstk = false;
+	int prtrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
+	int prenv = 3; // print environment
+	boolean prstk = false; // print stack
 	
 	
 	// Continuations
@@ -581,7 +581,7 @@ public class Vm {
 				res = r != null ? r.resume() : !ctapv ? evaluate(e, x) : getTco(Vm.this.combine(e, x, null));
 			}
 			catch (Throwable thw) {
-				if (tag != ignore && thw instanceof Value val && !Vm.this.equals(val.tag, tag)) throw thw; 
+				if (tag != ignore && thw instanceof Value val && val.tag != tag) throw thw; 
 				res = pipe(dbg(e, this, hdl, thw), ()-> {
 						if (hdl == null) {
 							if (thw instanceof Value val) return val.value;
@@ -1113,7 +1113,7 @@ public class Vm {
 					$("%def", "%wrap", wrap(new JFun("%Wrap", (Function<Object, Object>) t-> wrap(t)))),
 					$("%def", "%unwrap", wrap(new JFun("%Unwrap", (Function<Object, Object>) t-> unwrap(t)))),
 					$("%def", "%bound?", wrap(new JFun("%Bound?", (BiFunction<Symbol,Env,Boolean>) (s, e)-> e.get(s).isBound))),
-					$("%def", "%bind", wrap(new JFun("%Bind", (ArgsList) o-> ((Env) o.car()).put(o.car(1), o.car(2))))),
+					$("%def", "%bind", wrap(new JFun("%Bind", (ArgsList) o-> bind((Env) o.car(), o.car(1), o.car(2)) == null))),
 					$("%def", "%apply", wrap(new JFun("%Apply", (ArgsList) o-> combine(o.cdr(1) != null ? o.car(2) : env(null), unwrap(o.car()), o.car(1))))),
 					$("%def", "%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(null), unwrap(o.car()), o.cdr())))),
 					$("%def", "%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; }))),
@@ -1215,12 +1215,11 @@ public class Vm {
 					$("%def", "print", wrap(new JFun("Print", (ArgsList) o-> print(array(o))))),
 					$("%def", "write", wrap(new JFun("Write", (ArgsList) o-> write(array(o))))),
 					$("%def", "load", wrap(new JFun("Load", (Function<String, Object>) nf-> uncked(()-> loadText(nf))))),
-					$("%def", "dotco", wrap(new JFun("Dotco", (ArgsList) o-> { if (checkO("dotco", o, 0, 1, Boolean.class) == 0) return dotco; dotco=o.car(); return inert; }))),
-					$("%def", "doasrt",  wrap(new JFun("Doasrt", (ArgsList) o-> { if (checkO("doasrt", o, 0, 1, Boolean.class) == 0) return doasrt; doasrt=o.car(); return inert; }))),
-					$("%def", "prtrc", wrap(new JFun("Prtrc", (ArgsList) o-> { if (checkO("prtrc", o, 0, 1, Integer.class) == 0) return prtrc; prtrc=o.car(); start=level-3; return inert; }))),
-					$("%def", "prenv", wrap(new JFun("Prenv", (ArgsList) o-> { if (checkO("prenv", o, 0, 1, Integer.class) == 0) return prenv; prenv=o.car(); return inert; }))),
-					$("%def", "prstk", wrap(new JFun("Prstk", (ArgsList) o-> { if (checkO("prstk", o, 0, 1, Boolean.class) == 0) return prstk; prstk=o.car(); return inert; })))
-					//$("%def", "prenv", (ArgsList) o-> checkO("prenv", o, 0, 1, Boolean.class) == 0 ? prenv : inert(prenv=o.car()))
+					$("%def", "dotco", wrap(new JFun("Dotco", (ArgsList) o-> { return checkO("dotco", o, 0, 1, Boolean.class) == 0 ? dotco : inert(dotco=o.car()); }))),
+					$("%def", "doasrt",  wrap(new JFun("Doasrt", (ArgsList) o-> { return checkO("doasrt", o, 0, 1, Boolean.class) == 0 ? doasrt : inert(doasrt=o.car()); }))),
+					$("%def", "prtrc", wrap(new JFun("Prtrc", (ArgsList) o-> { if (checkO("prtrc", o, 0, 1, Integer.class) == 0) return prtrc; start=level-3; return inert(prtrc=o.car()); }))),
+					$("%def", "prenv", wrap(new JFun("Prenv", (ArgsList) o-> { return checkO("prenv", o, 0, 1, Integer.class) == 0 ? prenv : inert(prenv=o.car()); }))),
+					$("%def", "prstk", wrap(new JFun("Prstk", (ArgsList) o-> { return checkO("prstk", o, 0, 1, Boolean.class) == 0 ? prstk : inert(prstk=o.car()); })))
 				)
 			)
 		);

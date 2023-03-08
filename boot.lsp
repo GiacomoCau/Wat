@@ -78,7 +78,6 @@
 (def $lambda %lambda)
 (def theEnv ($vau () e e))
 (def theEnv %theEnv)
-
 (def car (\ ((x . #ignore)) x))
 (def car %car)
 (def cdr (\ ((#ignore . x)) x))
@@ -124,10 +123,6 @@
       (list 'def lhs (list* 'macro (car rhs) (cdr rhs)))
       (list 'def (car lhs) (list* 'macro (cdr lhs) rhs)) )))
 
-#| sostituito dal seguente, eliminare
-(defMacro (expand macro)
-  (list 'begin (list 'evm #f) (list 'finally macro (list 'evm #t))) )
-|#
 (defMacro (expand macro)
   (list 'begin (list 'evm #f) macro))
 
@@ -166,14 +161,20 @@
 ;;;; Wrap incomplete VM forms
 
 (defMacro (catch x . handler)
-  (list* 'catchTag #ignore x handler))
+  (list* '%catch #ignore x handler))
 
 (defMacro (throw . x)
-  (list* 'throwTag #ignore x))
+  (list* '%throw #ignore x))
 
 (assert (catch (throw)) #inert)
 (assert (catch (throw 1)) 1)
 (assert (catch (throw 1) (\ (x) (+ x 1))) 2)
+
+(defVau (catch! tag expr . hdl) env
+  (eval (list* '%catch (eval tag env) expr hdl) env) )
+
+(defVau (throw! tag . val) env
+  (eval (list* '%throw (eval tag env) val) env) )
 
 (defVau (finally protected . cleanup) env
   (eval (list '%finally protected (list* 'begin cleanup)) env) )
@@ -287,9 +288,7 @@
    lst ))
 
 (assert (member 'b '(a b c d)) '(b c d))
-#| solo se String interned!
-(assert (member "b" '("a" "b" "c" "d")) '("b" "c" "d"))
-|#
+;(assert (member "b" '("a" "b" "c" "d")) '("b" "c" "d")) ; solo se String interned!
 
 (def\ (assoc item lst)
   ((rec (loop lst)
@@ -307,11 +306,12 @@
          (if (== k key) (list v) (loop lst)))))
    lst ))
 
-(def\ (opt? val def) (if (!= val #null) (car val) def)) 
+(defVau (opt? val def) env (let1 (val (eval val env)) (if (!= val #null) (car val) (eval def env)))) 
 
 (assert (get? :b '(:a 1 :b 2 :c 3 :d 4)) '(2)) 
 (assert (opt? (get? :b '(:a 1 :b 2 :c 3 :d 4)) 10) 2)
 (assert (opt? (get? :f '(:a 1 :b 2 :c 3 :d 4)) 10) 10)
+
 
 ;;;; Type parameters check lambda
 
@@ -378,16 +378,26 @@
 (assert (label return (return 3)) 3)
 
 (defVau (while test . body) env
-  (let ((body (list* 'begin body)))
-    (label break
-      (%bind env 'break break)
+  (let ((body (list* 'begin body))
+        (break (list #null))
+        (continue (list #null)) )
+    (%bind env 'break (\ v (throw! break (if (! (null? v)) (if (null? (cdr v)) (car v) v)))))
+    (%bind env 'continue (\ () (throw! continue)))
+    (catch! break
       (loop
-        (if (eval test env)
-          (eval body env)
-          (break) )))))
-          
-(assert (let1 (c 2) (while (> c 0) (def c (- c 1))) c) 0)
-(assert (let1 (c 2) (while #t (if (zero? c) (break (+ 5 5)) (def c (- c 1))))) 10)
+        (catch! continue
+          (if (eval test env) 
+            (eval body env)
+            (throw! break) ))))))
+
+(defMacro (-- n) 
+  (list 'begin (list 'def n (list '- n 1)) n)) 
+(defMacro (++ n) 
+  (list 'begin (list 'def n (list '+ n 1)) n)) 
+
+(assert (let1 (c 2) (while (> c 0) (-- c)) c) 0)
+(assert (let1 (c 2) (while #t (if (zero? c) (break (+ 5 5)) (-- c)))) 10)
+(assert (let ((c 10) (r #null)) (while #t (if (zero? c) (break r)) (if (zero? (% (-- c) 2)) (continue)) (def r (cons c r)) )) '(1 3 5 7 9))
 
 (defMacro (when test . body)
   (list 'if test (list* 'begin body)))
