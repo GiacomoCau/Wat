@@ -49,6 +49,10 @@ public class Prova {
 	}
 	
 	public static void main(String[] args) throws Exception {
+		extend2("Wat.Vm$Box2",null);
+	}
+
+	public static void key() {
 		var map = new HashMap<Key,Object>();
 		out.println(new Key(1, " ", true).equals(new Key(1, " ", true)));
 		map.put(new Key(1, " ", true), 2);
@@ -69,6 +73,41 @@ public class Prova {
 		new Box(1).get();
 	}
 
+	/* funziona ma ha bisogno di una istanza di Vm
+	public void extend2(String className, Class superClass) throws Exception{
+		class JavaStringFile extends SimpleJavaFileObject {
+		    final String code;
+		    JavaStringFile(String name, String code) {
+		        super(URI.create("string:///" + name.replace('.','/') + Kind.SOURCE.extension), Kind.SOURCE); this.code = code;
+		    }
+		    @Override public CharSequence getCharContent(boolean ignoreEncodingErrors) { return code; }
+		}
+	    var diagnostics = new DiagnosticCollector<JavaFileObject>();
+	    var task = ToolProvider.getSystemJavaCompiler().getTask(
+	    	null, null, diagnostics,
+	    	java.util.List.of("-d", "bin", "--enable-preview", "-source", "19", "-Xlint:unchecked" ),
+	    	null,
+	    	java.util.List.of(
+		    	new JavaStringFile("Ext.StdObj2", """
+					package Ext;
+					import Wat.Vm;
+					public class StdObj2 extends Vm.StdObj {
+						public StdObj2(Vm vm, Vm.List l) { vm.super(l); }
+					}
+					"""
+				)
+	    	)
+	    );
+	    if (task.call()) {
+	    	var cls = Class.forName("Ext.StdObj2");
+	    	out.println(cls.getCanonicalName());
+	    	cls.getConstructor(Vm.class, List.class).newInstance(Vm.this, null);
+	    }
+	    else {
+	    	System.out.println(diagnostics.getDiagnostics());
+	    }
+	}
+    */
 	public static void extend2(String className, Class superClass){
 		class JavaStringFile extends SimpleJavaFileObject {
 		    final String code;
@@ -83,15 +122,24 @@ public class Prova {
 	    	java.util.List.of("-d", "bin", "--enable-preview", "-source", "19", "-Xlint:unchecked" ),
 	    	null,
 	    	java.util.List.of(
-		    	new JavaStringFile("Ext.Xxx", """
+	    		/*new JavaStringFile("Wat.Vm$", """
 					package Ext;
 					import Wat.Vm;
-					/*public*/ class %1$s extends %2$s {
+					/*public* / class %1$s extends %2$s {
 						private static final long serialVersionUID = 1L;
 						public %1$s(Vm.List l) { super(l); }
 						@Override public String toString() { return "{%1$s" + Vm.reverseMap(this) + "}"; }
 					}
 					""".formatted(className, superClass == null ? "Vm.StdObj" : superClass.getCanonicalName())
+				)*/
+		    	new JavaStringFile("Wat.Vm$StdObj2", """
+					package Wat;
+					import Wat.Vm;
+					class StdObj2 extends Vm.StdObj {
+						private static final long serialVersionUID = 1L;
+						public StdObj2(Vm.List l) { super(Vm.this, l); }
+					}
+					"""
 				)
 	    	)
 	    );

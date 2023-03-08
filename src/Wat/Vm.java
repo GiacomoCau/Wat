@@ -33,6 +33,7 @@ import static java.lang.System.currentTimeMillis;
 import static java.lang.System.out;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
+	import static javax.tools.ToolProvider.getSystemJavaCompiler;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -45,6 +46,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -58,7 +60,9 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import javax.tools.ToolProvider;
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaFileObject;
+import javax.tools.SimpleJavaFileObject;
 
 // java.exe -cp bin --enable-preview Wat.Vm
 
@@ -105,7 +109,6 @@ public class Vm {
 
 	static {
 	    for (File file: new File("bin/Ext").listFiles()) file.delete();
-	    for (File file: new File("src/Ext").listFiles()) file.delete();
 	}
 
 	boolean dotco = true;
@@ -324,7 +327,7 @@ public class Vm {
 	
 	
 	// Classes and Objects
-	public static class StdObj extends LinkedHashMap<Keyword, Object> {
+	public class StdObj extends LinkedHashMap<Keyword, Object> {
 		private static final long serialVersionUID = 1L;
 		public StdObj(List list) {
 	        for (var l=list; l!=null; l=l.cdr()) {
@@ -333,7 +336,6 @@ public class Vm {
 	        	put(key, l.car);
 	        }
 		}
-		@Override public String toString() { return "{StdObj" + reverseMap(this) + "}"; }
 	}
 	Class extend(Symbol className, Class superClass) {
 		try {
@@ -345,22 +347,35 @@ public class Vm {
 		}
 		catch (ClassNotFoundException e) {
 			try {
-				String source = """
-					package Ext;
-					import Wat.Vm;
-					public class %1$s extends %2$s {
-						private static final long serialVersionUID = 1L;
-						public %1$s(Vm.List l) { super(l); }
-						@Override public String toString() { return "{%1$s" + Vm.reverseMap(this) + "}"; }
-					}
-					""".formatted(className, superClass == null ? "Vm.StdObj" : superClass.getCanonicalName())
-				;
-				var classPath = "src/Ext/%s.java".formatted(className);
-				var file = new File(classPath);
-				file.deleteOnExit();
-				new File(classPath.replace("src", "bin").replace("java", "class")).deleteOnExit();
-				Files.write(file.toPath(), source.getBytes("cp1252"));
-				ToolProvider.getSystemJavaCompiler().run(null, null, null, classPath, "-d", "bin", "--enable-preview", "-source", "19", "-Xlint:unchecked" );
+				class JavaStringFile extends SimpleJavaFileObject {
+				    final String code;
+				    JavaStringFile(String name, String code) {
+				        super(URI.create("string:///" + name.replace('.','/') + Kind.SOURCE.extension), Kind.SOURCE); this.code = code;
+				    }
+				    @Override public CharSequence getCharContent(boolean ignoreEncodingErrors) { return code; }
+				}
+			    var diagnostics = new DiagnosticCollector<JavaFileObject>();
+			    var isStdObj = superClass == null || superClass == StdObj.class;
+			    var task = getSystemJavaCompiler().getTask(
+			    	null, null, diagnostics,
+			    	java.util.List.of("-d", "bin", "--enable-preview", "-source", "19", "-Xlint:unchecked" ),
+			    	null,
+			    	java.util.List.of(
+				    	new JavaStringFile("Ext." + className, """
+							package Ext;
+							import Wat.Vm;
+							public class %1$s extends %2$s {
+								public %1$s(Vm vm, Vm.List l) { %3$s; }
+							}
+							""".formatted(className, isStdObj ? "Vm.StdObj" : superClass.getCanonicalName(), isStdObj ? "vm.super(l)" : "super(vm, l)")
+						)
+			    	)
+			    );
+			    if (!task.call()) {
+			    	System.out.println(diagnostics.getDiagnostics());
+			    	return error("defining class " + className);
+			    }
+				new File("bin/Ext/" + className + ".class").deleteOnExit();
 				return Class.forName("Ext." + className);
 			}
 			catch (Throwable t) {
@@ -1146,6 +1161,7 @@ public class Vm {
 					$("%def", "%addMethod", wrap(new JFun("%AddMethod", (ArgsList) o-> addMethod(o.car(), o.car(1), o.car(2))))),
 					$("%def", "%getMethod", wrap(new JFun("%GetMethod", (BiFunction<Class,Symbol,Object>) this::getMethod))),
 					$("%def", "%obj", wrap(new JFun("%Obj", (ArgsList) o-> uncked(()-> ((Class<? extends StdObj>) o.car()).getDeclaredConstructor(List.class).newInstance(o.cdr()))))),
+					$("%def", "%obj", wrap(new JFun("%Obj", (ArgsList) o-> uncked(()-> ((Class<? extends StdObj>) o.car()).getDeclaredConstructor(Vm.class, List.class).newInstance(Vm.this, o.cdr()))))),
 					$("%def", "%class", wrap(new JFun("%Class", (ArgsList) o-> extend(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr()))))),
 					$("%def", "%subClass?", wrap(new JFun("%SubClass", (BiFunction<Class,Class,Boolean>) (cl,sc)-> sc.isAssignableFrom(cl)))),
 					$("%def", "%type?",  wrap(new JFun("%Type?", (BiFunction<Object,Class,Boolean>) (o,c)-> o == null ? c == null : c.isAssignableFrom(o.getClass())))),
@@ -1274,6 +1290,7 @@ public class Vm {
 		new Vm().main();
 	}
 	public void main() throws Exception {
+		///*
 		var milli = currentTimeMillis();
 		loadText("testVm.lsp");
 		loadText("boot.lsp");
@@ -1282,5 +1299,7 @@ public class Vm {
 		loadText("testOos.lsp");
 		print("start time: " + (currentTimeMillis() - milli));
 		repl();
+		//*/
+		//extend2(symbol("StdObj2"), null);
 	}
 }
