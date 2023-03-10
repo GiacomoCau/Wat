@@ -62,6 +62,7 @@
 (def string->symbol %string->symbol)
 (def symbolName %internName)
 (def symbol? %symbol?)
+(def type? %type?)
 (def throwTag %throw)
 (def unwrap %unwrap)
 (def wrap %wrap)
@@ -233,16 +234,17 @@
 
 (defMacro (let bindings . body)
   (if (symbol? bindings)
-      (list* 'letLoop bindings body)
-      (list* (list* '\ (map car bindings) body)
-             (map cadr bindings) )))
+    (list* 'letLoop bindings body)
+    (list* (list* '\ (map car bindings) body)
+      (map cadr bindings) )))
 
 (assert (let ((a 1)) a) 1)
 
 (defMacro (let1 binding . body)
-  (list
-    (list* '\ (list (car binding)) body)
-    (cadr binding) ))
+  (if (symbol? binding)
+    (list* 'letLoop binding (list (car body)) (cdr body))
+    (list (list* '\ (list (car binding)) body)
+      (cadr binding) )))
 
 (assert (let1 (a 1) a) 1)
     
@@ -315,6 +317,14 @@
 
 ;;;; Type parameters check lambda
 
+(def Boolean &java.lang.Boolean)
+(def Date &java.util.Date)
+(def Number &java.lang.Number)
+(def Integer &java.lang.Integer)
+(def Double &java.lang.Double)
+(def Object &java.lang.Object)
+(def String &java.lang.String)
+
 (defMacro (lambda params . body)
   (letrec ((typedParams->namesAndChecks
             (\ (ps)
@@ -323,12 +333,18 @@
                          ((names . checks) (typedParams->namesAndChecks restPs)))
                     (if (cons? p)
                         (let* (((name type) p)
-                               (check (list the type name)))
+                               (check (list 'the type name)))
                           (cons (cons name names) (cons check checks)) )
                         (cons (cons p names) checks) ))
                   (cons ps ()) ))))
-    (let ( ((untypedNames . typeChecks) (typedParams->namesAndChecks params)) )
-      (list* '\ untypedNames (list* 'begin typeChecks) body) )))
+    (let1 ((names . checks) (typedParams->namesAndChecks params))
+      (list* '\ names (if (null? checks) body (list* (list* 'begin checks) body))) )))
+
+(defMacro (the type obj)
+  (list 'if (list 'type? obj type) obj (list 'error (list '$ obj " is not a: " type))) )
+
+(assert (expand (lambda (a) (+ a 1))) '(\ (a) (+ a 1)))
+(assert (expand (lambda ((a Integer)) (+ a 1))) '(\ (a) (begin (the Integer a)) (+ a 1)))
 
 (defMacro (define lhs . rhs)
   (if (symbol? lhs)
@@ -408,20 +424,32 @@
 (defMacro (set (getter . args) newVal)
   (list* (list 'setter getter) newVal args))
 
-#|
-(def\ switchDefaultFunction (default)
+(def\ makeTypecase (default)
   ($vau (keyform . clauses) env
     (let1 (key (eval keyform env))
-      (let typecase ((clauses clauses))
+      (let1 typecase (clauses clauses)
         (if (null? clauses) (default key)
-          (let1 (((className . forms) . clauses) clauses)
-            (if (type? key (@get env (string->symbol className)))
+          (let1 (((class . forms) . clauses) clauses)
+            (if (type? key (eval class env))
               (eval (list* 'begin forms) env)
               (typecase clauses) )))))))
 
-(def typecase (switchDefaultFunction (lambda (#ignore) #inert))
-(def etypecase (switchDefaultFunction (lambda (key) (error (make-type-error key Object))))
-|#
+(def typecase (makeTypecase (\ (#ignore) #inert)))
+(def etypecase (makeTypecase (\ (key) (error "type of " key " not" Object))))
+
+(assert (typecase 2.0 (String "string") (Double "double")) "double")
+
+(defVau (case\ . clauses) env
+  (\ values
+    (let1 loop (clauses clauses)
+      (if (null? clauses) #inert
+        (let ((env (makeEnv env))
+              (((bindings . forms) . clauses) clauses) )
+          (if (%bind env bindings values)
+            (eval (list* 'begin forms) env)
+            (loop clauses) ))))))
+
+(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1) 2)
 
 
 ;;;; List utilities
@@ -575,9 +603,9 @@
 (assert (begin (provide (x) (define x 10)) x) 10)
 
 (defVau (module exports . body) env
-  (let ((menv (makeEnv env)))
-    (eval (list* 'provide exports body) menv)
-    (makeEnv menv) ))
+  (let ((env (makeEnv env)))
+    (eval (list* 'provide exports body) env)
+    (makeEnv env) ))
 
 (assert (begin (define m (module (x) (define x 10))) (eval 'x m)) 10)
 
@@ -587,9 +615,9 @@
 (assert (begin (defModule m (x) (define x 10)) (eval 'x m)) 10)
 
 (defVau (import module imports) env
-  (let* ((m (eval module env))
-         (values (map (\ (import) (eval import m)) imports)))
-    (eval (list 'def imports (list* list values)) env) ))
+  (let* ((module (eval module env))
+         (values (map (\ (import) (eval import module)) imports)) )
+    (eval (list* 'def* imports values) env) ))
 
 (assert (begin (defModule m (x) (define x 10)) (import m (x)) x) 10)
 
@@ -633,11 +661,12 @@
 (def - (negativeOp - 0))
 (def / (negativeOp / 1))
 
+
 #| TODO da rivedere
 (def % (%jsBinop "%"))
 (def not (%jsUnop "!"))
-(def typeof (%jsUnop "typeof"))
 (def in (%jsBinop "in"))
+(def typeof (%jsUnop "typeof"))
 (def instanceof (%jsBinop "instanceof"))
 
 (def bitand (%jsBinop "&"))
@@ -662,28 +691,11 @@
   (lambda (newVal object key)
     (set ((jsGetter key) object) newVal) ))
 
-(def\ (array . args) (list->array args))
-
 (def\ (jsCallback fun)
   (%jsFunction (\ args (pushPrompt rootPrompt (apply fun args)))) )
 
 (defMacro (jsLambda params . body)
   (list 'jsCallback (list* 'lambda params body)))
-
-(defMacro (type? obj type)
-  (list '%type? obj type (symbolName type)))
-
-(defMacro (the type obj)
-  (list 'if (list 'type? obj type) obj (list 'error (list '$ obj " is not a: " type))) )
-
-(def Array &Array)
-(def Boolean &Boolean)
-(def Date &Date)
-(def Function &Function)
-(def Number &Number)
-(def Object &Object)
-(def RegExp &RegExp)
-(def String &String)
 
 (def\ (log x . xs)
   (apply @log (list* &console x xs))
@@ -703,22 +715,6 @@
   (list 'set place (list '- place 1)) )
 
 
-;;;; Utilities
-
-;; ugh
-(def\ (mapArray fun (arr Array))
-  (list->array (map fun (array->list arr))) )
-
-(def\ (filterArray pred (arr Array))
-  (list->array (filter pred (array->list arr))) )
-
-(defVau (time expr) env
-  (let ((n (@getTime (new Date)))
-        (result (eval expr env)))
-    (log ($ "time " expr ": " (- (@getTime (new Date)) n) "ms"))
-    result ))
-
-
 ;;;; Options
 
 (defPrototype Option Object ())
@@ -732,6 +728,27 @@
         (eval (list (list 'lambda (list optionName) then) (.value option)) env)
         (eval else env) )))
 |#
+
+
+;;;; Utilities
+
+(def\ (array . args) (list->array args))
+
+(def Array &java.lang.Object[])
+
+(lambda (arrayMap fun (arr Array))
+  (list->array (map fun (array->list arr))) )
+
+(lambda (arrayFilter pred (arr Array))
+  (list->array (filter pred (array->list arr))) )
+
+(defVau (time expr) env
+  (let1 (currentTime (@getMethod &java.lang.System "currentTimeMillis"))
+    (def milli (currentTime #null))
+    (def result (eval expr env))
+    (def milli (- (currentTime #null) milli))
+    (log ($ "time " expr ": " milli  "ms"))
+    result ))
 
 
 ;;;; Error break routine, called by VM to print stacktrace and throw
