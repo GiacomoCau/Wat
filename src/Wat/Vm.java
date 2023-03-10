@@ -113,7 +113,7 @@ public class Vm {
 
 	boolean dotco = true; // do tco
 	boolean doasrt = true; // do assert
-	boolean ctapv = false; // catch & throw applicative
+	boolean ctapv = false; // applicative catch & throw
 	boolean instr = false; // intern string
 	
 	int prtrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
@@ -808,9 +808,17 @@ public class Vm {
 			// (@getConstructor class . classes) -> class.getConstructor(classes) -> constructor
 			// (@getMethod class name . classes) -> class.getMethod(name, classes) -> method
 			// (@getField class name)            -> class.getField(name, classes) -> field
+			/*
+			 per costruttori o0 è una classe e vanno cercati solo su quella
+			 per i metodi statici o0 è una classe e vanno cercati su o0 e relative super classi
+			 per tutti gli altri metodi o0 è un object e vanno cercati sulla classe di o0 relative super classi
+			*/
 			var classes = getClasses(args);
 			Executable executable = getExecutable(name.startsWith("new") ? (Class) o0 : o0.getClass(), name, classes);
-			if (executable == null) return error("not found " + executable(name, classes) + " of: " + toString(o0));
+			if (executable == null) {
+				if (o0 instanceof Class) executable = getExecutable((Class) o0, name, classes);
+				if (executable == null) return error("not found " + executable(name, classes) + " of: " + toString(o0));
+			}
 			try {
 				//executable.setAccessible(true);
 				args = reorg(executable, args);

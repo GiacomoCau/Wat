@@ -405,13 +405,13 @@ public class Utility {
 					if (!isInvokeConvertible(isVarArgs, parametersClass, argumentsClass)) continue;
 					executables.add(executor);
 				}
-				if (publicMember) break;
+				if (constructors || publicMember) break;
 			}
 		} while ((classe = classe.getSuperclass()) != null);
 		
 		if (trace) out.println("f: " + executables.size());
 		switch (executables.size()) {
-			case 0: throw new RuntimeException(toString(name, argumentsClass) + " non trovato in " + classe);
+			case 0: return null; //throw new RuntimeException(toString(name, argumentsClass) + " non trovato in " + classe);
 			case 1: return (T) executables.get(0);
 			default: {
 				executables.sort(comparing(Executable::toString));
