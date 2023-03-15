@@ -35,9 +35,9 @@
 (def >>> %>>>)
 
 (def \ %lambda)
+(def append %append)
 (def array->list %array->list)
 (def begin %begin)
-(def catchTag %catch)
 (def cons %cons)
 (def cons? %cons?)
 ;(def ddef %dDef)
@@ -50,6 +50,7 @@
 (def finally %finally)
 (def if %if)
 (def instanceof? %instanceof?)
+(def len %len)
 (def list* %list*)
 (def list->array %list->array)
 (def loop %loop)
@@ -63,7 +64,6 @@
 (def symbolName %internName)
 (def symbol? %symbol?)
 (def type? %type?)
-(def throwTag %throw)
 (def unwrap %unwrap)
 (def wrap %wrap)
 
@@ -152,30 +152,43 @@
 
 ;;;; Basic value test
 
-(def\ (ifnull? a b) (if (null? a) b a))
 (def\ (zero? n) (== n 0))
-(def\ (ifzero? a b) (if (zero? a) b a))
 (def\ (inert? a) (== a #inert))
-(def\ (ifinert? a b) (if (inert? a) b a))
  
 
 ;;;; Wrap incomplete VM forms
 
-(defMacro (catch x . handler)
-  (list* '%catch #ignore x handler))
+(def* (then else) %begin %begin)
 
-(defMacro (throw . x)
-  (list* '%throw #ignore x))
+(if (ctapv)
+  (then
+    (defMacro (catch exp . hdl)
+      (list* '%catch #ignore (list '\ () exp) hdl) )
+    (defMacro (throw . val)
+      (list* '%throw #ignore val) )
 
-(assert (catch (throw)) #inert)
-(assert (catch (throw 1)) 1)
-(assert (catch (throw 1) (\ (x) (+ x 1))) 2)
+    (defMacro (catchTag tag exp . hdl)
+      (list* '%catch tag (list '\ () exp) hdl) )
+    (defMacro (throwTag tag . val)
+      (list* '%throw tag val) )
+    (def throwTag %throw)
+  )
+  (else
+    (defMacro (catch x . hdl)
+      (list* '%catch #ignore x hdl))
+    (defMacro (throw . x)
+      (list* '%throw #ignore x))
 
-(defVau (catch! tag expr . hdl) env
-  (eval (list* '%catch (eval tag env) expr hdl) env) )
+    (assert (catch (throw)) #inert)
+    (assert (catch (throw 1)) 1)
+    (assert (catch (throw 1) (\ (x) (+ x 1))) 2)
 
-(defVau (throw! tag . val) env
-  (eval (list* '%throw (eval tag env) val) env) )
+    (defVau (catchTag tag exp . hdl) env
+      (eval (list* '%catch (eval tag env) exp hdl) env) )
+    (defVau (throwTag tag . val) env
+      (eval (list* '%throw (eval tag env) val) env) )
+  )
+)
 
 (defVau (finally protected . cleanup) env
   (eval (list '%finally protected (list* 'begin cleanup)) env) )
@@ -357,11 +370,11 @@
 (defVau (cond . clauses) env
   (if (nil? clauses) #inert
     (let ((((test . body) . clauses) clauses))
-      (if (eval test env)
-        (apply (wrap begin) body env)
-        (apply (wrap cond) clauses env) ))))
-
-(define else #t)
+      (if (== test 'else)
+        (apply (wrap begin) body env) 
+        (if (eval test env)
+          (apply (wrap begin) body env)
+          (apply (wrap cond) clauses env) )))))
 
 (defVau (and . x) e
   (cond ((nil? x)         #t)
@@ -397,14 +410,14 @@
   (let ((body (list* 'begin body))
         (break (list #null))
         (continue (list #null)) )
-    (%bind env 'break (\ v (throw! break (if (! (null? v)) (if (null? (cdr v)) (car v) v)))))
-    (%bind env 'continue (\ () (throw! continue)))
-    (catch! break
+    (%bind env 'break (\ v (throwTag break (if (! (null? v)) (if (null? (cdr v)) (car v) v)))))
+    (%bind env 'continue (\ () (throwTag continue)))
+    (catchTag break
       (loop
-        (catch! continue
+        (catchTag continue
           (if (eval test env) 
             (eval body env)
-            (throw! break) ))))))
+            (throwTag break) ))))))
 
 (defMacro (-- n) 
   (list 'begin (list 'def n (list '- n 1)) n)) 

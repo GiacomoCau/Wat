@@ -292,14 +292,14 @@
       (list (dval *x*) (dval *y*))))
   '(2 2) )
 
-(assert (catchTag a (throwTag a)) #inert)
-(assert (catchTag a (throwTag a 2)) 2)
+(assert (catchTag 'a (throwTag 'a)) #inert)
+(assert (catchTag 'a (throwTag 'a 2)) 2)
 
 (assert (finally (== 1 1)) #t)
 (assert (begin (+ (finally 1 2 3 (define x 10)) x)) 11)
-(assert (+ (catchTag a (finally (throwTag a 1) 2 3 (define x 10))) x) 11)
-(assert (catchTag a (finally 1 2 3 (throwTag a 4))) 4)
-(assert (catchTag a (finally (throwTag a 1) 2 3 (throwTag a (+ 2 2)))) 4)
+(assert (+ (catchTag 'a (finally (throwTag 'a 1) 2 3 (def x 10))) 10) 11)
+(assert (catchTag 'a (finally 1 2 3 (throwTag 'a 4))) 4)
+(assert (catchTag 'a (finally (throwTag 'a 1) 2 3 (throwTag 'a (+ 2 2)))) 4)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

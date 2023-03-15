@@ -568,7 +568,7 @@ public class Vm {
 	}
 	class Catch implements Combinable {
 		public Object combine(Env e, List o) {
-			var l = checkO(this, o, 2, 3); // o = (tag x) | (tag x hdl) -> (tag x (lambda (exc) ... )) 
+			var l = checkO(this, o, 2, 3); // o = (tag x) | (tag x hdl) -> (tag x (\ (exc) ... )) 
 			var tag = o.car();
 			var x = o.car(1);
 			var hdl = l == 2 ? null : o.car(2);
@@ -1046,7 +1046,7 @@ public class Vm {
 			catch (Throwable t) {
 				if (len == 2) return true;
 				if (prstk) t.printStackTrace(out);
-				else print(name, expr, " throw ", t);
+				else print(name, expr, " throw ", "{" + t.getClass().getSimpleName() + " " + t.getMessage() + "}");
 			}
 			return false;
 		}
@@ -1225,6 +1225,7 @@ public class Vm {
 					$("%def", "load", wrap(new JFun("Load", (Function<String, Object>) nf-> uncked(()-> loadText(nf))))),
 					$("%def", "dotco", wrap(new JFun("Dotco", (ArgsList) o-> { return checkO("dotco", o, 0, 1, Boolean.class) == 0 ? dotco : inert(dotco=o.car()); }))),
 					$("%def", "doasrt",  wrap(new JFun("Doasrt", (ArgsList) o-> { return checkO("doasrt", o, 0, 1, Boolean.class) == 0 ? doasrt : inert(doasrt=o.car()); }))),
+					$("%def", "ctapv", wrap(new JFun("Ctapv", (ArgsList) o-> { checkO("ctapv", o, 0); return ctapv; }))),
 					$("%def", "prtrc", wrap(new JFun("Prtrc", (ArgsList) o-> { if (checkO("prtrc", o, 0, 1, Integer.class) == 0) return prtrc; start=level-3; return inert(prtrc=o.car()); }))),
 					$("%def", "prenv", wrap(new JFun("Prenv", (ArgsList) o-> { return checkO("prenv", o, 0, 1, Integer.class) == 0 ? prenv : inert(prenv=o.car()); }))),
 					$("%def", "prstk", wrap(new JFun("Prstk", (ArgsList) o-> { return checkO("prstk", o, 0, 1, Boolean.class) == 0 ? prstk : inert(prstk=o.car()); })))
