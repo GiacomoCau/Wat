@@ -397,9 +397,9 @@ public class Vm {
 	
 	
 	// Bind
-	Object bind(Env e, Dbg dbg, Object lhs, Object rhs) {
+	Object bind(Dbg dbg, Env e, Object lhs, Object rhs) {
 		var msg = bind(e, lhs, rhs); if (msg == null) return inert;
-		return error(msg + " for bind: " + toString(lhs) + eIfnull(dbg,()-> " of: " + cons(dbg.op, list(dbg.os))) + " with: " + rhs);
+		return error(msg + " for bind: " + toString(lhs) + eIfnull(dbg, ()-> " of: " + cons(dbg.op, list(dbg.os))) + " with: " + rhs);
 	}
 	@SuppressWarnings("preview")
 	Object bind(Env e, Object lhs, Object rhs) {
@@ -435,7 +435,7 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			var xe = env(this.e);
 			var dbg = dbg(e, this, o);
-			return tco(()-> pipe(dbg, ()-> bind(xe, dbg, p, o), $-> bind(xe, dbg, ep, e), $$-> tco(()-> begin.combine(xe, x))));
+			return tco(()-> pipe(dbg, ()-> bind(dbg, xe, p, o), $-> bind(dbg, xe, ep, e), $$-> tco(()-> begin.combine(xe, x))));
 			/* TODO in alternativa al precedente
 			return pipe(dbg, ()-> bind(xe, dbg, p, o), $-> bind(xe, dbg, ep, e),
 				$$-> x == null ? inert : tco(()-> x.cdr == null ? evaluate(e, x.car) : begin.begin(null, xe, x))
@@ -488,7 +488,7 @@ public class Vm {
 				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
 			}
 			var dbg = dbg(e, this, o);
-			return pipe(dbg, ()-> getTco(evaluate(e, o.car(1))), res-> bind(e, dbg, pt, res));
+			return pipe(dbg, ()-> getTco(evaluate(e, o.car(1))), res-> bind(dbg, e, pt, res));
 		}
 		public String toString() { return "%Def"; }
 	};
@@ -501,7 +501,7 @@ public class Vm {
 				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
 			}
 			var dbg = dbg(e, this, o);
-			return pipe(dbg, ()-> mapCar(car-> getTco(evaluate(e, car)), o.cdr()), res-> bind(e, dbg, pt, res));
+			return pipe(dbg, ()-> mapCar(car-> getTco(evaluate(e, car)), o.cdr()), res-> bind(dbg, e, pt, res));
 		}
 		public String toString() { return "%Def*"; }
 	};
@@ -688,7 +688,7 @@ public class Vm {
 			if (lookup.isBound && !(lookup.value instanceof DVar)) return error("not a dinamic variable: " + var);
 			DVar dVar = (DVar) lookup.value;
 			return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, o.car(1))), val-> {
-					if (dVar != null) dVar.value = val; else bind(e, null, var, new DVar(val));
+					if (dVar != null) dVar.value = val; else bind(null, e, var, new DVar(val));
 					return inert;
 				}
 			);
@@ -710,13 +710,12 @@ public class Vm {
 			return pipe(dbg(e, this, o), ()-> mapCar(car-> getTco(evaluate(e, car)), o.cdr()), args-> {
 					var vals = array((List) args);
 					if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
-					for (int i=0; i<dVars.length; i+=1) dSet(dbg(e, this, o), dVars[i], vars[i], vals[i]);
+					for (int i=0; i<dVars.length; i+=1) {
+						var dVar = dVars[i]; if (dVar != null) dVar.value = vals[i]; else bind(dbg(e, this, o), e, vars[i], new DVar(vals[i]));
+					}
 					return inert;
 				}
 			);
-		}
-		private void dSet(Dbg dbg, DVar dvar, Symbol var, Object val) {
-			if (dvar != null) dvar.value = val; else bind(dbg.e, dbg, var, new DVar(val));
 		}
 		public String toString() { return "%DDef*"; }
 	}
@@ -1105,8 +1104,8 @@ public class Vm {
 	
 	// Bootstrap
 	Env theEnv=env(null); {
-		bind(theEnv, null, symbol("%def"), new Def());
-		bind(theEnv, null, symbol("%begin"), begin);
+		bind(null, theEnv, symbol("%def"), new Def());
+		bind(null, theEnv, symbol("%begin"), begin);
 		getTco(evaluate(theEnv,
 			parseBytecode(
 				$("%begin",

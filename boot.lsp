@@ -167,6 +167,10 @@
     (defMacro (throw . val)
       (list* '%throw #ignore val) )
 
+    (assert (catch (throw)) #inert)
+    (assert (catch (throw (\ () 1))) 1)
+    (assert (catch (throw (\ () 1)) (\ (x) (+ x 1))) 2)
+    
     (defMacro (catchTag tag exp . hdl)
       (list* '%catch tag (list '\ () exp) hdl) )
     (defMacro (throwTag tag . val)
