@@ -33,7 +33,7 @@ import static java.lang.System.currentTimeMillis;
 import static java.lang.System.out;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
-	import static javax.tools.ToolProvider.getSystemJavaCompiler;
+import static javax.tools.ToolProvider.getSystemJavaCompiler;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -213,9 +213,12 @@ public class Vm {
 			v = switch (o) {
 				case null, default-> o;
 				case Symbol s-> tco(()-> pipe(dbg(e, o), ()-> e.lookup(s)));
-				case List c-> {
-					var ee=e; yield tco(()-> pipe(dbg(ee, o), ()-> getTco(evaluate(ee, c.car)), op-> tco(()-> combine(ee, op, c.cdr()))));
+				//case Cons c when c.car() instanceof Keyword->{ Vm.this.print(c); yield o; }
+				case List l-> {
+					if (l.car() instanceof Keyword) yield l;
+					var ee=e; yield tco(()-> pipe(dbg(ee, o), ()-> getTco(evaluate(ee, l.car)), op-> tco(()-> combine(ee, op, l.cdr()))));
 				}
+				case Cons c-> c.car() instanceof Keyword ? c : error("not a proper list: " + c);
 			};
 		}
 		finally {
@@ -1118,7 +1121,7 @@ public class Vm {
 					$("%def", "%unwrap", wrap(new JFun("%Unwrap", (Function<Object, Object>) t-> unwrap(t)))),
 					$("%def", "%bound?", wrap(new JFun("%Bound?", (BiFunction<Symbol,Env,Boolean>) (s, e)-> e.get(s).isBound))),
 					$("%def", "%bind", wrap(new JFun("%Bind", (ArgsList) o-> bind((Env) o.car(), o.car(1), o.car(2)) == null))),
-					$("%def", "%apply", wrap(new JFun("%Apply", (ArgsList) o-> combine(o.cdr(1) != null ? o.car(2) : env(null), unwrap(o.car()), o.car(1))))),
+					$("%def", "%apply", wrap(new JFun("%Apply", (ArgsList) o-> combine(o.cdr(1) == null ? env(null) : o.car(2), unwrap(o.car()), o.car(1))))),
 					$("%def", "%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(null), unwrap(o.car()), o.cdr())))),
 					$("%def", "%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; }))),
 					$("%def", "%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnv = env(theEnv)))),
