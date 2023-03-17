@@ -371,6 +371,12 @@
 
 ;;;; Simple control
 
+(defMacro (when test . body)
+  (list 'if test (list* 'begin body)))
+
+(defMacro (unless test . body)
+  (list* 'when (list 'not test) body))
+
 (defVau (cond . clauses) env
   (if (nil? clauses) #inert
     (let ((((test . body) . clauses) clauses))
@@ -432,14 +438,17 @@
 (assert (let1 (c 2) (while #t (if (zero? c) (break (+ 5 5)) (-- c)))) 10)
 (assert (let ((c 10) (r #null)) (while #t (if (zero? c) (break r)) (if (zero? (% (-- c) 2)) (continue)) (def r (cons c r)) )) '(1 3 5 7 9))
 
-(defMacro (when test . body)
-  (list 'if test (list* 'begin body)))
+(defMacro (until test-form . forms)
+  (list* while (list '! test-form) forms) )
 
-(defMacro (unless test . body)
-  (list* 'when (list 'not test) body))
+(defVau (block block-name . forms) env
+  (let* ((tag (list #inert))
+         (escape (\ (value) (throwTag tag value))) )
+    (catchTag tag
+      (eval (list (list* '\ (list block-name) forms) escape) env) )))
 
-(defMacro (set (getter . args) newVal)
-  (list* (list 'setter getter) newVal args))
+(def\ (returnFrom block-name . value?)
+  (block-name (unless (null? value?) (car value?))) )
 
 (def\ makeTypecase (default)
   ($vau (keyform . clauses) env
@@ -467,6 +476,8 @@
             (loop clauses) ))))))
 
 (assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1) 2)
+(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2) 3)
+(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2 3) '(2 3 4))
 
 
 ;;;; List utilities
@@ -482,14 +493,51 @@
 (forEach (\ (a b) (log a b)) '(1 2) '(3 4))
 |#
 
-(def\ (filter p lst)
-  (if (nil? lst) ()
-    (if (p (car lst))
-      (cons (car lst) (filter p (cdr lst)))
-      (filter p (cdr lst)) )))
+(def\ (filter f . lst*)
+  (if (null? lst*) (error "none lists"))
+  (if (null? (cdr lst*))
+    ((rec (filter lst) (if (null? lst) #null (if (f (car lst)) (cons (car lst) (filter (cdr lst))) (filter (cdr lst))))) (car lst*))
+    ((rec (filter* lst*) (if (null? (car lst*)) #null (let1 (cars (map car lst*)) (if (apply f cars) (cons cars (filter* (map cdr lst*))) (filter* (map cdr lst*)) )))) lst*) ))
 
-(def\ (reduce f init lst)
-  ((rec (reduce init lst) (if (nil? lst) init (reduce (f init (car lst)) (cdr lst)) )) init lst) )
+(def\ (even n) (== (% n 2) 0))
+(def\ (odd n)  (== (% n 2) 1))
+
+(assert (filter even '(1 2 3 4 5 6 7 8 9)) '(2 4 6 8))
+(assert (filter != '(1 2 3) '(3 2 1)) '((1 3) (3 1)))
+
+(def\ (reduceL f init . lst*)
+  (if (null? lst*) (error "none lists"))
+  (if (null? (cdr lst*))
+    ((rec (reduce acc lst) (if (nil? lst) acc (reduce (f acc (car lst)) (cdr lst)) )) init (car lst*))
+    ((rec (reduce* acc lst*) (if (nil? (car lst*)) acc (reduce* (%apply* f acc (map car lst*)) (map cdr lst*)) )) init lst*) ))
+
+(assert (reduceL + 0 '(1 2 3 4)) 10)
+(assert (reduceL (\ (init lst) (+ init (reduceL * 1 lst))) 0 '(1 2 3 4) '(1 2 3 4)) 30)
+(assert (reduceL cons () '(1 2 3 4)) '((((() . 1) . 2) . 3) . 4))
+
+(def\ (reduceR f init . lst*)
+  (if (null? lst*) (error "none lists"))
+  (if (null? (cdr lst*))
+    ((rec (reduce acc lst) (if (nil? lst) acc (f (reduce acc (cdr lst)) (car lst)) )) init (car lst*))
+    ((rec (reduce* acc lst*) (if (nil? (car lst*)) acc (%apply* f (reduce* acc (map cdr lst*)) (map cadr lst*)) )) init lst*) ))
+
+(assert (reduceR cons () '(1 2 3 4)) '((((() . 4) . 3) . 2) . 1))
+
+(def\ (foldL f init . lst*)
+  (if (null? lst*) (error "none lists"))
+  (if (null? (cdr lst*))
+    ((rec (foldl acc lst) (if (nil? lst) acc (foldl (f (car lst) acc) (cdr lst)) )) init (car lst*))
+    ((rec (foldl* acc lst*) (if (nil? (car lst*)) acc (foldl* (%apply* f (map car lst*) acc) (map cdr lst*)) )) init lst*) ))
+
+(assert (foldL cons () '(1 2 3 4)) '(4 3 2 1))
+
+(def\ (foldR f init . lst*)
+  (if (null? lst*) (error "none lists"))
+  (if (null? (cdr lst*))
+    ((rec (foldr acc lst) (if (nil? lst) acc (f (car lst) (foldr acc (cdr lst)) ) )) init (car lst*))
+    ((rec (foldr* acc lst*) (if (nil? (car lst*)) acc (%apply* f (map car lst*) (foldr* acc (map cdr lst*)) ) )) init lst*) ))
+
+(assert (foldR cons () '(1 2 3 4)) '(1 2 3 4))
 
 (def\ (split n lst)
   (let loop ((n n) (h ()) (t lst))
@@ -659,7 +707,7 @@
 (def\ (!= . args) (not (apply == args)))
 
 (def\ (positiveOp binop unit)
-  (\ args (reduce binop unit args)))
+  (\ args (reduceL binop unit args)))
 
 (def $ (positiveOp $ ""))
 (def + (positiveOp + 0))
@@ -673,7 +721,7 @@
   (\ (arg1 . rest)
     (if (nil? rest)
       (binop unit arg1)
-      (reduce binop arg1 rest) )))
+      (reduceL binop arg1 rest) )))
 
 (def - (negativeOp - 0))
 (def / (negativeOp / 1))

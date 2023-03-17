@@ -48,8 +48,23 @@ public class Prova {
 		@Override public int hashCode() { return Arrays.deepHashCode(a); }
 	}
 	
+	static class A {
+		int val;
+		A(int val) {this.val = val; }
+	}
+	static class B extends A {
+		B(int val) { super(val); }
+	}
+	
 	public static void main(String[] args) throws Exception {
-		extend2("Wat.Vm$Box2",null);
+		Object o = new B(2);
+		switch (o) {
+			case null /*, default*/-> out.println(0); // darebbe 0
+			case A a when a.val == 1-> out.println(1); 
+			case B b-> out.println(2);
+			case A a-> out.println(3);
+			default-> out.println(4); // con default qui da 3 ma mai 2
+		};
 	}
 
 	public static void key() {
