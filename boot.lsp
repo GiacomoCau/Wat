@@ -153,7 +153,7 @@
 ;;;; Basic value test
 
 (def\ (zero? n) (== n 0))
-(def\ (inert? a) (== a #inert))
+(def\ (inert? o) (== o #inert))
  
 
 ;;;; Wrap incomplete VM forms
@@ -215,7 +215,7 @@
 (def\ (apply appv args . optEnv)
   (def env (if (null? optEnv) (makeEnv) (car optEnv))) 
   (if (%jFun? appv)
-    (@combine env (@new &Wat.Vm$JFun appv) args)
+    (@combine (@new &Wat.Vm$JFun vm appv) env args)
     (eval (cons (unwrap appv) args) env) ))
 
 (defMacro (rec lhs . rhs)
@@ -330,9 +330,10 @@
          (if (== k key) (list v) (loop lst)))))
    lst ))
 
+(assert (get? :b '(:a 1 :b 2 :c 3 :d 4)) '(2)) 
+
 (defVau (opt? val def) env (let1 (val (eval val env)) (if (!= val #null) (car val) (eval def env)))) 
 
-(assert (get? :b '(:a 1 :b 2 :c 3 :d 4)) '(2)) 
 (assert (opt? (get? :b '(:a 1 :b 2 :c 3 :d 4)) 10) 2)
 (assert (opt? (get? :f '(:a 1 :b 2 :c 3 :d 4)) 10) 10)
 
@@ -435,9 +436,9 @@
             (throwTag break) ))))))
 
 (defMacro (-- n) 
-  (list 'begin (list 'def n (list '- n 1)) n)) 
+  (list 'def n :rhs (list '- n 1)) ) 
 (defMacro (++ n) 
-  (list 'begin (list 'def n (list '+ n 1)) n)) 
+  (list 'def n :rhs (list '+ n 1)) ) 
 
 (assert (let1 (c 2) (while (> c 0) (-- c)) c) 0)
 (assert (let1 (c 2) (while #t (if (zero? c) (break (+ 5 5)) (-- c)))) 10)
@@ -454,23 +455,43 @@
 
 (def\ (returnFrom block-name . value?)
   (block-name (unless (null? value?) (car value?))) )
+  
+(defVau (case expr . clauses) env
+  (let1 (value (eval expr env))
+    (let1 loop (clauses clauses)
+      (if (null? clauses) #inert
+        (let1 (((values . forms) . clauses) clauses)
+          (if (or (== values 'else) (cons? (member value values)))
+            (eval (list* 'begin forms) env)
+            (loop clauses) ))))))
 
-(def\ makeTypecase (default)
-  ($vau (keyform . clauses) env
-    (let1 (key (eval keyform env))
-      (let1 typecase (clauses clauses)
-        (if (null? clauses) (default key)
-          (let1 (((class . forms) . clauses) clauses)
-            (if (type? key (eval class env))
+#|
+(defVau (vauCase . clauses) env 
+  ($vau values #ignore
+    (let1 loop (clauses clauses)
+      (if (null? clauses) #inert
+        (let ((env (makeEnv env))
+              (((bindings . forms) . clauses) clauses) )
+          (if (%bind env bindings values)
+            (eval (list* 'begin forms) env)
+            (loop clauses) ))))))
+
+(def \case (wrap vauCase))
+
+(defVau (\case . clauses) env
+  (wrap
+    ($vau values #ignore
+      (let1 loop (clauses clauses)
+        (if (null? clauses) #inert
+          (let ((env (makeEnv env))
+                (((bindings . forms) . clauses) clauses) )
+            (if (%bind env bindings values)
               (eval (list* 'begin forms) env)
-              (typecase clauses) )))))))
+              (loop clauses) )))))))
 
-(def typecase (makeTypecase (\ (#ignore) #inert)))
-(def etypecase (makeTypecase (\ (key) (error "type of " key " not" Object))))
+|#
 
-(assert (typecase 2.0 (String "string") (Double "double")) "double")
-
-(defVau (case\ . clauses) env
+(defVau (\case . clauses) env
   (\ values
     (let1 loop (clauses clauses)
       (if (null? clauses) #inert
@@ -480,9 +501,24 @@
             (eval (list* 'begin forms) env)
             (loop clauses) ))))))
 
-(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1) 2)
-(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2) 3)
-(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2 3) '(2 3 4))
+(assert ((\case ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1) 2)
+(assert ((\case ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2) 3)
+(assert ((\case ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2 3) '(2 3 4))
+
+(def\ makeTypecase (default)
+  ($vau (keyform . clauses) env
+    (let1 (key (eval keyform env))
+      (let1 loop (clauses clauses)
+        (if (null? clauses) (default key)
+          (let1 (((class . forms) . clauses) clauses)
+            (if (type? key (eval class env))
+              (eval (list* 'begin forms) env)
+              (loop clauses) )))))))
+
+(def typecase (makeTypecase (\ (#ignore) #inert)))
+(def etypecase (makeTypecase (\ (key) (error "type of " key " not" Object))))
+
+(assert (typecase 2.0 (String "string") (Double "double")) "double")
 
 
 ;;;; List utilities
@@ -610,11 +646,11 @@
 (defMacro (ddef* var* . val*)
   (list* (list 'd\ var*) val*) )
 
-(defMacro (progv var* val* . body)
-  (list* (list* 'd\ var* body) val*) )
+(defMacro (progv var* val* expr . nexts)
+  (list* (list* 'd\ var* expr nexts) val*) )
 
-(defMacro (dlet bindings . body)
-  (list* (list* 'd\ (map car bindings) body) (map cadr bindings)) )  
+(defMacro (dlet bindings expr . nexts)
+  (list* (list* 'd\ (map car bindings) expr nexts) (map cadr bindings)) )  
 
 (defMacro (dlet* bindings . body)
   (if (nil? bindings)
@@ -756,6 +792,9 @@
 
 (def\ (elt object key)
   ((jsGetter key) object))
+
+(defMacro (set (getter . args) new-val)
+  (list* (list 'setter getter) new-val args))
 
 (set (setter elt)
   (lambda (newVal object key)

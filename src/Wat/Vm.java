@@ -206,7 +206,6 @@ public class Vm {
 	
 	
 	// Evaluation Core
-	@SuppressWarnings("preview")
 	<T> T evaluate(Env e, Object o) {
 		if (prtrc >= 3) print("evaluate: ", indent(), o, "   ", e);
 		Object v; try {
@@ -440,7 +439,6 @@ public class Vm {
 			return error(rte.getMessage() + " for bind: " + toString(lhs) + eIfnull(dbg, ()-> " of: " + cons(dbg.op, list(dbg.os))) + " with: " + rhs);
 		}
 	}
-	@SuppressWarnings("preview")
 	Object bind(int bndret, Env e, Object lhs, Object rhs) {
 		return switch (lhs) {
 			case Ignore i-> rhs;
@@ -816,7 +814,6 @@ public class Vm {
 	
 	// Java Native Interface
 	interface ArgsList extends Function<List,Object> {}
-	@SuppressWarnings("preview")
 	class JFun implements Combinable {
 		String name; ArgsList jfun; 
 		JFun(String name, Object jfun) { this(jfun); this.name = name; };
@@ -862,7 +859,6 @@ public class Vm {
 	boolean isjFun(Object obj) {
 		return isInstance(obj, Supplier.class, Function.class, BiFunction.class, Executable.class, Field.class);
 	}
-	@SuppressWarnings("preview")
 	Object jInvoke(String name) {
 		if (name == null) return error("method name is null");
 		return (ArgsList) o-> {
@@ -987,7 +983,6 @@ public class Vm {
 	}
 	Object checkPt(Object pt) { return checkPt(pt, null); }
 	Object checkPt(Object pt, Object ep) { return new PTree(pt, ep).check(); }
-	@SuppressWarnings("preview")
 	int args(Apv apv) {
 		return switch(apv.cmb) {
 			case Opv opv-> opv.p == null ? 0 : opv.p instanceof Cons c && c.cdr == null && (c.car == ignore || c.car instanceof Symbol) ? 1 : Integer.MAX_VALUE;
@@ -1150,7 +1145,6 @@ public class Vm {
 	
 	// Stringification
 	String toString(Object o) { return toString(false, o); }
-	@SuppressWarnings("preview")
 	String toString(boolean t, Object o) {
 		return switch (o) {
 			case null-> "()"; // () in cons  altrove #null
@@ -1342,7 +1336,6 @@ public class Vm {
 		if (prtrc > 1) print("--------: "  + fileName + " end");
 		return v;
 	}
-	@SuppressWarnings("preview")
 	public void repl() throws Exception {
 		loop: for (;;) {
 			switch (read()) {

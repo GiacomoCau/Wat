@@ -466,7 +466,6 @@ public class Prova {
 	static <T> T cons(Object car, Object cdr) {
 		return (T)(cdr instanceof Nil nil ? new Lons(car, nil) : cdr instanceof Lons list ? new Lons(car, list) : new Cons(car, cdr));
 	}
-	@SuppressWarnings("preview")
 	Cons cons2(Object car, Object cdr) {
 		return switch (cdr) {
 			case Nil nil-> new Lons(car, nil);
