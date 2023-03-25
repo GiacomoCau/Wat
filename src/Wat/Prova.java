@@ -469,9 +469,9 @@ public class Prova {
 	@SuppressWarnings("preview")
 	Cons cons2(Object car, Object cdr) {
 		return switch (cdr) {
-			default-> new Cons(car, cdr); 
 			case Nil nil-> new Lons(car, nil);
 			case Lons lons-> new Lons(car, lons);
+			default-> new Cons(car, cdr); 
 		};
 	}
 	

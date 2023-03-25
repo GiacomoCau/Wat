@@ -115,10 +115,11 @@ public class Vm {
 	boolean doasrt = true; // do assert
 	boolean ctapv = false; // applicative catch & throw
 	boolean instr = false; // intern string
+	boolean prstk = false; // print stack
 	
 	int prtrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
 	int prenv = 3; // print environment
-	boolean prstk = false; // print stack
+	int bndret = 0; // bind return: 0:inert 1:rhs 2:prev
 	
 	
 	// Continuations
@@ -159,14 +160,14 @@ public class Vm {
 		}
 		return res;
 	}
-	Object mapCar(Function f, List todo) {
-		return mapCar(null, null, f, todo);
+	Object map(Function f, List todo) {
+		return map(null, null, f, todo);
 	}
-	Object mapCar(Resumption r, List done, Function f, List todo) {
+	Object map(Resumption r, List done, Function f, List todo) {
 		for (var first=true;;) { // only one resume for suspension
 			if (todo == null) return reverse(done); 
 			var res = first && r != null && !(first = false) ? r.resume() : f.apply(todo.car());
-			if (res instanceof Suspension s) { List td=todo, dn=done; return s.suspend(dbg(null, "mapCar", todo.car), rr-> mapCar(rr, dn, f, td)); }
+			if (res instanceof Suspension s) { List td=todo, dn=done; return s.suspend(dbg(null, "map", todo.car), rr-> map(rr, dn, f, td)); }
 			todo = todo.cdr(); done = cons(res, done);
 		}
 	}
@@ -201,7 +202,7 @@ public class Vm {
 	
 	// Trace Log
 	int level=0, start=0; String indent = "|  ";
-	String indent() { return indent.repeat((level-start)) + "|" + stackDeep() + ":  " ; 	}
+	String indent() { return indent.repeat(level-start) + "|" + stackDeep() + ":  " ; }
 	
 	
 	// Evaluation Core
@@ -211,14 +212,16 @@ public class Vm {
 		Object v; try {
 			level += 1;
 			v = switch (o) {
-				case null, default-> o;
 				case Symbol s-> tco(()-> pipe(dbg(e, o), ()-> e.lookup(s)));
 				//case Cons c when c.car() instanceof Keyword->{ Vm.this.print(c); yield o; }
 				case List l-> {
 					if (l.car() instanceof Keyword) yield l;
+					//if (!isInstance(l.car(), Keyword.class, Number.class)) yield l;
+					//if (!isInstance(l.car(), Symbol.class, Apv.class, Opv.class)) yield l;
 					var ee=e; yield tco(()-> pipe(dbg(ee, o), ()-> getTco(evaluate(ee, l.car)), op-> tco(()-> combine(ee, op, l.cdr()))));
 				}
 				case Cons c-> c.car() instanceof Keyword ? c : error("not a proper list: " + c);
+				case null, default-> o;
 			};
 		}
 		finally {
@@ -303,7 +306,7 @@ public class Vm {
 			return false; // TODO or error("!") ok new Lookup(false, null)
 		};
 		Object put(K name, Object value) {
-			if (prtrc >= 6) print("    bind: ", name, "=", value, " in: ", this); map.put(name, value); return null; 
+			if (prtrc >= 6) print("    bind: ", name, "=", value, " in: ", this); return map.put(name, value); // return null; 
 		}
 		public String toString() {
 			var deep = deep();
@@ -336,6 +339,10 @@ public class Vm {
 	        	put(key, l.car);
 	        }
 		}
+		@Override public String toString() {
+			var field = super.toString().substring(1);
+			return "{&" + getClass().getCanonicalName() + (field.length() == 1 ? field : " " + field) ;
+		}
 	}
 	Class extend(Symbol className, Class superClass) {
 		try {
@@ -358,7 +365,7 @@ public class Vm {
 			    var isStdObj = superClass == null || superClass == StdObj.class;
 			    var task = getSystemJavaCompiler().getTask(
 			    	null, null, diagnostics,
-			    	java.util.List.of("-d", "bin", "--enable-preview", "-source", "19", "-Xlint:unchecked" ),
+			    	java.util.List.of("-d", "bin", "--enable-preview", "-source", "20", "-Xlint:unchecked" ),
 			    	null,
 			    	java.util.List.of(
 				    	new JavaStringFile("Ext." + className, """
@@ -400,6 +407,7 @@ public class Vm {
 	
 	
 	// Bind
+	/*
 	Object bind(Dbg dbg, Env e, Object lhs, Object rhs) {
 		var msg = bind(e, lhs, rhs); if (msg == null) return inert;
 		return error(msg + " for bind: " + toString(lhs) + eIfnull(dbg, ()-> " of: " + cons(dbg.op, list(dbg.os))) + " with: " + rhs);
@@ -410,13 +418,47 @@ public class Vm {
 			case Ignore i-> null;
 			case Symbol s-> e.put(s, rhs);  
 			case Keyword k-> k.equals(rhs) ? null : "not found keyword: " + k;  
-			case null-> rhs == null ? null : "too many operands" /*+ ", none expected, but got: " + toString(rhs)*/;
+			case null-> rhs == null ? null : "too many operands" /*+ ", none expected, but got: " + toString(rhs)* /;
 			case Cons lc-> {
-				if (!(rhs instanceof Cons rc)) yield "too few operands" /*+ ", more expected, but got: " + toString(rhs)*/;
+				if (!(rhs instanceof Cons rc)) yield "too few operands" /*+ ", more expected, but got: " + toString(rhs)* /;
 				var msg = bind(e, lc.car, rc.car); if (msg != null) yield msg;
 				yield bind(e, lc.cdr, rc.cdr);
 			}
 			default-> error("cannot bind: " + lhs);
+		};
+	}
+	*/
+	Object bind(Dbg dbg, Env e, Object lhs, Object rhs) {
+		return bind(dbg, bndret, e, lhs, rhs);
+	}
+	Object bind(Dbg dbg, int bndret, Env e, Object lhs, Object rhs) {
+		try {
+		  var v = bind(bndret, e, lhs, rhs);
+		  return bndret == 0 ? inert : v;
+		}
+		catch (RuntimeException rte) {
+			return error(rte.getMessage() + " for bind: " + toString(lhs) + eIfnull(dbg, ()-> " of: " + cons(dbg.op, list(dbg.os))) + " with: " + rhs);
+		}
+	}
+	@SuppressWarnings("preview")
+	Object bind(int bndret, Env e, Object lhs, Object rhs) {
+		return switch (lhs) {
+			case Ignore i-> rhs;
+			case Symbol s-> { var v = e.put(s, rhs); yield bndret == 2 ? v : rhs; }  
+			case Keyword k-> {
+				if (k.equals(rhs)) yield rhs;
+				throw new RuntimeException("not found keyword: " + k);
+			}
+			case null-> {
+				if (rhs == null) yield null;
+				throw new RuntimeException("too many operands" /*+ ", none expected, but got: " + toString(rhs)*/);
+			}
+			case Cons lc-> {
+				if (!(rhs instanceof Cons rc)) throw new RuntimeException("too few operands" /*+ ", more expected, but got: " + toString(rhs)*/);
+				var v = bind(bndret, e, lc.car, rc.car);
+				yield lc.cdr == null && rc.cdr == null ? v : bind(bndret, e, lc.cdr, rc.cdr);
+			}
+			default-> throw new RuntimeException("cannot bind: " + lhs);
 		};
 	}
 	
@@ -451,7 +493,7 @@ public class Vm {
 		Combinable cmb;
 		Apv(Combinable cmb) { this.cmb = cmb; }
 		public Object combine(Env e, List o) {
-			return tco(()-> pipe(dbg(e, this, o), ()-> mapCar(car-> getTco(evaluate(e, car)), o), args-> tco(()-> cmb.combine(e, (List) args)))); 
+			return tco(()-> pipe(dbg(e, this, o), ()-> map(car-> getTco(evaluate(e, car)), o), args-> tco(()-> cmb.combine(e, (List) args)))); 
 		}
 		public String toString() {
 			return "{Apv " + Vm.this.toString(cmb) + "}";
@@ -484,14 +526,25 @@ public class Vm {
 	};
 	class Def implements Combinable  {
 		public Object combine(Env e, List o) {
-			checkO(this, o, 2); // o = (pt arg)
+			int len = checkO(this, o, 2, 3);  // o = (pt arg)|(pt key arg)
+			int bndret = len == 2
+				? Vm.this.bndret 
+				: switch (o.car(1)) {
+					case Inert i -> 0; 
+					case Keyword k-> switch (k.name) {
+						case ":rhs"-> 1;
+						case ":prv"-> 2;
+						default-> error("invalid keyword " + k);
+					};
+					default-> error("not a #inert, :rhs or :prv " + o.car(1));
+			   };
 			var pt = o.car();
 			if (!(pt instanceof Symbol)) {
 				if (!(pt instanceof Cons)) return error("not a symbol or parameter tree: " + pt + " in: " + cons(this, o));
 				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
 			}
 			var dbg = dbg(e, this, o);
-			return pipe(dbg, ()-> getTco(evaluate(e, o.car(1))), res-> bind(dbg, e, pt, res));
+			return pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> bind(dbg, bndret, e, pt, res));
 		}
 		public String toString() { return "%Def"; }
 	};
@@ -504,7 +557,7 @@ public class Vm {
 				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
 			}
 			var dbg = dbg(e, this, o);
-			return pipe(dbg, ()-> mapCar(car-> getTco(evaluate(e, car)), o.cdr()), res-> bind(dbg, e, pt, res));
+			return pipe(dbg, ()-> map(car-> getTco(evaluate(e, car)), o.cdr()), res-> bind(dbg, e, pt, res));
 		}
 		public String toString() { return "%Def*"; }
 	};
@@ -679,7 +732,22 @@ public class Vm {
 	class Box implements ArgsList {
 		Object value;
 		Box (Object val) { this.value = val; }
-		public Object apply(List o) { return checkO(this, o, 0, 1) == 0 ? value : inert(value = o.car()); }
+		//public Object apply(List o) { return checkO(this, o, 0, 1) == 0 ? value : inert(value = o.car()); }
+		public Object apply(List o) {
+			return switch (checkO(this, o, 0, 2)) {
+				case 0 -> value;
+				case 1 -> inert(value = o.car());
+				default-> switch (o.car()) {
+					case Inert i-> inert(value = o.car());
+					case Keyword k-> switch (k.name) {
+						case ":rhs"-> value = o.car(1);
+						case ":prv"-> { var v = value; value = o.car(1); yield v; }
+						default-> error("invalid keyword " + k);
+					};
+					default-> error("not a #inert, :rhs or :prv " + o.car());
+			    }; 
+			};
+		}
 		public String toString() { return "{" + getClass().getSimpleName() + " " + value + "}"; }
 	}
 	class DVar extends Box { DVar(Object val) { super(val); }}
@@ -710,7 +778,7 @@ public class Vm {
 				if (!(lookup.value instanceof DVar dVar)) return error("not a dinamic variable: " + var);
 				dVars[i] = dVar;
 			}
-			return pipe(dbg(e, this, o), ()-> mapCar(car-> getTco(evaluate(e, car)), o.cdr()), args-> {
+			return pipe(dbg(e, this, o), ()-> map(car-> getTco(evaluate(e, car)), o.cdr()), args-> {
 					var vals = array((List) args);
 					if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
 					for (int i=0; i<dVars.length; i+=1) {
@@ -1120,7 +1188,7 @@ public class Vm {
 					$("%def", "%wrap", wrap(new JFun("%Wrap", (Function<Object, Object>) t-> wrap(t)))),
 					$("%def", "%unwrap", wrap(new JFun("%Unwrap", (Function<Object, Object>) t-> unwrap(t)))),
 					$("%def", "%bound?", wrap(new JFun("%Bound?", (BiFunction<Symbol,Env,Boolean>) (s, e)-> e.get(s).isBound))),
-					$("%def", "%bind", wrap(new JFun("%Bind", (ArgsList) o-> bind((Env) o.car(), o.car(1), o.car(2)) == null))),
+					$("%def", "%bind", wrap(new JFun("%Bind", (ArgsList) o->{ try { bind(0, (Env) o.car(), o.car(1), o.car(2)); return true; } catch (RuntimeException rte) { return false; }}))),
 					$("%def", "%apply", wrap(new JFun("%Apply", (ArgsList) o-> combine(o.cdr(1) == null ? env(null) : o.car(2), unwrap(o.car()), o.car(1))))),
 					$("%def", "%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(null), unwrap(o.car()), o.cdr())))),
 					$("%def", "%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; }))),
@@ -1225,7 +1293,7 @@ public class Vm {
 					$("%def", "dotco", wrap(new JFun("Dotco", (ArgsList) o-> { return checkO("dotco", o, 0, 1, Boolean.class) == 0 ? dotco : inert(dotco=o.car()); }))),
 					$("%def", "doasrt",  wrap(new JFun("Doasrt", (ArgsList) o-> { return checkO("doasrt", o, 0, 1, Boolean.class) == 0 ? doasrt : inert(doasrt=o.car()); }))),
 					$("%def", "ctapv", wrap(new JFun("Ctapv", (ArgsList) o-> { checkO("ctapv", o, 0); return ctapv; }))),
-					$("%def", "prtrc", wrap(new JFun("Prtrc", (ArgsList) o-> { if (checkO("prtrc", o, 0, 1, Integer.class) == 0) return prtrc; start=level-3; return inert(prtrc=o.car()); }))),
+					$("%def", "prtrc", wrap(new JFun("Prtrc", (ArgsList) o-> { if (checkO("prtrc", o, 0, 1, Integer.class) == 0) return prtrc; start=level-(dotco ? 0 : 3); return inert(prtrc=o.car()); }))),
 					$("%def", "prenv", wrap(new JFun("Prenv", (ArgsList) o-> { return checkO("prenv", o, 0, 1, Integer.class) == 0 ? prenv : inert(prenv=o.car()); }))),
 					$("%def", "prstk", wrap(new JFun("Prstk", (ArgsList) o-> { return checkO("prstk", o, 0, 1, Boolean.class) == 0 ? prstk : inert(prstk=o.car()); })))
 				)
