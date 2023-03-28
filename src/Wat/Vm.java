@@ -29,10 +29,12 @@ import static Wat.Utility.Binop.Sl;
 import static Wat.Utility.Binop.Sr;
 import static Wat.Utility.Binop.Sr0;
 import static Wat.Utility.Binop.Xor;
+import static java.lang.Runtime.version;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.System.out;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Stream.of;
 import static javax.tools.ToolProvider.getSystemJavaCompiler;
 
 import java.io.File;
@@ -120,6 +122,18 @@ public class Vm {
 	int prtrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
 	int prenv = 3; // print environment
 	int bndret = 0; // bind return: 0:inert 1:rhs 2:prev
+	private int bndret(Object o) {
+		return switch (o) {
+			case null-> bndret;
+			case Inert i -> 0; 
+			case Keyword k-> switch (k.name) {
+				case ":rhs"-> 1;
+				case ":prv"-> 2;
+				default-> error("invalid keyword " + k);
+			};
+			default-> error("not a #null, #inert, :rhs or :prv " + o);
+		};
+	}
 	
 	
 	// Continuations
@@ -329,7 +343,7 @@ public class Vm {
 	
 	
 	// Classes and Objects
-	public class StdObj extends LinkedHashMap<Keyword, Object> {
+	public class StdObj extends LinkedHashMap<Keyword, Object> implements ArgsList {
 		private static final long serialVersionUID = 1L;
 		public StdObj(List list) {
 	        for (var l=list; l!=null; l=l.cdr()) {
@@ -342,13 +356,24 @@ public class Vm {
 			var field = super.toString().substring(1);
 			return "{&" + getClass().getCanonicalName() + (field.length() == 1 ? field : " " + field) ;
 		}
+		@Override public Object apply(List o) {
+			var len = (checkO(this, o, 1, 3)); // (:key) | (:key value) | (:key :key value)
+			return switch (len) { 
+				case 1 -> get(o.car());
+				default-> switch (bndret(len != 3 ? null : o.car(1))) {
+					case 0-> inert(put(o.car(), o.car(2)));
+					case 1-> {var v = o.car(2); put(o.car(), v); yield v; }
+					default-> put(o.car(), o.car(2));
+			    }; 
+			};
+		}
 	}
 	Class extend(Symbol className, Class superClass) {
 		try {
-			if (!className.name.matches("[a-zA-Z$_.]+")) return error("invalid class name: " + className);
-			if (superClass != null && !StdObj.class.isAssignableFrom(superClass)) return error("invalid extendible " + superClass);
+			if (!className.name.matches("[A-Z][a-zA-Z_0-9]*")) return error("invalid class name: " + className);
+			if (superClass != null && !of(StdObj.class, Box.class).anyMatch(c-> c.isAssignableFrom(superClass))) return error("invalid extendible " + superClass);
 			var c = Class.forName("Ext." + className);
-			out.println("Warning: class " + className + " just defined!");
+			out.println("Warning: class " + className + " is already defined!");
 			return c;
 		}
 		catch (ClassNotFoundException e) {
@@ -364,16 +389,21 @@ public class Vm {
 			    var isStdObj = superClass == null || superClass == StdObj.class;
 			    var task = getSystemJavaCompiler().getTask(
 			    	null, null, diagnostics,
-			    	java.util.List.of("-d", "bin", "--enable-preview", "-source", "20", "-Xlint:unchecked" ),
+			    	java.util.List.of("-d", "bin", "--enable-preview", "-source", ""+version().feature(), "-Xlint:unchecked" ),
 			    	null,
 			    	java.util.List.of(
 				    	new JavaStringFile("Ext." + className, """
 							package Ext;
 							import Wat.Vm;
-							public class %1$s extends %2$s {
-								public %1$s(Vm vm, Vm.List l) { %3$s; }
+							public class %s extends %s {
+								public %1$s(Vm vm, %s o) { %s; }
 							}
-							""".formatted(className, isStdObj ? "Vm.StdObj" : superClass.getCanonicalName(), isStdObj ? "vm.super(l)" : "super(vm, l)")
+							""".formatted(
+								className,
+								isStdObj ? "Vm.StdObj" : superClass.getCanonicalName(),
+								superClass != null && Box.class.isAssignableFrom(superClass)  ? "Object" : "Vm.List", 
+								isStdObj || superClass == Box.class ? "vm.super(o)" : "super(vm, o)"
+							)
 						)
 			    	)
 			    );
@@ -406,27 +436,6 @@ public class Vm {
 	
 	
 	// Bind
-	/*
-	Object bind(Dbg dbg, Env e, Object lhs, Object rhs) {
-		var msg = bind(e, lhs, rhs); if (msg == null) return inert;
-		return error(msg + " for bind: " + toString(lhs) + eIfnull(dbg, ()-> " of: " + cons(dbg.op, list(dbg.os))) + " with: " + rhs);
-	}
-	@SuppressWarnings("preview")
-	Object bind(Env e, Object lhs, Object rhs) {
-		return switch (lhs) {
-			case Ignore i-> null;
-			case Symbol s-> e.put(s, rhs);  
-			case Keyword k-> k.equals(rhs) ? null : "not found keyword: " + k;  
-			case null-> rhs == null ? null : "too many operands" /*+ ", none expected, but got: " + toString(rhs)* /;
-			case Cons lc-> {
-				if (!(rhs instanceof Cons rc)) yield "too few operands" /*+ ", more expected, but got: " + toString(rhs)* /;
-				var msg = bind(e, lc.car, rc.car); if (msg != null) yield msg;
-				yield bind(e, lc.cdr, rc.cdr);
-			}
-			default-> error("cannot bind: " + lhs);
-		};
-	}
-	*/
 	Object bind(Dbg dbg, Env e, Object lhs, Object rhs) {
 		return bind(dbg, bndret, e, lhs, rhs);
 	}
@@ -525,24 +534,13 @@ public class Vm {
 	class Def implements Combinable  {
 		public Object combine(Env e, List o) {
 			int len = checkO(this, o, 2, 3);  // o = (pt arg)|(pt key arg)
-			int bndret = len == 2
-				? Vm.this.bndret 
-				: switch (o.car(1)) {
-					case Inert i -> 0; 
-					case Keyword k-> switch (k.name) {
-						case ":rhs"-> 1;
-						case ":prv"-> 2;
-						default-> error("invalid keyword " + k);
-					};
-					default-> error("not a #inert, :rhs or :prv " + o.car(1));
-			   };
 			var pt = o.car();
 			if (!(pt instanceof Symbol)) {
 				if (!(pt instanceof Cons)) return error("not a symbol or parameter tree: " + pt + " in: " + cons(this, o));
 				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
 			}
 			var dbg = dbg(e, this, o);
-			return pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> bind(dbg, bndret, e, pt, res));
+			return pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> bind(dbg, bndret(len != 3 ? null : o.car(1)), e, pt, res));
 		}
 		public String toString() { return "%Def"; }
 	};
@@ -727,22 +725,18 @@ public class Vm {
 	
 	
 	// Dynamic Variables
-	class Box implements ArgsList {
+	public class Box implements ArgsList {
 		Object value;
-		Box (Object val) { this.value = val; }
+		public Box (Object val) { this.value = val; }
 		//public Object apply(List o) { return checkO(this, o, 0, 1) == 0 ? value : inert(value = o.car()); }
-		public Object apply(List o) {
-			return switch (checkO(this, o, 0, 2)) {
-				case 0 -> value;
-				case 1 -> inert(value = o.car());
-				default-> switch (o.car()) {
-					case Inert i-> inert(value = o.car());
-					case Keyword k-> switch (k.name) {
-						case ":rhs"-> value = o.car(1);
-						case ":prv"-> { var v = value; value = o.car(1); yield v; }
-						default-> error("invalid keyword " + k);
-					};
-					default-> error("not a #inert, :rhs or :prv " + o.car());
+		@Override public Object apply(List o) {
+			var len = checkO(this, o, 0, 2);
+			return switch (len) {
+				case 0-> value;
+				default-> switch (bndret(len != 2 ? null : o.car())) {
+					case 0-> inert(value = o.car());
+					case 1-> value = o.car(1);
+					default-> { var v = value; value = o.car(1); yield v; }
 			    }; 
 			};
 		}

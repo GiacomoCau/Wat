@@ -57,6 +57,16 @@ public class Prova {
 	}
 	
 	public static void main(String[] args) throws Exception {
+		System.out.println(Runtime.version());
+		System.out.println(Runtime.version().feature());
+		System.out.println(Runtime.version().interim());
+		System.out.println(Runtime.version().update());
+		System.out.println(Runtime.version().patch());
+		System.out.println(Runtime.version().build());
+		System.out.println(Runtime.version().optional());
+	}
+
+	private static void anotherError() {
 		Object o = new B(2);
 		switch (o) {
 			case null /*, default*/-> out.println(0); // darebbe 0
