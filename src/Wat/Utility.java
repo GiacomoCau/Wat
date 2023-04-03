@@ -335,21 +335,21 @@ public class Utility {
 		
 		//out.println(getExecutable((Object) Integer.class, "equals", new Object[] { Object.class }));
 		//out.println();
-		//out.println(getExecutable((Object) Prova.Box.class, "getMethod", new Object[] { "get" }));
+		//out.println(getExecutable((Object) Prova.Cls.class, "getMethod", new Object[] { "get" }));
 		//out.println();
-		//out.println(getExecutable((Object) Prova.Box.class, "getMethod", new Object[] { "set", 1 }));
+		//out.println(getExecutable((Object) Prova.Cls.class, "getMethod", new Object[] { "set", 1 }));
 		//out.println();
 		
-		out.println(getExecutable(Prova.Box.class, "getMethod", new Class[] { String.class, Class[].class } ));
+		out.println(getExecutable(Prova.Cls.class, "getMethod", new Class[] { String.class, Class[].class } ));
 		out.println();
-		out.println(getExecutable(Prova.Box.class, "getConstructor", new Class[] { Prova.Box.class, Class[].class } ));
+		out.println(getExecutable(Prova.Cls.class, "getConstructor", new Class[] { Prova.Cls.class, Class[].class } ));
 		out.println();
 		
-		Method m = (Method) getExecutable(Prova.Box.class, "getConstructor", Class[].class );
+		Method m = (Method) getExecutable(Prova.Cls.class, "getConstructor", Class[].class );
 		out.println(m);
 		out.println();
 		
-		out.println(m.invoke((Object) Prova.Box.class, int.class));
+		out.println(m.invoke((Object) Prova.Cls.class, int.class));
 		//Constructor c2 = (Constructor) m.invoke((Object) Class.class , int.class);
 		
 		//out.println(getExecutable((Object) Class.class, "getMethod", new Object[] { String.class, Class[].class } ));

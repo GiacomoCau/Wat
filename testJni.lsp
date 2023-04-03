@@ -42,50 +42,50 @@
 ;(prtrc 2)
 
 &Wat.Prova
-&Wat.Prova$Box
+&Wat.Prova$Cls
 
-(@new &Wat.Prova$Box)
-(@new &Wat.Prova$Box 1)
-($define! box (@new &Wat.Prova$Box 1))
-box
+(@new &Wat.Prova$Cls)
+(@new &Wat.Prova$Cls 1)
+($define! cls (@new &Wat.Prova$Cls 1))
+cls
 	
-(.i box)
-(.i box 2)
-(.i box)
+(.i cls)
+(.i cls 2)
+(.i cls)
 	
-(@get box)
-(@set box 3)
-(@get box)
+(@get cls)
+(@set cls 3)
+(@get cls)
 
-(@getMethod &Wat.Prova$Box "get")
-(@getMethod &Wat.Prova$Box "set" &int)
-(@getConstructor &Wat.Prova$Box)
-(@getConstructor &Wat.Prova$Box &int)
-((@getMethod &java.lang.Class "getConstructor" &java.lang.Class[]) &Wat.Prova$Box)
-((@getMethod &java.lang.Class "getConstructor" &java.lang.Class[]) &Wat.Prova$Box &int)
+(@getMethod &Wat.Prova$Cls "get")
+(@getMethod &Wat.Prova$Cls "set" &int)
+(@getConstructor &Wat.Prova$Cls)
+(@getConstructor &Wat.Prova$Cls &int)
+((@getMethod &java.lang.Class "getConstructor" &java.lang.Class[]) &Wat.Prova$Cls)
+((@getMethod &java.lang.Class "getConstructor" &java.lang.Class[]) &Wat.Prova$Cls &int)
 
-($define! box (@new &Wat.Prova$Box 1))
-((@getMethod &Wat.Prova$Box "get") box)
-((@getMethod &Wat.Prova$Box "set" &int) box 5)
-((@getMethod &Wat.Prova$Box "get") box)
+($define! cls (@new &Wat.Prova$Cls 1))
+((@getMethod &Wat.Prova$Cls "get") cls)
+((@getMethod &Wat.Prova$Cls "set" &int) cls 5)
+((@getMethod &Wat.Prova$Cls "get") cls)
 
-($define! box (@new &Wat.Prova$Box 1))
-(@invoke (@getMethod &Wat.Prova$Box "get") box)
-(@invoke (@getMethod &Wat.Prova$Box "set" &int) box 4)
-(@invoke (@getMethod &Wat.Prova$Box "get") box)
+($define! cls (@new &Wat.Prova$Cls 1))
+(@invoke (@getMethod &Wat.Prova$Cls "get") cls)
+(@invoke (@getMethod &Wat.Prova$Cls "set" &int) cls 4)
+(@invoke (@getMethod &Wat.Prova$Cls "get") cls)
 	
-((@getMethod &java.lang.Class "newInstance") &Wat.Prova$Box) ; Class.newInstance di Class permette di istanziare solo classi con un costruttore senza parametri
+((@getMethod &java.lang.Class "newInstance") &Wat.Prova$Cls) ; Class.newInstance di Class permette di istanziare solo classi con un costruttore senza parametri
 
 (def getConstructor (@getMethod &java.lang.Class "getConstructor" &java.lang.Class[]))
 (def newInstance (@getMethod &java.lang.reflect.Constructor "newInstance" &java.lang.Object[]))
-(newInstance (getConstructor  &Wat.Prova$Box))
-(newInstance (getConstructor &Wat.Prova$Box &int) 1)
-((@getMethod &java.lang.reflect.Constructor "newInstance" &java.lang.Object[]) (getConstructor &Wat.Prova$Box &int) 1)
+(newInstance (getConstructor  &Wat.Prova$Cls))
+(newInstance (getConstructor &Wat.Prova$Cls &int) 1)
+((@getMethod &java.lang.reflect.Constructor "newInstance" &java.lang.Object[]) (getConstructor &Wat.Prova$Cls &int) 1)
 
 (@newInstance &java.lang.reflect.Array &int 1)
 (@newInstance &java.lang.reflect.Array &int 1 2 3)
 	
-(@forName &java.lang.Class "Wat.Prova$Box")
+(@forName &java.lang.Class "Wat.Prova$Cls")
 
 ($define! int &int)
 ($define! Array &java.lang.reflect.Array)
@@ -102,27 +102,27 @@ box
 (get #null a 2)
 (length #null a)
 
-((@getField &Wat.Prova$Box "i") (@new &Wat.Prova$Box 3))
+((@getField &Wat.Prova$Cls "i") (@new &Wat.Prova$Cls 3))
 
 ; recupero ed esecuzione costruttore innerclass Wat.Vm$DVar (vanno resi public classe e costruttore)!
 ;((@getConstructor &Wat.Vm$DVar (@getClass vm) &java.lang.Object) vm 1)
 
-; recupero dei costruttori di &Wat.Prova$Box
-(@getConstructors &Wat.Prova$Box)
-((@getConstructor &Wat.Prova$Box))
-((@getConstructor &Wat.Prova$Box &int) 1)
+; recupero dei costruttori di &Wat.Prova$Cls
+(@getConstructors &Wat.Prova$Cls)
+((@getConstructor &Wat.Prova$Cls))
+((@getConstructor &Wat.Prova$Cls &int) 1)
 (def getConstructor (@getMethod &java.lang.Class "getConstructor" &java.lang.Class[]))
-((getConstructor &Wat.Prova$Box))
-((getConstructor &Wat.Prova$Box &int) 1)
+((getConstructor &Wat.Prova$Cls))
+((getConstructor &Wat.Prova$Cls &int) 1)
 
-((@getMethod &java.lang.Class "getField" &java.lang.String) &Wat.Prova$Box "i")
+((@getMethod &java.lang.Class "getField" &java.lang.String) &Wat.Prova$Cls "i")
 (def getField (@getMethod &java.lang.Class "getField" &java.lang.String))
-(getField &Wat.Prova$Box "i")
-((getField &Wat.Prova$Box "i") box)
+(getField &Wat.Prova$Cls "i")
+((getField &Wat.Prova$Cls "i") cls)
 
-((@getMethod &java.lang.Class "getMethod" &java.lang.String &java.lang.Class[]) &Wat.Prova$Box "get")
+((@getMethod &java.lang.Class "getMethod" &java.lang.String &java.lang.Class[]) &Wat.Prova$Cls "get")
 (def getMethod (@getMethod &java.lang.Class "getMethod" &java.lang.String &java.lang.Class[]))
-(def get (getMethod &Wat.Prova$Box "get"))
-(get box)
+(def get (getMethod &Wat.Prova$Cls "get"))
+(get cls)
 
 ;(prtrc 0)

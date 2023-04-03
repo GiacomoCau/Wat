@@ -125,7 +125,7 @@ public class Vm {
 	private int bndret(Object o) {
 		return switch (o) {
 			case null-> bndret;
-			case Inert i -> 0; 
+			case Inert i-> 0; 
 			case Keyword k-> switch (k.name) {
 				case ":rhs"-> 1;
 				case ":prv"-> 2;
@@ -354,6 +354,7 @@ public class Vm {
 		}
 		@Override public String toString() {
 			var field = super.toString().substring(1);
+			//return "{" + getClass().getSimpleName() + (field.length() == 1 ? field : " " + field) ;
 			return "{&" + getClass().getCanonicalName() + (field.length() == 1 ? field : " " + field) ;
 		}
 		@Override public Object apply(List o) {
@@ -967,10 +968,11 @@ public class Vm {
 			return !syms.contains(sym) ? null : "not a unique symbol: " + ep;
 		}
 		private Object check(Object p) {
+			if (p == null) return null;
 			if (p == ignore) return null;
 			if (p instanceof Keyword) return null;
 			if (p instanceof Symbol) { return syms.add(p) ? null : "not a unique symbol: " + p + eIf(p == pt, ()-> " in: " + pt); }
-			if (!(p instanceof Cons c)) return "not a #ignore, keyword or symbol: " + p + eIf(p == pt, ()-> " in: " + pt);
+			if (!(p instanceof Cons c)) return "not a #null, #ignore, keyword or symbol: " + p + eIf(p == pt, ()-> " in: " + pt);
 			var msg = check(c.car); if (msg != null) return msg;
 			return c.cdr == null ? null : check(c.cdr);
 		}
@@ -1176,7 +1178,8 @@ public class Vm {
 					$("%def", "%wrap", wrap(new JFun("%Wrap", (Function<Object, Object>) t-> wrap(t)))),
 					$("%def", "%unwrap", wrap(new JFun("%Unwrap", (Function<Object, Object>) t-> unwrap(t)))),
 					$("%def", "%bound?", wrap(new JFun("%Bound?", (BiFunction<Symbol,Env,Boolean>) (s, e)-> e.get(s).isBound))),
-					$("%def", "%bind", wrap(new JFun("%Bind", (ArgsList) o->{ try { bind(0, (Env) o.car(), o.car(1), o.car(2)); return true; } catch (RuntimeException rte) { return false; }}))),
+					//$("%def", "%bind", wrap(new JFun("%Bind", (ArgsList) o->{ bind(0, (Env) o.car(), o.car(1), o.car(2)); return true; } ))),
+					$("%def", "%bind?", wrap(new JFun("%Bind?", (ArgsList) o->{ try { bind(0, (Env) o.car(), o.car(1), o.car(2)); return true; } catch (RuntimeException rte) { return false; }}))),
 					$("%def", "%apply", wrap(new JFun("%Apply", (ArgsList) o-> combine(o.cdr(1) == null ? env(null) : o.car(2), unwrap(o.car()), o.car(1))))),
 					$("%def", "%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(null), unwrap(o.car()), o.cdr())))),
 					$("%def", "%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; }))),
@@ -1223,7 +1226,6 @@ public class Vm {
 					// Object System
 					$("%def", "%addMethod", wrap(new JFun("%AddMethod", (ArgsList) o-> addMethod(o.car(), o.car(1), o.car(2))))),
 					$("%def", "%getMethod", wrap(new JFun("%GetMethod", (BiFunction<Class,Symbol,Object>) this::getMethod))),
-					$("%def", "%obj", wrap(new JFun("%Obj", (ArgsList) o-> uncked(()-> ((Class<? extends StdObj>) o.car()).getDeclaredConstructor(List.class).newInstance(o.cdr()))))),
 					$("%def", "%obj", wrap(new JFun("%Obj", (ArgsList) o-> uncked(()-> ((Class<? extends StdObj>) o.car()).getDeclaredConstructor(Vm.class, List.class).newInstance(Vm.this, o.cdr()))))),
 					$("%def", "%class", wrap(new JFun("%Class", (ArgsList) o-> extend(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr()))))),
 					$("%def", "%subClass?", wrap(new JFun("%SubClass", (BiFunction<Class,Class,Boolean>) (cl,sc)-> sc.isAssignableFrom(cl)))),
@@ -1358,7 +1360,6 @@ public class Vm {
 		loadText("boot.lsp");
 		loadText("test.lsp");
 		loadText("testJni.lsp");
-		loadText("testOos.lsp");
 		print("start time: " + (currentTimeMillis() - milli));
 		repl();
 		//*/

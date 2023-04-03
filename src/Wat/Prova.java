@@ -86,16 +86,16 @@ public class Prova {
 
 	public static void box() throws NoSuchMethodException {
 		//extend2("Ooo", null);
-		Box.class.getConstructor((Class[]) null);
-		Box.class.getConstructor((Class[]) null);
-		out.println(Box.class); // -> Wat.Prova$Box
-		out.println(Box.class.getSuperclass()); // -> Object
-		out.println(Box.class.getClass()); // -> Class
-		out.println(Box.class.getClass().getClass()); // -> Class
-		out.println(Box.class.getClass().getSuperclass()); // -> Object
-		out.println(Box.class.getClass().getSuperclass().getClass()); // -> Class
-		out.println(Box.class.getClass().getSuperclass().getClass().getClass()); // -> Class
-		new Box(1).get();
+		Cls.class.getConstructor((Class[]) null);
+		Cls.class.getConstructor((Class[]) null);
+		out.println(Cls.class); // -> Wat.Prova$Cls
+		out.println(Cls.class.getSuperclass()); // -> Object
+		out.println(Cls.class.getClass()); // -> Class
+		out.println(Cls.class.getClass().getClass()); // -> Class
+		out.println(Cls.class.getClass().getSuperclass()); // -> Object
+		out.println(Cls.class.getClass().getSuperclass().getClass()); // -> Class
+		out.println(Cls.class.getClass().getSuperclass().getClass().getClass()); // -> Class
+		new Cls(1).get();
 	}
 
 	/* funziona ma ha bisogno di una istanza di Vm
@@ -449,10 +449,10 @@ public class Prova {
 	}
 	
 	static void executable() {
-		out.println(Utility.getExecutable(Box.class, "new", Integer.class));
-		//MethodUtils.getMatchingMethod(Box.class, null, null)
-		//out.println(ConstructorUtils.getMatchingAccessibleConstructor(Box.class, null));
-		for (var c: Box.class.getConstructors()) out.println(c);
+		out.println(Utility.getExecutable(Cls.class, "new", Integer.class));
+		//MethodUtils.getMatchingMethod(Cls.class, null, null)
+		//out.println(ConstructorUtils.getMatchingAccessibleConstructor(Cls.class, null));
+		for (var c: Cls.class.getConstructors()) out.println(c);
 		for (var c: Vm.DVar.class.getConstructors()) out.println(c);
 		out.println();
 	}
@@ -611,8 +611,8 @@ public class Prova {
 		//out.println(Class.class.getClass());
 		//out.println();
 		
-		out.println(Prova.Box.class.getConstructor());
-		out.println(Prova.Box.class.getConstructor(int.class));
+		out.println(Prova.Cls.class.getConstructor());
+		out.println(Prova.Cls.class.getConstructor(int.class));
 		
 		// facendolo diretto è semplice
 		out.println(Integer.class.getConstructor(String.class));
@@ -762,7 +762,7 @@ public class Prova {
 		System.out.println(o);
 	}
 	
-	public static class Box {
+	public static class Cls {
 		public Object i;
 		public void set(int i) {
 			this.i = i;
@@ -773,17 +773,17 @@ public class Prova {
 		public int get() {
 			return (Integer) i;
 		}
-		public Box() {
+		public Cls() {
 		}
-		public Box(int i) {
+		public Cls(int i) {
 			this.i = i;
 		}
-		public Box(Object o) {
+		public Cls(Object o) {
 			this.i = o;
 		}
 		@Override
 		public String toString() {
-			return "{Box " + i + "}";
+			return "{&Wat.Prova$Cls " + i + "}";
 		}
 	}
 }
