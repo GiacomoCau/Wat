@@ -68,6 +68,24 @@
 (def wrap %wrap)
 
 
+;;;; Basic type
+
+(def Box &Wat.Vm$Box)
+(def Cons &Wat.Vm$Cons)
+(def DVar &Wat.Vm$DVar)
+(def JFun &Wat.Vm$JFun)
+(def StdObj &Wat.Vm$StdObj)
+(def Symbol &Wat.Vm$Symbol)
+(def Keyword &Wat.Vm$Keyword)
+(def Boolean &java.lang.Boolean)
+(def Date &java.util.Date)
+(def Number &java.lang.Number)
+(def Integer &java.lang.Integer)
+(def Double &java.lang.Double)
+(def Object &java.lang.Object)
+(def String &java.lang.String)
+
+
 ;;;; Important utilities
 
 (def $vau %vau)
@@ -91,9 +109,6 @@
 (def cdar (compose cdr car))
 (def cddr (compose cdr cdr))
 
-(def DVar &Wat.Vm$DVar)
-(def Symbol &Wat.Vm$Symbol)
-
 
 ;;;; Macro
 
@@ -105,8 +120,8 @@
       ($vau operands env
         (def !evm (! (evm)))
         (if !evm (evm #t))
-        (def expr (eval (cons expander operands) (makeEnv)))
-        (if !evm expr (eval expr env)) ))))
+        (def exp (eval (cons expander operands) (makeEnv)))
+        (if !evm exp (eval exp env)) ))))
 
 (def macro
   (makeMacro
@@ -215,7 +230,7 @@
 (def\ (apply appv args . optEnv)
   (def env (if (null? optEnv) (makeEnv) (car optEnv))) 
   (if (%jFun? appv)
-    (@combine (@new &Wat.Vm$JFun vm appv) env args)
+    (@combine (@new JFun vm appv) env args)
     (eval (cons (unwrap appv) args) env) ))
 
 (defMacro (rec lhs . rhs)
@@ -330,23 +345,83 @@
          (if (== k key) (list v) (loop lst)))))
    lst ))
 
-(assert (get? :b '(:a 1 :b 2 :c 3 :d 4)) '(2)) 
+(assert (get? :b '(:a 1 :b 2 :c 3)) '(2)) 
 
-(defVau (opt? val def) env (let1 (val (eval val env)) (if (!= val #null) (car val) (eval def env)))) 
 
-(assert (opt? (get? :b '(:a 1 :b 2 :c 3 :d 4)) 10) 2)
-(assert (opt? (get? :f '(:a 1 :b 2 :c 3 :d 4)) 10) 10)
+;;;; Bind
+
+;(def bind %bind)
+(def bind? %bind?)
+
+(defVau (ifBind (pt exp) then . else) env
+  (let1 (env+ (makeEnv env))
+    (if (bind? env+ pt (eval exp env))
+      (eval then env+)
+      (unless (null? else)
+        (eval (let1 ((exp) else) exp) env) ))))
+
+
+;;;; Options
+
+(defVau (opt? exp dft) env
+  (let1 (exp (eval exp env))
+    (if (cons? exp)
+      ;(car exp) ; unchecked lenght
+      (let1 ((val) exp) val) ; check length 1
+      ;((\ ((val)) val) exp) ; check length 1
+      ;(def (val) :rhs exp) ; check length 1
+      (eval dft env) ))) 
+
+(assert (opt? '(2) 10) 2)
+(assert (opt? #null 10) 10)
+
+(defVau (ifOpt? (pt exp) then . else) env
+  (let1 (exp (eval exp env))
+    (if (cons? exp)
+      (eval (list* (list '$vau (if (symbol? pt) (list pt) pt) #ignore then) exp) env)
+      (if (null? else) #null
+        (eval (let1 ((exp) else) exp) env) ))))
+
+(assert (ifOpt? (a ()) (+ 1 a)) #null)
+(assert (ifOpt? (a '(2)) (+ 1 a)) 3)
+(assert (ifOpt? (a '(2 2)) (+ 1 a)))
+
+(assert (ifOpt? ((a) ()) (+ 1 a)) #null)
+(assert (ifOpt? ((a) ()) (+ 1 a) 0) 0)
+(assert (ifOpt? ((a) ()) (+ 1 a) 0 1))
+(assert (ifOpt? ((a) '(2)) (+ 1 a)) 3)
+(assert (ifOpt? ((a) '(2 3)) (+ 1 a)))
+(assert (ifOpt? ((a b) '(2 3)) (+ 1 b)) 4)
+
+(defMacro whenOpt? ((name opt?) form . forms)
+  (list ifOpt? (list name opt?) (list* progn form forms)))
+
+(defMacro unlessOpt? (opt? form . forms)
+  (list ifOpt? (list #ignore opt?) #null (list* progn form forms)))
+
+(defVau (caseOpt? exp . clauses) env
+  (let1 (exp (eval exp env))
+    (if (! (cons? exp)) #null
+      (let1 loop (clauses clauses)
+        (if (null? clauses) (error "not a valid opt? form! ")
+          (let ((env+ (makeEnv env))
+                (((bindings . forms) . clauses) clauses) )
+            (if (bind? env+ bindings exp)
+              (eval (list* 'begin forms) env+)
+              (loop clauses) )))))))
+
+(assert (caseOpt? () ((a) 1) ((a b) (+ a b))) ())
+(assert (caseOpt? '(2) ((a) 1) ((a b) (+ a b))) 1)
+(assert (caseOpt? '(1 2) ((a) 1) ((a b) (+ a b))) 3)
+(assert (caseOpt? '(1 2 3) ((a) 1) ((a b) (+ a b))))
+
+(defVau (defOpt? pt exp) env
+  (def exp (eval exp env))
+  (unless (null? exp) 
+    (eval (list 'def pt exp) env) )) 
 
 
 ;;;; Type parameters check lambda
-
-(def Boolean &java.lang.Boolean)
-(def Date &java.util.Date)
-(def Number &java.lang.Number)
-(def Integer &java.lang.Integer)
-(def Double &java.lang.Double)
-(def Object &java.lang.Object)
-(def String &java.lang.String)
 
 (defMacro (lambda params . body)
   (letrec ((typedParams->namesAndChecks
@@ -426,8 +501,8 @@
   (let ((body (list* 'begin body))
         (break (list #null))
         (continue (list #null)) )
-    (%bind env 'break (\ v (throwTag break (if (! (null? v)) (if (null? (cdr v)) (car v) v)))))
-    (%bind env 'continue (\ () (throwTag continue)))
+    (eval (list 'def 'break (\ v (throwTag break (if (! (null? v)) (if (null? (cdr v)) (car v) v))))) env)
+    (eval (list 'def 'continue (\ () (throwTag continue))) env)
     (catchTag break
       (loop
         (catchTag continue
@@ -456,8 +531,8 @@
 (def\ (returnFrom block-name . value?)
   (block-name (unless (null? value?) (car value?))) )
   
-(defVau (case expr . clauses) env
-  (let1 (value (eval expr env))
+(defVau (case exp . clauses) env
+  (let1 (value (eval exp env))
     (let1 loop (clauses clauses)
       (if (null? clauses) #inert
         (let1 (((values . forms) . clauses) clauses)
@@ -470,42 +545,41 @@
   ($vau values #ignore
     (let1 loop (clauses clauses)
       (if (null? clauses) #inert
-        (let ((env (makeEnv env))
+        (let ((env+ (makeEnv env))
               (((bindings . forms) . clauses) clauses) )
-          (if (%bind env bindings values)
-            (eval (list* 'begin forms) env)
+          (if (bind? env+ bindings values)
+            (eval (list* 'begin forms) env+)
             (loop clauses) ))))))
 
-(def \case (wrap vauCase))
+(def case\ (wrap vauCase))
 
-(defVau (\case . clauses) env
+(defVau (case\ . clauses) env
   (wrap
     ($vau values #ignore
       (let1 loop (clauses clauses)
         (if (null? clauses) #inert
-          (let ((env (makeEnv env))
+          (let ((env+ (makeEnv env))
                 (((bindings . forms) . clauses) clauses) )
-            (if (%bind env bindings values)
-              (eval (list* 'begin forms) env)
+            (if (bind? env+ bindings values)
+              (eval (list* 'begin forms) env+)
               (loop clauses) )))))))
-
 |#
 
-(defVau (\case . clauses) env
+(defVau (case\ . clauses) env
   (\ values
     (let1 loop (clauses clauses)
       (if (null? clauses) #inert
-        (let ((env (makeEnv env))
+        (let ((env+ (makeEnv env))
               (((bindings . forms) . clauses) clauses) )
-          (if (%bind env bindings values)
-            (eval (list* 'begin forms) env)
+          (if (bind? env+ bindings values)
+            (eval (list* 'begin forms) env+)
             (loop clauses) ))))))
 
-(assert ((\case ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1) 2)
-(assert ((\case ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2) 3)
-(assert ((\case ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2 3) '(2 3 4))
+(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1) 2)
+(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2) 3)
+(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2 3) '(2 3 4))
 
-(def\ makeTypecase (default)
+(def\ makeCaseType (default)
   ($vau (keyform . clauses) env
     (let1 (key (eval keyform env))
       (let1 loop (clauses clauses)
@@ -515,10 +589,10 @@
               (eval (list* 'begin forms) env)
               (loop clauses) )))))))
 
-(def typecase (makeTypecase (\ (#ignore) #inert)))
-(def etypecase (makeTypecase (\ (key) (error "type of " key " not" Object))))
+(def caseType (makeCaseType (\ (#ignore) #inert)))
+(def eCaseType (makeCaseType (\ (key) (error "type of " key " not" Object))))
 
-(assert (typecase 2.0 (String "string") (Double "double")) "double")
+(assert (caseType 2.0 (String "string") (Double "double")) "double")
 
 
 ;;;; List utilities
@@ -580,18 +654,16 @@
 
 (assert (foldR cons () '(1 2 3 4)) '(1 2 3 4))
 
-(def\ (split n lst)
-  (let loop ((n n) (h ()) (t lst))
-    (if (or (null? t) (<= n 0)) (cons (reverse h) (list t))
-      (loop (- n 1) (cons (car t) h) (cdr t)) )))
-
-(def\ (resize n lst)
-  (let loop ((n n) (h ()) (t lst))
-    (if (null? t) (reverse h)
-      (if (<= n 1)
-        (reverse (cons (if (null? (cdr t)) (car t) t) h))
-        (loop (- n 1) (cons (car t) h) (cdr t)) ))))
-
+(def\ (call* n f)
+  (def\ (resize n lst)
+    (let loop ((n n) (h ()) (t lst))
+      (if (null? t) (reverse h)
+        (if (<= n 1)
+          (reverse (cons (if (null? (cdr t)) (car t) t) h))
+          (loop (- n 1) (cons (car t) h) (cdr t)) ))))
+  (\ lst (apply f (resize n lst))))
+  
+(assert ((call* 2 (\(a b) b)) 1 2 3 4 5) '(2 3 4 5))
 
 ;;;; Dynamic Binding
 
@@ -646,11 +718,11 @@
 (defMacro (ddef* var* . val*)
   (list* (list 'd\ var*) val*) )
 
-(defMacro (progv var* val* expr . nexts)
-  (list* (list* 'd\ var* expr nexts) val*) )
+(defMacro (progv var* val* exp . exps)
+  (list* (list* 'd\ var* exp exps) val*) )
 
-(defMacro (dlet bindings expr . nexts)
-  (list* (list* 'd\ (map car bindings) expr nexts) (map cadr bindings)) )  
+(defMacro (dlet bindings exp . exps)
+  (list* (list* 'd\ (map car bindings) exp exps) (map cadr bindings)) )  
 
 (defMacro (dlet* bindings . body)
   (if (nil? bindings)
@@ -672,27 +744,68 @@
 (assert (begin (ddef* (a) 1) (dlet* ((a (+ 1 (dval a))) (a (+ 1 (dval a)))) (dval a))) 3)
 
 
+;;;; Class
+
+(defMacro (defClass className . superClass? #| slot-specs . properties |# )
+  (list 'def className (list* '%class (list 'quote className) superClass?)))
+
+;; receiver e parameters dei defMethod dovrebbero corrispondere a quelli del corrispondente defGeneric con quel nome
+
+(defVau (defGeneric . args) env
+  (if (symbol? (car args))
+    (def (name (receiver . parameters) . properties) args)
+    (def ((name receiver . parameters) . properties) args) )
+  (def\ (generic . args) (apply (%getMethod (%classOf (car args)) name) args))
+  (eval (list 'def name generic) env) )
+
+(defVau (defMethod . args) env
+  (if (symbol? (car args))
+    (def (name ((receiver class) . parameters) . forms) args)
+    (def ((name (receiver class) . parameters) . forms) args) )
+  (def method (eval (list* '\ (list* receiver parameters) forms) env))
+  (%addMethod (eval class env) name method)
+  #inert )
+
+(assert 
+  (begin
+    (defClass Foo)
+    (defClass Bar Foo)
+    (defGeneric g1 (obj p))
+    (defMethod g1 ((foo Foo) p) (+ p 100))
+
+    (def foo (%obj Foo))
+    (def bar (%obj Bar :a 1 :b (+ 2 3)))
+
+    (assert (g1 foo (+ 1 1)) 102)
+    (assert (g1 bar (+ 2 3)) 105)
+
+    (defMethod g1 ((bar Bar) p) (+ p (bar :b)))
+
+    (assert (bar :b) 5)
+    (assert (g1 bar 2) 7)
+    (assert (g1 bar (* 2 (bar :b))) 15)
+    (assert (bar :b :prv 6) 5)
+    (assert (bar :b) 6)
+  )
+  #t )
+  
 #|
-;;;; Prototypes
+(defVau (object . pairs) env
+  (let ((obj (%jsMakeObject)))
+    (map (\ ((name value))
+                (set ((jsGetter (eval name env)) obj) (eval value env)))
+              pairs)
+    obj))
 
-(defVau (defPrototype name superName propNames) env
-  (eval (list 'def name (makePrototype name superName propNames env)) env))
+(def\ (elt object key)
+  ((jsGetter key) object))
 
-(def\ (makePrototype name superName propNames env)
-  (let ((p (apply %jsMakePrototype (list* (symbolName name) (map symbolName propNames))))
-        (super (eval superName env)))
-    (set (.prototype p) (@create &Object (.prototype super)))
-    (set (.constructor (.prototype p)) super)
-    p ))
+(defMacro (set (getter . args) new-val)
+  (list* (list 'setter getter) new-val args))
 
-(defMacro (defineGeneric (name . #ignore))
-  (list 'def name (lambda args (apply ((jsGetter name) (car args)) args))))
-
-(defMacro (defineMethod (name (self ctor) . args) . body)
-  (list 'putMethod ctor (symbolName name) (list* 'lambda (list* self args) body)))
-
-(def\ (putMethod ctor name fun)
-  (set ((jsGetter name) (.prototype ctor)) fun))
+(set (setter elt)
+  (lambda (newVal object key)
+    (set ((jsGetter key) object) newVal) ))
 |#
 
 
@@ -728,7 +841,7 @@
 (assert (begin (defModule m (x) (define x 10)) (import m (x)) x) 10)
 
 
-;;;; JavaScript
+;;;; Java
 
 (def\ (relationalOp %binop)
   (let ((binop %binop))
@@ -769,37 +882,6 @@
 
 
 #| TODO da rivedere
-(def % (%jsBinop "%"))
-(def not (%jsUnop "!"))
-(def in (%jsBinop "in"))
-(def typeof (%jsUnop "typeof"))
-(def instanceof (%jsBinop "instanceof"))
-
-(def bitand (%jsBinop "&"))
-(def bitor (%jsBinop "|"))
-(def bitxor (%jsBinop "^"))
-(def bitnot (%jsUnop "~"))
-(def bitshiftl (%jsBinop "<<"))
-(def bitshiftr (%jsBinop ">>"))
-(def bitshiftr0 (%jsBinop ">>>"))
-
-(defVau (object . pairs) env
-  (let ((obj (%jsMakeObject)))
-    (map (\ ((name value))
-                (set ((jsGetter (eval name env)) obj) (eval value env)))
-              pairs)
-    obj))
-
-(def\ (elt object key)
-  ((jsGetter key) object))
-
-(defMacro (set (getter . args) new-val)
-  (list* (list 'setter getter) new-val args))
-
-(set (setter elt)
-  (lambda (newVal object key)
-    (set ((jsGetter key) object) newVal) ))
-
 (def\ (jsCallback fun)
   (%jsFunction (\ args (pushPrompt rootPrompt (apply fun args)))) )
 
@@ -817,26 +899,25 @@
 (def\ (cell value) (new Cell value))
 (def\ (ref (c Cell)) (.value c))
 (set (setter ref) (lambda (newVal (c Cell)) (set (.value c) newVal)))
-
-(defMacro (++ place)
-  (list 'set place (list '+ place 1)) )
-(defMacro (-- place)
-  (list 'set place (list '- place 1)) )
-
-
-;;;; Options
-
-(defPrototype Option Object ())
-(defPrototype Some Option (value))
-(defPrototype None Option ())
-(def\ (some value) (new Some value))
-(def\ none (new None))
-(defVau (ifOption (optionName optionExpr) then else) env
-  (let ((option (the Option (eval optionExpr env))))
-    (if (type? option Some)
-        (eval (list (list 'lambda (list optionName) then) (.value option)) env)
-        (eval else env) )))
 |#
+
+(defVau (++ place . opt?) env
+  (def val (eval place env))
+  (eCaseType val
+    (Box    (let1 (() opt?) (val :rhs (+ (val) 1))))
+    (StdObj (let1 ((key) opt?) (val key :rhs (+ (val key) 1)))) 
+    (Number (let1 (() opt?) (eval (list 'def place :rhs (+ val 1)) env))) )) 
+
+(defVau (-- place . opt?) env
+  (def val (eval place env))
+  (eCaseType val
+    (Box    (let1 (() opt?) (val :rhs (- (val) 1))))
+    (StdObj (let1 ((key) opt?) (val key :rhs (- (val key) 1)))) 
+    (Number (let1 (() opt?) (eval (list 'def place :rhs (- val 1)) env))) )) 
+
+(assert (begin (defClass Baz) (def baz (%obj Baz :a 1)) (++ baz :a) (++ baz :a) (-- baz :a)) 2)
+(assert (begin (def box (%box 1)) (++ box) (++ box) (-- box)) 2)
+(assert (begin (def n 1) (++ n) (++ n) (-- n)) 2)
 
 
 ;;;; Utilities
@@ -851,12 +932,12 @@
 (lambda (arrayFilter pred (arr Array))
   (list->array (filter pred (array->list arr))) )
 
-(defVau (time expr) env
+(defVau (time exp) env
   (let1 (currentTime (@getMethod &java.lang.System "currentTimeMillis"))
     (def milli (currentTime #null))
-    (def result (eval expr env))
+    (def result (eval exp env))
     (def milli (- (currentTime #null) milli))
-    (log ($ "time " expr ": " milli  "ms"))
+    (log ($ "time " exp ": " milli  "ms"))
     result ))
 
 
