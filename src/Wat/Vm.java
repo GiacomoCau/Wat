@@ -362,9 +362,9 @@ public class Vm {
 			return switch (len) { 
 				case 1 -> get(o.car());
 				default-> switch (bndret(len != 3 ? null : o.car(1))) {
-					case 0-> inert(put(o.car(), o.car(2)));
-					case 1-> {var v = o.car(2); put(o.car(), v); yield v; }
-					default-> put(o.car(), o.car(2));
+					case 0-> inert(put(o.car(), o.car(len-1)));
+					case 1-> {var v = o.car(len-1); put(o.car(), v); yield v; }
+					default-> put(o.car(), o.car(len-1));
 			    }; 
 			};
 		}

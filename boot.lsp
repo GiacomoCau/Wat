@@ -530,7 +530,10 @@
 
 (def\ (returnFrom block-name . value?)
   (block-name (unless (null? value?) (car value?))) )
-  
+
+
+;;; Case
+
 (defVau (case exp . clauses) env
   (let1 (value (eval exp env))
     (let1 loop (clauses clauses)
@@ -540,8 +543,9 @@
             (eval (list* 'begin forms) env)
             (loop clauses) ))))))
 
-#|
-(defVau (vauCase . clauses) env 
+(assert (case 3 ((2 4 6 8) 'pair) ((1 3 5 7 9) 'odd)) 'odd) 
+
+(defVau (caseVau . clauses) env 
   ($vau values #ignore
     (let1 loop (clauses clauses)
       (if (null? clauses) #inert
@@ -551,8 +555,7 @@
             (eval (list* 'begin forms) env+)
             (loop clauses) ))))))
 
-(def case\ (wrap vauCase))
-
+#|
 (defVau (case\ . clauses) env
   (wrap
     ($vau values #ignore
@@ -563,7 +566,6 @@
             (if (bind? env+ bindings values)
               (eval (list* 'begin forms) env+)
               (loop clauses) )))))))
-|#
 
 (defVau (case\ . clauses) env
   (\ values
@@ -574,10 +576,39 @@
           (if (bind? env+ bindings values)
             (eval (list* 'begin forms) env+)
             (loop clauses) ))))))
+|#
+
+(defMacro (case\ . clauses)
+  (list 'wrap (list* 'caseVau clauses)) )
 
 (assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1) 2)
 (assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2) 3)
 (assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2 3) '(2 3 4))
+
+#|
+(defVau (match exp . clauses) env
+  (let1 (exp (eval exp env))
+    (let1 loop (clauses clauses)
+      (if (null? clauses) (error "not a valid match form! ")
+        (let ((env+ (makeEnv env))
+              (((bindings . forms) . clauses) clauses) )
+          (if (or (== bindings 'else) (bind? env+ bindings exp))
+            (eval (list* 'begin forms) env+)
+            (loop clauses) ))))))
+|#
+
+(defMacro (match exp . clauses)
+  (list (list* 'case\ (map (\ ((a . b)) (list* (if (== a 'else) a (list a)) b)) clauses)) exp) )  
+
+;(defMacro (match exp . clauses)
+;  (list* (list* 'case\ clauses) (list exp)) )  
+;(defVau (match exp . clauses) env
+;  (eval (list* (list 'caseVau clauses) (eval exp env)) env) )
+
+(assert (match '(1 2 3) ((a) 1) ((a b) 2) (else 3)) 3)
+(assert (match '(1 2) ((a) 1) ((a b) 2) (else 3)) 2)
+(assert (match '(1) ((a) 1) ((a b) 2) (else 3)) 1)
+(assert (match 1 ((a) 1) ((a b) 2) (else 3)) 3)
 
 (def\ makeCaseType (default)
   ($vau (keyform . clauses) env
@@ -901,23 +932,45 @@
 (set (setter ref) (lambda (newVal (c Cell)) (set (.value c) newVal)))
 |#
 
-(defVau (++ place . opt?) env
-  (def val (eval place env))
+(defVau (++ plc . args) env
+  (def val (eval plc env))
   (eCaseType val
-    (Box    (let1 (() opt?) (val :rhs (+ (val) 1))))
-    (StdObj (let1 ((key) opt?) (val key :rhs (+ (val key) 1)))) 
-    (Number (let1 (() opt?) (eval (list 'def place :rhs (+ val 1)) env))) )) 
+    (Box    (let1 (() args) (val :rhs (+ (val) 1))))
+    (StdObj (let1 ((fld) args) (val fld :rhs (+ (val fld) 1)))) 
+    (Number (let1 (() args) (eval (list 'def plc :rhs (+ val 1)) env))) )) 
 
-(defVau (-- place . opt?) env
-  (def val (eval place env))
+(defVau (-- plc . args) env
+  (def val (eval plc env))
   (eCaseType val
-    (Box    (let1 (() opt?) (val :rhs (- (val) 1))))
-    (StdObj (let1 ((key) opt?) (val key :rhs (- (val key) 1)))) 
-    (Number (let1 (() opt?) (eval (list 'def place :rhs (- val 1)) env))) )) 
+    (Box    (let1 (() args) (val :rhs (- (val) 1))))
+    (StdObj (let1 ((fld) args) (val fld :rhs (- (val fld) 1)))) 
+    (Number (let1 (() args) (eval (list 'def plc :rhs (- val 1)) env))) )) 
 
-(assert (begin (defClass Baz) (def baz (%obj Baz :a 1)) (++ baz :a) (++ baz :a) (-- baz :a)) 2)
+(assert (begin (def obj (%obj StdObj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
 (assert (begin (def box (%box 1)) (++ box) (++ box) (-- box)) 2)
 (assert (begin (def n 1) (++ n) (++ n) (-- n)) 2)
+
+(def\ (assignOp op)
+  ($vau (plc . args) env
+    (def lval (eval plc env))
+    (eCaseType lval
+      (Box (match args 
+        ((rval) (lval (op (lval) (eval rval env)))) 
+        ((key rval) (lval key (op (lval) (eval rval env)))) ))
+      (StdObj (match args
+        ((fld rval) (lval fld (op (lval fld) (eval rval env))))
+        ((fld key rval) (lval fld key (op (lval fld) (eval rval env)))) ))
+      (Object (match args
+        ((rval) (eval (list 'def plc (op lval (eval rval env))) env))
+        ((key rval) (eval (list 'def plc key (op lval (eval rval env))) env)) ))))) 
+
+(def $= (assignOp %$))
+(def += (assignOp %+))
+(def -= (assignOp %-))
+
+(assert (begin (def a 1) (+= a :rhs 3)) 4)
+(assert (begin (def a (%box 1)) (+= a :rhs 3)) 4)
+(assert (begin (def a (%obj StdObj :fld 1)) (+= a :fld :rhs 3)) 4)
 
 
 ;;;; Utilities
