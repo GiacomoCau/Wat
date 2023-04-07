@@ -70,6 +70,8 @@
 
 ;;;; Basic type
 
+(def Apv &Wat.Vm$Apv)
+(def Opv &Wat.Vm$Opv)
 (def Box &Wat.Vm$Box)
 (def Cons &Wat.Vm$Cons)
 (def DVar &Wat.Vm$DVar)
@@ -225,7 +227,7 @@
   (list '%pushPromptSubcont #ignore k (list* '\ () body)) )
 
 
-;;;; Important macros and functions
+;;;; Basic macros and functions
 
 (def\ (apply appv args . optEnv)
   (def env (if (null? optEnv) (makeEnv) (car optEnv))) 
@@ -267,19 +269,29 @@
 
 ;;;; Lexical bindings
 
-(defMacro (let bindings . body)
-  (if (symbol? bindings)
-    (list* 'letLoop bindings body)
-    (list* (list* '\ (map car bindings) body)
-      (map cadr bindings) )))
+(defMacro (let lhs . rhs)
+  (if (symbol? lhs)
+    (list* 'letLoop lhs rhs)
+    (list* (list* '\ (map car lhs) rhs)
+      (map (\ ((#ignore cadr)) cadr) lhs) )))
 
 (assert (let ((a 1)) a) 1)
 
-(defMacro (let1 binding . body)
-  (if (symbol? binding)
-    (list* 'letLoop binding (list (car body)) (cdr body))
-    (list (list* '\ (list (car binding)) body)
-      (cadr binding) )))
+#|
+(defMacro (let lhs . rhs)
+  (if (symbol? lhs)
+    (list* 'letLoop lhs rhs)
+    (list* (list* '\ (map car lhs) rhs)
+      (map (\ ((#_ cadr . exps)) (if (null? exps) cadr (list* 'begin cadr exps))) lhs) )))
+      
+(assert (let ((a 1 2)) a) 1)
+|#
+
+(defMacro (let1 lhs . rhs)
+  (if (symbol? lhs)
+    (list* 'letLoop lhs (list (car rhs)) (cdr rhs))
+    (list (list* '\ (list (car lhs)) rhs)
+      ((\ ((#ignore cadr)) cadr) lhs) )))
 
 (assert (let1 (a 1) a) 1)
     
@@ -296,7 +308,7 @@
 (defMacro (letrec bindings . body)
   (list* 'let ()
     (list* 'def* (map car bindings) (map (\ (#ignore) #inert) bindings))
-    (list* 'def* (map car bindings) (map cadr bindings))
+    (list* 'def* (map car bindings) (map (\ ((#ignore cadr)) cadr) bindings))
     body ))
 
 (assert (letrec ( (even? (\ (n) (if (zero? n) #t (odd? (- n 1))))) (odd? (\ (n) (if (zero? n) #f (even? (- n 1))))) ) (even? 88)) #t)
@@ -309,15 +321,38 @@
 
 (def labels letrec\)
 
-(assert (labels ( ((even? n) (if (zero? n) #t (odd? (- n 1)))) ((odd? n) (if (== n 0) #f (even? (- n 1)))) ) (even? 88) ) #t)
-(assert (labels ( (even? (n) (if (zero? n) #t (odd? (- n 1)))) (odd? (n) (if (== n 0) #f (even? (- n 1)))) ) (even? 88) ) #t)
+(assert (labels ( ((even? n) (if (zero? n) #t (odd? (- n 1)))) ((odd? n) (if (zero? n) #f (even? (- n 1)))) ) (even? 88) ) #t)
+(assert (labels ( (even? (n) (if (zero? n) #t (odd? (- n 1)))) (odd? (n) (if (zero? n) #f (even? (- n 1)))) ) (even? 88) ) #t)
 
-(defMacro (letLoop name bindings . body)
-  (list 'letrec
-    (list (list name (list* '\ (map car bindings) body)))
-    (list* name (map cadr bindings)) ))
+#|
+(defMacro (letLoop . args)
+  (if (symbol? (car args))
+    (def (name bindings . body) args)
+    (def ((name . bindings) . body) args))
+  (list 'letrec\
+    (list (list* name (map car bindings) body))
+    (list* name (map (\ ((#ignore cadr)) cadr) bindings)) ))
+
+(defMacro (letLoop . args)
+  (if (symbol? (car args))
+    (def (name bindings . body) args)
+    (def ((name . bindings) . body) args))
+  (list 'let ()
+    (list 'def name #inert)
+    (list* 'def\ name (map car bindings) body)
+    (list* name (map (\ ((#ignore cadr)) cadr) bindings)) ))
+|#
+
+(defMacro (letLoop . args)
+  (if (symbol? (car args))
+    (def (name bindings . body) args)
+    (def ((name . bindings) . body) args))
+  (list*
+    (list* 'rec\ name (map car bindings) body)
+    (map (\ ((#ignore cadr)) cadr) bindings) ))
 
 (assert (letLoop sum ((a '(1 2)) (b '(3 4))) (if (nil? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
+(assert (letLoop (sum (a '(1 2)) (b '(3 4))) (if (nil? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
 
 (def\ (member item lst)
   ((rec\ (loop lst)
@@ -348,6 +383,54 @@
 (assert (get? :b '(:a 1 :b 2 :c 3)) '(2)) 
 
 
+;;;; Simple control
+
+(defMacro (when test . body)
+  (list 'if test (list* 'begin body)))
+
+(defMacro (unless test . body)
+  (list* 'when (list 'not test) body))
+
+(defVau (cond . clauses) env
+  (if (nil? clauses) #inert
+    (let ((((test . body) . clauses) cla uses))
+      (if (== test 'else)
+        (apply (wrap begin) body env) 
+        (if (eval test env)
+          (apply (wrap begin) body env)
+          (apply (wrap cond) clauses env) )))))
+
+(defVau (cond . clauses) env
+  (if (nil? clauses) #inert
+    (let ((((test . body) . clauses) clauses))
+      (if (== test 'else)
+        (apply (wrap begin) body env)
+        (let1 (test (eval test env))
+          (if test
+            (if (null? body) test
+              (if (== (car body) '=>)
+                (let1 ((apd1) (cdr body))
+                  ((eval apd1 env) test) )
+                (apply (wrap begin) body env) ))
+            (apply (wrap cond) clauses env) ))))))
+
+(defVau (and . x) e
+  (cond ((nil? x)         #t)
+        ((nil? (cdr x))   (eval (car x) e))
+        ((eval (car x) e) (apply (wrap and) (cdr x) e))
+        (else             #f)))
+
+(def && and)
+
+(defVau (or . x) e
+  (cond ((nil? x)         #f)
+        ((nil? (cdr x))   (eval (car x) e))
+        ((eval (car x) e) #t)
+        (else             (apply (wrap or) (cdr x) e))))
+
+(def || or)
+
+
 ;;;; Bind
 
 ;(def bind %bind)
@@ -361,15 +444,104 @@
         (eval (let1 ((exp) else) exp) env) ))))
 
 
+;;; Case
+
+(defVau (case exp . clauses) env
+  (let1 (value (eval exp env))
+    (let1 loop (clauses clauses)
+      (if (null? clauses) #inert
+        (let1 (((values . forms) . clauses) clauses)
+          (if (or (== values 'else) (cons? (member value values)))
+            (if (== (car forms) '=>)
+              (let1 ((apd) (cdr forms)) ((eval apd env) value))  
+              (eval (list* 'begin forms) env) )
+            (loop clauses) ))))))
+
+(assert (case 3 ((2 4 6 8) 'pair) ((1 3 5 7 9) 'odd)) 'odd) 
+
+(defVau (caseVau . clauses) env 
+  ($vau values #ignore
+    (let1 loop (clauses clauses)
+      (if (null? clauses) #inert ;(error ($ "not a match form for: " values))
+        (let ((env+ (makeEnv env))
+              (((bindings . forms) . clauses) clauses) )
+          (if (or (== bindings 'else) (bind? env+ bindings values))
+            (eval (list* 'begin forms) env+)
+            (loop clauses) ))))))
+
+#|
+(defVau (case\ . clauses) env
+  (wrap
+    ($vau values #ignore
+      (let1 loop (clauses clauses)
+        (if (null? clauses) #inert
+          (let ((env+ (makeEnv env))
+                (((bindings . forms) . clauses) clauses) )
+            (if (or (== bindings 'else) (bind? env+ bindings values))
+              (eval (list* 'begin forms) env+)
+              (loop clauses) )))))))
+
+(defVau (case\ . clauses) env
+  (\ values
+    (let1 loop (clauses clauses)
+      (if (null? clauses) #inert
+        (let ((env+ (makeEnv env))
+              (((bindings . forms) . clauses) clauses) )
+          (if (or (== bindings 'else) (bind? env+ bindings values))
+            (eval (list* 'begin forms) env+)
+            (loop clauses) ))))))
+|#
+
+(defMacro (case\ . clauses)
+  (list 'wrap (list* 'caseVau clauses)) )
+
+(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1) 2)
+(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2) 3)
+(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2 3) '(2 3 4))
+
+#|
+(defVau (match exp . clauses) env
+  (let1 (exp (eval exp env))
+    (let1 loop (clauses clauses)
+      (if (null? clauses) #inert
+        (let ((env+ (makeEnv env))
+              (((bindings . forms) . clauses) clauses) )
+          (if (or (== bindings 'else) (bind? env+ bindings exp))
+            (eval (list* 'begin forms) env+)
+            (loop clauses) ))))))
+|#
+
+(defMacro (match exp . clauses)
+  (list (list* 'case\ (map (\ ((a . b)) (list* (if (== a 'else) a (list a)) b)) clauses)) exp) )  
+
+;(defMacro (match exp . clauses)
+;  (list* (list* 'case\ clauses) (list exp)) )  
+;(defVau (match exp . clauses) env
+;  (eval (list* (list 'caseVau clauses) (eval exp env)) env) )
+
+(assert (match '(1 2 3) ((a) 1) ((a b) 2) (else 3)) 3)
+(assert (match '(1 2) ((a) 1) ((a b) 2) (else 3)) 2)
+(assert (match '(1) ((a) 1) ((a b) 2) (else 3)) 1)
+(assert (match 1 ((a) 1) ((a b) 2) (else 3)) 3)
+
+(defVau (caseType keyform . clauses) env
+    (let1 (key (eval keyform env))
+      (let1 loop (clauses clauses)
+        (if (null? clauses) #inert ;(error ($ "type of " key " not " Object))
+          (let1 (((class . forms) . clauses) clauses)
+            (if (or (== class ' else) (type? key (eval class env)))
+              (eval (list* 'begin forms) env)
+              (loop clauses) ))))))
+
+(assert (caseType 2.0 (String "string") (Double "double")) "double")
+
+
 ;;;; Options
 
 (defVau (opt? exp dft) env
   (let1 (exp (eval exp env))
     (if (cons? exp)
-      ;(car exp) ; unchecked lenght
-      (let1 ((val) exp) val) ; check length 1
-      ;((\ ((val)) val) exp) ; check length 1
-      ;(def (val) :rhs exp) ; check length 1
+      (let1 ((val) exp) val)
       (eval dft env) ))) 
 
 (assert (opt? '(2) 10) 2)
@@ -403,17 +575,17 @@
   (let1 (exp (eval exp env))
     (if (! (cons? exp)) #null
       (let1 loop (clauses clauses)
-        (if (null? clauses) (error "not a valid opt? form! ")
+        (if (null? clauses) #inert ;(error "not a valid opt? form! ")
           (let ((env+ (makeEnv env))
                 (((bindings . forms) . clauses) clauses) )
-            (if (bind? env+ bindings exp)
+            (if (or (== bindings 'else) (bind? env+ bindings exp))
               (eval (list* 'begin forms) env+)
               (loop clauses) )))))))
 
 (assert (caseOpt? () ((a) 1) ((a b) (+ a b))) ())
 (assert (caseOpt? '(2) ((a) 1) ((a b) (+ a b))) 1)
 (assert (caseOpt? '(1 2) ((a) 1) ((a b) (+ a b))) 3)
-(assert (caseOpt? '(1 2 3) ((a) 1) ((a b) (+ a b))))
+(assert (caseOpt? '(1 2 3) ((a) 1) ((a b) (+ a b))) #inert)
 
 (defVau (defOpt? pt exp) env
   (def exp (eval exp env))
@@ -421,74 +593,14 @@
     (eval (list 'def pt exp) env) )) 
 
 
-;;;; Type parameters check lambda
-
-(defMacro (lambda params . body)
-  (letrec ((typedParams->namesAndChecks
-            (\ (ps)
-              (if (cons? ps)
-                  (let* (((p . restPs) ps)
-                         ((names . checks) (typedParams->namesAndChecks restPs)))
-                    (if (cons? p)
-                        (let* (((name type) p)
-                               (check (list 'the type name)))
-                          (cons (cons name names) (cons check checks)) )
-                        (cons (cons p names) checks) ))
-                  (cons ps ()) ))))
-    (let1 ((names . checks) (typedParams->namesAndChecks params))
-      (list* '\ names (if (null? checks) body (list* (list* 'begin checks) body))) )))
-
-(defMacro (the type obj)
-  (list 'if (list 'type? obj type) obj (list 'error (list '$ obj " is not a: " type))) )
-
-(assert (expand (lambda (a) (+ a 1))) '(\ (a) (+ a 1)))
-(assert (expand (lambda ((a Integer)) (+ a 1))) '(\ (a) (begin (the Integer a)) (+ a 1)))
-
-(defMacro (define lhs . rhs)
-  (if (symbol? lhs)
-    (list 'def lhs (car rhs))
-    (list 'def (car lhs) (list* 'lambda (cdr lhs) rhs)) ))
-
-
-;;;; Simple control
-
-(defMacro (when test . body)
-  (list 'if test (list* 'begin body)))
-
-(defMacro (unless test . body)
-  (list* 'when (list 'not test) body))
-
-(defVau (cond . clauses) env
-  (if (nil? clauses) #inert
-    (let ((((test . body) . clauses) clauses))
-      (if (== test 'else)
-        (apply (wrap begin) body env) 
-        (if (eval test env)
-          (apply (wrap begin) body env)
-          (apply (wrap cond) clauses env) )))))
-
-(defVau (and . x) e
-  (cond ((nil? x)         #t)
-        ((nil? (cdr x))   (eval (car x) e))
-        ((eval (car x) e) (apply (wrap and) (cdr x) e))
-        (else             #f)))
-
-(def && and)
-
-(defVau (or . x) e
-  (cond ((nil? x)         #f)
-        ((nil? (cdr x))   (eval (car x) e))
-        ((eval (car x) e) #t)
-        (else             (apply (wrap or) (cdr x) e))))
-
-(def || or)
+;;; Loop
 
 (def\ (callWithEscape fun)
   (let1 (fresh (list #null))
-    (catch (fun (\ opt? (throw (list fresh opt?))))
+    (catch (fun (\ opt? (throw (list fresh (ifOpt? ((val) opt?) opt?) ))))
       (\ (exc)
         (if (and (cons? exc) (== (car exc) fresh))
-          (let1 (opt? (cadr exc)) (if (cons? opt?) (car opt?)))
+          (let1 ((#ignore opt?) exc) (if (cons? opt?) (car opt?)))
           (throw exc))))))
 
 (defMacro (label name . body)
@@ -496,6 +608,7 @@
 
 (assert (label return (return)) #inert)
 (assert (label return (return 3)) 3)
+(assert (label return (return 3 4)))
 
 (defVau (while test . body) env
   (let ((body (list* 'begin body))
@@ -532,98 +645,33 @@
   (block-name (unless (null? value?) (car value?))) )
 
 
-;;; Case
+;;;; Type parameters check lambda
 
-(defVau (case exp . clauses) env
-  (let1 (value (eval exp env))
-    (let1 loop (clauses clauses)
-      (if (null? clauses) #inert
-        (let1 (((values . forms) . clauses) clauses)
-          (if (or (== values 'else) (cons? (member value values)))
-            (eval (list* 'begin forms) env)
-            (loop clauses) ))))))
+(defMacro (lambda params . body)
+  (letrec ((typedParams->namesAndChecks
+            (\ (ps)
+              (if (cons? ps)
+                  (let* (((p . restPs) ps)
+                         ((names . checks) (typedParams->namesAndChecks restPs)))
+                    (if (cons? p)
+                        (let* (((name type) p)
+                               (check (list 'the type name)))
+                          (cons (cons name names) (cons check checks)) )
+                        (cons (cons p names) checks) ))
+                  (cons ps ()) ))))
+    (let1 ((names . checks) (typedParams->namesAndChecks params))
+      (list* '\ names (if (null? checks) body (list* (list* 'begin checks) body))) )))
 
-(assert (case 3 ((2 4 6 8) 'pair) ((1 3 5 7 9) 'odd)) 'odd) 
+(defMacro (the type obj)
+  (list 'if (list 'type? obj type) obj (list 'error (list '$ obj " is not a: " type))) )
 
-(defVau (caseVau . clauses) env 
-  ($vau values #ignore
-    (let1 loop (clauses clauses)
-      (if (null? clauses) #inert
-        (let ((env+ (makeEnv env))
-              (((bindings . forms) . clauses) clauses) )
-          (if (bind? env+ bindings values)
-            (eval (list* 'begin forms) env+)
-            (loop clauses) ))))))
+(assert (expand (lambda (a) (+ a 1))) '(\ (a) (+ a 1)))
+(assert (expand (lambda ((a Integer)) (+ a 1))) '(\ (a) (begin (the Integer a)) (+ a 1)))
 
-#|
-(defVau (case\ . clauses) env
-  (wrap
-    ($vau values #ignore
-      (let1 loop (clauses clauses)
-        (if (null? clauses) #inert
-          (let ((env+ (makeEnv env))
-                (((bindings . forms) . clauses) clauses) )
-            (if (bind? env+ bindings values)
-              (eval (list* 'begin forms) env+)
-              (loop clauses) )))))))
-
-(defVau (case\ . clauses) env
-  (\ values
-    (let1 loop (clauses clauses)
-      (if (null? clauses) #inert
-        (let ((env+ (makeEnv env))
-              (((bindings . forms) . clauses) clauses) )
-          (if (bind? env+ bindings values)
-            (eval (list* 'begin forms) env+)
-            (loop clauses) ))))))
-|#
-
-(defMacro (case\ . clauses)
-  (list 'wrap (list* 'caseVau clauses)) )
-
-(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1) 2)
-(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2) 3)
-(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2 3) '(2 3 4))
-
-#|
-(defVau (match exp . clauses) env
-  (let1 (exp (eval exp env))
-    (let1 loop (clauses clauses)
-      (if (null? clauses) (error "not a valid match form! ")
-        (let ((env+ (makeEnv env))
-              (((bindings . forms) . clauses) clauses) )
-          (if (or (== bindings 'else) (bind? env+ bindings exp))
-            (eval (list* 'begin forms) env+)
-            (loop clauses) ))))))
-|#
-
-(defMacro (match exp . clauses)
-  (list (list* 'case\ (map (\ ((a . b)) (list* (if (== a 'else) a (list a)) b)) clauses)) exp) )  
-
-;(defMacro (match exp . clauses)
-;  (list* (list* 'case\ clauses) (list exp)) )  
-;(defVau (match exp . clauses) env
-;  (eval (list* (list 'caseVau clauses) (eval exp env)) env) )
-
-(assert (match '(1 2 3) ((a) 1) ((a b) 2) (else 3)) 3)
-(assert (match '(1 2) ((a) 1) ((a b) 2) (else 3)) 2)
-(assert (match '(1) ((a) 1) ((a b) 2) (else 3)) 1)
-(assert (match 1 ((a) 1) ((a b) 2) (else 3)) 3)
-
-(def\ makeCaseType (default)
-  ($vau (keyform . clauses) env
-    (let1 (key (eval keyform env))
-      (let1 loop (clauses clauses)
-        (if (null? clauses) (default key)
-          (let1 (((class . forms) . clauses) clauses)
-            (if (type? key (eval class env))
-              (eval (list* 'begin forms) env)
-              (loop clauses) )))))))
-
-(def caseType (makeCaseType (\ (#ignore) #inert)))
-(def eCaseType (makeCaseType (\ (key) (error "type of " key " not" Object))))
-
-(assert (caseType 2.0 (String "string") (Double "double")) "double")
+(defMacro (define lhs . rhs)
+  (if (symbol? lhs)
+    (list 'def lhs (car rhs))
+    (list 'def (car lhs) (list* 'lambda (cdr lhs) rhs)) ))
 
 
 ;;;; List utilities
@@ -685,7 +733,7 @@
 
 (assert (foldR cons () '(1 2 3 4)) '(1 2 3 4))
 
-(def\ (call* n f)
+(def\ (make\* n f)
   (def\ (resize n lst)
     (let loop ((n n) (h ()) (t lst))
       (if (null? t) (reverse h)
@@ -694,7 +742,8 @@
           (loop (- n 1) (cons (car t) h) (cdr t)) ))))
   (\ lst (apply f (resize n lst))))
   
-(assert ((call* 2 (\(a b) b)) 1 2 3 4 5) '(2 3 4 5))
+(assert ((make\* 2 (\(a b) b)) 1 2 3 4 5) '(2 3 4 5))
+
 
 ;;;; Dynamic Binding
 
@@ -874,20 +923,24 @@
 
 ;;;; Java
 
-(def\ (relationalOp %binop)
-  (let ((binop %binop))
-    (letrec ((op (\ (arg1 arg2 . rest)
-                   (if (binop arg1 arg2)
-                       (if (nil? rest) #t
-                           (apply op (list* arg2 rest)))
-                       #f))))
-      op)))
+(def\ (relationalOp binop)
+  (rec\ (op arg1 arg2 . rest)
+    (if (binop arg1 arg2)
+      (if (nil? rest) #t
+        (apply op (list* arg2 rest)))
+      #f )))
 
 (def == (relationalOp ==))
 (def < (relationalOp <))
 (def > (relationalOp >))
 (def <= (relationalOp <=))
 (def >= (relationalOp >=))
+
+(assert (== 1 1 1) #t)
+(assert (< 1 2 3) #t)
+(assert (> 3 2 1) #t)
+(assert (<= 1 2 2 3) #t)
+(assert (>= 3 2 2 1) #t)
 
 (def\ (!= . args) (not (apply == args)))
 
@@ -934,17 +987,19 @@
 
 (defVau (++ plc . args) env
   (def val (eval plc env))
-  (eCaseType val
+  (caseType val
     (Box    (let1 (() args) (val :rhs (+ (val) 1))))
     (StdObj (let1 ((fld) args) (val fld :rhs (+ (val fld) 1)))) 
-    (Number (let1 (() args) (eval (list 'def plc :rhs (+ val 1)) env))) )) 
+    (Number (let1 (() args) (eval (list 'def plc :rhs (+ val 1)) env)))
+    (else   (error ($ "not valid type: " val))) )) 
 
 (defVau (-- plc . args) env
   (def val (eval plc env))
-  (eCaseType val
+  (caseType val
     (Box    (let1 (() args) (val :rhs (- (val) 1))))
     (StdObj (let1 ((fld) args) (val fld :rhs (- (val fld) 1)))) 
-    (Number (let1 (() args) (eval (list 'def plc :rhs (- val 1)) env))) )) 
+    (Number (let1 (() args) (eval (list 'def plc :rhs (- val 1)) env)))
+    (else   (error ($ "not valid type: " val))) ))
 
 (assert (begin (def obj (%obj StdObj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
 (assert (begin (def box (%box 1)) (++ box) (++ box) (-- box)) 2)
@@ -953,7 +1008,7 @@
 (def\ (assignOp op)
   ($vau (plc . args) env
     (def lval (eval plc env))
-    (eCaseType lval
+    (caseType lval
       (Box (match args 
         ((rval) (lval (op (lval) (eval rval env)))) 
         ((key rval) (lval key (op (lval) (eval rval env)))) ))
