@@ -866,17 +866,9 @@ public class Vm {
 			// (@getConstructor class . classes) -> class.getConstructor(classes) -> constructor
 			// (@getMethod class name . classes) -> class.getMethod(name, classes) -> method
 			// (@getField class name)            -> class.getField(name, classes) -> field
-			/*
-			 per costruttori o0 è una classe e vanno cercati solo su quella
-			 per i metodi statici o0 è una classe e vanno cercati su o0 e relative super classi
-			 per tutti gli altri metodi o0 è un object e vanno cercati sulla classe di o0 relative super classi
-			*/
 			var classes = getClasses(args);
-			Executable executable = getExecutable(name.startsWith("new") ? (Class) o0 : o0.getClass(), name, classes);
-			if (executable == null) {
-				if (o0 instanceof Class) executable = getExecutable((Class) o0, name, classes);
-				if (executable == null) return error("not found " + executable(name, classes) + " of: " + toString(o0));
-			}
+			Executable executable = getExecutable(o0, name, classes);
+			if (executable == null) return error("not found " + executable(name, classes) + " of: " + toString(o0));
 			try {
 				//executable.setAccessible(true);
 				args = reorg(executable, args);
@@ -891,13 +883,6 @@ public class Vm {
 						case Constructor c-> c.newInstance(args);
 					}
 				);
-				//*/
-				/* TODO in alternativa al precedente da verificare
-				Object v = switch (executable) { 
-					case Method m-> m.invoke(o0, args);
-					case Constructor c-> c.newInstance(args);
-				};
-				return isjFun(v) ? wrap(new JFun(name, v)) : v;
 				//*/
 			}
 			catch (Exception exc) {
@@ -1120,7 +1105,7 @@ public class Vm {
 	}
 	
 	Object parseBytecode(Object o) {
-		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore"-> ignore; default-> intern(instr ? s.intern() : s); };
+		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore", "#_" -> ignore; default-> intern(instr ? s.intern() : s); };
 		if (o instanceof Object[] a) return parseBytecode(a);
 		return o;
 	}

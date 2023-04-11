@@ -123,28 +123,6 @@ public class Parser {
 
 PARSER_END(Parser)
 
-/*
-SKIP:	// white spaces
-{	< " " | "\t" | < cmt > | < mlc > | "\n" | "\r" >
-| 	< # cmt: ";" (<String> | ~["\n"])* (("\r")? "\n")? >
-| 	< # mlc: "|#" (<cmt> | <String> | ~["#"])* "#" (~["|"] (~["#"])* "#")* "|">
-}
-//*/
-
-/*
-SKIP:	// white spaces
-// test: a\n|#\n "b"\n#|\nc\n|#\n  "d"\n#|\ne -> ["a" "c" "e"]
-// test: a |# "b" #| c |# "d" #| e -> ["a" "c" "e"]
-// test: a|#"b"#|c|#"d"#|e -> ["a" "c" "e"]
-{	< ( <mlc> | <cmt> | " " | "\t" | "\r" "\n" | "\r" | "\n" )+ > 
-|  	< # str: "\"" ( "\\" "\"" | ~["\""] )* "\"" >
-| 	< # cmt: ";" ( <str> | ~["\n"] )* (("\r")? "\n")? >
-| 	< # mlc: "|#" ( <cmt> | <str> | "#" ~["|"] | "|" ~["#"] | ~["|","#"] )* "#|">
-}
-//*/
-
-// test: a |# "b" "\\\"" "#|" #||##|c |# "d" #|e -> ["a" "c" "e"]
-// test: a |#"b"#|c |#"d"#|e - > ["a" "c" "e"] -> necessari i blanck dopo gli id!
 SKIP:	// white spaces
 {	"#|" : MLC | ";" : CMT | < (" " | "\t" | "\r" | "\n")+  >
 }
@@ -156,8 +134,7 @@ SKIP:	// white spaces
 <CMLC> MORE: { "\"" : SCMLC | < ~[] > }
 <SCMLC> SKIP: { "\"" : CMLC } 
 
-<CMT> SKIP: { < (("\r")? "\n") > : DEFAULT }
-<CMT> MORE: { "\"" : SCMT | < ~[] > } 
+<CMT> SKIP: { "\"" : SCMT | < (("\r")? "\n") > : DEFAULT |  < ~[] > }
 <SCMT> SKIP: { "\"" : CMT } 
 
 <SMLC, SCMLC, SCMT> MORE: {	< "\\\"" | ~["\""] > }
@@ -172,7 +149,7 @@ TOKEN:	// reserved words
 |	< False: "#f" >
 | 	< Null: "#null" >
 |	< Inert: "#inert" >
-|	< Ignore: "#ignore" >
+|	< Ignore: "#ignore" | "#_" >
 }
 
 TOKEN:	// literals
@@ -200,7 +177,7 @@ TOKEN:	// identifiers
 |   < Kwd: ":" (<Sym>)+ >
 |	< Sym: <first> ( <first> | "." | <digit> )* >
 |	< # first: <letter> | <special> > 
-|	< # special: [ "-", "&", "!", "=", ">", "<", "%", "+", "?", "/", "*", "$", "_", "@", "|", "~", "^", ":", "\\"] >  // why not also , "\\"  
+|	< # special: [ "-", "&", "!", "=", ">", "<", "%", "+", "?", "/", "*", "$", "_", "@", "|", "~", "^", ":", "\\"] >  // why not also "\\" or "#"  
 |	< # letter: [ "A"-"Z", "a"-"z" ] >
 |	< # digit: [ "0"-"9" ] >
 }
@@ -219,7 +196,6 @@ Object Elt() throws Exception: {
 	|	t=<Integer>	{ return java.lang.Integer.parseInt(t.image); }
 	|	t=<Double>	{ return java.lang.Double.parseDouble(t.image); }
 	|	t=<String>	{ return $("wat-string", toStringTokenImage(t.image)); }
-	//|	t=<UString>	{ return $("wat-string", t.image); }
 	|	t=<USymbol>	{ return t.image; }
 	|	t=<Prim>	{ return classForName(t.image.substring(1)); }	
 	|	t=<ClsId>	{ return classForName(t.image.substring(1)); }	

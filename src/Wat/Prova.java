@@ -48,15 +48,30 @@ public class Prova {
 		@Override public int hashCode() { return Arrays.deepHashCode(a); }
 	}
 	
-	static class A {
-		int val;
-		A(int val) {this.val = val; }
-	}
-	static class B extends A {
-		B(int val) { super(val); }
+	public static void main(String[] args) throws Exception {
+		classi(true, (Object) Cls3.class);
+		classi(false, new Cls3());
+		classi(false, Cls3 .class);
 	}
 	
-	public static void main(String[] args) throws Exception {
+	static void classi(boolean constructors, Object obj) {
+		Class <?> classe = constructors ? (Class) obj : obj.getClass();
+		do {
+			out.print(classe.getSimpleName() + " ");
+		}
+		while (!constructors && (classe = classe.getSuperclass()) != null);
+		if (!constructors && obj instanceof Class) {
+			out.print("| ");
+			classe = (Class) obj;
+			do {
+				out.print(classe.getSimpleName() + " ");
+			} while ((classe = classe.getSuperclass()) != Object.class );
+		};
+		out.println();
+	}
+	
+
+	static void version() {
 		System.out.println(Runtime.version());
 		System.out.println(Runtime.version().feature());
 		System.out.println(Runtime.version().interim());
@@ -66,12 +81,20 @@ public class Prova {
 		System.out.println(Runtime.version().optional());
 	}
 
+	static class A {
+		int val;
+		A(int val) {this.val = val; }
+	}
+	static class B extends A {
+		B(int val) { super(val); }
+	}
+	
 	private static void anotherError() {
 		Object o = new B(2);
 		switch (o) {
 			case null /*, default*/-> out.println(0); // darebbe 0
 			case A a when a.val == 1-> out.println(1); 
-			case B b-> out.println(2);
+			case B b when b.val == 2-> out.println(2);
 			case A a-> out.println(3);
 			default-> out.println(4); // con default qui da 3 ma mai 2
 		};
@@ -786,4 +809,6 @@ public class Prova {
 			return "{&Wat.Prova$Cls " + i + "}";
 		}
 	}
+	public static class Cls2 extends Cls {}
+	public static class Cls3 extends Cls2 {}
 }

@@ -209,77 +209,9 @@ public class Utility {
 		return cl.toString();
 	}
 	
-	/* TODO sostituito dal seguente eliminare appena verificato
-	public static Object[] reorg(Class[] classi, Object[] args) throws Exception {
-		int length = classi.length;
-		/* TODO verificare l'ottimizzazione, eliminare altrimenti
-		if (length == 1 && !classi[0].isPrimitive()) return args;
-	 	* /
-		Object[] newArgs = Arrays.copyOf(args, length); // eventualmente null in più!
-		if (args.length < length) return newArgs;
-		Class componentType = classi[length-=1].getComponentType();
-		if (!componentType.isPrimitive()) {
-			//newArgs[length] = Arrays.copyOfRange(args, length, args.length, (Class) Array.newInstance(componentType, 0).getClass()); // ok
-			newArgs[length] = Arrays.copyOfRange(args, length, args.length, getClassArray(componentType)); // ok
-		}
-		else {
-			Object last = Array.newInstance(componentType, args.length-length);
-			for (int i=length; i<args.length; i+=1) Array.set(last, i-length, args[i]);
-			newArgs[length] = last;
-		}
-		return newArgs;
-	}
-	*/
 	public static Object[] reorg(Executable ex, Object[] args) throws Exception {
 		return reorg(ex.isVarArgs(), ex.getParameterTypes(), args); 
 	}
-	/* TODO sostituito dal seguente eliminare appena verificato
-	public static Object[] reorg(boolean isVarArgs, Class[] parms, Object[] args) throws Exception {
-		int length = parms.length;
-		if (!isVarArgs) {
-			if (length != 1 || !parms[0].isArray()) return args;
-			return new Object[] { copyOf(args, length, getClassArray(parms[0].componentType())) };
-		}
-		Object[] newArgs = copyOf(args, length); // eventualmente null in più!
-		if (args.length < length) return newArgs;
-		Class componentType = parms[length-=1].getComponentType();
-		if (!componentType.isPrimitive()) {
-			newArgs[length] = copyOfRange(args, length, args.length, getClassArray(componentType));
-		}
-		else {
-			Object last = Array.newInstance(componentType, args.length-length);
-			for (int i=length; i<args.length; i+=1) set(last, i-length, args[i]);
-			newArgs[length] = last;
-		}
-		return newArgs;
-	}
-	private static Object[] reorg(boolean isVarArgs, Class[] parms, Object[] args) throws Exception {
-		int length = parms.length;
-		if (!isVarArgs) {
-			if (length != 1 || !parms[0].isArray()) return args;
-			var cType = parms[0].componentType();
-			if (args.getClass().componentType() == cType) return new Object[] { args };
-			if (!cType.isPrimitive()) {
-				return new Object[] { copyOfRange(args, 0, args.length, getClassArray(cType)) };
-			}
-			Object newArgs = newInstance(cType, length);
-			for (int i=0; i<args.length; i+=1) Array.set(newArgs, i-length, args[i]);
-			return new Object[] { newArgs };
-		}
-		Object[] newArgs = copyOf(args, length); // eventualmente null in più!
-		if (args.length < length) return newArgs;
-		Class cType = parms[length-=1].getComponentType();
-		if (!cType.isPrimitive()) {
-			newArgs[length] = copyOfRange(args, length, args.length, getClassArray(cType));
-		}
-		else {
-			Object lastArg = newInstance(cType, args.length-length);
-			for (int i=length; i<args.length; i+=1) Array.set(lastArg, i-length, args[i]);
-			newArgs[length] = lastArg;
-		}
-		return newArgs;
-	}
-	*/
 	public static Object[] reorg(boolean isVarArgs, Class[] parms, Object[] args) throws Exception {
 		int length = parms.length;
 		if (!isVarArgs) {
@@ -358,22 +290,12 @@ public class Utility {
 		//out.println(getExecutable((Object) Integer.class, "newInstance", new Object[] { String.class }));
 	}
 	
-	public static Executable getExecutable(Object obj, String name, Object ... args) {
-		return getExecutable(obj.getClass(), name, getClasses(args));
-	}
-	
 	public static Class[] getClasses(Object ... objects) {
 		return stream(objects).map(o-> o == null ? null : o instanceof Class c ? c : o.getClass()).toArray(Class[]::new);
 	}
 	
-	public static <T extends Executable> T getExecutable(Class <?> classe, String name) {
-		return getExecutable(classe, name, (Class[]) null);
-	}
-	
-	public static <T extends Executable> T getExecutable(Class <?> classe, String name, Class <?> ... classes) {
-		return getExecutable(classe, publicMember, name, classes);
-		//T executable = getExecutable(classe, publicMember, name, classes);
-		//return executable != null ? executable : getExecutable(classe.getClass(), publicMember, name, classes);
+	public static <T extends Executable> T getExecutable(Object obj, String name, Class <?> ... classes) {
+		return getExecutable(obj, publicMember, name, classes);
 	}
 	
 	private static boolean trace = false; 
@@ -383,33 +305,23 @@ public class Utility {
 		return name + "(" + s.substring(1, s.length()-1) + ")";
 	}
 	
-	public static <T extends Executable> T getExecutable(Class <?> classe, boolean publicMember, String name, Class <?> ... argumentsClass) {
-		if (trace) out.println(classe + " " + toString(name, argumentsClass));
+	public static <T extends Executable> T getExecutable(Object obj, boolean publicMember, String name, Class <?> ... argumentsClass) {
 		boolean constructors = name.equals("new");
+		Class <?> classe = constructors ? (Class) obj : obj.getClass();
+		if (trace) out.println(classe + " " + toString(name, argumentsClass));
+		// per costruttori obj è una classe e vanno cercati solo su quella
+		// obj è una classe e vanno cercati su obj e relative super classi
+		// per tutti gli altri metodi obj è una istanza object e vanno cercati sulla classe di objo0 relative super classi
 		List<Executable> executables = new ArrayList<>();
-		do {
-			if (trace) out.println("\tc: " + classe);
-			try {
-				var t = (T) getExecutor(classe, constructors, publicMember, name, argumentsClass);
-				if (trace) out.println("\t\t1: " + t);
-				return t;
-			}
-			catch (NoSuchMethodException nsme) {
-				for (Executable executor: getExecutors(classe, constructors, publicMember)) {
-					if (!constructors && !executor.getName().equals(name)) continue;
-					if (trace) out.println("\t\tn: " + executor);
-					if (argumentsClass == null) return (T) executor; // si va per nome, non si possono controllare gli argomenti
-					boolean isVarArgs = executor.isVarArgs();
-					Class [] parametersClass = executor.getParameterTypes();
-					if (!isVarArgs && argumentsClass.length != parametersClass.length || argumentsClass.length < parametersClass.length - 1) continue;
-					if (!isInvokeConvertible(isVarArgs, parametersClass, argumentsClass)) continue;
-					executables.add(executor);
-				}
-				if (constructors || publicMember) break;
-			}
-		} while ((classe = classe.getSuperclass()) != null);
+		do addExecutable(executables, classe, publicMember, constructors, name, argumentsClass);
+		while (!constructors && !publicMember && (classe = classe.getSuperclass()) != null);
+		if (!constructors && obj instanceof Class && obj != Class.class) {
+			classe = (Class) obj;
+			do addExecutable(executables, classe, publicMember, constructors, name, argumentsClass);
+			while (!publicMember && (classe = classe.getSuperclass()) != Object.class);
+		}
 		
-		if (trace) out.println("f: " + executables.size());
+		if (trace) out.println("found: " + executables.size());
 		switch (executables.size()) {
 			case 0: return null; //throw new RuntimeException(toString(name, argumentsClass) + " non trovato in " + classe);
 			case 1: return (T) executables.get(0);
@@ -430,6 +342,30 @@ public class Utility {
 				}
 				if (bestMatch != null) return (T) bestMatch;
 				throw new RuntimeException((name.equals("new") ? "Costruttore" : "Metodo") + " non univoco." + executables);
+			}
+		}
+	}
+
+	private static void addExecutable(
+		List<Executable> executables, Class<?> classe, boolean publicMember, boolean constructors,	String name, Class<?>... argumentsClass
+	) {
+		if (trace) out.println("\tc: " + classe);
+		try {
+			var t = getExecutor(classe, constructors, publicMember, name, argumentsClass);
+			if (trace) out.println("\t\t1: " + t);
+			executables.add(t);
+		}
+		catch (NoSuchMethodException nsme) {
+			for (Executable executor: getExecutors(classe, constructors, publicMember)) {
+				if (!constructors && !executor.getName().equals(name)) continue;
+				if (trace) out.println("\t\tn: " + executor);
+				if (argumentsClass != null) {
+					boolean isVarArgs = executor.isVarArgs();
+					Class [] parametersClass = executor.getParameterTypes();
+					if (!isVarArgs && argumentsClass.length != parametersClass.length || argumentsClass.length < parametersClass.length - 1) continue;
+					if (!isInvokeConvertible(isVarArgs, parametersClass, argumentsClass)) continue;
+				}
+				executables.add(executor);
 			}
 		}
 	}
@@ -485,17 +421,15 @@ public class Utility {
 			if (destClass.isInterface() && isAssignableFrom(destClass, srcClass)) {
 				// slight penalty for interface match.
 				// we still want an exact match to override an interface match,
-				// but
-				// an interface match should override anything where we have to
-				// get a superclass.
+				// but an interface match should override anything where we have to get a superclass.
 				cost += 0.25f;
 				break;
 			}
 			cost++;
 			srcClass = srcClass.getSuperclass();
 		}
-		// If the destination class is null, we've traveled all the way up to
-		// an Object match. We'll penalize this by adding 1.5 to the cost.
+		// If the destination class is null, we've traveled all the way up to an Object match.
+		// We'll penalize this by adding 1.5 to the cost.
 		if (srcClass == null) cost += 1.5f;
 		return cost;
 	}
@@ -663,5 +597,4 @@ public class Utility {
 		} while (open > close);
 		return s.toString();
 	}
-
 }
