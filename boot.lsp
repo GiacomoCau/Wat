@@ -269,31 +269,54 @@
 
 ;;;; Lexical bindings
 
-(defMacro (let lhs . rhs)
-  (if (symbol? lhs)
-    (list* 'letLoop lhs rhs)
-    (list* (list* '\ (map car lhs) rhs)
-      (map (\ ((#ignore cadr)) cadr) lhs) )))
-
-(assert (let ((a 1)) a) 1)
+(def\ (->inert binding) #inert)
+(def\ (->1expr binding) ((\ ((#_ cadr)) cadr) binding))
+(def\ (->begin binding) ((\ ((#_ cadr . exps)) (if (null? exps) cadr (list* 'begin cadr exps))) binding))
 
 #|
-(defMacro (let lhs . rhs)
-  (if (symbol? lhs)
-    (list* 'letLoop lhs rhs)
-    (list* (list* '\ (map car lhs) rhs)
-      (map (\ ((#_ cadr . exps)) (if (null? exps) cadr (list* 'begin cadr exps))) lhs) )))
-      
-(assert (let ((a 1 2)) a) 1)
+(defMacro (let1\ . args)
+  (if (symbol? (car args))
+    (def (name binding . body) args)
+    (def ((name binding) . body) args))
+  (list
+    (list* 'rec\ name (list (car binding)) body)
+    (->1expr binding) ))
+
+(assert (let1\  f (a 2)  (if (zero? a) 'end (f (- a 1)))) 'end)
+(assert (let1\ (f (a 2)) (if (zero? a) 'end (f (- a 1)))) 'end)
 |#
+
+(defMacro (let\ . args)
+  (if (symbol? (car args))
+    (def (name bindings . body) args)
+    (def ((name . bindings) . body) args))
+  (list*
+    (list* 'rec\ name (map car bindings) body)
+    (map ->1expr bindings) ))
+
+(def letLoop let\)
+
+(assert (letLoop sum ((a '(1 2)) (b '(3 4))) (if (nil? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
+(assert (letLoop (sum (a '(1 2)) (b '(3 4))) (if (nil? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
 
 (defMacro (let1 lhs . rhs)
   (if (symbol? lhs)
-    (list* 'letLoop lhs (list (car rhs)) (cdr rhs))
+    ;(list* 'let1\ lhs (car rhs) (cdr rhs))
+    (list* 'let\ lhs (list (car rhs)) (cdr rhs))
     (list (list* '\ (list (car lhs)) rhs)
-      ((\ ((#ignore cadr)) cadr) lhs) )))
-
+      (->1expr lhs) )))
+      
 (assert (let1 (a 1) a) 1)
+;(assert (let1 (a 1 2) a) 2) ; need ->begin
+(assert (let1 f (a 2) (if (zero? a) 'end (f (- a 1)))) 'end)
+
+(defMacro (let lhs . rhs)
+  (if (symbol? lhs)
+    (list* 'let\ lhs rhs)
+    (list* (list* '\ (map car lhs) rhs)
+      (map ->1expr lhs) )))
+
+(assert (let ((a 1)) a) 1)
     
 (defMacro (let* bindings . body)
   (if (nil? bindings)
@@ -307,15 +330,15 @@
 
 (defMacro (letrec bindings . body)
   (list* 'let ()
-    (list* 'def* (map car bindings) (map (\ (#ignore) #inert) bindings))
-    (list* 'def* (map car bindings) (map (\ ((#ignore cadr)) cadr) bindings))
+    (list* 'def* (map car bindings) (map ->inert bindings))
+    (list* 'def* (map car bindings) (map ->1expr bindings))
     body ))
 
 (assert (letrec ( (even? (\ (n) (if (zero? n) #t (odd? (- n 1))))) (odd? (\ (n) (if (zero? n) #f (even? (- n 1))))) ) (even? 88)) #t)
 
 (defMacro (letrec\ bindings . body)
   (list* 'let ()
-    (list* 'def* (map (\ ((lhs . rhs)) (if (symbol? lhs) lhs (car lhs))) bindings) (map (\ (#ignore) #inert) bindings))
+    (list* 'def* (map (\ ((lhs . rhs)) (if (symbol? lhs) lhs (car lhs))) bindings) (map ->inert bindings))
     (list* 'def*\ (map car bindings) (map cdr bindings))
     body ))
 
@@ -324,14 +347,14 @@
 (assert (labels ( ((even? n) (if (zero? n) #t (odd? (- n 1)))) ((odd? n) (if (zero? n) #f (even? (- n 1)))) ) (even? 88) ) #t)
 (assert (labels ( (even? (n) (if (zero? n) #t (odd? (- n 1)))) (odd? (n) (if (zero? n) #f (even? (- n 1)))) ) (even? 88) ) #t)
 
-#|
+#| definizioni alternative
 (defMacro (letLoop . args)
   (if (symbol? (car args))
     (def (name bindings . body) args)
     (def ((name . bindings) . body) args))
   (list 'letrec\
     (list (list* name (map car bindings) body))
-    (list* name (map (\ ((#ignore cadr)) cadr) bindings)) ))
+    (list* name (map ->1expr bindings)) ))
 
 (defMacro (letLoop . args)
   (if (symbol? (car args))
@@ -340,47 +363,37 @@
   (list 'let ()
     (list 'def name #inert)
     (list* 'def\ name (map car bindings) body)
-    (list* name (map (\ ((#ignore cadr)) cadr) bindings)) ))
+    (list* name (map ->1expr bindings)) ))
 |#
 
-(defMacro (letLoop . args)
-  (if (symbol? (car args))
-    (def (name bindings . body) args)
-    (def ((name . bindings) . body) args))
-  (list*
-    (list* 'rec\ name (map car bindings) body)
-    (map (\ ((#ignore cadr)) cadr) bindings) ))
 
-(assert (letLoop sum ((a '(1 2)) (b '(3 4))) (if (nil? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
-(assert (letLoop (sum (a '(1 2)) (b '(3 4))) (if (nil? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
+;;; Finding
 
 (def\ (member item lst)
-  ((rec\ (loop lst)
+  (let\ (loop (lst lst))
      (if (null? lst) #null
        (if (== item (car lst)) lst
-         (loop (cdr lst)) )))
-   lst ))
+         (loop (cdr lst)) ))))
 
 (assert (member 'b '(a b c d)) '(b c d))
 ;(assert (member "b" '("a" "b" "c" "d")) '("b" "c" "d")) ; solo se String interned!
 
 (def\ (assoc item lst)
-  ((rec\ (loop lst)
+  (let\ (loop (lst lst))
      (if (null? lst) #null
        (if (== item (caar lst)) (car lst)
-         (loop (cdr lst)))))
-   lst ))
+         (loop (cdr lst)) ))))
 
 (assert (assoc 'b '((a 1) (b 2) (c 3) (d 4))) '(b 2))
 
 (def\ (get? key lst)
-  ((rec\ (loop lst) 
+  (let\ (loop (lst lst)) 
      (if (null? lst) #null
        (let1 ((k v . lst) lst)
-         (if (== k key) (list v) (loop lst)))))
-   lst ))
+         (if (== k key) (list v) (loop lst)) ))))
 
 (assert (get? :b '(:a 1 :b 2 :c 3)) '(2)) 
+(assert (get? 'b '(a 1 b 2 c 3)) '(2)) 
 
 
 ;;;; Simple control
