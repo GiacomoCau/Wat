@@ -118,7 +118,8 @@ public class Vm {
 	boolean ctapv = false; // applicative catch & throw
 	boolean instr = false; // intern string
 	boolean prstk = false; // print stack
-	boolean aquote = true; // auto quote
+	boolean aquote = true; // auto quote list
+	boolean nullf = true; // null false
 	
 	int prtrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
 	int prenv = 3; // print environment
@@ -609,9 +610,7 @@ public class Vm {
 		public String toString() { return "%If"; }
 	}
 	boolean istrue(Object res) {
-		return res instanceof Boolean b ? b : error("not a boolean.");
-		//return res instanceof Boolean b ? b : res != null; // or #inert or 0 or ""  or [] or ... !?
-		// ((rec (for . l) (when l (print (car l)) (apply for (cdr l)))) 1 2 3 4)
+		return res instanceof Boolean b ? b : nullf ?  res != null : error("not a boolean: " + res);
 	}
 	class Loop implements Combinable  {
 		public Object combine(Env e, List o) {
@@ -745,7 +744,7 @@ public class Vm {
 			    }; 
 			};
 		}
-		public String toString() { return "{" + getClass().getSimpleName() + " " + value + "}"; }
+		public String toString() { return "{" + getClass().getSimpleName() + " " + (value == null ? "#null" : Vm.this.toString(value)) + "}"; }
 	}
 	class DVar extends Box { DVar(Object val) { super(val); }}
 	class DDef implements Combinable {
@@ -1237,8 +1236,7 @@ public class Vm {
 					$("%def", "%/", wrap(new JFun("%/", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Dvd, a, b)))),
 					$("%def", "%%", wrap(new JFun("%%", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Rst, a, b)))),
 					//
-					$("%def", "%!", wrap(new JFun("%!", (Function<Boolean,Boolean>) a-> !a))),
-					//$("%def", "%!", wrap(new JFun("%!", (Function<Object,Boolean>) a-> !istrue(a)))),
+					$("%def", "%!", wrap(new JFun("%!", (Function<Object,Boolean>) a-> !istrue(a)))),
 					$("%def", "%<", wrap(new JFun("%<", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Ls, a, b)))),
 					$("%def", "%>", wrap(new JFun("%>", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Gt, a, b)))),
 					$("%def", "%<=", wrap(new JFun("%<=", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Le, a, b)))),

@@ -795,7 +795,7 @@
               (error ($ "not " (if (null? body) "unbound or " "") "a dynamic value: " var)) )))
         (def dv* (map ckdvar var*))
         (unless (null? body) (def old* (map (\ (dv) (dv)) dv*)))
-        (forEach (\ (dv var val) (if (instanceof? dv DVar) (dv val) (@put env var (dvar val)) )) dv* var* val*)
+        (forEach (\ (dv var val) (if (instanceof? dv DVar) (dv val) (@put env var (dvar val)) )) dv* var* (if (null? val*) (map (\ (var) #null) var*) val*))
         (unless (null? body)
           (finally
             (eval (list* 'begin body) env) 
@@ -804,8 +804,8 @@
 ;((d\ (d e) (print e)) 4 5)     
 ;((d\ (d e)) 6 7)
 
-(defMacro (ddef var val)
-  (list (list 'd\ (list var)) val) )
+(defMacro (ddef var . val)
+  (list (list 'd\ (list (the Symbol var))) (opt? val #null) ))
 
 (defMacro (ddef* var* . val*)
   (list* (list 'd\ var*) val*) )
@@ -836,10 +836,15 @@
 (assert (begin (ddef* (a) 1) (dlet* ((a (+ 1 (dval a))) (a (+ 1 (dval a)))) (dval a))) 3)
 
 
-;;;; Class
+;;;; Class Object Method
 
 (defMacro (defClass className . superClass? #| slot-specs . properties |# )
   (list 'def className (list* '%class (list 'quote className) superClass?)))
+
+(def obj %obj) 
+
+(defMacro (defObj name class . attr)
+  (list 'def name (list* obj class attr)) )
 
 ;; receiver e parameters dei defMethod dovrebbero corrispondere a quelli del corrispondente defGeneric con quel nome
 
@@ -865,20 +870,19 @@
     (defGeneric g1 (obj p))
     (defMethod g1 ((foo Foo) p) (+ p 100))
 
-    (def foo (%obj Foo))
-    (def bar (%obj Bar :a 1 :b (+ 2 3)))
+    (defObj foo Foo)
+    (defObj bar Bar :a 1 :b (+ 2 3))
 
     (assert (g1 foo (+ 1 1)) 102)
     (assert (g1 bar (+ 2 3)) 105)
 
-    (defMethod g1 ((bar Bar) p) (+ p (bar :b)))
+    (defMethod (g1 (bar Bar) p) (+ p (bar :b)))
 
     (assert (bar :b) 5)
     (assert (g1 bar 2) 7)
     (assert (g1 bar (* 2 (bar :b))) 15)
     (assert (bar :b :prv 6) 5)
-    (assert (bar :b) 6)
-  )
+    (assert (bar :b) 6) )
   #t )
   
 #|
@@ -997,6 +1001,17 @@
 (set (setter ref) (lambda (newVal (c Cell)) (set (.value c) newVal)))
 |#
 
+
+;;;; Box
+
+(def box %box)
+
+(defMacro (defBox name . value?)
+  (list 'def name (list 'box (opt? value? #null)) ))
+
+
+;;;; Auto Increment/Decrement and Assignement Operator
+
 (defVau (++ plc . args) env
   (def val (eval plc env))
   (caseType val
@@ -1013,8 +1028,8 @@
     (Number (let1 (() args) (eval (list 'def plc :rhs (- val 1)) env)))
     (else   (error ($ "not valid type: " val))) ))
 
-(assert (begin (def obj (%obj StdObj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
-(assert (begin (def box (%box 1)) (++ box) (++ box) (-- box)) 2)
+(assert (begin (def obj (obj StdObj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
+(assert (begin (def box (box 1)) (++ box) (++ box) (-- box)) 2)
 (assert (begin (def n 1) (++ n) (++ n) (-- n)) 2)
 
 (def\ (assignOp op)
@@ -1036,8 +1051,8 @@
 (def -= (assignOp %-))
 
 (assert (begin (def a 1) (+= a :rhs 3)) 4)
-(assert (begin (def a (%box 1)) (+= a :rhs 3)) 4)
-(assert (begin (def a (%obj StdObj :fld 1)) (+= a :fld :rhs 3)) 4)
+(assert (begin (def a (box 1)) (+= a :rhs 3)) 4)
+(assert (begin (def a (obj StdObj :fld 1)) (+= a :fld :rhs 3)) 4)
 
 
 ;;;; Utilities
