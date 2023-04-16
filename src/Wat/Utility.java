@@ -16,8 +16,6 @@ import java.io.InputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -244,6 +242,11 @@ public class Utility {
 	}
 	
 	static boolean publicMember = false;
+	private static boolean trace = false; 
+	
+	public static Class[] getClasses(Object ... objects) {
+		return stream(objects).map(o-> o == null ? null : o instanceof Class c ? c : o.getClass()).toArray(Class[]::new);
+	}
 	
 	public static Field getField(Class <?> classe, String name) {
 		return getField(classe, publicMember, name);
@@ -260,51 +263,9 @@ public class Utility {
 		return null;
 	}
 	
-	public static void getConstructor() throws IllegalAccessException, InvocationTargetException {
-		//Class c = Integer.class;
-		//out.println(getField(Integer.class, "MAX_VALUE"));
-		//out.println();
-		
-		//out.println(getExecutable((Object) Integer.class, "equals", new Object[] { Object.class }));
-		//out.println();
-		//out.println(getExecutable((Object) Prova.Cls.class, "getMethod", new Object[] { "get" }));
-		//out.println();
-		//out.println(getExecutable((Object) Prova.Cls.class, "getMethod", new Object[] { "set", 1 }));
-		//out.println();
-		
-		out.println(getExecutable(Prova.Cls.class, "getMethod", new Class[] { String.class, Class[].class } ));
-		out.println();
-		out.println(getExecutable(Prova.Cls.class, "getConstructor", new Class[] { Prova.Cls.class, Class[].class } ));
-		out.println();
-		
-		Method m = (Method) getExecutable(Prova.Cls.class, "getConstructor", Class[].class );
-		out.println(m);
-		out.println();
-		
-		out.println(m.invoke((Object) Prova.Cls.class, int.class));
-		//Constructor c2 = (Constructor) m.invoke((Object) Class.class , int.class);
-		
-		//out.println(getExecutable((Object) Class.class, "getMethod", new Object[] { String.class, Class[].class } ));
-		//out.println(getExecutable((Object) Integer.class, "invoke", new Object[] { String.class }));
-		//out.println(getExecutable((Object) Integer.class, "new", new Object[] { String.class }));
-		//out.println(getExecutable((Object) Integer.class, "newInstance", new Object[] { String.class }));
-	}
-	
-	public static Class[] getClasses(Object ... objects) {
-		return stream(objects).map(o-> o == null ? null : o instanceof Class c ? c : o.getClass()).toArray(Class[]::new);
-	}
-	
 	public static <T extends Executable> T getExecutable(Object obj, String name, Class <?> ... classes) {
 		return getExecutable(obj, publicMember, name, classes);
 	}
-	
-	private static boolean trace = false; 
-	
-	private static String toString(String name, Class <?> ... argumentsClass) {
-		String s = stream(argumentsClass).map(c-> c == null ? null : c.toString()).toList().toString();
-		return name + "(" + s.substring(1, s.length()-1) + ")";
-	}
-	
 	public static <T extends Executable> T getExecutable(Object obj, boolean publicMember, String name, Class <?> ... argumentsClass) {
 		boolean constructors = name.equals("new");
 		Class <?> classe = constructors ? (Class) obj : obj.getClass();
@@ -346,6 +307,11 @@ public class Utility {
 		}
 	}
 
+	private static String toString(String name, Class <?> ... argumentsClass) {
+		String s = stream(argumentsClass).map(c-> c == null ? null : c.toString()).toList().toString();
+		return name + "(" + s.substring(1, s.length()-1) + ")";
+	}
+	
 	private static void addExecutable(
 		List<Executable> executables, Class<?> classe, boolean publicMember, boolean constructors,	String name, Class<?>... argumentsClass
 	) {

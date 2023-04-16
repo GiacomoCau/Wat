@@ -89,7 +89,7 @@ public class Prova {
 		B(int val) { super(val); }
 	}
 	
-	private static void anotherError() {
+	public static void anotherError() {
 		Object o = new B(2);
 		switch (o) {
 			case null /*, default*/-> out.println(0); // darebbe 0
@@ -220,6 +220,7 @@ public class Prova {
 		w1.slot.put("b", 2);
 		out.println(Wat1.class.getSuperclass());
 		var wat1 = Wat1.class;
+		@SuppressWarnings("unused")
 		var wat1Methods = (Map) wat1.getDeclaredField("methods").get(wat1);
 		var wat0 = wat1.getSuperclass();
 		var wat0Methods = (Map) wat0.getDeclaredField("methods").get(wat0);

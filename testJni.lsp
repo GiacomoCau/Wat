@@ -46,7 +46,7 @@
 
 (@new &Wat.Prova$Cls)
 (@new &Wat.Prova$Cls 1)
-($define! cls (@new &Wat.Prova$Cls 1))
+(def cls (@new &Wat.Prova$Cls 1))
 cls
 	
 (.i cls)
@@ -64,12 +64,12 @@ cls
 ((@getMethod &java.lang.Class "getConstructor" &java.lang.Class[]) &Wat.Prova$Cls)
 ((@getMethod &java.lang.Class "getConstructor" &java.lang.Class[]) &Wat.Prova$Cls &int)
 
-($define! cls (@new &Wat.Prova$Cls 1))
+(def cls (@new &Wat.Prova$Cls 1))
 ((@getMethod &Wat.Prova$Cls "get") cls)
 ((@getMethod &Wat.Prova$Cls "set" &int) cls 5)
 ((@getMethod &Wat.Prova$Cls "get") cls)
 
-($define! cls (@new &Wat.Prova$Cls 1))
+(def cls (@new &Wat.Prova$Cls 1))
 (@invoke (@getMethod &Wat.Prova$Cls "get") cls)
 (@invoke (@getMethod &Wat.Prova$Cls "set" &int) cls 4)
 (@invoke (@getMethod &Wat.Prova$Cls "get") cls)
@@ -87,13 +87,13 @@ cls
 	
 (@forName &java.lang.Class "Wat.Prova$Cls")
 
-($define! int &int)
-($define! Array &java.lang.reflect.Array)
-($define! Object &java.lang.Object)
-($define! a (@newInstance Array int 4))	
-($define! get (@getMethod Array "get" Object int))
-($define! set (@getMethod Array "set" Object int Object))
-($define! length (@getMethod Array "getLength" Object))
+(def int &int)
+(def Array &java.lang.reflect.Array)
+(def Object &java.lang.Object)
+(def a (@newInstance Array int 4))	
+(def get (@getMethod Array "get" Object int))
+(def set (@getMethod Array "set" Object int Object))
+(def length (@getMethod Array "getLength" Object))
 (@invoke get #null a 2)	
 (@invoke set #null a 2 4)
 (@invoke get #null a 2)

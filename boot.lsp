@@ -5,8 +5,6 @@
 ;; Rename %def
 
 (%def def %def)
-(%def $define! %def)
-
 
 ;; Rename bindings that will be used as provided by VM
 
@@ -86,7 +84,8 @@
 (def Double &java.lang.Double)
 (def Object &java.lang.Object)
 (def String &java.lang.String)
-
+(def Math &java.lang.Math)
+(def System &java.lang.System)
 
 ;;;; Important utilities
 
@@ -1054,7 +1053,7 @@
   (list->array (filter pred (array->list arr))) )
 
 (defVau (time exp) env
-  (let1 (currentTime (@getMethod &java.lang.System "currentTimeMillis"))
+  (let1 (currentTime (@getMethod System "currentTimeMillis"))
     (def milli (currentTime #null))
     (def result (eval exp env))
     (def milli (- (currentTime #null) milli))

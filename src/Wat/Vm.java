@@ -118,6 +118,7 @@ public class Vm {
 	boolean ctapv = false; // applicative catch & throw
 	boolean instr = false; // intern string
 	boolean prstk = false; // print stack
+	boolean aquote = true; // auto quote
 	
 	int prtrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
 	int prenv = 3; // print environment
@@ -226,14 +227,11 @@ public class Vm {
 			level += 1;
 			v = switch (o) {
 				case Symbol s-> tco(()-> pipe(dbg(e, o), ()-> e.lookup(s)));
-				//case Cons c when c.car() instanceof Keyword->{ Vm.this.print(c); yield o; }
 				case List l-> {
 					if (l.car() instanceof Keyword) yield l;
-					//if (!isInstance(l.car(), Keyword.class, Number.class)) yield l;
-					//if (!isInstance(l.car(), Symbol.class, Apv.class, Opv.class)) yield l;
 					var ee=e; yield tco(()-> pipe(dbg(ee, o), ()-> getTco(evaluate(ee, l.car)), op-> tco(()-> combine(ee, op, l.cdr()))));
 				}
-				case Cons c-> c.car() instanceof Keyword ? c : error("not a proper list: " + c);
+				//case Cons c-> c.car() instanceof Keyword ? c : error("not a proper list: " + c);
 				case null, default-> o;
 			};
 		}
@@ -446,7 +444,7 @@ public class Vm {
 		  return bndret == 0 ? inert : v;
 		}
 		catch (RuntimeException rte) {
-			return error(rte.getMessage() + " for bind: " + toString(lhs) + eIfnull(dbg, ()-> " of: " + cons(dbg.op, list(dbg.os))) + " with: " + rhs);
+			return error(rte.getMessage() + " for bind: " + toString(lhs) + eIfnull(dbg, ()-> " of: " + /*cons(*/dbg.op/*, list(dbg.os))*/) + " with: " + rhs);
 		}
 	}
 	Object bind(int bndret, Env e, Object lhs, Object rhs) {
@@ -479,7 +477,7 @@ public class Vm {
 		if (op instanceof Combinable cmb) return cmb.combine(e, o);
 		// per default le jFun nude sono considerate applicative
 		if (isjFun(op)) return (T) new Apv(new JFun(op)).combine(e, o);
-		return error("not a combiner: " + toString(op) + " in: " + cons(op, o));
+		return aquote ? cons(op, o) : error("not a combiner: " + toString(op) + " in: " + cons(op, o));
 	}
 	
 	class Opv implements Combinable  {
@@ -1247,8 +1245,8 @@ public class Vm {
 					$("%def", "%>>", wrap(new JFun("%>>", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr, a, b)))),
 					$("%def", "%>>>", wrap(new JFun("%>>>", (BiFunction<Number,Number,Object>) (a,b)-> binOp(Sr0, a, b)))),
 					//
-					$("%def", "%==", wrap(new JFun("%==", (BiFunction<Object,Object,Boolean>) (a,b)-> a == b))),
-					$("%def", "%!=", wrap(new JFun("%!=", (BiFunction<Object,Object,Boolean>) (a,b)-> a != b))),
+					$("%def", "%==", wrap(new JFun("%==", (BiFunction<Object,Object,Boolean>) (a,b)-> a instanceof Number ? a.equals(b) : a == b))),
+					$("%def", "%!=", wrap(new JFun("%!=", (BiFunction<Object,Object,Boolean>) (a,b)-> a instanceof Number ? !a.equals(b) : a != b))),
 					$("%def", "%eq?", wrap(new JFun("%Eq?", (BiFunction<Object,Object,Boolean>) (a,b)-> Vm.this.equals(a, b)))),
 					//
 					$("%def", "%quote", $("%vau", $("arg"), ignore, "arg")),
