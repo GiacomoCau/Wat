@@ -306,15 +306,15 @@ public class Vm {
 			}
 			return new Lookup(false, null);
 		};
-		boolean set(K name, Object value) {
+		Object set(K name, Object value) {
 			/* TODO sostituito dal seguente
 			Env env = this; do {
 				if (env.map.containsKey(name)) { env.put(name, value); return true; }
 			} while ((env = env.parent) != null);
 			*/
 			for (var env=this; env!=null; env=env.parent)
-				if (env.map.containsKey(name)) { env.put(name, value); return true; }
-			return false; // TODO or error("!") ok new Lookup(false, null)
+				if (env.map.containsKey(name)) return env.put(name, value);
+			return error("not found: " + name );
 		};
 		Object put(K name, Object value) {
 			if (prtrc >= 6) print("    bind: ", name, "=", value, " in: ", this); return map.put(name, value); // return null; 
@@ -436,21 +436,25 @@ public class Vm {
 	
 	// Bind
 	Object bind(Dbg dbg, Env e, Object lhs, Object rhs) {
-		return bind(dbg, bndret, e, lhs, rhs);
+		return bind(dbg, true, bndret, e, lhs, rhs);
 	}
-	Object bind(Dbg dbg, int bndret, Env e, Object lhs, Object rhs) {
+	Object bind(Dbg dbg, boolean put, int bndret, Env e, Object lhs, Object rhs) {
 		try {
-		  var v = bind(bndret, e, lhs, rhs);
+		  var v = bind(put, bndret, e, lhs, rhs);
 		  return bndret == 0 ? inert : v;
 		}
 		catch (RuntimeException rte) {
-			return error(rte.getMessage() + " for bind: " + toString(lhs) + eIfnull(dbg, ()-> " of: " + /*cons(*/dbg.op/*, list(dbg.os))*/) + " with: " + rhs);
+			return error(
+				rte.getMessage() + " for " + (put ? "bind" : "set") + ": " + toString(lhs)
+				+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv ? dbg.op : cons(dbg.op, dbg.os[0])))
+				+ " with: " + rhs
+			);
 		}
 	}
-	Object bind(int bndret, Env e, Object lhs, Object rhs) {
+	Object bind(boolean put, int bndret, Env e, Object lhs, Object rhs) {
 		return switch (lhs) {
 			case Ignore i-> rhs;
-			case Symbol s-> { var v = e.put(s, rhs); yield bndret == 2 ? v : rhs; }  
+			case Symbol s-> { var v = put ? e.put(s, rhs) : e.set(s, rhs); yield bndret == 2 ? v : rhs; }  
 			case Keyword k-> {
 				if (k.equals(rhs)) yield rhs;
 				throw new RuntimeException("not found keyword: " + k);
@@ -461,8 +465,8 @@ public class Vm {
 			}
 			case Cons lc-> {
 				if (!(rhs instanceof Cons rc)) throw new RuntimeException("too few operands" /*+ ", more expected, but got: " + toString(rhs)*/);
-				var v = bind(bndret, e, lc.car, rc.car);
-				yield lc.cdr == null && rc.cdr == null ? v : bind(bndret, e, lc.cdr, rc.cdr);
+				var v = bind(put, bndret, e, lc.car, rc.car);
+				yield lc.cdr == null && rc.cdr == null ? v : bind(put, bndret, e, lc.cdr, rc.cdr);
 			}
 			default-> throw new RuntimeException("cannot bind: " + lhs);
 		};
@@ -531,6 +535,8 @@ public class Vm {
 		public String toString() { return "%Vau"; }
 	};
 	class Def implements Combinable  {
+		boolean put;
+		Def(boolean put) {this.put = put; }
 		public Object combine(Env e, List o) {
 			int len = checkO(this, o, 2, 3);  // o = (pt arg)|(pt key arg)
 			var pt = o.car();
@@ -539,9 +545,9 @@ public class Vm {
 				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
 			}
 			var dbg = dbg(e, this, o);
-			return pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> bind(dbg, bndret(len != 3 ? null : o.car(1)), e, pt, res));
+			return pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> bind(dbg, put, bndret(len != 3 ? null : o.car(1)), e, pt, res));
 		}
-		public String toString() { return "%Def"; }
+		public String toString() { return put ? "%Def" : "%Set!"; }
 	};
 	class DefStar implements Combinable  {
 		public Object combine(Env e, List o) {
@@ -1148,13 +1154,14 @@ public class Vm {
 	
 	// Bootstrap
 	Env theEnv=env(null); {
-		bind(null, theEnv, symbol("%def"), new Def());
+		bind(null, theEnv, symbol("%def"), new Def(true));
 		bind(null, theEnv, symbol("%begin"), begin);
 		getTco(evaluate(theEnv,
 			parseBytecode(
 				$("%begin",
 					// Basics
 					$("%def", "%vau", new Vau()),
+					$("%def", "%set!", new Def(false)),
 					$("%def", "%def*", new DefStar()),
 					$("%def", "%eval", wrap(new Eval())),
 					$("%def", "%makeEnv", wrap(new JFun("%MakeEnv", (ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car())))),
@@ -1162,7 +1169,7 @@ public class Vm {
 					$("%def", "%unwrap", wrap(new JFun("%Unwrap", (Function<Object, Object>) t-> unwrap(t)))),
 					$("%def", "%bound?", wrap(new JFun("%Bound?", (BiFunction<Symbol,Env,Boolean>) (s, e)-> e.get(s).isBound))),
 					//$("%def", "%bind", wrap(new JFun("%Bind", (ArgsList) o->{ bind(0, (Env) o.car(), o.car(1), o.car(2)); return true; } ))),
-					$("%def", "%bind?", wrap(new JFun("%Bind?", (ArgsList) o->{ try { bind(0, (Env) o.car(), o.car(1), o.car(2)); return true; } catch (RuntimeException rte) { return false; }}))),
+					$("%def", "%bind?", wrap(new JFun("%Bind?", (ArgsList) o->{ try { bind(true, 0, (Env) o.car(), o.car(1), o.car(2)); return true; } catch (RuntimeException rte) { return false; }}))),
 					$("%def", "%apply", wrap(new JFun("%Apply", (ArgsList) o-> combine(o.cdr(1) == null ? env(null) : o.car(2), unwrap(o.car()), o.car(1))))),
 					$("%def", "%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(null), unwrap(o.car()), o.cdr())))),
 					$("%def", "%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; }))),
