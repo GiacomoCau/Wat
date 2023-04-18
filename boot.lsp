@@ -795,7 +795,7 @@
               (error ($ "not " (if (null? body) "unbound or " "") "a dynamic value: " var)) )))
         (def dv* (map ckdvar var*))
         (unless (null? body) (def old* (map (\ (dv) (dv)) dv*)))
-        (forEach (\ (dv var val) (if (instanceof? dv DVar) (dv val) (@put env var (dvar val)) )) dv* var* (if (null? val*) (map (\ (var) #null) var*) val*))
+        (forEach (\ (dv var val) (if (instanceof? dv DVar) (dv val) (@def env var (dvar val)) )) dv* var* (if (null? val*) (map (\ (var) #null) var*) val*))
         (unless (null? body)
           (finally
             (eval (list* 'begin body) env) 

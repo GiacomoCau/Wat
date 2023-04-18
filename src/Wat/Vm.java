@@ -314,10 +314,10 @@ public class Vm {
 			} while ((env = env.parent) != null);
 			*/
 			for (var env=this; env!=null; env=env.parent)
-				if (env.map.containsKey(name)) return env.put(name, value);
+				if (env.map.containsKey(name)) return env.def(name, value);
 			return error("not found: " + name );
 		};
-		Object put(K name, Object value) {
+		Object def(K name, Object value) {
 			if (prtrc >= 6) print("    bind: ", name, "=", value, " in: ", this); return map.put(name, value); // return null; 
 		}
 		public String toString() {
@@ -439,37 +439,44 @@ public class Vm {
 	Object bind(Dbg dbg, Env e, Object lhs, Object rhs) {
 		return bind(dbg, true, bndret, e, lhs, rhs);
 	}
-	Object bind(Dbg dbg, boolean put, int bndret, Env e, Object lhs, Object rhs) {
+	Object bind(Dbg dbg, boolean def, int bndret, Env e, Object lhs, Object rhs) {
 		try {
-		  var v = bind(put, bndret, e, lhs, rhs);
+		  var v = bind(def, bndret, e, lhs, rhs);
 		  return bndret == 0 ? inert : v;
 		}
 		catch (RuntimeException rte) {
 			return error(
-				rte.getMessage() + " for " + (put ? "bind" : "set") + ": " + toString(lhs)
+				rte.getMessage() + " " + (def ? "bind" : "sett") + "ing: " + toString(lhs)
 				+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv ? dbg.op : cons(dbg.op, dbg.os[0])))
 				+ " with: " + rhs
 			);
 		}
 	}
-	Object bind(boolean put, int bndret, Env e, Object lhs, Object rhs) {
+	Object bind(boolean def, int bndret, Env e, Object lhs, Object rhs) {
 		return switch (lhs) {
 			case Ignore i-> rhs;
-			case Symbol s-> { var v = put ? e.put(s, rhs) : e.set(s, rhs); yield bndret == 2 ? v : rhs; }  
+			case Symbol s-> { var v = def ? e.def(s, rhs) : e.set(s, rhs); yield bndret == 2 ? v : rhs; }  
 			case Keyword k-> {
 				if (k.equals(rhs)) yield rhs;
 				throw new RuntimeException("not found keyword: " + k);
 			}
 			case null-> {
 				if (rhs == null) yield null;
-				throw new RuntimeException("too many operands" /*+ ", none expected, but got: " + toString(rhs)*/);
+				throw new RuntimeException("too many arguments" /*+ ", none expected,"*/ + ", found: " + toString(rhs));
 			}
 			case Cons lc-> {
-				if (!(rhs instanceof Cons rc)) throw new RuntimeException("too few operands" /*+ ", more expected, but got: " + toString(rhs)*/);
-				var v = bind(put, bndret, e, lc.car, rc.car);
-				yield lc.cdr == null && rc.cdr == null ? v : bind(put, bndret, e, lc.cdr, rc.cdr);
+				if (lc.car instanceof Symbol s && Utility.equals(s.name, "%quote", "quote")) {
+					if (equals((Object) lc.car(1), rhs)) yield null;
+					throw new RuntimeException("not found literal: " + lc.car(1));
+				}
+				if (!(rhs instanceof Cons rc)) throw new RuntimeException("too few arguments" /*+ ", more expected,"*/ + " found: " + toString(rhs));
+				var v = bind(def, bndret, e, lc.car, rc.car);
+				yield lc.cdr == null && rc.cdr == null ? v : bind(def, bndret, e, lc.cdr, rc.cdr);
 			}
-			default-> throw new RuntimeException("cannot bind: " + lhs);
+			default-> {
+				if (equals(lhs, rhs)) yield null;
+				throw new RuntimeException("not found literal: " + toString(lhs));
+			}
 		};
 	}
 	
@@ -498,7 +505,7 @@ public class Vm {
 			);
 			//*/
 		}
-		public String toString() { return "{Opv " + Vm.this.toString(p) + " " + Vm.this.toString(ep) + " " + Vm.this.toString(x) + /*" " + e +*/ "}"; }
+		public String toString() { return "{%Opv " + Vm.this.toString(p) + " " + Vm.this.toString(ep) + " " + Vm.this.toString(x) + /*" " + e +*/ "}"; }
 	}
 	class Apv implements Combinable  {
 		Combinable cmb;
@@ -507,7 +514,7 @@ public class Vm {
 			return tco(()-> pipe(dbg(e, this, o), ()-> map(car-> getTco(evaluate(e, car)), o), args-> tco(()-> cmb.combine(e, (List) args)))); 
 		}
 		public String toString() {
-			return "{Apv " + Vm.this.toString(cmb) + "}";
+			return "{%Apv " + Vm.this.toString(cmb) + "}";
 		}
 		Combinable unwrap() { return cmb; }
 	}
@@ -536,8 +543,8 @@ public class Vm {
 		public String toString() { return "%Vau"; }
 	};
 	class Def implements Combinable  {
-		boolean put;
-		Def(boolean put) {this.put = put; }
+		boolean def;
+		Def(boolean def) {this.def = def; }
 		public Object combine(Env e, List o) {
 			int len = checkO(this, o, 2, 3);  // o = (pt arg)|(pt key arg)
 			var pt = o.car();
@@ -546,10 +553,11 @@ public class Vm {
 				var msg = checkPt(pt); if (msg != null) return error(msg + " of: " + cons(this, o));
 			}
 			var dbg = dbg(e, this, o);
-			return pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> bind(dbg, put, bndret(len != 3 ? null : o.car(1)), e, pt, res));
+			return pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> bind(dbg, def, bndret(len != 3 ? null : o.car(1)), e, pt, res));
 		}
-		public String toString() { return put ? "%Def" : "%Set!"; }
+		public String toString() { return def ? "%Def" : "%Set!"; }
 	};
+	/* TODO non più necessario
 	class DefStar implements Combinable  {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 1, -1); // o = (pt arg ...)
@@ -563,6 +571,7 @@ public class Vm {
 		}
 		public String toString() { return "%Def*"; }
 	};
+	*/
 	class Eval implements Combinable  {
 		public Object combine(Env e, List o) {
 			checkO(this, o, 2); // o = (x eo)
@@ -949,18 +958,18 @@ public class Vm {
 		private Set syms = new HashSet<Symbol>();
 		PTree(Object pt, Object ep) { this.pt = pt; this.ep = ep; }
 		Object check() { 
-			if (pt != null && pt != ignore) { var msg = check(pt); if (msg != null) return msg; }
+			if (pt != null && pt != ignore && !(pt instanceof Symbol s && syms.add(s))) {
+				if (!(pt instanceof Cons)) return "not a #null, #ignore, symbol or parameters tree: " + pt;
+				var msg = check(pt); if (msg != null) return msg;
+			}
 			if (ep == null) return syms.size() > 0 ? null : "no one symbol in: " + pt;
 			if (ep == ignore) return null;
 			if (!(ep instanceof Symbol sym)) return "not a #ignore or symbol: " + ep;
 			return !syms.contains(sym) ? null : "not a unique symbol: " + ep;
 		}
 		private Object check(Object p) {
-			if (p == null) return null;
-			if (p == ignore) return null;
-			if (p instanceof Keyword) return null;
 			if (p instanceof Symbol) { return syms.add(p) ? null : "not a unique symbol: " + p + eIf(p == pt, ()-> " in: " + pt); }
-			if (!(p instanceof Cons c)) return "not a #null, #ignore, keyword or symbol: " + p + eIf(p == pt, ()-> " in: " + pt);
+			if (!(p instanceof Cons c)) return null;
 			var msg = check(c.car); if (msg != null) return msg;
 			return c.cdr == null ? null : check(c.cdr);
 		}
@@ -1161,7 +1170,7 @@ public class Vm {
 					// Basics
 					$("%def", "%vau", new Vau()),
 					$("%def", "%set!", new Def(false)),
-					$("%def", "%def*", new DefStar()),
+					//$("%def", "%def*", new DefStar()), // TODO non più necessario
 					$("%def", "%eval", wrap(new Eval())),
 					$("%def", "%makeEnv", wrap(new JFun("%MakeEnv", (ArgsList) o-> env(checkO("env", o, 0, 1, Env.class) == 0 ? null : o.car())))),
 					$("%def", "%wrap", wrap(new JFun("%Wrap", (Function<Object, Object>) t-> wrap(t)))),
