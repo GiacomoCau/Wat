@@ -217,8 +217,8 @@ public class Utility {
 			var cType = parms[0].componentType();
 			return new Object[] { args.getClass().componentType() == cType ?  args : copyFrom(cType, 0, args) };
 		}
+		if (args.length == length && (args[length-1] == null || args[length-1].getClass() == parms[length-1])) return args;
 		Object[] newArgs = copyOf(args, length); // eventualmente un null in più!
-		if (args.length < length) return newArgs;
 		var cType = parms[length-=1].getComponentType();
 		newArgs[length] = copyFrom(cType, length, args);
 		return newArgs;

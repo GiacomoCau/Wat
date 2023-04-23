@@ -136,18 +136,18 @@ public class Prova {
 	    	java.util.List.of("-d", "bin", "--enable-preview", "-source", "19", "-Xlint:unchecked" ),
 	    	null,
 	    	java.util.List.of(
-		    	new JavaStringFile("Ext.StdObj2", """
+		    	new JavaStringFile("Ext.Obj2", """
 					package Ext;
 					import Wat.Vm;
-					public class StdObj2 extends Vm.StdObj {
-						public StdObj2(Vm vm, Vm.List l) { vm.super(l); }
+					public class Obj2 extends Vm.Obj {
+						public Obj2(Vm vm, Vm.List l) { vm.super(l); }
 					}
 					"""
 				)
 	    	)
 	    );
 	    if (task.call()) {
-	    	var cls = Class.forName("Ext.StdObj2");
+	    	var cls = Class.forName("Ext.Obj2");
 	    	out.println(cls.getCanonicalName());
 	    	cls.getConstructor(Vm.class, List.class).newInstance(Vm.this, null);
 	    }
@@ -178,14 +178,14 @@ public class Prova {
 						public %1$s(Vm.List l) { super(l); }
 						@Override public String toString() { return "{%1$s" + Vm.reverseMap(this) + "}"; }
 					}
-					""".formatted(className, superClass == null ? "Vm.StdObj" : superClass.getCanonicalName())
+					""".formatted(className, superClass == null ? "Vm.Obj" : superClass.getCanonicalName())
 				)*/
-		    	new JavaStringFile("Wat.Vm$StdObj2", """
+		    	new JavaStringFile("Wat.Vm$Obj2", """
 					package Wat;
 					import Wat.Vm;
-					class StdObj2 extends Vm.StdObj {
+					class Obj2 extends Vm.Obj {
 						private static final long serialVersionUID = 1L;
-						public StdObj2(Vm.List l) { super(Vm.this, l); }
+						public Obj2(Vm.List l) { super(Vm.this, l); }
 					}
 					"""
 				)

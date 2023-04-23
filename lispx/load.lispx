@@ -67,7 +67,7 @@
 (%def Object &java.lang.Object)
 (%def Symbol &Wat.Vm$Cons)
 (%def Standard-class &java.lang.Class)
-(%def Standard-object &Wat.Vm$StdObj)
+(%def Standard-object &Wat.Vm$Obj)
 (%def String &java.lang.String)
 
 

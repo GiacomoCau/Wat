@@ -74,7 +74,8 @@
 (def Cons &Wat.Vm$Cons)
 (def DVar &Wat.Vm$DVar)
 (def JFun &Wat.Vm$JFun)
-(def StdObj &Wat.Vm$StdObj)
+(def Obj &Wat.Vm$Obj)
+(def Error &Wat.Vm$Error)
 (def Symbol &Wat.Vm$Symbol)
 (def Keyword &Wat.Vm$Keyword)
 (def Boolean &java.lang.Boolean)
@@ -1016,7 +1017,7 @@
   (def val (eval plc env))
   (caseType val
     (Box    (let1 (() args) (val :rhs (+ (val) 1))))
-    (StdObj (let1 ((fld) args) (val fld :rhs (+ (val fld) 1)))) 
+    (Obj (let1 ((fld) args) (val fld :rhs (+ (val fld) 1)))) 
     (Number (let1 (() args) (eval (list 'def plc :rhs (+ val 1)) env)))
     (else   (error ($ "not valid type: " val))) )) 
 
@@ -1024,11 +1025,11 @@
   (def val (eval plc env))
   (caseType val
     (Box    (let1 (() args) (val :rhs (- (val) 1))))
-    (StdObj (let1 ((fld) args) (val fld :rhs (- (val fld) 1)))) 
+    (Obj (let1 ((fld) args) (val fld :rhs (- (val fld) 1)))) 
     (Number (let1 (() args) (eval (list 'def plc :rhs (- val 1)) env)))
     (else   (error ($ "not valid type: " val))) ))
 
-(assert (begin (def obj (obj StdObj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
+(assert (begin (def obj (obj Obj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
 (assert (begin (def box (box 1)) (++ box) (++ box) (-- box)) 2)
 (assert (begin (def n 1) (++ n) (++ n) (-- n)) 2)
 
@@ -1039,7 +1040,7 @@
       (Box (match args 
         ((rval) (lval (op (lval) (eval rval env)))) 
         ((key rval) (lval key (op (lval) (eval rval env)))) ))
-      (StdObj (match args
+      (Obj (match args
         ((fld rval) (lval fld (op (lval fld) (eval rval env))))
         ((fld key rval) (lval fld key (op (lval fld) (eval rval env)))) ))
       (Object (match args
@@ -1052,7 +1053,7 @@
 
 (assert (begin (def a 1) (+= a :rhs 3)) 4)
 (assert (begin (def a (box 1)) (+= a :rhs 3)) 4)
-(assert (begin (def a (obj StdObj :fld 1)) (+= a :fld :rhs 3)) 4)
+(assert (begin (def a (obj Obj :fld 1)) (+= a :fld :rhs 3)) 4)
 
 
 ;;;; Utilities

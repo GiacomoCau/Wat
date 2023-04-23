@@ -232,7 +232,6 @@ public class Vm {
 					if (l.car() instanceof Keyword) yield l;
 					var ee=e; yield tco(()-> pipe(dbg(ee, o), ()-> getTco(evaluate(ee, l.car)), op-> tco(()-> combine(ee, op, l.cdr()))));
 				}
-				//case Cons c-> c.car() instanceof Keyword ? c : error("not a proper list: " + c);
 				case null, default-> o;
 			};
 		}
@@ -262,7 +261,7 @@ public class Vm {
 		Cons(Object car, Object cdr) { this.car = car; this.cdr = cdr; }
 		public String toString() { return "(" + toString(this) + ")"; }
 		private String toString(Cons c) {
-			var car = Vm.this.toString(true, c.car);
+			var car = c.car == null ? "()" : Vm.this.toString(true, c.car);
 			if (c.cdr == null) return car;
 			if (c.cdr instanceof Cons cdr) return car + " " + toString(cdr);
 			return car + " . " + Vm.this.toString(true, c.cdr);
@@ -342,24 +341,25 @@ public class Vm {
 	
 	
 	// Classes and Objects
-	public class StdObj extends LinkedHashMap<Keyword, Object> implements ArgsList {
+	public class Obj extends LinkedHashMap<Keyword, Object> implements ArgsList {
 		private static final long serialVersionUID = 1L;
-		public StdObj(List list) {
-	        for (var l=list; l!=null; l=l.cdr()) {
-	        	var car = l.car; if (!(car instanceof Keyword key)) throw new Error("not a keyword: " + car + " in: " + list); 
-	        	l = l.cdr(); if (l == null) throw new Error("a value expected in: " + list);
-	        	put(key, l.car);
+		public Obj(Object ... objs) {
+			if (objs == null) return;
+			for (int i=0, e=objs.length-1; i<=e; i+=1) {
+	        	if (!(objs[i] instanceof Keyword key)) throw new Error("not a keyword: " + objs[i] + " in: " + list(objs)); 
+	        	if (i == e) throw new Error("a value expected in: " + list(objs));
+	        	put(key, objs[i+=1]);
 	        }
 		}
 		@Override public String toString() {
 			var field = super.toString().substring(1);
-			//return "{" + getClass().getSimpleName() + (field.length() == 1 ? field : " " + field) ;
-			return "{&" + getClass().getCanonicalName() + (field.length() == 1 ? field : " " + field) ;
+			return "{&" + getClass().getCanonicalName() // or .getSimpleName()?
+				+ (field.length() == 1 ? field : " " + field) ;
 		}
 		@Override public Object apply(List o) {
 			var len = (checkO(this, o, 1, 3)); // (:key) | (:key value) | (:key :key value)
 			return switch (len) { 
-				case 1 -> get(o.car());
+				case 1-> get(o.car());
 				default-> switch (bndret(len != 3 ? null : o.car(1))) {
 					case 0-> inert(put(o.car(), o.car(len-1)));
 					case 1-> {var v = o.car(len-1); put(o.car(), v); yield v; }
@@ -371,7 +371,7 @@ public class Vm {
 	Class extend(Symbol className, Class superClass) {
 		try {
 			if (!className.name.matches("[A-Z][a-zA-Z_0-9]*")) return error("invalid class name: " + className);
-			if (superClass != null && !of(StdObj.class, Box.class).anyMatch(c-> c.isAssignableFrom(superClass))) return error("invalid extendible " + superClass);
+			if (superClass != null && !of(Obj.class, Box.class).anyMatch(c-> c.isAssignableFrom(superClass))) return error("invalid extendible " + superClass);
 			var c = Class.forName("Ext." + className);
 			out.println("Warning: class " + className + " is already defined!");
 			return c;
@@ -386,7 +386,8 @@ public class Vm {
 				    @Override public CharSequence getCharContent(boolean ignoreEncodingErrors) { return code; }
 				}
 			    var diagnostics = new DiagnosticCollector<JavaFileObject>();
-			    var isStdObj = superClass == null || superClass == StdObj.class;
+			    var isObj = superClass == null || superClass == Obj.class;
+			    var isBox = superClass != null && Box.class.isAssignableFrom(superClass);
 			    var task = getSystemJavaCompiler().getTask(
 			    	null, null, diagnostics,
 			    	java.util.List.of("-d", "bin", "--enable-preview", "-source", ""+version().feature(), "-Xlint:unchecked" ),
@@ -400,9 +401,9 @@ public class Vm {
 							}
 							""".formatted(
 								className,
-								isStdObj ? "Vm.StdObj" : superClass.getCanonicalName(),
-								superClass != null && Box.class.isAssignableFrom(superClass)  ? "Object" : "Vm.List", 
-								isStdObj || superClass == Box.class ? "vm.super(o)" : "super(vm, o)"
+								isObj ? "Vm.Obj" : superClass.getCanonicalName(),
+								isBox ? "Object" : "Object ...", 
+								isObj || superClass == Box.class ? "vm.super(o)" : "super(vm, o)"
 							)
 						)
 			    	)
@@ -866,7 +867,7 @@ public class Vm {
 	boolean isjFun(Object obj) {
 		return isInstance(obj, Supplier.class, Function.class, BiFunction.class, Executable.class, Field.class);
 	}
-	Object jInvoke(String name) {
+	ArgsList jInvoke(String name) {
 		if (name == null) return error("method name is null");
 		return (ArgsList) o-> {
 			if (!(o instanceof List)) return error("no operands for executing: " + name) ;  
@@ -902,7 +903,7 @@ public class Vm {
 			}
 		};
 	}
-	Object jGetSet(String name) {
+	ArgsList jGetSet(String name) {
 		if (name == null) return error("field name is null");
 		return (ArgsList) o-> {
 			var len = checkO("jGetSet", o, 1, 2); 
@@ -925,14 +926,13 @@ public class Vm {
 	// Error handling
 	Object rootPrompt = new Object() { public String toString() { return "%RootPrompt"; }};
 	Object pushRootPrompt(Object x) { return list(new PushPrompt(), rootPrompt, x); }
-	<T> T error(String msg) {
-		return error(msg, null);
-	}
+	<T> T error(String msg) { return error(msg, null); }
+	<T> T error(Throwable t) { return error(null, t); }
 	<T> T error(String msg, Throwable cause) {
 		var exc = new Error(msg, cause); 
 		var userBreak = theEnv.get("userBreak").value;
 		if (userBreak != null) {
-			// con l'attuale userBbreak se stack is true viene tornata una sospension per il takeSubcont (o un tco)
+			// con l'attuale userBbreak se prstk == true viene tornata una sospension per il takeSubcont (o un tco)
 			var res = getTco(evaluate(theEnv, list(userBreak, exc)));
 			//var res = pipe(dbg(theEnv, userBreak, exc), ()-> evaluate(theEnv, list(userBreak, exc))); // for ?
 			// per l'esecuzione della throw anche se userbreak non lo facesse
@@ -940,7 +940,7 @@ public class Vm {
 		}
 		throw exc;
 	}
-	static class Error extends RuntimeException {
+	class Error extends RuntimeException {
 		private static final long serialVersionUID = 1L;
 		public Error(Throwable cause) { super(cause); }
 		public Error(String message) { super(message); }
@@ -1140,7 +1140,7 @@ public class Vm {
 	String toString(Object o) { return toString(false, o); }
 	String toString(boolean t, Object o) {
 		return switch (o) {
-			case null-> "()"; // () in cons  altrove #null
+			case null-> "#null"; // () in cons  altrove #null
 			case Boolean b-> b ? "#t" : "#f";
 			case Class cl-> "&" + Utility.toSource(cl);
 			case String s-> !t ? s : '"' + Utility.toSource(s) + '"';
@@ -1224,7 +1224,7 @@ public class Vm {
 					// Object System
 					$("%def", "%addMethod", wrap(new JFun("%AddMethod", (ArgsList) o-> addMethod(o.car(), o.car(1), o.car(2))))),
 					$("%def", "%getMethod", wrap(new JFun("%GetMethod", (BiFunction<Class,Symbol,Object>) this::getMethod))),
-					$("%def", "%obj", wrap(new JFun("%Obj", (ArgsList) o-> uncked(()-> ((Class<? extends StdObj>) o.car()).getDeclaredConstructor(Vm.class, List.class).newInstance(Vm.this, o.cdr()))))),
+					$("%def", "%obj", wrap(new JFun("%Obj", (ArgsList) o-> jInvoke("new").apply(listStar(o.car(), Vm.this, o.cdr))))),
 					$("%def", "%class", wrap(new JFun("%Class", (ArgsList) o-> extend(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr()))))),
 					$("%def", "%subClass?", wrap(new JFun("%SubClass", (BiFunction<Class,Class,Boolean>) (cl,sc)-> sc.isAssignableFrom(cl)))),
 					$("%def", "%type?",  wrap(new JFun("%Type?", (BiFunction<Object,Class,Boolean>) (o,c)-> o == null ? c == null : c.isAssignableFrom(o.getClass())))),
@@ -1338,7 +1338,7 @@ public class Vm {
 				}
 				catch (Throwable t) {
 					if (prstk) t.printStackTrace(out);
-					else out.println("{" + t.getClass().getSimpleName() + " " + t.getMessage() + "}");
+					else out.println(/*t instanceof Obj ? t : */ "{" + t.getClass().getSimpleName() + " " + t.getMessage() + "}");
 				}
 			}
 		}
@@ -1360,6 +1360,6 @@ public class Vm {
 		print("start time: " + (currentTimeMillis() - milli));
 		repl();
 		//*/
-		//extend2(symbol("StdObj2"), null);
+		//extend2(symbol("Obj2"), null);
 	}
 }
