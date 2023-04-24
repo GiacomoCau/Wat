@@ -276,7 +276,7 @@ public class Utility {
 		List<Executable> executables = new ArrayList<>();
 		do addExecutable(executables, classe, publicMember, constructors, name, argumentsClass);
 		while (!constructors && !publicMember && (classe = classe.getSuperclass()) != null);
-		if (!constructors && obj instanceof Class && obj != Class.class) {
+		if (!constructors && obj instanceof Class && !equals(obj, Class.class, Object.class)) {
 			classe = (Class) obj;
 			do addExecutable(executables, classe, publicMember, constructors, name, argumentsClass);
 			while (!publicMember && (classe = classe.getSuperclass()) != Object.class);

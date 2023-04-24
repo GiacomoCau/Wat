@@ -166,6 +166,10 @@
 (assert (expand (def\ succ (n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
 (assert (expand (def\ (succ n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
 
+(defMacro (wrau pt e . body)
+  (list 'wrap (list* '$vau pt e body)))
+
+(assert (expand (wrau pt env a b c)) '(wrap ($vau pt env a b c)))    
 
 ;;;; Basic value test
 
@@ -578,15 +582,15 @@
 (assert (ifOpt? ((a) '(2 3)) (+ 1 a)))
 (assert (ifOpt? ((a b) '(2 3)) (+ 1 b)) 4)
 
-(defMacro whenOpt? ((name opt?) form . forms)
-  (list ifOpt? (list name opt?) (list* progn form forms)))
+(defMacro whenOpt? ((pt opt?) form . forms)
+  (list ifOpt? (list pt opt?) (list* progn form forms)))
 
 (defMacro unlessOpt? (opt? form . forms)
   (list ifOpt? (list #ignore opt?) #null (list* progn form forms)))
 
 (defVau (caseOpt? exp . clauses) env
   (let1 (exp (eval exp env))
-    (if (! (cons? exp)) #null
+    (if (null? exp) #null
       (let1 loop (clauses clauses)
         (if (null? clauses) #inert ;(error "not a valid opt? form! ")
           (let ((env+ (makeEnv env))
@@ -648,15 +652,18 @@
 (defMacro (until test-form . forms)
   (list* while (list '! test-form) forms) )
 
-(defVau (block block-name . forms) env
+(defVau (block blockName . forms) env
   (let* ((tag (list #inert))
          (escape (\ (value) (throwTag tag value))) )
     (catchTag tag
-      (eval (list (list* '\ (list block-name) forms) escape) env) )))
+      (eval (list (list* '\ (list blockName) forms) escape) env) )))
 
-(def\ (returnFrom block-name . value?)
-  (block-name (unless (null? value?) (car value?))) )
+(assert (block exit (def x 1) (loop (if (== x 4) (exit 7)) (def x (+ x 1)))) 7)
 
+(def\ (returnFrom blockName . value?)
+  (blockName (unless (null? value?) (car value?))) )
+
+(assert (block ciclo (def x 1) (loop (if (== x 4) (returnFrom ciclo 7)) (def x (+ x 1)))) 7)
 
 ;;;; Type parameters check lambda
 
@@ -785,22 +792,22 @@
 |#
 
 (def d\
-  (%vau (var* . body) #ignore
-    (wrap ($vau val* env
-        (def ckdvar (\ (var)
+  ($vau (var* . body) #ignore
+    (wrau val* env
+        (def\ (ckdvar var)
             (def lkp (@get env var))
             (def dv (.value lkp))
             ;(if (or (and (null? body) (null? dv)) (instanceof? dv DVar)) dv
-            ;  (error ($ "not " (if (null? body) "null or " "") "a dynamic value: " var)) )))
+            ;  (error ($ "not " (if (null? body) "null or " "") "a dynamic value: " var)) )
             (if (or (and (null? body) (! (.isBound lkp))) (instanceof? dv DVar)) dv
-              (error ($ "not " (if (null? body) "unbound or " "") "a dynamic value: " var)) )))
+              (error ($ "not " (if (null? body) "unbound or " "") "a dynamic value: " var)) ))
         (def dv* (map ckdvar var*))
         (unless (null? body) (def old* (map (\ (dv) (dv)) dv*)))
         (forEach (\ (dv var val) (if (instanceof? dv DVar) (dv val) (@def env var (dvar val)) )) dv* var* (if (null? val*) (map (\ (var) #null) var*) val*))
         (unless (null? body)
           (finally
             (eval (list* 'begin body) env) 
-            (forEach (\ (dv old) (dv old)) dv* old*) ))))))
+            (forEach (\ (dv old) (dv old)) dv* old*) )))))
 
 ;((d\ (d e) (print e)) 4 5)     
 ;((d\ (d e)) 6 7)
@@ -1013,12 +1020,15 @@
 
 ;;;; Auto Increment/Decrement and Assignement Operator
 
+;(defVau ($set! exp1 formals exp2) env
+;  (eval (list 'def formals (list '(unwrap eval) exp2 env)) (eval exp1 env)))
+
 (defVau (++ plc . args) env
   (def val (eval plc env))
   (caseType val
     (Box    (let1 (() args) (val :rhs (+ (val) 1))))
     (Obj (let1 ((fld) args) (val fld :rhs (+ (val fld) 1)))) 
-    (Number (let1 (() args) (eval (list 'def plc :rhs (+ val 1)) env)))
+    (Number (let1 (() args) (eval (list '%set! plc :rhs (+ val 1)) env)))
     (else   (error ($ "not valid type: " val))) )) 
 
 (defVau (-- plc . args) env
@@ -1026,7 +1036,7 @@
   (caseType val
     (Box    (let1 (() args) (val :rhs (- (val) 1))))
     (Obj (let1 ((fld) args) (val fld :rhs (- (val fld) 1)))) 
-    (Number (let1 (() args) (eval (list 'def plc :rhs (- val 1)) env)))
+    (Number (let1 (() args) (eval (list '%set! plc :rhs (- val 1)) env)))
     (else   (error ($ "not valid type: " val))) ))
 
 (assert (begin (def obj (obj Obj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
@@ -1045,7 +1055,7 @@
         ((fld key rval) (lval fld key (op (lval fld) (eval rval env)))) ))
       (Object (match args
         ((rval) (eval (list 'def plc (op lval (eval rval env))) env))
-        ((key rval) (eval (list 'def plc key (op lval (eval rval env))) env)) ))))) 
+        ((key rval) (eval (list '%set! plc key (op lval (eval rval env))) env)) ))))) 
 
 (def $= (assignOp %$))
 (def += (assignOp %+))
@@ -1081,16 +1091,11 @@
 
 (def\ (printStacktrace)
   (def\ (printFrame k)
-    ;(log "--" k)
-    (if (!= (.next k) #null)
-      (printFrame (.next k)) )
-    (log "--" k) )
+    (let1 (k (.nxt k)) (unless (null? k) (printFrame k) ))
+    (log "v" k) )
   (takeSubcont rootPrompt k
-  	(printFrame k) (pushPrompt rootPrompt (pushSubcont k) )) ;old need 2+ vau args
-    ;(pushPrompt rootPrompt (pushSubcont k (printFrame k) )) ;new with 3+ vau args
-)
+  	(printFrame k) (pushPrompt rootPrompt (pushSubcont k)) ))
 
 (def\ (userBreak err)
-  ;(log "==" err)
-  (when (stack) (log "++" err) (printStacktrace))
+  (when (prstk) (log "-" (@getMessage err)) (printStacktrace))
   (throw err) )

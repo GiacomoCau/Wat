@@ -89,7 +89,7 @@
   "`elt' for JS arrays.  We must put the method on `object' because we
   |don't have a more precise type for them."
   (if (or (< index 0) (>= index (length seq)))
-      (error (make-instance \Out-of-bounds-error))
+      (error (make-instance OutOfBoundsError))
       (%js-elt seq index)))
 
 (defmethod length ((seq object))

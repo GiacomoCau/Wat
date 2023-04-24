@@ -302,7 +302,7 @@
   |an operand evaluates to false, later operands are not evaluated.  If
   |there are no operands, return false."
   (cond ((null operands)           #t)
-        ((null (cdr operands))     (the boolean (eval (car operands) env)))
+        ((null (cdr operands))     (the Boolean (eval (car operands) env)))
         ((eval (car operands) env) (eval (cons and (cdr operands)) env))
         (#t                        #f)))
 
@@ -311,7 +311,7 @@
   |otherwise.  If an operand evaluates to true, later operands are not
   |evaluated.  If there are no operands, return true."
   (cond ((null operands)           #f)
-        ((null (cdr operands))     (the boolean (eval (car operands) env)))
+        ((null (cdr operands))     (the Boolean (eval (car operands) env)))
         ((eval (car operands) env) #t)
         (#t                        (eval (cons or (cdr operands)) env))))
 
@@ -445,7 +445,7 @@
 
 (defun assert (boolean)
   "Signal an error if the BOOLEAN is false.  Otherwise return void."
-  (unless boolean (error (make-instance Assertion-error))))
+  (unless boolean (error (make-instance AssertionError))))
 
 (defun compose (f g)
   "Compose two functions, creating a new function equivalent to (G (F ...))."
@@ -569,7 +569,7 @@
   (if (null plist)
       #null
       (let (((i v . plist) plist))
-        (if (eq i indicator)
+        (if (= i indicator) ; era eq
             (some v)
             (get? plist indicator)))))
 
@@ -689,12 +689,14 @@
   |$(syntax slot-spec symbol)
   |$(syntax property (:documentation docstring))"
   ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
-  (dolist (slot-spec slot-specs) (the symbol slot-spec))
+  (dolist (slot-spec slot-specs) (the Symbol slot-spec))
   (let ((class-name (class-symbol name))
-        (superclass (find-class (optional superclass? 'standard-object) env)))
-    (if (boundp class-name env)
-        (%reinitialize-standard-class (eval class-name env) superclass)
-        (eval (list def class-name (%make-standard-class name superclass)) env))))
+        (superclass (find-class (optional superclass? 'StandardObject) env)))
+    ;(if (boundp class-name env)
+    ;   (%reinitialize-standard-class (eval class-name env) superclass)
+        (eval (list def class-name (%make-standard-class name superclass)) env))
+    ;)
+)
 
 ;;; Generic Functions
 
@@ -735,7 +737,7 @@
 
 (defun make-type-error (datum expected-type)
   "Create a `type-error' with the given DATUM and EXPECTED-TYPE."
-  (make-instance Type-error :datum datum :expected-type expected-type))
+  (make-instance TypeError :datum datum :expected-type expected-type))
 
 (defun assert-type (object class)
   "Signal a `type-error' if the OBJECT is not an instance of the CLASS."
@@ -753,13 +755,16 @@
 (defgeneric length (sequence)
   (:documentation "Return the number of elements in a sequence."))
 
-(defmethod length ((seq list))
+(defmethod length ((seq List))
+  (%list-length seq))
+
+(defmethod length ((seq Nil))
   (%list-length seq))
 
 (defgeneric elt (sequence index)
   (:documentation "Return the sequence element at the specified index."))
 
-(defmethod elt ((seq list) index)
+(defmethod elt ((seq List) index)
   (nth index seq))
 
 (defgeneric subseq (sequence start . end?)
@@ -768,10 +773,13 @@
   supplied or void, the subsequence stretches until the end of the
   list."))
 
-(defmethod subseq ((seq list) start . end?)
+(defmethod subseq ((seq List) start . end?)
   (%list-subseq seq start (optional end?)))
 
-(defmethod subseq ((seq string) start . end?)
+(defmethod subseq ((seq Nil) start . end?)
+  (%list-subseq seq start (optional end?)))
+
+(defmethod subseq ((seq String) start . end?)
   (%string-subseq seq start (optional end?)))
 
 ;;; Options

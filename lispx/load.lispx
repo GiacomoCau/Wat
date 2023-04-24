@@ -6,23 +6,22 @@
 
 ; boot.lispx
 ; commentare stringhe in eccesso nelle (%def name expr "..."), troppi parametri per la %def!
-; commentare definizione list*, l'apply crea problemi con l'environment vuoto
-; commentare definizione assert
-; commentare ;;; Sequences
 
-(%resetEnvironment)
+(%resetEnv)
 
-(%def %->symbol  (%lambda (i) (%def name (.name i)) (@new &Wat.Vm$Symbol  (this) (%if (@startsWith name ":") (@substring name 1) name))))
-(%def %->keyword (%lambda (i) (%def name (.name i)) (@new &Wat.Vm$Keyword (this) (%if (@startsWith name ":") name (@substring (+ ":" (.name i)) 1)) )))
+(%def \ %lambda)
+(%def %->symbol  (\ (i) (@intern vm (%if (%instanceof? i &Wat.Vm$Keyword) (@substring (.name i) 1) (.name i)))))
+(%def %->keyword (\ (i) (@intern vm (%if (%instanceof? i &Wat.Vm$Keyword) (.name i) (%$ ":" (.name i))))))
 
-(%def %= %eq?) ; 
+(%def %= %eq?)
 (%def %assert assert)
 (%def %add-method %addMethod)
 (%def %boundp %bound?)
-(%def %car (%lambda ((x . #ignore)) x))
-(%def %cdr (%lambda ((#ignore . x)) x))
-(%def %class-name (%lambda (c) ((@getCanonicalName c) c)))
-(%def %class-of (%lambda (o) (%if (%null? o) o (%classOf o))))
+(%def %car (\ ((x . #ignore)) x))
+(%def %cdr (\ ((#ignore . x)) x))
+(%def %class-name (\ (c) (@getCanonicalName c)))
+(%def %class-name (\ (c) (@getSimpleName c)))
+(%def %class-of (\ (o) (%if (%null? o) o (%classOf o))))
 (%def %class-symbol %->symbol)
 (%def %eq %==)
 (%def %find-method %getMethod)
@@ -30,68 +29,118 @@
 (%def %keyword-symbol %->keyword)
 (%def %length %len) 
 (%def %list-length %len)
-(%def %nth (%lambda (i l) (@car l i)))
-(%def %nthcdr (%lambda (i l) (%if (%== i 0) l (@cdr l (%- i 1)))))
+(%def %nth (\ (i l) (@car l i)))
+(%def %nthcdr (\ (i l) (%if (%== i 0) l (@cdr l (%- i 1)))))
+(%def %make-environment %makeEnv)
 (%def %make-instance %obj)
-(%def %make-environment %makeEnvironment)
-(%def %make-standard-class %class)
+(%def %make-standard-class (\ (name superclass) (%class name superclass)))
+;(%def %make-standard-class (\ (name superclass) (%class (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass)))
 (%def %progn %begin)
 (%def %push-delim-subcont %pushPromptSubcont)
-(%def %push-prompt %pushPrompt)
+(%def %push-prompt (%wrap %pushPrompt))
 (%def %push-subcont-barrier %pushSubcontBarrier)
-(%def %symbol-name (%lambda (i) (%def name (.name i)) (%if (@startsWith name ":") (@substring name 1) name)))
+(%def %symbol-name (\ (i) (%def name (.name i)) (%if (@startsWith name ":") (@substring name 1) name)))
+;(%def %symbol-name (\ (i) (%def name (.name i)) (@substring name (%if (@startsWith name ":") 1 0))))
 (%def %subclassp %subClass?)
 (%def %take-subcont %takeSubcont)
 (%def %test test)
 (%def %typep %type?)
+(%def %unwind-protect %finally)
 (%def %variable-symbol %->symbol)
 
-(%def list* %list*) 
+(%def list* %list*)
 
-;(%def boolean &java.lang.Boolean)
-;(%def number &java.lang.Number)
-;(%def object &java.lang.Object)
-;(%def list &&Wat.Vm$List) ; conflict with list method
+(%def +root-prompt+ %rootPrompt)
+(%def %print-stacktrace
+  (\ (k)
+    (%if (%!= (.nxt k) #null)
+      (%print-stacktrace (.nxt k)) )
+    (%if (prstk) (log "--" k)) ))
+(%def %panic (\ (e) (:log "panic:" e) (%throw #ignore e)))
 
+(%def Nil #null)
 (%def Boolean &java.lang.Boolean)
 (%def Built-in-class &java.lang.Class)
 (%def Class &java.lang.Class)
 (%def Cons &Wat.Vm$Cons)
-(%def Error &Wat.Vm$Error)
 (%def Fexpr &Wat.Vm$Opv)
 (%def Function &Wat.Vm$Apv)
 (%def Integer &java.lang.Integer)
 (%def List &Wat.Vm$List)
-(%def Nil #null)
 (%def Number &java.lang.Number)
 (%def Object &java.lang.Object)
-(%def Symbol &Wat.Vm$Cons)
-(%def Standard-class &java.lang.Class)
-(%def Standard-object &Wat.Vm$Obj)
+(%def Symbol &Wat.Vm$Symbol)
+(%def StandardClass &java.lang.Class)
 (%def String &java.lang.String)
+(%def Throwable &java.lang.Throwable)
+(%def Inert &Wat.Vm$Inert)
+(%def Ignore &Wat.Vm$Ignore)
+(%def Operator &Wat.Vm$Opv)
+(%def Utility &Wat.Utility)
 
+(%def StandardObject &Wat.Vm$Obj)
+(%def Dynamic &Wat.Vm$DVar)
+(%def Condition &Wat.Vm$Condition)
+(%def Error &Wat.Vm$Error)
+(%def TypeError Error)
+(%def MatchError Error)
+(%def UnboundSymbolError Error)
+(%def OutOfBoundsError Error)
+(%def AssertionError Error)
+(%def UnboundSlotError Error)
+(%def UnboundMethodError Error)
+(%def PromptNotFoundError Error)
 
-(%def %take (%lambda (i l) (%if (%== i 0) #null (%cons (%car l) (%take (%- i 1) (%cdr l))))))
-(%def %list-subseq (%lambda (l s e)	(%def tail (%nthcdr s l)) (%if (%== e #inert) tail (%take (%- e s) tail))))
-(%def %string-subseq (%lambda (seq start end) (%if (%== end #inert) (@substring seq start) (@substring seq start end))))
+;(%def StandardObject &Wat.Vm$Obj)
+;(%def Condition (%class 'Condition))
+;(%def Error (%class 'Error Condition))
+;(%def TypeError (%class 'TypeError Error))
 
-(load "lispx/boot.lispx")
+(%def %take (\ (i l) (%if (%== i 0) #null (%cons (%car l) (%take (%- i 1) (%cdr l))))))
+(%def %list-subseq (\ (l s e)	(%def tail (%nthcdr s l)) (%if (%== e #inert) tail (%take (%- e s) tail))))
+(%def %string-subseq (\ (seq start end) (%if (%== end #inert) (@substring seq start) (@substring seq start end))))
 
-(defmacro assert (v)
-  (list unless (list %assert v #t)
-    (list throw #ignore (list @new &Wat.Vm$Error "assert error!")) ))
+(load "lispx/src/boot.lispx")
 
-;(load "lispx/cond-sys.lispx")
-;(load "lispx/stream.lispx")
-;(load "lispx/read.lispx")
-;(load "lispx/print.lispx")
-;(load "lispx/js.lispx")
+(def %progv (\ (var val body)
+  ((%wrap %dLet) (cons var val) body) ))
 
+;(defdynamic aa 1)(%progv (list aa) (list 2) (lambda () (dynamic aa))) ; -> 2
 
+;(defmacro assert (v)
+;  (list unless (list %assert v #t)
+;    (list throw #ignore (list @new Error vm "assert error!")) ))
+
+(defmacro %slot-value (obj slot)
+   (list obj (list %->keyword slot)))
+
+#|
+(defmacro %slot-value (obj slot)
+   (list '%if (list '%slot-bound-p obj (list '%->keyword slot))
+     (list obj (list '%->keyword slot))
+     (list '%throw #ignore (list '@new 'Error (%$ "slot not found: " slot ))) ))
+
+(defmacro %slot-value (obj slot)
+  (let ((key (list '%->keyword slot)) )
+   (list '%if (list '%slot-bound-p obj key)
+     (list obj key)
+     (list '%throw #ignore (list '@new 'Error (%$ "slot not found: " slot ))) )))
+|#
+
+(defmacro %set-slot-value (obj slot value)
+   (list obj (list %->keyword slot) value))
+
+(defmacro %slot-bound-p (obj slot)
+   (list (list %jInvoke "isBound") obj (list %->keyword slot)))
+
+(load "lispx/src/cond-sys.lispx")
+;(load "lispx/src/stream.lispx")
+;(load "lispx/src/read.lispx")
+;(load "lispx/src/print.lispx")
+;(load "lispx/src/js.lispx")
 
 ; test-util.lispx
 ; commentare tutto e bastano queste definizioni
-
 ;(load "lispx/test/test-util.lispx")
 
 (defmacro deftest (name expression . expected?)
@@ -105,16 +154,41 @@
 
 (defmacro signals-error (form condition-class . slot-specs)
   (list %catch #ignore
-    (list lambda () form #f)
-    (list lambda '(r) (list  %instanceof? 'r &java.lang.Throwable)) ))
-    
-;(load "lispx/test/test-util-test.lispx")
-(load "lispx/test/boot-test.lispx")
+    (list '\ () form #f)
+    (list '\ '(r) (list 'typep 'r condition-class)) ))
+
+(defexpr signals-error (form condition-class . slot-specs) env
+  (let ((class (find-class condition-class env)))
+    (block exit
+      (handler-case ((StandardObject (lambda (c)
+                               (if (typep c class)
+                                   (progn
+                                     (loop-let -check-slots- ((slot-specs slot-specs))
+                                       (when (not (null slot-specs))
+                                         (let (((name value . rest-slot-specs) slot-specs))
+                                           (unless (= (slot-value c name) (eval value env))
+                                             (return-from exit #f))
+                                           (-check-slots- rest-slot-specs))))
+                                     (return-from exit #t) )
+                                   (return-from exit #f) ))))
+        (eval form env))
+      #f )))
+
+;(load "lispx/test/test-util-test.lispx") ;; mai
+;(load "lispx/test/boot-test.lispx")
 ;(load "lispx/test/cond-sys-test.lispx")
-;(load "lispx/test/control-test.lispx")
 ;(load "lispx/test/delimcc-test.lispx")
+;(load "lispx/test/control-test.lispx")
 ;(load "lispx/test/stream-test.lispx")
 ;(load "lispx/test/read-test.lispx")
 ;(load "lispx/test/print-test.lispx")
 ;(load "lispx/test/js-test.lispx")
 ;(load "lispx/test/hierarchy-test.lispx")
+
+(load "lispx/tool/repl/repl.lispx")
+(%def userBreak error) 
+
+(def uprint print)
+(def repl:%display-prompt
+  (\ (level) (if (eq level 0) "* " (%$ level "]"))) )
+

@@ -1,11 +1,11 @@
 (defsuite handler-bind
 
-  (defclass test-error (error) ())
+  (defclass TestError (Error) ())
 
   (deftest handler-bind.0
     (signals-error
      (handler-bind)
-     match-error))
+     MatchError))
 
   (deftest handler-bind.0b
     (handler-bind ())
@@ -17,36 +17,36 @@
     3)
 
   (deftest handler-bind.2
-    (handler-bind ((simple-error (lambda (e) 'whatever)))
+    (handler-bind ((SimpleError (lambda (e) 'whatever)))
       1 2 (+ 1 2))
     3)
 
   (deftest handler-bind.3
-    (handler-bind ((simple-error (lambda (e) 'whatever))
-                   (test-error (lambda (e) 'whatever)))
+    (handler-bind ((SimpleError (lambda (e) 'whatever))
+                   (TestError (lambda (e) 'whatever)))
       1 2 (+ 1 2))
     3)
 
   (deftest handler-bind.no-handler
-    (handler-bind ((test-error (lambda (e) 'whatever)))
+    (handler-bind ((TestError (lambda (e) 'whatever)))
       (signal (make-simple-error "foo")))
     #inert)
 
   (deftest handler-bind.unhandled
-    (handler-bind ((simple-error (lambda (e) 'whatever)))
+    (handler-bind ((SimpleError (lambda (e) 'whatever)))
       (signal (make-simple-error "foo")))
     #inert)
 
   (deftest handler-bind.decline
     (block b
-      (handler-bind ((simple-error (lambda (e) (return-from b 1))))
-        (handler-bind ((simple-error (lambda (e) 'decline)))
+      (handler-bind ((SimpleError (lambda (e) (return-from b 1))))
+        (handler-bind ((SimpleError (lambda (e) 'decline)))
           (signal (make-simple-error "foo")))))
     1)
 
   (deftest handler-bind.handled
     (block b
-      (handler-bind ((simple-error (lambda (e)
+      (handler-bind ((SimpleError (lambda (e)
                                      (assert (= "foo" (slot-value e 'message)))
                                      (return-from b 1))))
         (signal (make-simple-error "foo"))))
@@ -54,55 +54,56 @@
 
   (deftest handler-bind.nested
     (block b
-      (handler-bind ((simple-error (lambda (e) (return-from b 'outer))))
-        (handler-bind ((simple-error (lambda (e) (return-from b 'inner))))
+      (handler-bind ((SimpleError (lambda (e) (return-from b 'outer))))
+        (handler-bind ((SimpleError (lambda (e) (return-from b 'inner))))
           (signal (make-simple-error "foo")))))
     'inner)
 
   (deftest handler-bind.resignal
     (block b
-      (handler-bind ((simple-error (lambda (e) (return-from b 'outer))))
-        (handler-bind ((simple-error (lambda (e) (signal e))))
+      (handler-bind ((SimpleError (lambda (e) (return-from b 'outer))))
+        (handler-bind ((SimpleError (lambda (e) (signal e))))
           (signal (make-simple-error "foo")))))
     'outer)
 
   (deftest handler-bind.firewall
     (block b
-      (handler-bind ((test-error (lambda (e) (return-from b 'outer))))
-        (handler-bind ((simple-error (lambda (e)
-                                       (signal (make-instance Test-error)))))
-          (handler-bind ((test-error (lambda (e) (return-from b 'inner))))
+      (handler-bind ((TestError (lambda (e) (return-from b 'outer))))
+        (handler-bind ((SimpleError (lambda (e)
+                                       (signal (make-instance TestError)))))
+          (handler-bind ((TestError (lambda (e) (return-from b 'inner))))
             (signal (make-simple-error "foo"))))))
     'outer)
 
   (deftest handler-bind.multiple.1
     (block b
-      (handler-bind ((test-error (lambda (e) (return-from b 'test)))
-                     (simple-error (lambda (e) (return-from b 'simple))))
+      (handler-bind ((TestError (lambda (e) (return-from b 'test)))
+                     (SimpleError (lambda (e) (return-from b 'simple))))
         (signal (make-simple-error "foo"))))
     'simple)
 
   (deftest handler-bind.multiple.2
     (block b
-      (handler-bind ((test-error (lambda (e) (return-from b 'test)))
-                     (simple-error (lambda (e) (return-from b 'simple))))
-        (signal (make-instance Test-error))))
+      (handler-bind ((TestError (lambda (e) (return-from b 'test)))
+                     (SimpleError (lambda (e) (return-from b 'simple))))
+        (signal (make-instance TestError))))
     'test)
 
   (deftest handler-bind.anything
     (block b
-      (handler-bind ((object (lambda (e) (return-from b e))))
+      (handler-bind ((Object (lambda (e) (return-from b e))))
         (signal "foo")))
     "foo"))
 
 (defsuite handler-case
 
-  (defclass test-error (error) ())
+  (defclass TestError (Error) ())
+  (def test-error TestError)
 
   (deftest handler-case.0
     (signals-error
      (handler-case)
-     match-error))
+     MatchError))
 
   (deftest handler-case.0b
     (handler-case ())
@@ -114,54 +115,54 @@
     3)
 
   (deftest handler-case.2
-    (handler-case ((simple-error (lambda (e) 'whatever)))
+    (handler-case ((SimpleError (lambda (e) 'whatever)))
       1 2 (+ 1 2))
     3)
 
   (deftest handler-case.3
-    (handler-case ((simple-error (lambda (e) 'whatever))
-                   (test-error (lambda (e) 'whatever)))
+    (handler-case ((SimpleError (lambda (e) 'whatever))
+                   (TestError (lambda (e) 'whatever)))
       1 2 (+ 1 2))
     3)
 
   (deftest handler-case.no-handler
-    (handler-case ((test-error (lambda (e) 'whatever)))
+    (handler-case ((TestError (lambda (e) 'whatever)))
       (signal (make-simple-error "foo")))
     #inert)
 
   (deftest handler-case.handled
-    (handler-case ((simple-error (lambda (e)
+    (handler-case ((SimpleError (lambda (e)
                                    (assert (= "foo" (slot-value e 'message)))
                                    'whatever)))
       (signal (make-simple-error "foo")))
     'whatever)
 
   (deftest handler-case.nested
-    (handler-case ((simple-error (lambda (e) 'outer)))
-      (handler-case ((simple-error (lambda (e) 'inner)))
+    (handler-case ((SimpleError (lambda (e) 'outer)))
+      (handler-case ((SimpleError (lambda (e) 'inner)))
         (signal (make-simple-error "foo"))))
     'inner)
 
   (deftest handler-case.resignal
-    (handler-case ((simple-error (lambda (e) 'outer)))
-      (handler-case ((simple-error (lambda (e) (signal e))))
+    (handler-case ((SimpleError (lambda (e) 'outer)))
+      (handler-case ((SimpleError (lambda (e) (signal e))))
         (signal (make-simple-error "foo"))))
     'outer)
 
   (deftest handler-case.multiple.1
-    (handler-case ((test-error (lambda (e) 'test))
-                   (simple-error (lambda (e) 'simple)))
+    (handler-case ((TestError (lambda (e) 'test))
+                   (SimpleError (lambda (e) 'simple)))
       (signal (make-simple-error "foo")))
     'simple)
 
   (deftest handler-case.multiple.2
-    (handler-case ((test-error (lambda (e) 'test))
-                   (simple-error (lambda (e) 'simple)))
-      (signal (make-instance Test-error)))
+    (handler-case ((TestError (lambda (e) 'test))
+                   (SimpleError (lambda (e) 'simple)))
+      (signal (make-instance TestError)))
     'test)
 
   (deftest handler-case.anything
-    (handler-case ((object (lambda (e) e)))
+    (handler-case ((Object (lambda (e) e)))
       (signal "foo"))
     "foo"))
 
@@ -170,7 +171,7 @@
   (deftest restart-bind.0
     (signals-error
      (restart-bind)
-     match-error))
+     MatchError))
 
   (deftest restart-bind.0b
     (restart-bind ())
@@ -195,24 +196,24 @@
   (deftest restart-bind.no-handler.1
     (signals-error
      (invoke-restart 'continue)
-     restart-error :restart-name 'continue))
+     RestartError :restart-name 'continue))
 
   (deftest restart-bind.no-handler.2
     (signals-error
      (restart-bind ((continue (lambda () 'whatever)))
        (invoke-restart 'abort))
-     restart-error :restart-name 'abort))
+     RestartError :restart-name 'abort))
 
   (deftest restart-bind.no-handler.1a
     (signals-error
      (invoke-restart-interactively 'continue)
-     restart-error :restart-name 'continue))
+     RestartError :restart-name 'continue))
 
   (deftest restart-bind.no-handler.2a
     (signals-error
      (restart-bind ((continue (lambda () 'whatever)))
        (invoke-restart-interactively 'abort))
-     restart-error :restart-name 'abort))
+     RestartError :restart-name 'abort))
 
   (deftest restart-bind.no-exit.1
     (restart-bind ((continue (lambda () 'whatever)))
@@ -276,7 +277,7 @@
   (deftest restart-case.0
     (signals-error
      (restart-case)
-     match-error))
+     MatchError))
 
   (deftest restart-case.0b
     (restart-case ())
@@ -301,13 +302,13 @@
   (deftest restart-case.no-handler.1
     (signals-error
      (invoke-restart 'continue)
-     restart-error :restart-name 'continue))
+     RestartError :restart-name 'continue))
 
   (deftest restart-case.no-handler.2
     (signals-error
      (restart-case ((continue (lambda () 'whatever)))
        (invoke-restart 'abort))
-     restart-error :restart-name 'abort))
+     RestartError :restart-name 'abort))
 
   (deftest restart-case.no-exit.1
     (restart-case ((continue (lambda () 'whatever)))
@@ -379,7 +380,7 @@
   (deftest find-restart?.0
     (signals-error
      (find-restart?)
-     match-error))
+     MatchError))
 
   (deftest find-restart?.1
     (find-restart? 'foo)
@@ -553,7 +554,7 @@
   (deftest signal.0
     (signals-error
      (signal)
-     match-error))
+     MatchError))
 
   (deftest signal.1
     (signal (make-simple-error "foo"))
@@ -561,11 +562,11 @@
 
   (deftest signal.2
     (signals-error
-     (signal (make-instance Standard-object :x 1 :y 2))
-     standard-object :x 1 :y 2))
+     (signal (make-instance StandardObject :x 1 :y 2))
+     StandardObject :x 1 :y 2))
 
   (deftest signal.3
-    (handler-bind ((simple-error (lambda (e)
+    (handler-bind ((SimpleError (lambda (e)
                                    (invoke-restart 'continue 12))))
       (signal (make-simple-error "Foo!")
         (abort (lambda (value) (* value 10)))
@@ -573,7 +574,7 @@
     24)
 
   (deftest signal.3b
-    (handler-bind ((simple-error (lambda (e)
+    (handler-bind ((SimpleError (lambda (e)
                                    (invoke-restart 'abort 12))))
       (signal (make-simple-error "Foo!")
         (abort (lambda (value) (* value 10)))
@@ -582,7 +583,7 @@
 
   (deftest signal.4
     (restart-case ((abort (lambda (value) (* 1000 value))))
-      (handler-bind ((simple-error (lambda (e)
+      (handler-bind ((SimpleError (lambda (e)
                                      (invoke-restart 'abort 12))))
         ;; Silly?  Yeah, probably.
         (signal (signal (make-simple-error "Foo!"))
@@ -593,7 +594,7 @@
   (deftest signal.4b
     (block b
       (restart-case ((abort (lambda (value) (* 1000 value))))
-        (handler-bind ((simple-error (lambda (e)
+        (handler-bind ((SimpleError (lambda (e)
                                        (invoke-restart 'abort 12))))
           (signal (signal (make-simple-error "Foo!")
                     (abort (lambda (value) (return-from b (* 10000 value)))))
@@ -606,7 +607,7 @@
   (deftest signal.associations
     (dolist (signal-operator (list signal error) #t)
       (block ok ; so that the test doesn't fail when testing `error'.
-        (handler-bind ((simple-error
+        (handler-bind ((SimpleError
                         (lambda (e)
                           (let* ((handler (optional (find-restart? 'r e)))
                                  (a-cs (slot-value handler 'associated-conditions)))
@@ -620,12 +621,12 @@
   (deftest invoke-restart.0
     (signals-error
      (invoke-restart)
-     match-error))
+     MatchError))
 
   (deftest invoke-restart.1
     (signals-error
      (invoke-restart "foo")
-     type-error :datum "foo")))
+     TypeError :datum "foo")))
 
 (defsuite invoke-restart-interactively
 
@@ -656,39 +657,39 @@
      (restart-bind ((r1 (lambda (arg1 arg2) (+ arg1 arg2))
                         :interactive-function (lambda () '())))
        (invoke-restart-interactively 'r1))
-     match-error))
+     MatchError))
 
   (deftest invoke-restart-interactively.3
     (signals-error
      (restart-bind ((r1 (lambda (arg1) arg1)
                         :interactive-function (lambda () '(1 2 3))))
        (invoke-restart-interactively 'r1))
-     match-error)))
+     MatchError)))
 
 (defsuite |Condition Handling in the Lisp Language Family|
   ;; Adapted from https://www.nhplace.com/kent/Papers/Condition-Handling-2001.html
 
-  (defclass unbound-variable (error) (name))
+  (defclass UnboundVariable (Error) (name))
 
   (deftest* firewall.1
     (let ((result
-           (handler-case ((unbound-variable (lambda (c) (list 'outer c))))
-             (handler-bind ((error (lambda (#ignore)
-                                     (error (make-instance Unbound-variable :name 'fred)))))
-               (handler-case ((unbound-variable (lambda (c) (list 'inner c))))
+           (handler-case ((UnboundVariable (lambda (c) (list 'outer c))))
+             (handler-bind ((Error (lambda (#ignore)
+                                     (error (make-instance UnboundVariable :name 'fred)))))
+               (handler-case ((UnboundVariable (lambda (c) (list 'inner c))))
                  ;; Signal an arbitrary error:
                  (simple-error "Not an UNBOUND-VARIABLE error."))))))
       (assert (and (eq (car result) 'outer)
-                   (typep (cadr result) Unbound-variable)
+                   (typep (cadr result) UnboundVariable)
                    (eq (slot-value (cadr result) 'name) 'fred)))))
 
   (deftest* firewall.2
     (let ((result
-           (handler-case ((unbound-variable (lambda (c) (list 'outer c))))
-             (handler-bind ((error (lambda (#ignore)
-                                     (error (make-instance Unbound-variable :name 'fred)))))
-               (handler-case ((unbound-variable (lambda (c) (list 'inner c))))
-                 (error (make-instance Unbound-variable :name 'marvin)))))))
+           (handler-case ((UnboundVariable (lambda (c) (list 'outer c))))
+             (handler-bind ((Error (lambda (#ignore)
+                                     (error (make-instance UnboundVariable :name 'fred)))))
+               (handler-case ((UnboundVariable (lambda (c) (list 'inner c))))
+                 (error (make-instance UnboundVariable :name 'marvin)))))))
       (assert (and (eq (car result) 'inner)
-                   (typep (cadr result) Unbound-variable)
+                   (typep (cadr result) UnboundVariable)
                    (eq (slot-value (cadr result) 'name) 'marvin))))))

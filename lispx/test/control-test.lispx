@@ -14,13 +14,13 @@
 (defconstant +fiber-prompt+ 'fiber-prompt
   "The prompt used for delimiting fibers.")
 
-(defclass yield-record ()
+(defclass YieldRecord ()
   (value continuation)
   (:documentation "Instances of this class are yielded."))
 
 (defun make-yield-record (v k)
   "Create a new yield record with the given yielded value and resume continuation."
-  (make-instance Yield-record :value v :continuation k))
+  (make-instance YieldRecord :value v :continuation k))
 
 (defun fiber-yield v?
   "Yield a value (which defaults to void)."
@@ -40,7 +40,7 @@
   "Get all values yielded by a fiber, and its final result, and
   |collect them in a list."
   (loop-let -run- ((result (fiber (thunk))))
-    (if (typep result Yield-record)
+    (if (typep result YieldRecord)
         (cons (slot-value result 'value) (-run- (fiber-resume result)))
         (list result))))
 
@@ -48,7 +48,7 @@
   "Like `run-fiber' but uses a list of values that are sent to the
   |fiber with `fiber-resume'."
   (loop-let -run- ((result (fiber (thunk))) (values values))
-    (if (typep result Yield-record)
+    (if (typep result YieldRecord)
         (cons (slot-value result 'value)
               (-run- (fiber-resume result (car values)) (cdr values)))
         (list result))))
@@ -62,7 +62,7 @@
   (deftest fiber.2
     (progn
       (def yield-record (fiber 1 2 (+ (fiber-yield (= 1 1)) 3)))
-      (assert (typep yield-record Yield-record))
+      (assert (typep yield-record YieldRecord))
       (assert (= #t (slot-value yield-record 'value)))
       (assert (= 33 (fiber-resume yield-record 30))))
     #inert)
@@ -369,7 +369,7 @@
   (deftest push-prompt.1
     (signals-error
      (push-prompt)
-     match-error))
+     MatchError))
 
   (deftest push-prompt.2
     (push-prompt 'p)
@@ -409,22 +409,22 @@
   (deftest take-subcont.1
     (signals-error
      (take-subcont)
-     match-error))
+     MatchError))
 
   (deftest take-subcont.2
     (signals-error
      (take-subcont 'p)
-     match-error))
+     MatchError))
 
   (deftest take-subcont.3
     (signals-error
      (take-subcont 'p #ignore)
-     prompt-not-found-error :prompt 'p))
+     PromptNotFoundError :prompt 'p))
 
   (deftest take-subcont.4
     (signals-error
      (push-prompt 'p (take-subcont 'q #ignore))
-     prompt-not-found-error :prompt 'q))
+     PromptNotFoundError :prompt 'q))
 
   (deftest take-subcont.5
     (push-prompt 'p (take-subcont 'p #ignore))
@@ -443,17 +443,17 @@
   (deftest push-delim-subcont.1
     (signals-error
      (push-delim-subcont)
-     match-error))
+     MatchError))
 
   (deftest push-delim-subcont.2
     (signals-error
      (push-delim-subcont 'p)
-     match-error))
+     MatchError))
 
   (deftest push-delim-subcont.3
     (signals-error
      (push-delim-subcont 'p 12)
-     type-error :datum 12))
+     TypeError :datum 12))
 
   (deftest push-delim-subcont.4
     (let ((k (push-prompt 'p (+ 100 (take-subcont 'p k k)))))
@@ -473,7 +473,7 @@
   (deftest prompt-set-p.1
     (signals-error
      (prompt-set-p)
-     match-error))
+     MatchError))
 
   (deftest prompt-set-p.2
     (prompt-set-p 'p)
@@ -489,14 +489,14 @@
     (signals-error
      (push-subcont-barrier
       (take-subcont 'p1 sk))
-     prompt-not-found-error :prompt 'p1))
+     PromptNotFoundError :prompt 'p1))
 
   (deftest push-subcont-barrier.2
     (signals-error
      (push-prompt 'p1
        (push-subcont-barrier
          (take-subcont 'p1 sk)))
-     prompt-not-found-error :prompt 'p1)))
+     PromptNotFoundError :prompt 'p1)))
 
 (defsuite dynamics
 
@@ -556,9 +556,9 @@
       (assert (= (dynamic *foo*) #inert))
       (assert (= (slot-value *foo* 'value) #inert))
       (assert (typep *foo* Dynamic))
-      (assert (typep *foo* Standard-object))
+      (assert (typep *foo* StandardObject))
       (assert (typep *foo* Object))
-      (assert (subclassp Dynamic Standard-object))
+      (assert (subclassp Dynamic StandardObject))
       (assert (subclassp Dynamic Object)))
     #inert)
 
@@ -636,7 +636,7 @@
   (deftest catch.1
     (signals-error
      (catch)
-     match-error))
+     MatchError))
 
   (deftest catch.2
     (catch 'x)
@@ -675,7 +675,7 @@
   (deftest block.1
     (signals-error
      (block)
-     match-error))
+     MatchError))
 
   (deftest block.2
     (block x)
@@ -714,7 +714,7 @@
   (deftest unwind-protect.1
     (signals-error
      (unwind-protect)
-     match-error))
+     MatchError))
 
   (deftest unwind-protect.2
     (unwind-protect (= 1 1))

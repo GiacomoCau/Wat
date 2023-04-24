@@ -87,14 +87,14 @@
 ;; 3) Every restart must have a non-nil name; anonymous restarts
 ;;    are not supported.
 
-(defclass handler-frame ()
+(defclass HandlerFrame ()
   (handlers
    parent-frame?)
   (:documentation "Instances of this class make up the condition and
   |restart handler chains.  Each frame stores a list of HANDLERS and an
   |optional PARENT-FRAME?."))
 
-(defclass condition-handler ()
+(defclass ConditionHandler ()
   (condition-class
    handler-function)
   (:documentation "A condition handler is handling a particular
@@ -102,7 +102,7 @@
   |HANDLER-FUNCTION receives a signalled condition as its single
   |argument."))
 
-(defclass restart-handler ()
+(defclass RestartHandler ()
   (restart-name
    handler-function
    interactive-function?
@@ -131,7 +131,7 @@
   |its value, so it can be used with `progv')."
   (vau (handler-specs . forms) env
     (let ((handler-frame (make-instance
-                          handler-frame
+                          HandlerFrame
                           :handlers (mapcar (lambda (spec)
                                               (handler-spec-parser spec env))
                                             handler-specs)
@@ -142,11 +142,11 @@
 (def handler-bind
   (lispx::make-handler-bind-operator
    (lambda ((class-name function-form) env)
-     (make-instance \Condition-handler
+     (make-instance ConditionHandler
                     :condition-class
-                    (the class (find-class class-name env))
+                    (the Class (find-class class-name env))
                     :handler-function
-                    (the function (eval function-form env))))
+                    (the Function (eval function-form env))))
    *condition-handler-frame?*)
   "Establish condition handlers specified by HANDLER-SPECS around FORMS.
   |$(type fexpr)
@@ -156,17 +156,17 @@
 (def restart-bind
   (lispx::make-handler-bind-operator
    (lambda ((restart-name function-form . properties) env)
-     (make-instance \Restart-handler
+     (make-instance RestartHandler
                     :restart-name
-                    (the symbol restart-name)
+                    (the Symbol restart-name)
                     :handler-function
-                    (the function (eval function-form env))
+                    (the Function (eval function-form env))
                     :interactive-function?
                     (when-option (i-f-form (get? properties :interactive-function))
-                      (some (the function (eval i-f-form env))))
+                      (some (the Function (eval i-f-form env))))
                     :associated-conditions
                     (when-option (a-cs-form (get? properties :associated-conditions))
-                      (the list (eval a-cs-form env)))))
+                      (the List (eval a-cs-form env)))))
    *restart-handler-frame?*)
   "Establish restart handlers specified by HANDLER-SPECS around FORMS.
   |You should usually prefer `restart-case'.
@@ -298,11 +298,11 @@
   |which can be a symbol or a `restart-handler', with an arguments list
   |produced by FUNCTION (which receives a `restart-handler' as argument)."
   (etypecase restart-designator
-    (symbol
+    (Symbol
      (if-option (restart-handler (find-restart? restart-designator))
        (lispx::apply-handler-function restart-handler (function restart-handler))
        (error (make-restart-error restart-designator))))
-    (restart-handler
+    (RestartHandler
      (lispx::apply-handler-function restart-designator (function restart-designator)))))
 
 (defun lispx::find-handler? (object handler-frame? payload?)
@@ -341,12 +341,12 @@
   |restart name.  The PAYLOAD? is only used for restart handlers, and
   |always nil for condition handlers."))
 
-(defmethod lispx::handler-applicable-p ((handler condition-handler) condition #null)
+(defmethod lispx::handler-applicable-p ((handler ConditionHandler) condition)
   "A condition handler is applicable if the condition is an instance
   |of its condition class."
   (typep condition (slot-value handler 'condition-class)))
 
-(defmethod lispx::handler-applicable-p ((handler restart-handler) restart-name condition?)
+(defmethod lispx::handler-applicable-p ((handler RestartHandler) restart-name condition?)
   "A restart handler is applicable to a restart name and optional condition..."
   ;; ...if the restart name matches the handler's restart name, and...
   (and (eq restart-name (slot-value handler 'restart-name))
@@ -387,21 +387,21 @@
                           (slot-value handler-frame 'parent-frame?))
       restarts)))
 
-(defclass restart-error (error)
+(defclass RestartError (Error)
   (restart-name)
   (:documentation "Signalled when no handler for RESTART-NAME is found."))
 
 (defun make-restart-error (restart-name)
   "Create a new `restart-error' for the given RESTART-NAME."
-  (make-instance \Restart-error :restart-name restart-name))
+  (make-instance RestartError :restart-name restart-name))
 
-(defclass simple-error (error)
+(defclass SimpleError (Error)
   (message)
   (:documentation "Class for simple errors with a MESSAGE."))
 
 (defun make-simple-error (message)
   "Create a new simple error with a MESSAGE."
-  (make-instance \Simple-error :message message))
+  (make-instance SimpleError :message message))
 
 (defun simple-error (message)
   "Signal a simple error with a MESSAGE."

@@ -25,7 +25,7 @@
 (defun prompt-set-p (prompt)
   "Return true if a prompt is set, false otherwise.
   |(Note that this leads to stack growth, i.e. leaks.)"
-  (handler-case ((prompt-not-found-error (lambda #ignore #f)))
+  (handler-case ((PromptNotFoundError (lambda #ignore #f)))
     (take-subcont prompt k (push-delim-subcont prompt k #t))))
 
 ;; The actual tests.
@@ -72,7 +72,7 @@
          (+ (abort-subcont 'p 7)
             10))
        (abort-subcont 'p 9))
-     prompt-not-found-error :prompt 'p))
+     PromptNotFoundError :prompt 'p))
 
   (deftest test4
     (+ (push-prompt 'p

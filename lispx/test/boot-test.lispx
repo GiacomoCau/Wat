@@ -8,39 +8,39 @@
   (deftest |SIGNALS-ERROR returns true if the expression signals.|
     (signals-error
      x
-     unbound-symbol-error))
+     UnboundSymbolError))
 
   (deftest |SIGNALS-ERROR returns true if the expression signals a subclass.|
     (signals-error
      x
-     error))
+     Error))
 
   (deftest |SIGNALS-ERROR returns true if the expression signals and slots match.|
     (signals-error
      x
-     unbound-symbol-error :symbol 'x))
+     UnboundSymbolError :symbol 'x))
 
   (deftest |SIGNALS-ERROR returns true if the expression signals a subclass and slots match.|
     (signals-error
      x
-     error :symbol 'x))
+     Error :symbol 'x))
 
   (deftest |SIGNALS-ERROR returns false if the expression signals but slots don't match.|
     (signals-error
      x
-     unbound-symbol-error :symbol 'y)
+     UnboundSymbolError :symbol 'y)
     #f)
 
   (deftest |SIGNALS-ERROR returns false if the expression doesn't signal.|
     (signals-error
      1
-     error)
+     Error)
     #f)
 
   (deftest |SIGNALS-ERROR returns false if the expression signals another condition type.|
     (signals-error
      x
-     match-error)
+     MatchError)
     #f))
 
 (defsuite assert
@@ -52,37 +52,37 @@
   (deftest assert.2
     (signals-error
      (assert (= 1 2))
-     assertion-error))
+     AssertionError))
 
   (deftest assert.3
     (signals-error
      (assert)
-     match-error))
+     MatchError))
 
   (deftest assert.4
     (signals-error
      (assert 1)
-     type-error :datum 1 :expected-type 'boolean))
+     TypeError :datum 1 :expected-type 'Boolean))
 
   (deftest assert.5
     (signals-error
      (assert #t #t)
-     match-error)))
+     MatchError)))
 
 (defsuite error
 
   (deftest error.1
     (signals-error
-     (error (make-instance Standard-object :x 1 :y 2))
-     standard-object :x 1 :y 2))
+     (error (make-instance StandardObject :x 1 :y 2))
+     StandardObject :x 1 :y 2))
 
   (deftest error.2
     (signals-error
      (error)
-     match-error))
+     MatchError))
 
   (deftest error.3
-    (handler-bind ((simple-error (lambda (e)
+    (handler-bind ((SimpleError (lambda (e)
                                    (invoke-restart 'continue 12))))
       (error (make-simple-error "Foo!")
         (abort (lambda (value) (* value 10)))
@@ -90,7 +90,7 @@
     24)
 
   (deftest error.3b
-    (handler-bind ((simple-error (lambda (e)
+    (handler-bind ((SimpleError (lambda (e)
                                    (invoke-restart 'abort 12))))
       (error (make-simple-error "Foo!")
         (abort (lambda (value) (* value 10)))
@@ -99,7 +99,7 @@
 
   (deftest error.4
     (restart-case ((abort (lambda (value) (* 1000 value))))
-      (handler-bind ((simple-error (lambda (e)
+      (handler-bind ((SimpleError (lambda (e)
                                      (invoke-restart 'abort 12))))
         (error (error (make-simple-error "Foo!"))
           (abort (lambda (value) (* value 10)))
@@ -109,7 +109,7 @@
   (deftest error.4b
     (block b
       (restart-case ((abort (lambda (value) (* 1000 value))))
-        (handler-bind ((simple-error (lambda (e)
+        (handler-bind ((SimpleError (lambda (e)
                                        (invoke-restart 'abort 12))))
           (error (error (make-simple-error "Foo!")
                    (abort (lambda (value) (return-from b (* 10000 value)))))
@@ -125,65 +125,65 @@
   (deftest assert-type.2
     (signals-error
      (assert-type #t String)
-    type-error :datum #t :expected-type 'string))
+    TypeError :datum #t :expected-type 'String))
 
   (deftest assert-type.3
     (signals-error
      (assert-type #t #f)
-     type-error :datum #f :expected-type 'class))
+     TypeError :datum #f :expected-type 'Class))
 
   (deftest assert-type.4
     (signals-error
      (assert-type)
-     match-error))
+     MatchError))
 
   (deftest assert-type.5
     (signals-error
      (assert-type #t)
-     match-error)))
+     MatchError)))
 
 (defsuite the
 
   (deftest the.1
-    (the boolean (= 1 1))
+    (the Boolean (= 1 1))
     #t)
 
   (deftest the.2
     (signals-error
-     (the string #t)
-     type-error :datum #t :expected-type 'string))
+     (the String #t)
+     TypeError :datum #t :expected-type 'String))
 
   (deftest the.3
     (signals-error
      (the #t #f)
-     type-error :datum #t :expected-type 'symbol))
+     TypeError :datum #t :expected-type 'Symbol))
 
   (deftest the.4
     (signals-error
      (the)
-     match-error))
+     MatchError))
 
   (deftest the.5
     (signals-error
      (the #t)
-     match-error)))
+     MatchError)))
 
 (defsuite make-type-error
 
   (deftest make-type-error.1
-    (let ((e (make-type-error "foo" 'number)))
-      (assert (typep e Type-error))
+    (let ((e (make-type-error "foo" 'Number)))
+      (assert (typep e TypeError))
       (assert (typep e Error))
       (assert (typep e Condition))
       (assert (= "foo" (slot-value e 'datum)))
-      (assert (= 'number (slot-value e 'expected-type))))
+      (assert (= 'Number (slot-value e 'expected-type))))
     #inert))
 
 (defsuite simple-error
 
   (deftest make-simple-error.1
     (let ((e (make-simple-error "foo")))
-      (assert (typep e Simple-error))
+      (assert (typep e SimpleError))
       (assert (typep e Error))
       (assert (typep e Condition))
       (assert (= "foo" (slot-value e 'message))))
@@ -192,18 +192,18 @@
   (deftest simple-error.1
     (signals-error
      (simple-error)
-     match-error))
+     MatchError))
 
   (deftest simple-error.2
     (signals-error
      (simple-error "foo")
-     simple-error :message "foo")))
+     SimpleError :message "foo")))
 
 (defsuite make-restart-error
 
   (deftest make-restart-error.1
     (let ((e (make-restart-error 'continue)))
-      (assert (typep e Restart-error))
+      (assert (typep e RestartError))
       (assert (typep e Error))
       (assert (typep e Condition))
       (assert (= 'continue (slot-value e 'restart-name))))
@@ -243,12 +243,12 @@
   (deftest |Arity check 1.|
     (signals-error
      (vau)
-     match-error))
+     MatchError))
 
   (deftest |Arity check 2.|
     (signals-error
      (vau x)
-     match-error)))
+     MatchError)))
 
 (defsuite quote
 
@@ -258,7 +258,7 @@
      (eq 'foo 'foo)
      (eq 'foo (function-symbol 'foo))
      (eq 'Foo 'Foo)
-     (eq 'Foo (class-symbol 'foo))))
+     (eq 'Foo (class-symbol 'Foo))))
 
   (deftest |Ordinary symbols can be quoted.|
     (eq 'foo (variable-symbol 'foo)))
@@ -267,7 +267,7 @@
     (eq 'foo (function-symbol 'foo)))
 
   (deftest |Class symbols can be quoted.|
-    (eq 'Foo (class-symbol 'foo)))
+    (eq 'Foo (class-symbol 'Foo)))
 
   (deftest |Lists can be quoted.|
     (= '(1 2 3) (list 1 2 3)))
@@ -281,12 +281,12 @@
   (deftest |QUOTE requires at least one argument.|
     (signals-error
      (quote)
-     match-error))
+     MatchError))
 
   (deftest |QUOTE requires at most one argument.|
     (signals-error
      (quote 1 2 3)
-     match-error)))
+     MatchError)))
 
 (defsuite list
 
@@ -343,7 +343,7 @@
   (deftest the-environment.4
     (signals-error
      (the-environment #t)
-     match-error)))
+     MatchError)))
 
 (defsuite boundp
 
@@ -355,32 +355,32 @@
     (boundp 'defun (the-environment)))
 
   (deftest boundp.3
-    (boundp 'Standard-object (the-environment)))
+    (boundp 'StandardObject (the-environment)))
 
   (deftest boundp.4
     (signals-error
      (boundp)
-     match-error))
+     MatchError))
 
   (deftest boundp.5
     (signals-error
      (boundp 'x)
-     match-error))
+     MatchError))
 
   (deftest boundp.6
     (signals-error
      (boundp 12 (the-environment))
-     type-error :datum 12 :expected-type 'symbol))
+     TypeError :datum 12 :expected-type 'Symbol))
 
   (deftest boundp.7
     (signals-error
      (boundp 'x 33)
-     type-error :datum 33 :expected-type 'environment))
+     TypeError :datum 33 :expected-type 'Environment))
 
   (deftest boundp.8
     (signals-error
      (boundp 12 (the-environment) #t)
-     match-error)))
+     MatchError)))
 
 (defsuite macro
 
@@ -400,7 +400,7 @@
   (deftest macro.3
     (signals-error
      (macro)
-     match-error)
+     MatchError)
     #t))
 
 (defsuite defmacro
@@ -415,12 +415,12 @@
   (deftest defmacro.2
     (signals-error
      (defmacro)
-     match-error))
+     MatchError))
 
   (deftest defmacro.3
     (signals-error
      (defmacro foo)
-     match-error))
+     MatchError))
 
   (deftest defmacro.4
     (progn
@@ -440,17 +440,17 @@
   (deftest defexpr.2
     (signals-error
      (defexpr)
-     match-error))
+     MatchError))
 
   (deftest defexpr.3
     (signals-error
      (defexpr foo)
-     match-error))
+     MatchError))
 
   (deftest defexpr.3b
     (signals-error
      (defexpr foo ())
-     match-error))
+     MatchError))
 
   (deftest defexpr.4
     (progn
@@ -475,7 +475,7 @@
   (deftest def.2b
     (signals-error
      (def :key :key2)
-     match-error :definiend :key :value :key2))
+     MatchError :definiend :key :value :key2))
 
   (deftest def.3
     (def #ignore 2)
@@ -492,17 +492,17 @@
   (deftest def.6
     (signals-error
      (def)
-     match-error))
+     MatchError))
 
   (deftest def.7
     (signals-error
      (def x)
-     match-error))
+     MatchError))
 
   (deftest def.8
     (signals-error
      (def #t 12)
-     type-error :datum #t :expected-type '(or symbol ignore list)))
+     TypeError :datum #t :expected-type '(or Symbol Ignore List)))
 
   (deftest def.9
     (def x 1 "docstring")
@@ -519,12 +519,12 @@
   (deftest defconstant.2
     (signals-error
      (defconstant)
-     match-error))
+     MatchError))
 
   (deftest defconstant.3
     (signals-error
      (defconstant x)
-     match-error))
+     MatchError))
 
   (deftest defconstant.4
     (progn
@@ -549,12 +549,12 @@
   (deftest lambda.3
     (signals-error
      (lambda)
-     match-error))
+     MatchError))
 
   (deftest lambda.4
     (signals-error
      ((lambda #t))
-     type-error :datum #t :expected-type '(or symbol ignore list))))
+     TypeError :datum #t :expected-type '(or Symbol Ignore List))))
 
 (defsuite defun
 
@@ -574,17 +574,17 @@
   (deftest defun.3
     (signals-error
      (defun)
-     match-error))
+     MatchError))
 
   (deftest defun.4
     (signals-error
      (defun foo)
-     match-error))
+     MatchError))
 
   (deftest defun.5
     (signals-error
      (defun #t ())
-     type-error :datum #t :expected-type 'symbol))
+     TypeError :datum #t :expected-type 'Symbol))
 
   (deftest defun.6
     (typep (defun foo ()) Function)))
@@ -618,7 +618,7 @@
   (deftest prog1.3
     (signals-error
      (prog1)
-     match-error))
+     MatchError))
 
   (deftest prog1.4
     (progn
@@ -640,23 +640,23 @@
   (deftest eval.3
     (signals-error
      (eval)
-     match-error))
+     MatchError))
 
   (deftest eval.4
     (signals-error
      (eval '1)
-     match-error))
+     MatchError))
 
   (deftest eval.5
     (signals-error
      (eval 'x (the-environment))
-     unbound-symbol-error
+     UnboundSymbolError
      :symbol 'x))
 
   (deftest eval.6
     (signals-error
      (eval '1 (the-environment) #t)
-     match-error)))
+     MatchError)))
 
 (defsuite cons
 
@@ -671,17 +671,17 @@
   (deftest cons.3
     (signals-error
      (cons)
-     match-error))
+     MatchError))
 
   (deftest cons.4
     (signals-error
      (cons 1)
-     match-error))
+     MatchError))
 
   (deftest cons.5
     (signals-error
      (cons 1 2 3)
-     match-error)))
+     MatchError)))
 
 (defsuite car
 
@@ -692,17 +692,17 @@
   (deftest car.2
     (signals-error
      (car)
-     match-error))
+     MatchError))
 
   (deftest car.3
     (signals-error
      (car 1)
-     type-error :datum 1 :expected-type 'cons))
+     TypeError :datum 1 :expected-type 'Cons))
 
   (deftest car.4
     (signals-error
      (car 1 2)
-     match-error)))
+     MatchError)))
 
 (defsuite cdr
 
@@ -713,17 +713,17 @@
   (deftest cdr.2
     (signals-error
      (cdr)
-     match-error))
+     MatchError))
 
   (deftest cdr.3
     (signals-error
      (cdr 1)
-     type-error :datum 1 :expected-type 'cons))
+     TypeError :datum 1 :expected-type 'Cons))
 
   (deftest car.4
     (signals-error
      (cdr 1 2)
-     match-error)))
+     MatchError)))
 
 (defsuite symbol-name
 
@@ -742,12 +742,12 @@
   (deftest symbol-name.5
     (signals-error
      (symbol-name)
-     match-error))
+     MatchError))
 
   (deftest symbol-name.6
     (signals-error
      (symbol-name 12)
-     type-error :datum 12 :expected-type 'symbol)))
+     TypeError :datum 12 :expected-type 'Symbol)))
 
 (defsuite variable-symbol
 
@@ -766,12 +766,12 @@
   (deftest variable-symbol.5
     (signals-error
      (variable-symbol)
-     match-error))
+     MatchError))
 
   (deftest variable-symbol.6
     (signals-error
      (variable-symbol 5)
-     type-error :datum 5 :expected-type 'symbol)))
+     TypeError :datum 5 :expected-type 'Symbol)))
 
 (defsuite function-symbol
 
@@ -790,12 +790,12 @@
   (deftest function-symbol.5
     (signals-error
      (function-symbol)
-     match-error))
+     MatchError))
 
   (deftest function-symbol.6
     (signals-error
      (function-symbol 5)
-     type-error :datum 5 :expected-type 'symbol)))
+     TypeError :datum 5 :expected-type 'Symbol)))
 
 (defsuite class-symbol
 
@@ -808,18 +808,18 @@
     (class-symbol 'foo))
 
   (deftest class-symbol.3
-    (class-symbol 'foo)
-    (class-symbol 'foo))
+    (class-symbol 'Foo)
+    (class-symbol 'Foo))
 
   (deftest class-symbol.5
     (signals-error
      (class-symbol)
-     match-error))
+     MatchError))
 
   (deftest class-symbol.6
     (signals-error
      (class-symbol 5)
-     type-error :datum 5 :expected-type 'symbol)))
+     TypeError :datum 5 :expected-type 'Symbol)))
 
 (defsuite keyword-symbol
 
@@ -838,12 +838,12 @@
   (deftest keyword-symbol.5
     (signals-error
      (keyword-symbol)
-     match-error))
+     MatchError))
 
   (deftest keyword-symbol.6
     (signals-error
      (keyword-symbol 5)
-     type-error :datum 5 :expected-type 'symbol)))
+     TypeError :datum 5 :expected-type 'Symbol)))
 
 (defsuite wrap
 
@@ -854,12 +854,12 @@
   (deftest wrap.2
     (signals-error
      (wrap)
-     match-error))
+     MatchError))
 
   (deftest wrap.3
     (signals-error
      (wrap 33)
-     type-error :datum 33 :expected-type 'operator)))
+     TypeError :datum 33 :expected-type 'Operator)))
 
 (defsuite unwrap
 
@@ -870,12 +870,12 @@
   (deftest unwrap.2
     (signals-error
      (unwrap)
-     match-error))
+     MatchError))
 
   (deftest unwrap.3
     (signals-error
      (unwrap 33)
-     type-error :datum 33 :expected-type 'function)))
+     TypeError :datum 33 :expected-type 'Function)))
 
 (defsuite if
 
@@ -890,22 +890,22 @@
   (deftest if.3
     (signals-error
      (if)
-     match-error))
+     MatchError))
 
   (deftest if.4
     (signals-error
      (if #t)
-     match-error))
+     MatchError))
 
   (deftest if.5
     (signals-error
      (if #t #f)
-     match-error))
+     MatchError))
 
   (deftest if.6
     (signals-error
      (if 1 #f #t)
-     type-error :datum 1 :expected-type 'boolean)))
+     TypeError :datum 1 :expected-type 'Boolean)))
 
 (defsuite cond
 
@@ -925,14 +925,14 @@
   (deftest cond.4
     (signals-error
      (cond (1 #t))
-     type-error :datum 1 :expected-type 'boolean)))
+     TypeError :datum 1 :expected-type 'Boolean)))
 
 (defsuite typecase
 
   (deftest typecase.1
     (signals-error
      (typecase)
-     match-error))
+     MatchError))
 
   (deftest typecase.2
     (typecase (+ 2 2))
@@ -940,14 +940,14 @@
 
   (deftest typecase.3
     (typecase (+ 2 2)
-      (object 1)
-      (number 2))
+      (Object 1)
+      (Integer 2))
     1)
 
   (deftest typecase.4
     (typecase (+ 2 2)
-      (number 2)
-      (object 1))
+      (Integer 2)
+      (Object 1))
     2))
 
 (defsuite etypecase
@@ -955,31 +955,31 @@
   (deftest etypecase.1
     (signals-error
      (etypecase)
-     match-error))
+     MatchError))
 
   (deftest etypecase.2
     (signals-error
      (etypecase (+ 2 2))
-     type-error :datum 4))
+     TypeError :datum 4))
 
   (deftest etypecase.3
     (etypecase (+ 2 2)
-      (object 1)
-      (number 2))
+      (Object 1)
+      (Integer 2))
     1)
 
   (deftest etypecase.4
     (etypecase (+ 2 2)
-      (number 2)
-      (object 1))
+      (Integer 2)
+      (Object 1))
     2)
 
   (deftest etypecase.5
     (signals-error
      (etypecase (+ 2 2)
-       (string 2)
-       (boolean 1))
-     type-error :datum 4)))
+       (String 2)
+       (Boolean 1))
+     TypeError :datum 4)))
 
 (defsuite not
 
@@ -994,12 +994,12 @@
   (deftest not.3
     (signals-error
      (not)
-     match-error))
+     MatchError))
 
   (deftest not.4
     (signals-error
      (not 1)
-     type-error :datum 1 :expected-type 'boolean)))
+     TypeError :datum 1 :expected-type 'Boolean)))
 
 (defsuite eq
 
@@ -1042,12 +1042,12 @@
   (deftest eq.10
     (signals-error
      (eq)
-     match-error))
+     MatchError))
 
   (deftest eq.11
     (signals-error
      (eq 11)
-     match-error)))
+     MatchError)))
 
 (defsuite =
 
@@ -1078,12 +1078,12 @@
   (deftest =.7
     (signals-error
      (=)
-     match-error))
+     MatchError))
 
   (deftest =.8
     (signals-error
      (= 1)
-     match-error)))
+     MatchError)))
 
 (defsuite /=
 
@@ -1122,7 +1122,7 @@
   (deftest /=.7
     (signals-error
      (/=)
-     match-error))
+     MatchError))
 
   (deftest /=.8
     (/= 1)
@@ -1169,27 +1169,27 @@
   (deftest <.4
     (signals-error
      (< #t #t #f)
-    error))
+     Error))
 
   (deftest <.5
     (signals-error
      (< "foo" "foo" "foo")
-     error))
+     Error))
 
   (deftest <.6
     (signals-error
      (< (list (list 1)) (list (list 2)))
-     error))
+     Error))
 
   (deftest <.7
     (signals-error
      (<)
-     match-error))
+     MatchError))
 
   (deftest <.8
     (signals-error
      (< 1)
-     match-error))
+     MatchError))
 
   (deftest <.9
     (< 1 2 3 3)
@@ -1198,7 +1198,7 @@
   (deftest <.different-types
     (signals-error
      (< 1 2 3 "foo")
-     type-error :datum "foo" :expected-type 'number)))
+     TypeError :datum "foo" :expected-type 'Number)))
 
 (defsuite >
 
@@ -1217,27 +1217,27 @@
   (deftest >.4
     (signals-error
      (> #t #t #f)
-    error))
+     Error))
 
   (deftest >.5
     (signals-error
      (> "foo" "foo" "foo")
-     error))
+     Error))
 
   (deftest >.6
     (signals-error
      (> (list (list 1)) (list (list 2)))
-     error))
+     Error))
 
   (deftest >.7
     (signals-error
      (>)
-     match-error))
+     MatchError))
 
   (deftest >.8
     (signals-error
      (> 1)
-     match-error))
+     MatchError))
 
   (deftest >.9
     (> 3 2 1 1)
@@ -1246,7 +1246,7 @@
   (deftest >.different-types
     (signals-error
      (> 3 2 1 "foo")
-     type-error :datum "foo" :expected-type 'number)))
+     TypeError :datum "foo" :expected-type 'Number)))
 
 (defsuite <=
 
@@ -1265,27 +1265,27 @@
   (deftest <=.4
     (signals-error
      (<= #t #t #f)
-    error))
+     Error))
 
   (deftest <=.5
     (signals-error
      (<= "foo" "foo" "foo")
-     error))
+     Error))
 
   (deftest <=.6
     (signals-error
      (<= (list (list 1)) (list (list 2)))
-     error))
+     Error))
 
   (deftest <=.7
     (signals-error
      (<=)
-     match-error))
+     MatchError))
 
   (deftest <=.8
     (signals-error
      (<= 1)
-     match-error))
+     MatchError))
 
   (deftest <=.9
     (<= 1 2 3 3)
@@ -1298,7 +1298,7 @@
   (deftest <=.different-types
     (signals-error
      (<= 1 1 3 "foo")
-     type-error :datum "foo" :expected-type 'number)))
+     TypeError :datum "foo" :expected-type 'Number)))
 
 (defsuite >=
 
@@ -1317,27 +1317,27 @@
   (deftest >=.4
     (signals-error
      (>= #t #t #f)
-    error))
+    Error))
 
   (deftest >=.5
     (signals-error
      (>= "foo" "foo" "foo")
-     error))
+     Error))
 
   (deftest >=.6
     (signals-error
      (>= (list (list 1)) (list (list 2)))
-     error))
+     Error))
 
   (deftest >=.7
     (signals-error
      (>=)
-     match-error))
+     MatchError))
 
   (deftest >=.8
     (signals-error
      (>= 1)
-     match-error))
+     MatchError))
 
   (deftest >=.9
     (>= 3 3 2 1)
@@ -1350,7 +1350,7 @@
   (deftest >=.different-types
     (signals-error
      (>= 3 3 2 "foo")
-     type-error :datum "foo" :expected-type 'number)))
+     TypeError :datum "foo" :expected-type 'Number)))
 
 (defsuite +
 
@@ -1371,7 +1371,7 @@
   (deftest -.1
     (signals-error
      (-)
-     match-error))
+     MatchError))
 
   (deftest -.2
     (- 1)
@@ -1404,7 +1404,7 @@
   (deftest /.1
     (signals-error
      (/)
-     match-error))
+     MatchError))
 
   (deftest /.2
     (/ 10)
@@ -1424,26 +1424,26 @@
     (and
      (typep #t Boolean)
      (typep #f Boolean)
-     (typep 12 Number)
+     (typep 12 Integer)
      (typep "foo" String)
      (typep #null Nil)
      (typep Object Class)))
 
   (deftest typep.2
     (and
-     (typep Condition Standard-class)
+     (typep Condition StandardClass)
      (typep Condition Class)
      (typep Condition Object)))
 
   (deftest typep.3
     (signals-error
      (typep)
-     match-error))
+     MatchError))
 
   (deftest typep.3
     (signals-error
      (typep "foo")
-     match-error)))
+     MatchError)))
 
 (defsuite intern
 
@@ -1453,12 +1453,12 @@
   (deftest intern.2
     (signals-error
      (intern 12)
-     type-error :datum 12 :expected-type 'string))
+     TypeError :datum 12 :expected-type 'String))
 
   (deftest intern.3
     (signals-error
      (intern)
-     match-error)))
+     MatchError)))
 
 (defsuite apply
 
@@ -1473,43 +1473,43 @@
   (deftest apply.3
     (signals-error
      (apply)
-     match-error))
+     MatchError))
 
   (deftest apply.4
     (signals-error
      (apply list)
-     match-error))
+     MatchError))
 
   (deftest apply.5
     (signals-error
      (apply 12 '())
-     type-error :datum 12 :expected-type 'function)))
+     TypeError :datum 12 :expected-type 'Function)))
 
 (defsuite find-class
 
   (deftest find-class.1
-    (eq (find-class 'string (the-environment))
+    (eq (find-class 'String (the-environment))
         (class-of "foo")))
 
   (deftest find-class.2a
     (signals-error
      (find-class)
-     match-error))
+     MatchError))
 
   (deftest find-class.2b
     (signals-error
      (find-class 'foo)
-     match-error))
+     MatchError))
 
   (deftest find-class.3
     (signals-error
      (find-class "string" (the-environment))
-     type-error :datum "string" :expected-type 'symbol))
+     TypeError :datum "string" :expected-type 'Symbol))
 
   (deftest find-class.4
     (signals-error
      (find-class 'does-not-exist (the-environment))
-     unbound-symbol-error :symbol (class-symbol 'does-not-exist))))
+     UnboundSymbolError :symbol (class-symbol 'does-not-exist))))
 
 (defsuite make-environment
 
@@ -1533,7 +1533,7 @@
   (deftest make-environment.3
     (signals-error
      (make-environment 12)
-     type-error :datum 12 :expected-type 'environment)))
+     TypeError :datum 12 :expected-type 'Environment)))
 
 (defsuite cxxr
 
@@ -1544,12 +1544,12 @@
   (deftest caar.2
     (signals-error
      (caar)
-     match-error))
+     MatchError))
 
   (deftest caar.3
     (signals-error
      (caar 1)
-     type-error :datum 1 :expected-type 'cons))
+     TypeError :datum 1 :expected-type 'Cons))
 
   (deftest cadr.1
     (cadr '((1 2) (3 4) (5 6)))
@@ -1558,12 +1558,12 @@
   (deftest cadr.2
     (signals-error
      (cadr)
-     match-error))
+     MatchError))
 
   (deftest cadr.3
     (signals-error
      (cadr 1)
-     type-error :datum 1 :expected-type 'cons))
+     TypeError :datum 1 :expected-type 'Cons))
 
   (deftest cddr.1
     (cddr '((1 2) (3 4) (5 6)))
@@ -1572,12 +1572,12 @@
   (deftest cddr.2
     (signals-error
      (cddr)
-     match-error))
+     MatchError))
 
   (deftest cddr.3
     (signals-error
      (cddr 1)
-     type-error :datum 1 :expected-type 'cons))
+     TypeError :datum 1 :expected-type 'Cons))
 
   (deftest cdar.1
     (cdar '((1 2) (3 4) (5 6)))
@@ -1586,12 +1586,12 @@
   (deftest cdar.2
     (signals-error
      (cdar)
-     match-error))
+     MatchError))
 
   (deftest cdar.3
     (signals-error
      (cdar 1)
-     type-error :datum 1 :expected-type 'cons))
+     TypeError :datum 1 :expected-type 'Cons))
 
 (defsuite when
 
@@ -1614,12 +1614,12 @@
   (deftest when.5
     (signals-error
      (when)
-     match-error))
+     MatchError))
 
   (deftest when.6
     (signals-error
      (when 1)
-     type-error :datum 1 :expected-type 'boolean))))
+     TypeError :datum 1 :expected-type 'Boolean))))
 
 (defsuite unless
 
@@ -1642,12 +1642,12 @@
   (deftest unless.5
     (signals-error
      (unless)
-     match-error))
+     MatchError))
 
   (deftest unless.6
     (signals-error
      (unless 1)
-     type-error :datum 1 :expected-type 'boolean)))
+     TypeError :datum 1 :expected-type 'Boolean)))
 
 (defsuite null
 
@@ -1662,7 +1662,7 @@
   (deftest null.3
     (signals-error
      (null)
-     match-error))
+     MatchError))
 
   (deftest null.4
     (null 1)
@@ -1681,7 +1681,7 @@
   (deftest consp.3
     (signals-error
      (consp)
-     match-error))
+     MatchError))
 
   (deftest consp.4
     (consp 1)
@@ -1700,7 +1700,7 @@
   (deftest identity.3
     (signals-error
      (identity)
-     match-error))
+     MatchError))
 
   (deftest identity.4
     (identity (+ 1 1))
@@ -1711,12 +1711,12 @@
   (deftest compose.1
     (signals-error
      (compose)
-     match-error))
+     MatchError))
 
   (deftest compose.2
     (signals-error
      (compose (lambda ()))
-     match-error))
+     MatchError))
 
   (deftest compose.3
     (typep (compose (lambda ()) (lambda ())) Function))
@@ -1746,22 +1746,22 @@
   (deftest mapcar.3
     (signals-error
      (mapcar)
-     match-error))
+     MatchError))
 
   (deftest mapcar.4
     (signals-error
      (mapcar intern)
-     match-error))
+     MatchError))
 
   (deftest mapcar.5
     (signals-error
      (mapcar intern 12)
-     type-error :datum 12 :expected-type 'cons))
+     TypeError :datum 12 :expected-type 'Cons))
 
   (deftest mapcar.6
     (signals-error
      (mapcar 12 '(1))
-     type-error :datum 12 :expected-type 'operator)))
+     TypeError :datum 12 :expected-type 'Operator)))
 
 (defsuite reduce
 
@@ -1776,17 +1776,17 @@
   (deftest reduce.3
     (signals-error
      (reduce)
-     match-error))
+     MatchError))
 
   (deftest reduce.4
     (signals-error
      (reduce %*)
-     match-error))
+     MatchError))
 
   (deftest reduce.5
     (signals-error
      (reduce %* (list))
-     match-error))
+     MatchError))
 
   (deftest reduce.ansi.3
     (reduce cons '(a b c d e f) :initial-value 'z)
@@ -1801,22 +1801,22 @@
   (deftest mapc.1
     (signals-error
      (mapc)
-     match-error))
+     MatchError))
 
   (deftest mapc.2
     (signals-error
      (mapc (lambda (x) x))
-     match-error))
+     MatchError))
 
   (deftest mapc.3
     (signals-error
      (mapc "foo" '(1 2 3))
-     type-error :datum "foo" :expected-type 'operator))
+     TypeError :datum "foo" :expected-type 'Operator))
 
   (deftest mapc.4
     (signals-error
      (mapc (lambda (x) x) "foo")
-     type-error :datum "foo" :expected-type 'cons))
+     TypeError :datum "foo" :expected-type 'cons))
 
   (deftest mapc.5
     (let ((ct 0))
@@ -1844,25 +1844,25 @@
   (deftest mapcan.3
     (signals-error
      (mapcan)
-     match-error))
+     MatchError))
 
   (deftest mapcan.4
     (signals-error
      (mapcan list)
-     match-error))
+     MatchError))
 
   (deftest mapcan.5
     (signals-error
      (mapcan list 12)
-     type-error :datum 12 :expected-type 'cons))
+     TypeError :datum 12 :expected-type 'Cons))
 
   (deftest mapcan.6
     (signals-error
      (mapcan 12 '(1))
-     type-error :datum 12 :expected-type 'operator))
+     TypeError :datum 12 :expected-type 'Operator))
 
   (deftest mapcan.7
-    (mapcan (lambda (x) (if (typep x Number) (list x) #null))
+    (mapcan (lambda (x) (if (typep x Integer) (list x) #null))
             '(a 1 b c 3 4 d 5))
     '(1 3 4 5))
 
@@ -1875,17 +1875,17 @@
   (deftest dolist.1
     (signals-error
      (dolist)
-     match-error))
+     MatchError))
 
   (deftest dolist.2
     (signals-error
      (dolist ())
-     match-error))
+     MatchError))
 
   (deftest dolist.3
     (signals-error
      (dolist (x))
-     match-error))
+     MatchError))
 
   (deftest dolist.4
     (dolist (x '(1 2 3)))
@@ -1894,14 +1894,14 @@
   (deftest dolist.5
     (signals-error
      (dolist (x "not-a-list"))
-     type-error :datum "not-a-list" :expected-type 'cons))
+     TypeError :datum "not-a-list" :expected-type 'Cons))
 
   (deftest dolist.6
     (signals-error
      (dolist ("not-a-symbol" '(1 2 3)))
-     type-error
+     TypeError
      :datum "not-a-symbol"
-     :expected-type '(or symbol ignore list)))
+     :expected-type '(or Symbol Ignore List)))
 
   (deftest dolist.7
     (let ((ct 0))
@@ -1929,27 +1929,27 @@
   (deftest nth.1
     (signals-error
      (nth)
-     match-error))
+     MatchError))
 
   (deftest nth.2
     (signals-error
      (nth '())
-     match-error))
+     MatchError))
 
   (deftest nth.3
     (signals-error
      (nth #t '(1 2))
-     type-error :datum #t :expected-type 'number))
+     TypeError :datum #t :expected-type 'Number))
 
   (deftest nth.3a
     (signals-error
      (nth 1 '())
-     type-error :datum '() :expected-type 'cons))
+     TypeError :datum '() :expected-type 'Cons))
 
   (deftest nth.4
     (signals-error
      (nth 0 "foo")
-     type-error :datum "foo" :expected-type 'cons))
+     TypeError :datum "foo" :expected-type 'Cons))
 
   (deftest nth.5
     (nth 0 '(1 2))
@@ -1962,24 +1962,24 @@
   (deftest nth.7
     (signals-error
      (nth 2 '(1 2))
-     type-error :datum '() :expected-type 'cons)))
+     TypeError :datum '() :expected-type 'Cons)))
 
 (defsuite reverse
 
   (deftest reverse.1
     (signals-error
      (reverse)
-     match-error))
+     MatchError))
 
   (deftest reverse.2
     (signals-error
      (reverse "foo")
-     type-error :datum "foo" :expected-type 'list))
+     TypeError :datum "foo" :expected-type 'List))
 
   (deftest reverse.3
     (signals-error
      (reverse "foo" "bar")
-     match-error))
+     MatchError))
 
   (deftest reverse.4
     (reverse ())
@@ -1998,17 +1998,17 @@
   (deftest append.1
     (signals-error
      (append)
-     match-error))
+     MatchError))
 
   (deftest append.2
     (signals-error
      (append '())
-     match-error))
+     MatchError))
 
   (deftest append.3
     (signals-error
      (append 1 '())
-     type-error :datum 1 :expected-type 'list))
+     TypeError :datum 1 :expected-type 'List))
 
   (deftest append.4
     (append '() '())
@@ -2035,12 +2035,12 @@
   (deftest length.1
     (signals-error
      (length)
-     error))
+     Error))
 
   (deftest length.2
     (signals-error
      (length #f)
-     error)))
+     Error)))
 
 (defsuite list-length
 
@@ -2057,22 +2057,22 @@
   (deftest nthcdr.1
     (signals-error
      (nthcdr)
-     match-error))
+     MatchError))
 
   (deftest nthcdr.2
     (signals-error
      (nthcdr 1)
-     match-error))
+     MatchError))
 
   (deftest nthcdr.3
     (signals-error
      (nthcdr "foo" '())
-     type-error :datum "foo" :expected-type 'number))
+     TypeError :datum "foo" :expected-type 'Number))
 
   (deftest nthcdr.4
     (signals-error
      (nthcdr 12 "foo")
-     type-error :datum "foo" :expected-type 'list))
+     TypeError :datum "foo" :expected-type 'List))
 
   (deftest nthcdr.5
     (nthcdr 0 '())
@@ -2081,17 +2081,17 @@
   (deftest nthcdr.6
     (signals-error
      (nthcdr 1 '())
-     out-of-bounds-error))
+     OutOfBoundsError))
 
   (deftest nthcdr.7
     (signals-error
      (nthcdr 2 '(1))
-     out-of-bounds-error))
+     OutOfBoundsError))
 
   (deftest nthcdr.8
     (signals-error
      (nthcdr 3 '(1))
-     out-of-bounds-error))
+     OutOfBoundsError))
 
   (deftest nthcdr.9
     (nthcdr 0 '(1 2 3))
@@ -2112,46 +2112,46 @@
   (deftest nthcdr.13
     (signals-error
      (nthcdr 4 '(1 2 3))
-     out-of-bounds-error)))
+     OutOfBoundsError)))
 
 (defsuite subseq
 
   (deftest subseq.1
     (signals-error
      (subseq)
-     error))
+     Error))
 
   (deftest subseq.2
     (signals-error
      (subseq '())
-     match-error))
+     MatchError))
 
   (deftest subseq.3
     (signals-error
      (subseq 12 1 2)
-     unbound-method-error :class Number :method-name 'subseq)))
+     UnboundMethodError :class Integer :method-name 'subseq)))
 
 (defsuite list-subseq
 
   (deftest list-subseq.4
     (signals-error
      (subseq '() "a" 2)
-     type-error :datum "a" :expected-type 'number))
+     TypeError :datum "a" :expected-type 'Number))
 
   (deftest list-subseq.5
     (signals-error
      (subseq '() 1 "b")
-     type-error :datum "b" :expected-type 'number))
+     TypeError :datum "b" :expected-type 'Number))
 
   (deftest list-subseq.6
     (signals-error
      (subseq '() 1)
-     out-of-bounds-error))
+     OutOfBoundsError))
 
   (deftest list-subseq.7
     (signals-error
      (subseq '() 0 1)
-     out-of-bounds-error))
+     OutOfBoundsError))
 
   (deftest list-subseq.8
     (subseq '() 0)
@@ -2188,12 +2188,12 @@
   (deftest list-subseq.16
     (signals-error
      (subseq '(0 1 2 3 4 5) 0 7)
-     out-of-bounds-error))
+     OutOfBoundsError))
 
   (deftest list-subseq.17
     (signals-error
      (subseq '(0 1 2 3 4 5) 7 10)
-     out-of-bounds-error))
+     OutOfBoundsError))
 
   (deftest list-subseq.18
     (subseq '(0 1 2 3 4 5) 6)
@@ -2204,27 +2204,27 @@
   (deftest string-subseq.2
     (signals-error
      (subseq "")
-     match-error))
+     MatchError))
 
   (deftest string-subseq.4
     (signals-error
      (subseq "" "a" 2)
-     type-error :datum "a" :expected-type 'number))
+     TypeError :datum "a" :expected-type 'Number))
 
   (deftest string-subseq.5
     (signals-error
      (subseq "foo" 1 "b")
-     type-error :datum "b" :expected-type 'number))
+     TypeError :datum "b" :expected-type 'Number))
 
   (deftest string-subseq.6
     (signals-error
      (subseq "" 1)
-     out-of-bounds-error))
+     OutOfBoundsError))
 
   (deftest string-subseq.7
     (signals-error
      (subseq "" 0 1)
-     out-of-bounds-error))
+     OutOfBoundsError))
 
   (deftest string-subseq.8
     (subseq "" 0)
@@ -2241,7 +2241,7 @@
   (deftest string-subseq.10.1
     (signals-error
      (subseq "" 1 #inert)
-     out-of-bounds-error))
+     OutOfBoundsError))
 
   (deftest string-subseq.11
     (subseq "123" 0)
@@ -2266,12 +2266,12 @@
   (deftest string-subseq.16
     (signals-error
      (subseq "012345" 0 7)
-     out-of-bounds-error))
+     OutOfBoundsError))
 
   (deftest string-subseq.17
     (signals-error
      (subseq "012345" 7 10)
-     out-of-bounds-error))
+     OutOfBoundsError))
 
   (deftest string-subseq.18
     (subseq "012345" 6)
@@ -2282,24 +2282,24 @@
   (deftest elt.1
     (signals-error
      (elt)
-     error))
+     Error))
 
   (deftest elt.2
     (signals-error
      (elt #t 0)
-     error)))
+     Error)))
 
 (defsuite list-elt
 
   (deftest list-elt.2
     (signals-error
      (elt '())
-     match-error))
+     MatchError))
 
   (deftest list-elt.3a
     (signals-error
      (elt '() 1)
-     type-error :datum '() :expected-type 'cons))
+     TypeError :datum '() :expected-type 'Cons))
 
   (deftest list-elt.5
     (elt '(1 2) 0)
@@ -2312,19 +2312,19 @@
   (deftest list-elt.7
     (signals-error
      (elt '(1 2) 2)
-     type-error :datum '() :expected-type 'cons)))
+     TypeError :datum '() :expected-type 'Cons)))
 
 (defsuite member
 
   (deftest member.1
     (signals-error
      (member)
-     match-error))
+     MatchError))
 
   (deftest member.2
     (signals-error
      (member 'a)
-     match-error))
+     MatchError))
 
   (deftest member.3
     (member 'a '() :test eq)
@@ -2383,22 +2383,22 @@
   (deftest remove-if.1
     (signals-error
      (remove-if)
-     match-error))
+     MatchError))
 
   (deftest remove-if.2
     (signals-error
      (remove-if (lambda (item) #t))
-     match-error))
+     MatchError))
 
   (deftest remove-if.3
     (signals-error
      (remove-if (lambda (item) #t) 12)
-     type-error :datum 12 :expected-type 'cons))
+     TypeError :datum 12 :expected-type 'Cons))
 
   (deftest remove-if.4
     (signals-error
      (remove-if 1 '(1 2))
-     type-error :datum 1 :expected-type 'operator))
+     TypeError :datum 1 :expected-type 'Operator))
 
   (deftest remove-if.5
     (remove-if (lambda (item) (= 1 item)) '(1 2 3 1 2 3))
@@ -2429,19 +2429,19 @@
   (deftest get?.5
     (signals-error
      (get?)
-     match-error)
+     MatchError)
     #t)
 
   (deftest get?.6
     (signals-error
      (get? '())
-     match-error)
+     MatchError)
     #t)
 
   (deftest get?.7
     (signals-error
      (get? 12 :quux)
-     match-error)
+     MatchError)
     #t))
 
 (defsuite and
@@ -2461,7 +2461,7 @@
   (deftest and.4
     (signals-error
      (and #t #t 1)
-     type-error :datum 1 :expected-type 'boolean))
+     TypeError :datum 1 :expected-type 'Boolean))
 
   (deftest and.5
     (progn
@@ -2492,7 +2492,7 @@
   (deftest or.5
     (signals-error
      (or #f #f 1)
-     type-error :datum 1 :expected-type 'boolean))
+     TypeError :datum 1 :expected-type 'Boolean))
 
   (deftest or.6
     (progn
@@ -2506,44 +2506,44 @@
 
   (deftest make-instance.1
     (progn
-      (def obj (make-instance Type-error :datum 1 :expected-type 'string))
+      (def obj (make-instance TypeError :datum 1 :expected-type 'String))
       (assert (= (slot-value obj 'datum) 1))
       (assert (= (slot-value obj :datum) 1))
-      (assert (= (slot-value obj 'expected-type) 'string))
-      (assert (= (slot-value obj :expected-type) 'string)))
+      (assert (= (slot-value obj 'expected-type) 'String))
+      (assert (= (slot-value obj :expected-type) 'String)))
     #inert)
 
   (deftest make-instance.2
     (signals-error
      (make-instance)
-     match-error))
+     MatchError))
 
   (deftest make-instance.3
     (signals-error
      (make-instance 3)
-     type-error :datum 3 :expected-type 'standard-class))
+     TypeError :datum 3 :expected-type 'StandardClass))
 
   (deftest make-instance.4
     (signals-error
      (make-instance Object)
-     type-error :datum Object :expected-type 'standard-class))
+     TypeError :datum Object :expected-type 'StandardClass))
 
   (deftest make-instance.5
     (signals-error
-     (make-instance Standard-object :x)
-     assertion-error)))
+     (make-instance StandardObject :x)
+     AssertionError)))
 
 (defsuite slots
 
   (deftest slots.1
     (progn
-      (def obj (make-instance Standard-object))
+      (def obj (make-instance StandardObject))
       (assert (not (slot-bound-p obj 'x)))
       (assert (not (slot-bound-p obj :x)))
       (assert (signals-error (slot-value obj 'x)
-                             unbound-slot-error :object obj :slot-name 'x))
+                             UnboundSlotError :object obj :slot-name 'x))
       (assert (signals-error (slot-value obj :x)
-                             unbound-slot-error :object obj :slot-name :x))
+                             UnboundSlotError :object obj :slot-name :x))
       (set-slot-value obj 'x 1)
       (assert (slot-bound-p obj 'x))
       (assert (slot-bound-p obj :x))
@@ -2557,62 +2557,62 @@
   (deftest slot-value.1
     (signals-error
      (slot-value "foo" 'x)
-     type-error :datum "foo" :expected-type 'standard-object))
+     TypeError :datum "foo" :expected-type 'StandardObject))
 
   (deftest slot-value.1a
     (signals-error
-     (slot-value (make-instance Standard-object) "x")
-     type-error :datum "x" :expected-type 'symbol))
+     (slot-value (make-instance StandardObject) "x")
+     TypeError :datum "x" :expected-type 'Symbol))
 
   (deftest slot-value.2
     (signals-error
-     (slot-value (make-instance Standard-object))
-     match-error))
+     (slot-value (make-instance StandardObject))
+     MatchError))
 
   (deftest slot-value.3
     (signals-error
      (slot-value)
-     match-error))
+     MatchError))
 
   (deftest set-slot-value.1
     (signals-error
      (set-slot-value "foo" 'x 1)
-     type-error :datum "foo" :expected-type 'standard-object))
+     TypeError :datum "foo" :expected-type 'StandardObject))
 
   (deftest set-slot-value.1a
     (signals-error
-     (set-slot-value (make-instance Standard-object) "x" 1)
-     type-error :datum "x" :expected-type 'symbol))
+     (set-slot-value (make-instance StandardObject) "x" 1)
+     TypeError :datum "x" :expected-type 'Symbol))
 
   (deftest set-slot-value.2
     (signals-error
-     (set-slot-value (make-instance Standard-object))
-     match-error))
+     (set-slot-value (make-instance StandardObject))
+     MatchError))
 
   (deftest set-slot-value.3
     (signals-error
-     (set-slot-value (make-instance Standard-object) 'x)
-     match-error))
+     (set-slot-value (make-instance StandardObject) 'x)
+     MatchError))
 
   (deftest slot-bound-p.1
     (signals-error
      (slot-bound-p "foo" 'x)
-     type-error :datum "foo" :expected-type 'standard-object))
+     TypeError :datum "foo" :expected-type 'StandardObject))
 
   (deftest slot-bound-p.1a
     (signals-error
-     (slot-bound-p (make-instance Standard-object) "x")
-     type-error :datum "x" :expected-type 'symbol))
+     (slot-bound-p (make-instance StandardObject) "x")
+     TypeError :datum "x" :expected-type 'Symbol))
 
   (deftest slot-bound-p.2
     (signals-error
      (slot-bound-p)
-     match-error))
+     MatchError))
 
   (deftest slot-bound-p.3
     (signals-error
-     (slot-bound-p (make-instance Standard-object))
-     match-error)))
+     (slot-bound-p (make-instance StandardObject))
+     MatchError)))
 
 (defsuite let
 
@@ -2647,17 +2647,17 @@
   (deftest let.6
     (signals-error
      (let)
-     match-error))
+     MatchError))
 
   (deftest let.7
     (signals-error
      (let #t)
-     type-error :datum #t :expected-type 'cons))
+     TypeError :datum #t :expected-type 'Cons))
 
   (deftest let.8
     (signals-error
      (let ((#t 1)))
-     type-error :datum #t :expected-type '(or symbol ignore list))))
+     TypeError :datum #t :expected-type '(or Symbol Ignore List))))
 
 (defsuite let*
 
@@ -2675,17 +2675,17 @@
   (deftest let*.3
     (signals-error
      (let*)
-     match-error))
+     MatchError))
 
   (deftest let*.4
     (signals-error
      (let* #t)
-     type-error :datum #t :expected-type 'cons))
+     TypeError :datum #t :expected-type 'Cons))
 
   (deftest let*.5
     (signals-error
      (let* ((#t 1)))
-     type-error :datum #t :expected-type '(or symbol ignore list))))
+     TypeError :datum #t :expected-type '(or Symbol Ignore List))))
 
 (defsuite flet
 
@@ -2709,12 +2709,12 @@
   (deftest flet.3
     (signals-error
      (flet)
-     match-error))
+     MatchError))
 
   (deftest flet.4
     (signals-error
      (flet #t)
-     type-error :datum #t :expected-type 'cons))
+     TypeError :datum #t :expected-type 'Cons))
 
   (deftest flet.5
     (flet ())
@@ -2742,12 +2742,12 @@
   (deftest labels.4
     (signals-error
      (labels)
-     match-error))
+     MatchError))
 
   (deftest labels.5
     (signals-error
      (labels #t)
-     type-error :datum #t :expected-type 'cons))
+     TypeError :datum #t :expected-type 'Cons))
 
   (deftest labels.6
     (labels ())
@@ -2758,12 +2758,12 @@
   (deftest loop-let.1
     (signals-error
      (loop-let)
-     match-error))
+     MatchError))
 
   (deftest loop-let.2
     (signals-error
      (loop-let -name-)
-     match-error))
+     MatchError))
 
   (deftest loop-let.3
     (loop-let -name- ())
@@ -2783,7 +2783,7 @@
   (deftest while.1
     (signals-error
      (while)
-     match-error))
+     MatchError))
 
   (deftest while.2
     (while (= 1 2))
@@ -2792,7 +2792,7 @@
   (deftest while.3
     (signals-error
      (while 12)
-     type-error :datum 12 :expected-type 'boolean))
+     TypeError :datum 12 :expected-type 'Boolean))
 
   (deftest while.4
     (progn
@@ -2810,7 +2810,7 @@
   (deftest until.1
     (signals-error
      (until)
-     match-error))
+     MatchError))
 
   (deftest until.2
     (until (/= 1 2))
@@ -2819,7 +2819,7 @@
   (deftest until.3
     (signals-error
      (until 12)
-     type-error :datum 12 :expected-type 'boolean))
+     TypeError :datum 12 :expected-type 'Boolean))
 
   (deftest until.4
     (progn
@@ -2849,12 +2849,12 @@
   (deftest dotimes.3
     (signals-error
      (dotimes)
-     match-error))
+     MatchError))
 
   (deftest dotimes.4
     (signals-error
      (dotimes (x))
-     match-error))
+     MatchError))
 
   (deftest dotimes.5
     (dotimes (x 0))
@@ -2871,7 +2871,7 @@
   (deftest dotimes.8
     (signals-error
      (dotimes (x "foo") 1 2 3)
-     type-error :datum "foo" :expected-type 'number))
+     TypeError :datum "foo" :expected-type 'Number))
 
   (deftest dotimes.9
     (progn
@@ -2904,12 +2904,12 @@
   (deftest optional.5
     (signals-error
      (optional)
-     match-error))
+     MatchError))
 
   (deftest optional.6
     (signals-error
      (optional 1)
-     type-error :datum 1 :expected-type 'cons))
+     TypeError :datum 1 :expected-type 'Cons))
 
   (deftest optional.lazy.1
     (optional (some 1) (error (make-simple-error "foo")))
@@ -2918,7 +2918,7 @@
   (deftest optional.lazy.2
     (signals-error
      (optional #null (error (make-simple-error "foo")))
-     simple-error :message "foo")))
+     SimpleError :message "foo")))
 
 (defsuite optionals
 
@@ -2955,7 +2955,7 @@
   (deftest get-option.1
     (signals-error
      (get-option)
-     match-error))
+     MatchError))
 
   (deftest get-option.2
     (get-option (some 2))
@@ -2964,7 +2964,7 @@
   (deftest get-option.3
     (signals-error
      (get-option #null)
-     simple-error :message "Option is nil")))
+     SimpleError :message "Option is nil")))
 
 (defsuite some
 
@@ -2975,12 +2975,12 @@
   (deftest some.2
     (signals-error
      (some)
-     match-error))
+     MatchError))
 
   (deftest some.3
     (signals-error
      (some 1 2)
-     match-error)))
+     MatchError)))
 
 (defsuite if-option
 
@@ -2999,27 +2999,27 @@
   (deftest if-option.3
     (signals-error
      (if-option)
-     match-error))
+     MatchError))
 
   (deftest if-option.4
     (signals-error
      (if-option (name))
-     match-error))
+     MatchError))
 
   (deftest if-option.4.2
     (signals-error
      (if-option (name) then)
-     match-error))
+     MatchError))
 
   (deftest if-option.5
     (signals-error
      (if-option (name option))
-     match-error))
+     MatchError))
 
   (deftest if-option.6
     (signals-error
      (if-option (name option) then)
-     match-error)))
+     MatchError)))
 
 (defsuite when-option
 
@@ -3040,12 +3040,12 @@
   (deftest when-option.3
     (signals-error
      (when-option)
-     match-error))
+     MatchError))
 
   (deftest when-option.4
     (signals-error
      (when-option (name))
-     match-error)))
+     MatchError)))
 
 (defsuite unless-option
 
@@ -3064,21 +3064,21 @@
   (deftest unless-option.3
     (signals-error
      (unless-option)
-     match-error)))
+     MatchError)))
 
 (defsuite class-of
 
   (deftest class-of.1
     (progn
       (assert (eq (class-of "foo") String))
-      (assert (eq (class-of 12) Number))
+      (assert (eq (class-of 12) Integer))
       (assert (eq (class-of String) Built-in-class)))
     #inert)
 
   (deftest class-of.2
     (signals-error
      (class-of)
-     match-error)))
+     MatchError)))
 
 (defsuite set
 
@@ -3104,95 +3104,95 @@
   (deftest set.4
     (signals-error
      (set)
-     match-error))
+     MatchError))
 
   (deftest set.5
     (signals-error
      (set (the-environment))
-     match-error))
+     MatchError))
 
   (deftest set.6
     (signals-error
      (set (the-environment) x)
-     match-error))
+     MatchError))
 
   (deftest set.7
     (signals-error
      (set 33 x y)
-     type-error :datum 33 :expected-type 'environment)))
+     TypeError :datum 33 :expected-type 'Environment)))
 
 (defsuite class-name
 
   (deftest class-name.1
     (signals-error
      (class-name)
-     match-error))
+     MatchError))
 
   (deftest class-name.2
     (signals-error
      (class-name "foo")
-     type-error :datum "foo" :expected-type 'class))
+     TypeError :datum "foo" :expected-type 'Class))
 
   (deftest class-name.3
     (class-name Object)
-    'object))
+    "Object"))
 
 (defsuite subclassp
 
   (deftest subclassp.1
     (signals-error
      (subclassp)
-     match-error))
+     MatchError))
 
   (deftest subclassp.2
     (signals-error
      (subclassp Object)
-     match-error))
+     MatchError))
 
   (deftest subclassp.3
     (signals-error
      (subclassp Object "foo")
-     type-error :datum "foo" :expected-type 'class))
+     TypeError :datum "foo" :expected-type 'Class))
 
   (deftest subclassp.4
     (signals-error
      (subclassp "foo" Object)
-     type-error :datum "foo" :expected-type 'class))
+     TypeError :datum "foo" :expected-type 'class))
 
   (deftest subclassp.5
     (and (subclassp Object Object)
          (subclassp Class Object)
-         (subclassp Standard-class Class)
-         (subclassp Standard-class Object))
+         (subclassp StandardClass Class)
+         (subclassp StandardClass Object))
     #t))
 
 ;; Utility used by `%make-standard-class' and `defclass' tests.
 
 (defun classes-test (c d p q)
-  (assert (typep c Standard-class))
+  (assert (typep c StandardClass))
   (assert (typep c Class))
   (assert (typep c Object))
-  (assert (= (class-name c) 'point-2d))
-  (assert (subclassp c Standard-object))
+  (assert (= (class-name c) "Point2d"))
+  (assert (subclassp c StandardObject))
   (assert (subclassp c Object))
 
   (assert (typep p c))
-  (assert (typep p Standard-object))
+  (assert (typep p StandardObject))
   (assert (typep p Object))
   (assert (= (slot-value p 'x) 1))
   (assert (= (slot-value p 'y) 2))
 
-  (assert (typep d Standard-class))
+  (assert (typep d StandardClass))
   (assert (typep d Class))
   (assert (typep d Object))
-  (assert (= (class-name d) 'point-3d))
+  (assert (= (class-name d) "Point3d"))
   (assert (subclassp d c))
-  (assert (subclassp d Standard-object))
+  (assert (subclassp d StandardObject))
   (assert (subclassp d Object))
 
   (assert (typep q d))
   (assert (typep q c))
-  (assert (typep q Standard-object))
+  (assert (typep q StandardObject))
   (assert (typep q Object))
   (assert (= (slot-value q 'x) 1))
   (assert (= (slot-value q 'y) 2))
@@ -3201,8 +3201,8 @@
 (defsuite %make-standard-class
 
   (deftest %make-standard-class.1
-    (let* ((c (%make-standard-class 'point-2d Standard-object))
-           (d (%make-standard-class 'point-3d c))
+    (let* ((c (%make-standard-class 'Point2d StandardObject))
+           (d (%make-standard-class 'Point3d c))
            (p (make-instance c :x 1 :y 2))
            (q (make-instance d :x 1 :y 2 :z 3)))
       (classes-test c d p q))
@@ -3210,34 +3210,32 @@
 
   (deftest %make-standard-class.2
     (signals-error
-     (%make-standard-class 'foo Object)
-     type-error :datum Object :expected-type 'standard-class))
+     (%make-standard-class 'Foo Object)
+     TypeError :datum Object :expected-type 'StandardClass))
 
-  #|
   (deftest %make-standard-class.3
     (signals-error
-     (%make-standard-class 'foo)
-     match-error))
+     (%make-standard-class 'Foo)
+     MatchError))
 
   (deftest %make-standard-class.4
     (signals-error
      (%make-standard-class)
-     match-error))
-  |#
+     MatchError))
 
   (deftest %make-standard-class.5
     (signals-error
-     (%make-standard-class "foo" Standard-object)
-     type-error :datum "foo" :expected-type 'symbol)))
+     (%make-standard-class "foo" StandardObject)
+     TypeError :datum "foo" :expected-type 'Symbol)))
 
 (defsuite %reinitialize-standard-class
 
   (deftest* %reinitialize-standard-class.1
-    (let* ((a (%make-standard-class 'a Standard-object))
-           (b (%make-standard-class 'b a))
-           (c (%make-standard-class 'c b))
-           (d (%make-standard-class 'd Standard-object))
-           (e (%make-standard-class 'e d)))
+    (let* ((a (%make-standard-class 'A StandardObject))
+           (b (%make-standard-class 'B a))
+           (c (%make-standard-class 'C b))
+           (d (%make-standard-class 'D StandardObject))
+           (e (%make-standard-class 'E d)))
       (assert (subclassp b a))
       (assert (subclassp c a))
       (assert (subclassp c b))
@@ -3252,49 +3250,49 @@
 
   (deftest defclass.1
     (signals-error
-     (defclass foo () ("a"))
-     type-error :datum "a" :expected-type 'symbol))
+     (defclass Foo () ("a"))
+     TypeError :datum "a" :expected-type 'Symbol))
 
   (deftest defclass.2
     (signals-error
      (defclass)
-     match-error))
+     MatchError))
 
   (deftest defclass.3
     (signals-error
-     (defclass foo)
-     match-error))
+     (defclass Foo)
+     MatchError))
 
   (deftest defclass.4
     (signals-error
-     (defclass foo ())
-     match-error))
+     (defclass Foo ())
+     MatchError))
 
   (deftest defclass.5
-    (typep (defclass c () ()) Standard-class))
+    (typep (defclass C () ()) StandardClass))
 
   (deftest defclass.6
     (progn
-      (defclass point-2d () (x y))
-      (defclass point-3d (point-2d) (z))
-      (def p (make-instance Point-2d :x 1 :y 2))
-      (def q (make-instance Point-3d :x 1 :y 2 :z 3))
-      (classes-test Point-2d Point-3d p q))
+      (defclass Point2d () (x y))
+      (defclass Point3d (Point2d) (z))
+      (def p (make-instance Point2d :x 1 :y 2))
+      (def q (make-instance Point3d :x 1 :y 2 :z 3))
+      (classes-test Point2d Point3d p q))
     #inert)
 
   (deftest* defclass.redefine.1
-    (defclass a () ())
-    (defclass b (a) ())
+    (defclass A () ())
+    (defclass B (A) ())
     (defgeneric foo (x))
-    (defmethod foo ((a a)) "foo")
+    (defmethod foo ((a A)) "foo")
     (def b (make-instance B))
     (assert (subclassp B A))
     (assert (typep b B))
     (assert (typep b A))
     (assert (= "foo" (foo b)))
-    (defclass c () ())
-    (defmethod foo ((c c)) "bar")
-    (defclass b (c) ())
+    (defclass C () ())
+    (defmethod foo ((c C)) "bar")
+    (defclass B (C) ())
     (assert (subclassp B C))
     (assert (eq (class-of b) B))
     (assert (typep b B))
@@ -3305,8 +3303,8 @@
 
   (deftest generics.1
     (progn
-      (defclass foo () ())
-      (defclass bar (foo) ())
+      (defclass Foo () ())
+      (defclass Bar (Foo) ())
       (def foo (make-instance Foo))
       (def bar (make-instance Bar))
 
@@ -3315,47 +3313,47 @@
 
       (assert (signals-error
                (g1 12 (+ 1 1))
-               unbound-method-error :class Number :method-name 'g1))
+               UnboundMethodError :class Integer :method-name 'g1))
       (assert (signals-error
                (g1 foo (+ 1 1))
-               unbound-method-error :class Foo :method-name 'g1))
+               UnboundMethodError :class Foo :method-name 'g1))
       (assert (signals-error
                (g1 bar (+ 1 1))
-               unbound-method-error :class Bar :method-name 'g1))
+               UnboundMethodError :class Bar :method-name 'g1))
 
-      (defmethod g1 ((obj foo) param)
+      (defmethod g1 ((obj Foo) param)
         (+ param 100))
 
       (assert (signals-error
                (g1 12 (+ 1 1))
-               unbound-method-error :class Number :method-name 'g1))
+               UnboundMethodError :class Integer :method-name 'g1))
       (assert (= 102 (g1 foo (+ 1 1))))
       (assert (= 102 (g1 bar (+ 1 1))))
 
-      (defmethod g1 ((obj bar) param)
+      (defmethod g1 ((obj Bar) param)
         (+ param 1000))
 
       (assert (signals-error
                (g1 12 (+ 1 1))
-               unbound-method-error :class Number :method-name 'g1))
+               UnboundMethodError :class Integer :method-name 'g1))
       (assert (= 102 (g1 foo (+ 1 1))))
       (assert (= 1002 (g1 bar (+ 1 1))))
 
-      (defmethod g1 ((obj number) param)
+      (defmethod g1 ((obj Integer) param)
         (+ param 10000))
 
       (assert (= 10002 (g1 12 (+ 1 1))))
       (assert (= 102 (g1 foo (+ 1 1))))
       (assert (= 1002 (g1 bar (+ 1 1))))
 
-      (defmethod g1 ((obj number) param)
+      (defmethod g1 ((obj Integer) param)
         (+ param 100000))
 
       (assert (= 100002 (g1 12 (+ 1 1))))
       (assert (= 102 (g1 foo (+ 1 1))))
       (assert (= 1002 (g1 bar (+ 1 1))))
 
-      (defmethod g1 ((obj object) param)
+      (defmethod g1 ((obj Object) param)
         (- param))
 
       (assert (= 100002 (g1 12 (+ 1 1))))
