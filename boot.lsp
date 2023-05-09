@@ -32,7 +32,7 @@
 (def >> %>>)
 (def >>> %>>>)
 
-(def \ %lambda)
+(def \ %\)
 (def append %append)
 (def array->list %array->list)
 (def begin %begin)
@@ -49,18 +49,22 @@
 (def if %if)
 (def instanceof? %instanceof?)
 (def len %len)
+(def list? %list?)
 (def list* %list*)
 (def list->array %list->array)
 (def loop %loop)
 (def makeEnv %makeEnv)
 (def nil? %null?)
+(def not %!)
 (def null? %null?)
-(def not !)
+(def obj %obj)
 (def reverse %reverse)
 (def rootPrompt %rootPrompt)
 (def string->symbol %string->symbol)
 (def symbolName %internName)
 (def symbol? %symbol?)
+(def keywordName %internName)
+(def keyword? %keyword?)
 (def type? %type?)
 (def unwrap %unwrap)
 (def wrap %wrap)
@@ -96,9 +100,10 @@
 (def list (wrap ($vau elts #ignore elts)))
 (def list %list)
 (def $lambda ($vau (formals . body) env (wrap (eval (list* $vau formals #ignore body) env))))
-(def $lambda %lambda)
+(def $lambda %\)
 (def theEnv ($vau () e e))
 (def theEnv %theEnv)
+
 (def car (\ ((x . #ignore)) x))
 (def car %car)
 (def cdr (\ ((#ignore . x)) x))
@@ -114,16 +119,16 @@
 
 ;;;; Macro
 
-(def evm (dvar #t))
+(def evalMacro (dvar #t))
 
 (def makeMacro
   (wrap
     ($vau (expander) #ignore
       ($vau operands env
-        (def !evm (! (evm)))
-        (if !evm (evm #t))
+        (def !evalMacro (! (evalMacro)))
+        (if !evalMacro (evalMacro #t))
         (def exp (eval (cons expander operands) (makeEnv)))
-        (if !evm exp (eval exp env)) ))))
+        (if !evalMacro exp (eval exp env)) ))))
 
 (def macro
   (makeMacro
@@ -142,7 +147,7 @@
       (list 'def (car lhs) (list* 'macro (cdr lhs) rhs)) )))
 
 (defMacro (expand macro)
-  (list 'begin (list 'evm #f) macro))
+  (list 'begin (list 'evalMacro #f) macro))
 
 (assert (expand (defMacro (succ n) (list '+ n 1))) '(def succ (macro (n) (list (%quote +) n 1))))
 (assert (expand (defMacro succ (n) (list '+ n 1))) '(def succ (macro (n) (list (%quote +) n 1))))
@@ -233,8 +238,8 @@
 
 ;;;; Basic macros and functions
 
-(def\ (apply appv args . optEnv)
-  (def env (if (null? optEnv) (makeEnv) (car optEnv))) 
+(def\ (apply appv args . env)
+  (def env (if (null? env) (makeEnv) ((\ ((env)) env) env))) 
   (if (%jFun? appv)
     (@combine (@new JFun vm appv) env args)
     (eval (cons (unwrap appv) args) env) ))
@@ -546,12 +551,38 @@
       (let1 loop (clauses clauses)
         (if (null? clauses) #inert ;(error ($ "type of " key " not " Object))
           (let1 (((class . forms) . clauses) clauses)
-            (if (or (== class ' else) (type? key (eval class env)))
+            (if (or (== class 'else) (type? key (eval class env)))
               (eval (list* 'begin forms) env)
               (loop clauses) ))))))
 
-(assert (caseType 2.0 (String "string") (Double "double")) "double")
+(def checkSlot 
+  (\ (c slot)
+    (let1 next (slot slot)
+      (if (null? slot) #t
+        (let1 ((name value . slot) slot)
+          (if (or (! (@isBound c name)) (! (eq? (c name) value))) #f
+            (next slot) ))))))
 
+(def\ (evlis env lst)
+  (map (\ (elt) (eval elt env)) lst))
+
+(defVau (caseType keyform . clauses) env
+  (let1 (key (eval keyform env))
+    (let1 next (clauses clauses)
+      (if (null? clauses) #inert ;(error ($ "type of " key " not " Object))
+        (let1 (((test . forms) . clauses) clauses)
+          (if (== test 'else)
+            (eval (list* 'begin forms) env)
+            (let* ( (symbol? (%symbol? test))
+                    (className (if symbol? test (car test)))
+                    (class (eval className env)) )
+              (if (&& (type? key class) (|| symbol? (&& (type? key Obj) (checkSlot key (evlis env (cdr test))))))
+                (eval (list* 'begin forms) env)
+                (next clauses) ))))))))
+
+(assert (caseType 2.0 (else 3)) 3)
+(assert (caseType 2.0 (String "string") (Double "double")) "double")
+(assert (caseType (obj Obj :a 1) (Double "double") ((Obj :a 1) "Obj :a 1")) "Obj :a 1")
 
 ;;;; Options
 

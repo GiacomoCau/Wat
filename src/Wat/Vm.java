@@ -326,7 +326,7 @@ public class Vm {
 		}
 		public String toString() {
 			var deep = deep();
-			var prefix = switch(deep) { case 1-> "Vm-"; case 2-> "The-"; default-> ""; };
+			var prefix = switch(deep) { case 1-> "Vm"; case 2-> "The"; default-> ""; };
 			return "{" + prefix + "Env[" + map.size() + "]" + eIf(deep < prenv, ()-> reverseMap(map)) + eIf(parent == null, ()-> " " + parent) + "}";
 		}
 		Object lookup(K name) {
@@ -1214,6 +1214,7 @@ public class Vm {
 					$("%def", "%cadr", wrap(new JFun("%Car", (Function<Cons, Object>) c-> c.car(1)))),
 					$("%def", "%cons", wrap(new JFun("%Cons", (BiFunction<Object, Object, Object>) (car,cdr)-> cons(car,cdr)))),
 					$("%def", "%cons?", wrap(new JFun("%Cons?", (Function<Object, Boolean>) obj-> obj instanceof Cons))),
+					$("%def", "%list?", wrap(new JFun("%List?", (Function<Object, Boolean>) obj-> obj instanceof List))),
 					$("%def", "%null?", wrap(new JFun("%Null?", (Function<Object, Boolean>) obj-> obj == null))),
 					$("%def", "%string->symbol", wrap(new JFun("%String->symbol", (Function<String, Symbol>) this::symbol))),
 					$("%def", "%symbol?", wrap(new JFun("%Symbol?", (Function<Object, Boolean>) obj-> obj instanceof Symbol))),
@@ -1290,7 +1291,7 @@ public class Vm {
 					//
 					$("%def", "%quote", $("%vau", $("arg"), ignore, "arg")),
 					$("%def", "%theEnv", $("%vau", null, "env", "env")),
-					$("%def", "%lambda", $("%vau", $("formals", ".", "body"), "env",
+					$("%def", "%\\", $("%vau", $("formals", ".", "body"), "env",
 						$("%wrap", $("%eval", $("%list*", "%vau", "formals", ignore, "body"), "env")))),
 					//$("%def", "%jambda", jFun((ArgsList) o-> lambda(o.car(), o.car(1), o.cdr(1)))),
 					//

@@ -38,7 +38,7 @@
 ($define! list (wrap ($vau elts #ignore elts)))
 ($define! list %list)
 ($define! $lambda ($vau (formals . body) env (wrap (eval (list* $vau formals #ignore body) env))))
-($define! $lambda %lambda)
+($define! $lambda %\)
 ($define! the-environment ($vau () e e))
 
 ;;;; Macro
@@ -71,7 +71,7 @@
 
 (assert (catch (throw)) #inert)
 (assert (catch (throw 1)) 1)
-(assert (catch (throw 1) (%lambda (x) 2)) 2)
+(assert (catch (throw 1) (%\ (x) 2)) 2)
 
 (define-operative (finally protected . cleanup) env
   (eval (list %finally protected (list* begin cleanup)) env) )

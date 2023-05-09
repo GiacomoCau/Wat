@@ -48,7 +48,7 @@ public class Prova {
 		@Override public int hashCode() { return Arrays.deepHashCode(a); }
 	}
 	
-	public static void main(String[] args) throws Exception {
+	public static void classi() {
 		classi(true, (Object) Cls3.class);
 		classi(false, new Cls3());
 		classi(false, Cls3 .class);

@@ -9,7 +9,7 @@
 
 (%resetEnv)
 
-(%def \ %lambda)
+(%def \ %\)
 (%def %->symbol  (\ (i) (@intern vm (%if (%instanceof? i &Wat.Vm$Keyword) (@substring (.name i) 1) (.name i)))))
 (%def %->keyword (\ (i) (@intern vm (%if (%instanceof? i &Wat.Vm$Keyword) (.name i) (%$ ":" (.name i))))))
 
