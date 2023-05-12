@@ -121,7 +121,7 @@ public class Vm {
 	boolean instr = false; // intern string
 	boolean prstk = false; // print stack
 	boolean aquote = true; // auto quote list
-	boolean nullf = true; // null false
+	boolean nullf = false; // null false
 	
 	int prtrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
 	int prenv = 3; // print environment
@@ -646,6 +646,7 @@ public class Vm {
 	}
 	boolean istrue(Object res) {
 		return res instanceof Boolean b ? b : nullf ?  res != null : error("not a boolean: " + res);
+		//return !(res instanceof Boolean b) || b; // scheme guile racket
 	}
 	class Loop implements Combinable  {
 		public Object combine(Env e, List o) {

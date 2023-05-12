@@ -8,6 +8,8 @@
 
 ;; Rename bindings that will be used as provided by VM
 
+(def \ %\)
+
 (def == %==)
 (def != %!=)
 
@@ -32,7 +34,6 @@
 (def >> %>>)
 (def >>> %>>>)
 
-(def \ %\)
 (def append %append)
 (def array->list %array->list)
 (def begin %begin)
@@ -92,6 +93,7 @@
 (def Math &java.lang.Math)
 (def System &java.lang.System)
 
+
 ;;;; Important utilities
 
 (def $vau %vau)
@@ -136,8 +138,8 @@
       (list 'makeMacro (list* '$vau params #ignore body)) )))
 
 ; defMacro defVau def\ def*\ rec\ e letrec\ permettono le definizioni con le seguenti due sintassi
-;    (name parameters . body)
-;    ((name . parameters) . body)
+;    (... name parameters . body)
+;    (... (name . parameters) . body)
 ; rec rec\ letrec e letrec\ inizializzano a #inert le definizioni prima della valutazione
 
 (def defMacro
@@ -171,8 +173,8 @@
 (assert (expand (def\ succ (n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
 (assert (expand (def\ (succ n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
 
-(defMacro (wrau pt e . body)
-  (list 'wrap (list* '$vau pt e body)))
+(defMacro (wrau pt env . body)
+  (list 'wrap (list* '$vau pt env body)))
 
 (assert (expand (wrau pt env a b c)) '(wrap ($vau pt env a b c)))    
 
@@ -184,7 +186,7 @@
 
 ;;;; Wrap incomplete VM forms
 
-(def* (then else) %begin %begin)
+(def* (then else) begin begin)
 
 (if (ctapv)
   (then
@@ -356,7 +358,7 @@
 (assert (labels ( ((even? n) (if (zero? n) #t (odd? (- n 1)))) ((odd? n) (if (zero? n) #f (even? (- n 1)))) ) (even? 88) ) #t)
 (assert (labels ( (even? (n) (if (zero? n) #t (odd? (- n 1)))) (odd? (n) (if (zero? n) #f (even? (- n 1)))) ) (even? 88) ) #t)
 
-#| definizioni alternative
+#| TODO definizioni alternative, eliminare
 (defMacro (letLoop . args)
   (if (symbol? (car args))
     (def (name bindings . body) args)
@@ -376,7 +378,215 @@
 |#
 
 
-;;; Finding
+;;;; Simple control
+
+(defMacro (when test . body)
+  (list 'if test (list* 'begin body)))
+
+(defMacro (unless test . body)
+  (list* 'when (list 'not test) body))
+
+
+;;;; Bind CaseVau Case\ Match
+
+(def bind? %bind?)
+
+(defVau (ifbind (pt exp) then . else) env
+  (let1 (env+ (makeEnv env))
+    (if (bind? env+ pt (eval exp env))
+      (eval then env+)
+      (unless (null? else)
+        (eval (let1 ((exp) else) exp) env) ))))
+
+(defVau (caseVau . clauses) env 
+  ($vau values #ignore
+    (let1 loop (clauses clauses)
+      (if (null? clauses) #inert ;(error ($ "not a match form for: " values))
+        (let ( (env+ (makeEnv env))
+               (((bindings . forms) . clauses) clauses) )
+          (if (if (== bindings 'else) #t (bind? env+ bindings values)) ; or!
+            (eval (list* 'begin forms) env+)
+            (loop clauses) ))))))
+            
+#| TODO sostituiti dal seguente, eliminare
+(defVau (case\ . clauses) env
+  (wrap
+    ($vau values #ignore
+      (let1 loop (clauses clauses)
+        (if (null? clauses) #inert
+          (let ( (env+ (makeEnv env))
+                 (((bindings . forms) . clauses) clauses) )
+            (if (if (== bindings 'else) #t (bind? env+ bindings values)) ; or!
+              (eval (list* 'begin forms) env+)
+              (loop clauses) )))))))
+
+(defVau (case\ . clauses) env
+  (\ values
+    (let1 loop (clauses clauses)
+      (if (null? clauses) #inert
+        (let ( (env+ (makeEnv env))
+               (((bindings . forms) . clauses) clauses) )
+          (if (if (== bindings 'else) #t (bind? env+ bindings values)) ; or!
+            (eval (list* 'begin forms) env+)
+            (loop clauses) ))))))
+|#
+(defMacro (case\ . clauses)
+  (list 'wrap (list* 'caseVau clauses)) )
+
+(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1) 2)
+(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2) 3)
+(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2 3) '(2 3 4))
+
+#| TODO sostituito dal seguente, eliminare
+(defVau (match exp . clauses) env
+  (let1 (exp (eval exp env))
+    (let1 loop (clauses clauses)
+      (if (null? clauses) #inert
+        (let ((env+ (makeEnv env))
+              (((bindings . forms) . clauses) clauses) )
+          (if (if (== bindings 'else) #t (bind? env+ bindings exp)) ; or!
+            (eval (list* 'begin forms) env+)
+            (loop clauses) ))))))
+(defMacro (match exp . clauses)
+  (list* (list* 'case\ clauses) (list exp)) )  
+(defVau (match exp . clauses) env
+  (eval (list* (list 'caseVau clauses) (eval exp env)) env) )
+|#
+(defMacro (match exp . clauses)
+  (list (list* 'case\ (map (\ ((a . b)) (list* (if (== a 'else) a (list a)) b)) clauses)) exp) )  
+
+(assert (match '(1 2 3) ((a) 1) ((a b) 2) (else 3)) 3)
+(assert (match   '(1 2) ((a) 1) ((a b) 2) (else 3)) 2)
+(assert (match     '(1) ((a) 1) ((a b) 2) (else 3)) 1)
+(assert (match        1 ((a) 1) ((a b) 2) (else 3)) 3)
+(assert (match        4 ((a) 1) ((a b) 2)    (a a)) 4)
+
+
+;;;; Cond And Or
+ 
+#| TODO sostituito dal seguente, eliminare
+(defVau (cond . clauses) env
+  (if (nil? clauses) #inert
+    (let1 (((test . body) . clauses) cla uses)
+      (if (== test 'else)
+        (apply (wrap begin) body env) 
+        (if (eval test env)
+          (apply (wrap begin) body env)
+          (apply (wrap cond) clauses env) )))))
+
+(defVau (cond . clauses) env
+  (if (nil? clauses) #inert
+    (let1 (((test . body) . clauses) cla uses)
+      (if (if (== test 'else) #t (eval test env))
+        (apply (wrap begin) body env)
+        (apply (wrap cond) clauses env) ))))
+
+(defVau (cond . clauses) env
+  (if (nil? clauses) #inert
+    (let1 (((test . body) . clauses) clauses)
+      (if (== test 'else)
+        (apply (wrap begin) body env)
+        (let1 (test (eval test env))
+          (if test
+            (if (null? body) test
+              (if (== (car body) '=>)
+                (let1 ((apd1) (cdr body))
+                  ((eval apd1 env) test) )
+                (apply (wrap begin) body env) ))
+            (apply (wrap cond) clauses env) ))))))
+
+(defVau (cond . clauses) env
+  (if (nil? clauses) #inert
+    (let1 (((test . body) . clauses) clauses)
+      (if (== test 'else)
+        (apply (wrap begin) body env)
+        (let1 (test (eval test env))
+          (if (instanceof? test Boolean)
+            (if test
+              (if (null? body) test
+                (if (== (car body) '=>)
+                  (let1 ((apd1) (cdr body)) ((eval apd1 env) test) )
+                  (apply (wrap begin) body env) ))
+              (apply (wrap cond) clauses env) )
+            (let1 ((guard '=> apd1) body)
+              (if ((eval guard env) test)
+                ((eval apd1 env) test)
+                (apply (wrap cond) clauses env) )) ))))))
+
+(defVau (cond . clauses) env
+  (if (nil? clauses) #inert
+    (let1 (((test . body) . clauses) clauses)
+      (if (== test 'else)
+        (apply (wrap begin) body env)
+        (let1 (test (eval test env))
+          (if (instanceof? test Boolean)
+            (if test
+              (if (null? body) test
+                (ifbind (('=> apd1) body)
+                  ((eval apd1 env) test) 
+                  (apply (wrap begin) body env) ))
+              (apply (wrap cond) clauses env) )
+            (let1 ((guard '=> apd1) body)
+              (if ((eval guard env) test)
+                ((eval apd1 env) test)
+                (apply (wrap cond) clauses env) )) ))))))
+(defVau (cond . clauses) env
+  (if (nil? clauses) #inert
+    (let1 (((test . body) . clauses) clauses)
+      (if (== test 'else)
+        (apply (wrap begin) body env)
+        (let1 (test (eval test env))
+          (if (instanceof? test Boolean)
+            (if test
+              (match body
+                (() test)
+                (('=> apd1) ((eval apd1 env) test))
+                (else (apply (wrap begin) body env) ))
+              (apply (wrap cond) clauses env) )
+            (let1 ((guard '=> apd1) body)
+              (if ((eval guard env) test)
+                ((eval apd1 env) test)
+                (apply (wrap cond) clauses env) )) ))))))
+|#
+(defVau (cond . clauses) env
+  (if (nil? clauses) #inert
+    (let1 (((test . body) . clauses) clauses)
+      (if (== test 'else)
+        (apply (wrap begin) body env)
+        (let1 (test (eval test env))
+          (if (instanceof? test Boolean)
+            (if test
+              (apply (wrap begin) body env)
+              (apply (wrap cond) clauses env) )
+            (match body
+              (() test)
+              (('=> apv1) ((eval apd1 env) test))
+              ((guard '=> apd1)
+                 (if ((eval guard env) test)
+                   ((eval apd1 env) test)
+                   (apply (wrap cond) clauses env) ))
+              (else (apply (wrap cond) clauses env)) )))))))
+
+(assert (begin (def a 1) (cond (a (\(a) (== a 1)) => (\(a) (+ a 1))))) 2) 
+
+(defVau (and . x) e
+  (cond ((nil? x)         #t)
+        ((nil? (cdr x))   (eval (car x) e))
+        ((eval (car x) e) (apply (wrap and) (cdr x) e))
+        (else             #f)))
+
+(def && and)
+
+(defVau (or . x) e
+  (cond ((nil? x)         #f)
+        ((nil? (cdr x))   (eval (car x) e))
+        ((eval (car x) e) #t)
+        (else             (apply (wrap or) (cdr x) e))))
+
+(def || or)
+
+
+;;;; Finding
 
 (def\ (member item lst)
   (let\ (loop (lst lst))
@@ -405,68 +615,7 @@
 (assert (get? 'b '(a 1 b 2 c 3)) '(2)) 
 
 
-;;;; Simple control
-
-(defMacro (when test . body)
-  (list 'if test (list* 'begin body)))
-
-(defMacro (unless test . body)
-  (list* 'when (list 'not test) body))
-
-(defVau (cond . clauses) env
-  (if (nil? clauses) #inert
-    (let ((((test . body) . clauses) cla uses))
-      (if (== test 'else)
-        (apply (wrap begin) body env) 
-        (if (eval test env)
-          (apply (wrap begin) body env)
-          (apply (wrap cond) clauses env) )))))
-
-(defVau (cond . clauses) env
-  (if (nil? clauses) #inert
-    (let ((((test . body) . clauses) clauses))
-      (if (== test 'else)
-        (apply (wrap begin) body env)
-        (let1 (test (eval test env))
-          (if test
-            (if (null? body) test
-              (if (== (car body) '=>)
-                (let1 ((apd1) (cdr body))
-                  ((eval apd1 env) test) )
-                (apply (wrap begin) body env) ))
-            (apply (wrap cond) clauses env) ))))))
-
-(defVau (and . x) e
-  (cond ((nil? x)         #t)
-        ((nil? (cdr x))   (eval (car x) e))
-        ((eval (car x) e) (apply (wrap and) (cdr x) e))
-        (else             #f)))
-
-(def && and)
-
-(defVau (or . x) e
-  (cond ((nil? x)         #f)
-        ((nil? (cdr x))   (eval (car x) e))
-        ((eval (car x) e) #t)
-        (else             (apply (wrap or) (cdr x) e))))
-
-(def || or)
-
-
-;;;; Bind
-
-;(def bind %bind)
-(def bind? %bind?)
-
-(defVau (ifBind (pt exp) then . else) env
-  (let1 (env+ (makeEnv env))
-    (if (bind? env+ pt (eval exp env))
-      (eval then env+)
-      (unless (null? else)
-        (eval (let1 ((exp) else) exp) env) ))))
-
-
-;;; Case
+;;; Case CaseType
 
 (defVau (case exp . clauses) env
   (let1 (value (eval exp env))
@@ -481,71 +630,7 @@
 
 (assert (case 3 ((2 4 6 8) 'pair) ((1 3 5 7 9) 'odd)) 'odd) 
 
-(defVau (caseVau . clauses) env 
-  ($vau values #ignore
-    (let1 loop (clauses clauses)
-      (if (null? clauses) #inert ;(error ($ "not a match form for: " values))
-        (let ((env+ (makeEnv env))
-              (((bindings . forms) . clauses) clauses) )
-          (if (or (== bindings 'else) (bind? env+ bindings values))
-            (eval (list* 'begin forms) env+)
-            (loop clauses) ))))))
-
-#|
-(defVau (case\ . clauses) env
-  (wrap
-    ($vau values #ignore
-      (let1 loop (clauses clauses)
-        (if (null? clauses) #inert
-          (let ((env+ (makeEnv env))
-                (((bindings . forms) . clauses) clauses) )
-            (if (or (== bindings 'else) (bind? env+ bindings values))
-              (eval (list* 'begin forms) env+)
-              (loop clauses) )))))))
-
-(defVau (case\ . clauses) env
-  (\ values
-    (let1 loop (clauses clauses)
-      (if (null? clauses) #inert
-        (let ((env+ (makeEnv env))
-              (((bindings . forms) . clauses) clauses) )
-          (if (or (== bindings 'else) (bind? env+ bindings values))
-            (eval (list* 'begin forms) env+)
-            (loop clauses) ))))))
-|#
-
-(defMacro (case\ . clauses)
-  (list 'wrap (list* 'caseVau clauses)) )
-
-(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1) 2)
-(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2) 3)
-(assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2 3) '(2 3 4))
-
-#|
-(defVau (match exp . clauses) env
-  (let1 (exp (eval exp env))
-    (let1 loop (clauses clauses)
-      (if (null? clauses) #inert
-        (let ((env+ (makeEnv env))
-              (((bindings . forms) . clauses) clauses) )
-          (if (or (== bindings 'else) (bind? env+ bindings exp))
-            (eval (list* 'begin forms) env+)
-            (loop clauses) ))))))
-|#
-
-(defMacro (match exp . clauses)
-  (list (list* 'case\ (map (\ ((a . b)) (list* (if (== a 'else) a (list a)) b)) clauses)) exp) )  
-
-;(defMacro (match exp . clauses)
-;  (list* (list* 'case\ clauses) (list exp)) )  
-;(defVau (match exp . clauses) env
-;  (eval (list* (list 'caseVau clauses) (eval exp env)) env) )
-
-(assert (match '(1 2 3) ((a) 1) ((a b) 2) (else 3)) 3)
-(assert (match '(1 2) ((a) 1) ((a b) 2) (else 3)) 2)
-(assert (match '(1) ((a) 1) ((a b) 2) (else 3)) 1)
-(assert (match 1 ((a) 1) ((a b) 2) (else 3)) 3)
-
+#| TODO sostituito dal seguente, eliminare
 (defVau (caseType keyform . clauses) env
     (let1 (key (eval keyform env))
       (let1 loop (clauses clauses)
@@ -554,6 +639,7 @@
             (if (or (== class 'else) (type? key (eval class env)))
               (eval (list* 'begin forms) env)
               (loop clauses) ))))))
+|#
 
 (def checkSlot 
   (\ (c slot)
@@ -583,6 +669,7 @@
 (assert (caseType 2.0 (else 3)) 3)
 (assert (caseType 2.0 (String "string") (Double "double")) "double")
 (assert (caseType (obj Obj :a 1) (Double "double") ((Obj :a 1) "Obj :a 1")) "Obj :a 1")
+
 
 ;;;; Options
 
@@ -695,6 +782,7 @@
   (blockName (unless (null? value?) (car value?))) )
 
 (assert (block ciclo (def x 1) (loop (if (== x 4) (returnFrom ciclo 7)) (def x (+ x 1)))) 7)
+
 
 ;;;; Type parameters check lambda
 
