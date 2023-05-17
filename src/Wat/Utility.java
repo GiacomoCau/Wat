@@ -1,6 +1,7 @@
 package Wat;
 
 import static Wat.Utility.PrimitiveWrapper.toPrimitive;
+import static java.lang.Character.toUpperCase;
 import static java.lang.System.in;
 import static java.lang.System.out;
 import static java.lang.reflect.Array.newInstance;
@@ -38,7 +39,7 @@ public class Utility {
 	*/
 	
 	public static <T> boolean equals(T v, T ... a) {
-		for (T e: a) if (v.equals(e)) return true;
+		for (T e: a) if (v == null && e == null || v.equals(e)) return true;
 		return false;
 	}
 	
@@ -46,6 +47,15 @@ public class Utility {
 		return f.apply(a);
 	}
 	
+	public static String capitalize(String s) {
+		return toUpperCase(s.charAt(0)) + s.substring(1);
+	}
+	public static String camelize(String ss, String dot) {
+		String a[] = ss.split(dot), r = a[0];
+		for (int i=1; i<a.length; i+=1) r += capitalize(a[i]);
+		return r;
+	}
+
 	public static String eIf(boolean b, String s) {
 		return b ? "" : s;
 	}
@@ -60,6 +70,10 @@ public class Utility {
 	}
 	public static <T> String eIfnull(T o, Function<T, String> f) {
 		return o==null ? "" : f.apply(o);
+	}
+	
+	public static <T> T ifnull(T t, Supplier<T> s) {
+		return t != null ? t : s.get();
 	}
 	
 	public static <T> T uncked(Callable<T> t) {
@@ -207,10 +221,10 @@ public class Utility {
 		return cl.toString();
 	}
 	
-	public static Object[] reorg(Executable ex, Object[] args) throws Exception {
+	public static Object[] reorg(Executable ex, Object[] args) {
 		return reorg(ex.isVarArgs(), ex.getParameterTypes(), args); 
 	}
-	public static Object[] reorg(boolean isVarArgs, Class[] parms, Object[] args) throws Exception {
+	public static Object[] reorg(boolean isVarArgs, Class[] parms, Object[] args) {
 		int length = parms.length;
 		if (!isVarArgs) {
 			if (length != 1 || !parms[0].isArray()) return args;
