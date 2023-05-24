@@ -101,3 +101,4 @@
     (assert (%catch #ignore (%begin (%def x 0) (%loop (%if (%== x 10) (%throw #ignore x)) (%def x (%+ x 1))))) 10) ))
 
 (%def testTco (%\ (n) (%if (%<= n 0) n (testTco (%- n 1)))))
+(assert (testTco 400) 0)

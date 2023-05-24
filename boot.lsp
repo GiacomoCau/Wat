@@ -1118,8 +1118,34 @@
 (def\ (log x . xs)
   (apply @log (list* &console x xs))
   x)
+|#
 
 
+;;;; Greatest Common Divisor e Lowest Common Multiple
+
+(def\ (gcd a b . more)
+  (if (null? more) 
+    (if (zero? b) a (gcd b (% a b)))
+    (gcd a (apply gcd (cons b more))) ))
+
+(def abs (let1 (abs (@getMethod Math "abs" &int)) (\ (n) (abs #null n))))  
+
+(assert (gcd 8 108) 4)
+(assert (gcd 108 216 432) 108)
+
+(def abs (let1 (abs (@getMethod Math "abs" &int)) (\ (n) (abs #null n))))  
+
+(def\ (lcm a b . more)
+  (if (null? more)
+    (if (or (zero? a) (zero? b)) 0
+      (abs (* b (/ a (gcd a b)))) )
+    (lcm a (apply lcm (cons b more))) ))
+
+(assert (lcm 8 108) 216)
+(assert (lcm 3 4 5 6) 60)
+
+
+#|
 ;;;; Cells
 
 (defPrototype Cell Object (value))

@@ -352,9 +352,6 @@
 (assert (<= 1 1 2 3 4 5 5) #t)
 (assert (< 1 1 2 3 4 5 5) #f)
 
-;(define (testTco n) (if (<= n 0) n (testTco (- n 1))))
-(assert (testTco 400) 0)
-
 (exit "finito")
 
 #|

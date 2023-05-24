@@ -530,7 +530,7 @@ public class Vm {
 			);
 			//*/
 		}
-		public String toString() { return "{%Opv " + (pt == null ? "()" : Vm.this.toString(pt)) + " " + Vm.this.toString(ep) + " " + Vm.this.toString(x) + /*" " + e +*/ "}"; }
+		public String toString() { return "{%Opv " + (pt == null ? "()" : Vm.this.toString(pt)) + " " + Vm.this.toString(ep) + " " + apply(s-> s.substring(1, s.length()-1), Vm.this.toString(x)) + /*" " + e +*/ "}"; }
 	}
 	class Apv implements Combinable  {
 		Combinable cmb;
@@ -899,6 +899,7 @@ public class Vm {
 					try {
 						return jfun.apply(o);
 					}
+					/* TODO sostituito dal seguente, eliminare
 					catch (Error exc) {
 						return exc;
 					}
@@ -908,6 +909,14 @@ public class Vm {
 					catch (Throwable thw) {
 						//return error("jfun error: " + thw.getMessage(), thw);
 						return error("error combining: " + this + " with: " + o, thw);
+					}
+					*/
+					catch (Throwable thw) {
+						switch (thw) {
+							case Value val: throw val;
+							case Error err: return err;
+							default: return error("error combining: " + this + " with: " + o, thw);
+						}
 					}
 				}
 			);
@@ -959,6 +968,7 @@ public class Vm {
 				);
 				//*/
 			}
+			/* TODO sostituito dal precedente, eliminare
 			catch (InvocationTargetException ite) {
 				var te = ite.getTargetException();
 				if (te instanceof Value v) throw v; 
@@ -966,6 +976,17 @@ public class Vm {
 			}
 			catch (Exception exc) {
 				return error("error executing " + executable(name, args) + " of: " + toString(o0) + " with: " + toString(list(args)), exc);
+			}
+			*/ 
+			catch (Throwable thw) {
+				if (thw instanceof InvocationTargetException ite) {
+					switch (ite.getTargetException()) {
+						case Value v: throw v;
+						case Error e: return e;
+						default: // in errore senza!
+					}
+				}
+				return error("error executing " + executable(name, args) + " of: " + toString(o0) + " with: " + toString(list(args)), thw);
 			}
 		};
 	}
