@@ -222,11 +222,8 @@
   )
 )
 
-(defVau (finally protected . cleanup) env
-  (eval (list '%finally protected (list* 'begin cleanup)) env) )
-
-(defMacro (takeSubcont prompt k . body)
-  (list '%takeSubcont prompt (list* '\ (list k) body)) )
+(def finally %finally)
+(def takeSubcont %takeSubcont)
 
 (defVau (pushPrompt prompt . body) env
   (eval (list '%pushPrompt (eval prompt env) (list* 'begin body)) env) )

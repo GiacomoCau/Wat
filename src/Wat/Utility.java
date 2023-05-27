@@ -32,19 +32,20 @@ public class Utility {
 	public static Object[] $(Object... objects) {
 		return objects;
 	}
-	/*
-	public static <T> T[] $(T... objects) {
+	public static Object or(Object... objects) {
 		return objects;
 	}
-	*/
 	
 	public static <T> boolean equals(T v, T ... a) {
-		for (T e: a) if (v == null && e == null || v.equals(e)) return true;
+		for (T e: a) if (v == null ? e == null : v.equals(e)) return true;
 		return false;
 	}
 	
 	public static <T,R> R apply(Function<T,R> f, T a) {
 		return f.apply(a);
+	}
+	public static <T,U,R> R apply(BiFunction<T,U,R> f, T a, U b) {
+		return f.apply(a, b);
 	}
 	
 	public static String capitalize(String s) {

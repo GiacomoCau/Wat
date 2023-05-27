@@ -19,7 +19,7 @@
 ($define! list* %list*)
 ($define! list->array %list->array)
 ($define! loop %loop)
-($define! make-environment %makeEnvironment)
+($define! make-environment %MakeEnv)
 ($define! nil? %null?)
 ($define! not !)
 ($define! reverse-list %reverseList)
