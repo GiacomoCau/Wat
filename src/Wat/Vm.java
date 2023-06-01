@@ -9,6 +9,8 @@ import static Wat.Utility.eIfnull;
 import static Wat.Utility.getClasses;
 import static Wat.Utility.getExecutable;
 import static Wat.Utility.getField;
+import static Wat.Utility.headAdd;
+import static Wat.Utility.ifnull;
 import static Wat.Utility.isInstance;
 import static Wat.Utility.or;
 import static Wat.Utility.read;
@@ -321,15 +323,16 @@ public class Vm {
 			return error("not found: " + name );
 		};
 		Object def(K name, Object value) {
-			if (prtrc >= 6) print("    bind: ", name, "=", value, " in: ", this); return map.put(name, value); // return null; 
+			if (prtrc >= 6) print("    bind: ", name, "=", value, " in: ", this); return map.put(name, value);
 		}
 		public String toString() {
 			var deep = deep();
 			var prefix = switch(deep) { case 1-> "Vm"; case 2-> "The"; default-> ""; };
-			return "{" + prefix + "Env[" + map.size() + "]" + eIf(deep < prenv, ()-> reverseMap(map)) + eIf(parent == null, ()-> " " + parent) + "}";
+			return "{" + prefix + "Env[" + map.size() + "]" + eIf(deep < prenv, ()-> reverseMap(map)) + eIfnull(parent, ()-> " " + parent) + "}";
 		}
 		Object lookup(K name) {
-			var lookup = get(name); if (!lookup.isBound) return error("unbound: " + name);
+			var lookup = get(name);
+			if (!lookup.isBound) return error("unbound symbol: " + name);
 			if (prtrc >= 6) print("  lookup: ", lookup.value); return lookup.value;
 		}
 		boolean isParent(Env other) {
@@ -360,7 +363,7 @@ public class Vm {
 			    }; 
 			};
 		}
-		public String toString() { return "{" + getClass().getSimpleName() + " " + (value == null ? "#null" : Vm.this.toString(value)) + "}"; }
+		public String toString() { return "{" + getClass().getSimpleName() + " " + ifnull(value, "#null", v-> Vm.this.toString(v)) + "}"; }
 	}
 	public class Obj extends LinkedHashMap<Keyword, Object> implements ArgsList {
 		private static final long serialVersionUID = 1L;
@@ -378,11 +381,11 @@ public class Vm {
 				+ (field.length() == 1 ? field : " " + field) ;
 		}
 		@Override public Object apply(List o) {
-			var chk = checkR(this, o, 1, 3); // (:key) | (:key value) | (:key :key value)
+			var chk = checkR(this, o, 1, 3, Keyword.class); // (:key) | (:key value) | (:key :key value)
 			if (!(chk instanceof Integer len)) return chk;
 			var key = o.<Keyword>car();
 			return switch (len) { 
-				case 1-> get(key);
+				case 1-> containsKey(key) ? get(key) : error("field non found: " + key);
 				default-> switch (bndret(len != 3 ? null : o.car(1))) {
 					case 0-> inert(put(key, o.car(len-1)));
 					case 1-> {var v = o.car(len-1); put(key, v); yield v; }
@@ -395,7 +398,7 @@ public class Vm {
 	Class extend(Symbol className, Class superClass) {
 		try {
 			if (!className.name.matches("[A-Z][a-zA-Z_0-9]*")) return error("invalid class name: " + className);
-			if (superClass != null && !of(Obj.class, Box.class).anyMatch(c-> c.isAssignableFrom(superClass))) return error("invalid extendible " + superClass);
+			if (superClass != null && !of(Obj.class, Box.class).anyMatch(rc-> rc.isAssignableFrom(superClass))) return error("invalid extendible " + superClass);
 			var c = Class.forName("Ext." + className);
 			out.println("Warning: class " + className + " is already defined!");
 			return c;
@@ -426,7 +429,7 @@ public class Vm {
 							""".formatted(
 								className,
 								isObj ? "Vm.Obj" : superClass.getCanonicalName(),
-								isBox ? "Object" : "Object ...", 
+								isBox ? "Object" : "Object ... ", 
 								isObj || superClass == Box.class ? "vm.super(o)" : "super(vm, o)"
 							)
 						)
@@ -563,7 +566,7 @@ public class Vm {
 			if (!(chk instanceof Integer len)) return chk;
 			var pt = o.car();
 			var ep = o.car(1);
-			if (ep == null) return error("not #ignore or a symbol: () of: " + cons(this, o));
+			if (ep == null) return error("not #ignore or a symbol: #null of: " + cons(this, o));
 			var msg = checkPt(cons(this, o), pt, ep); if (msg != null) return msg;
 			return new Opv(pt, ep, o.cdr(1), e);
 		}
@@ -577,7 +580,7 @@ public class Vm {
 			if (!(chk instanceof Integer len)) return chk;
 			var pt = o.car();
 			if (!(pt instanceof Symbol)) {
-				if (!(pt instanceof Cons)) return error("not a symbol or parameter tree: " + (pt == null ? "()" : pt) + " of: " + cons(this, o));
+				if (!(pt instanceof Cons)) return error("not a symbol or parameter tree: " + ifnull(pt, "()") + " of: " + cons(this, o));
 				var msg = checkPt(cons(this, o), pt); if (msg != null) return msg;
 			}
 			var dbg = dbg(e, this, o);
@@ -604,12 +607,6 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			var chk = checkN(this, o, 2, null, Env.class); // o = (x eo)
 			if (!(chk instanceof Integer len)) return chk;
-			/* TODO sostituito dal seguente, eliminare
-			var x = o.car();
-			var o1 = o.car(1);
-			if (!(o1 instanceof Env eo)) return error("not an Env: " + o1);
-			return evaluate(eo, x);
-			*/
 			return evaluate(o.car(1), o.car());
 		}
 		public String toString() { return "%Eval"; }
@@ -856,7 +853,7 @@ public class Vm {
 				dvar.value = vals[i];
 			}
 			try {
-				Object res = r != null ? r.resume() : getTco(len == 2 && o.car(1) instanceof Apv apv ? Vm.this.combine(e, apv, null) : begin.combine(e, o.cdr()));
+				Object res = r != null ? r.resume() : getTco(len == 2 && o.car(1) instanceof Apv apv && args(apv) == 0 ? Vm.this.combine(e, apv, null) : begin.combine(e, o.cdr()));
 				return res instanceof Suspension s ? s.suspend(dbg(e, this, o), rr-> combine(rr, e, o)) : res;
 			}
 			finally {
@@ -933,12 +930,9 @@ public class Vm {
 			// (@getConstructor class . classes) -> class.getConstructor(classes) -> constructor
 			// (@getMethod class name . classes) -> class.getMethod(name, classes) -> method
 			// (@getField class name)            -> class.getField(name, classes) -> field
-			if (name.equals("new") && o0 instanceof Class c && Obj.class.isAssignableFrom(c) && args[0].getClass() != Vm.class) {
+			if (name.equals("new") && o0 instanceof Class c && of(Obj.class, Box.class).anyMatch(rc-> rc.isAssignableFrom(c)) && (args.length == 0 || args[0].getClass() != Vm.class)) {
 				// (@new Error "assert error!") -> (@new Error vm "assert error!")
-				var nArgs = new Object[args.length+1];
-				nArgs[0] = Vm.this; 
-				System.arraycopy(args, 0, nArgs, 1, args.length);
-				args = nArgs;
+				args = headAdd(args, Vm.this);
 			}
 			var classes = getClasses(args);
 			Executable executable = getExecutable(o0, name, classes);
@@ -1001,7 +995,7 @@ public class Vm {
 	<T> T error(Error err) {
 		var userBreak = theEnv.get(symbol("userBreak")).value;
 		if (userBreak == null) throw err;
-		return (T) pipe(dbg(theEnv, "throw", err), ()-> getTco(evaluate(theEnv, list(userBreak, err)))); 
+		return (T) pipe(dbg(theEnv, "userBreak", err), ()-> getTco(evaluate(theEnv, list(userBreak, err)))); 
 	}
 	class Error extends RuntimeException {
 		private static final long serialVersionUID = 1L;
@@ -1027,16 +1021,16 @@ public class Vm {
 		PTree(Object exp, Object pt, Object ep) { this.exp=exp; this.pt = pt; this.ep = ep; }
 		Object check() { 
 			if (pt != null && pt != ignore && !(pt instanceof Symbol s && syms.add(s))) {
-				if (!(pt instanceof Cons)) return error("not a #null, #ignore, symbol or parameters tree: " + pt + " of " + exp);
+				if (!(pt instanceof Cons)) return error("not a #null, #ignore, symbol or parameters tree: " + pt + " of: " + exp);
 				var msg = check(pt); if (msg != null) return msg;
 			}
-			if (ep == null) /* ovvero %def! */ return syms.size() > 0 ? null : error("no one symbol in: " + exp);
+			if (ep == null) /* ovvero %def!/%set! */ return syms.size() > 0 ? null : error("no one symbol in: " + pt + " of: " + exp);
 			if (ep == ignore) return null;
-			if (!(ep instanceof Symbol sym)) return error("not a #ignore or symbol: " + ep + " of " + exp);
-			return !syms.contains(sym) ? null : error("not a unique symbol: " + ep + " in " + exp);
+			if (!(ep instanceof Symbol sym)) return error("not a #ignore or symbol: " + ep + " of: " + exp);
+			return !syms.contains(sym) ? null : error("not a unique symbol: " + ep + " in: " + exp);
 		}
 		private Object check(Object p) {
-			if (p instanceof Symbol) { return syms.add(p) ? null : error("not a unique symbol: " + p + eIf(p == pt, ()-> " in: " + pt) + " of " + exp); }
+			if (p instanceof Symbol) { return syms.add(p) ? null : error("not a unique symbol: " + p + " in: " + pt + " of: " + exp); }
 			if (!(p instanceof Cons c)) return null;
 			var msg = check(c.car); if (msg != null) return msg;
 			return c.cdr == null ? null : check(c.cdr);
@@ -1261,7 +1255,7 @@ public class Vm {
 					$("%def", "%makeEnv", wrap(new JFun("%MakeEnv", (n,o)-> checkR(n, o, 0, 1, or(null, Env.class)), (l,o)-> env(l == 0 ? null : o.car()) ))) ,
 					$("%def", "%wrap", wrap(new JFun("%Wrap", (Function) this::wrap))),
 					$("%def", "%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap))),
-					$("%def", "%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, Symbol.class, or(null, Env.class)), (l,o)-> apply(e-> e != null && e.get(o.car()).isBound, o.<Env>car(1))))),
+					$("%def", "%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, Symbol.class, Env.class), (l,o)-> o.<Env>car(1).get(o.car()).isBound) )),
 					$("%def", "%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (RuntimeException rte) { return false; }} ))),
 					$("%def", "%apply", wrap(new JFun("%Apply", (ArgsList) o-> combine(o.cdr(1) == null ? env(null) : o.car(2), unwrap(o.car()), o.car(1)) ))),
 					$("%def", "%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(null), unwrap(o.car()), o.cdr()) ))),
@@ -1314,16 +1308,16 @@ public class Vm {
 					$("%def", "%obj", wrap(new JFun("%Obj", (n,o)-> checkM(n, o, 1, Obj.class, or(Keyword.class, null)), (l,o)-> ((ArgsList) jInvoke("new")).apply(listStar(o.car(), Vm.this, o.cdr)) ))),
 					$("%def", "%class", wrap(new JFun("%Class", (n,o)-> checkR(n, o, 1, 2, Symbol.class, or(Box.class, Obj.class)), (l,o)-> extend(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr())) ))),
 					$("%def", "%subClass?", wrap(new JFun("%SubClass?", (n,o)-> checkN(n, o, 2, Class.class, Class.class), (l,o)-> o.<Class>car(1).isAssignableFrom(o.car()) ))),
-					$("%def", "%type?",  wrap(new JFun("%Type?", (n,o)-> checkN(n, o, 2, null, or(null, Class.class)), (l,o)-> apply((o1, c)-> c == null ? o1 == null : o1 == null ? !c.isPrimitive() : c.isAssignableFrom(o1.getClass()), o.car(), o.<Class>car(1)) ))),
-					$("%def", "%classOf", wrap(new JFun("%ClassOf", (n,o)-> checkN(n, o, 1), (l,o)-> o.car().getClass() ))),
+					$("%def", "%type?",  wrap(new JFun("%Type?", (n,o)-> checkN(n, o, 2, null, or(null, Class.class)), (l,o)-> apply((o1, c)-> c == null ? o1 == null /*: o1 == null ? !c.isPrimitive()*/ : o1 != null && c.isAssignableFrom(o1.getClass()), o.car(), o.<Class>car(1)) ))),
+					$("%def", "%classOf", wrap(new JFun("%ClassOf", (n,o)-> checkN(n, o, 1), (l,o)-> apply(o1-> o1 == null ? null : o1.getClass(), o.car()) ))),
 					// Utilities
 					$("%def", "%list", wrap(new JFun("%List", (ArgsList) o-> o))),
 					$("%def", "%list*", wrap(new JFun("%List*", (ArgsList) this::listStar))),
-					$("%def", "%len", wrap(new JFun("%Len", (n,o)-> checkM(n, o, 1, List.class), (l,o)-> len(o.car()) ))),
+					$("%def", "%len", wrap(new JFun("%Len", (n,o)-> checkM(n, o, 1, or(null, List.class)), (l,o)-> len(o.car()) ))),
 					$("%def", "%list->array", wrap(new JFun("%List->array", (n,o)-> checkM(n, o, 1, List.class), (l,o)-> array(o) ))),
 					$("%def", "%array->list", wrap(new JFun("%Array->list", (n,o)-> checkM(n, o, 1, Boolean.class, Object[].class), (l,o)-> list(o.car(), o.car(1)) ))),
-					$("%def", "%reverse", wrap(new JFun("%Reverse", (n,o)-> checkM(n, o, 1, List.class), (l,o)-> reverse(o.car()) ))),
-					$("%def", "%append", wrap(new JFun("%Append", (n,o)-> checkM(n, o, 2, List.class), (l,o)-> append(o.car(),o.car(1)) ))),
+					$("%def", "%reverse", wrap(new JFun("%Reverse", (n,o)-> checkM(n, o, 1, or(null, List.class)), (l,o)-> reverse(o.car()) ))),
+					$("%def", "%append", wrap(new JFun("%Append", (n,o)-> checkM(n, o, 2, or(null, List.class)), (l,o)-> append(o.car(),o.car(1)) ))),
 					// 
 					$("%def", "%$", wrap(new JFun("%$", (BiFunction<Object,Object,String>) (a,b)-> Vm.this.toString(a) + Vm.this.toString(b)))),
 					$("%def", "%+", wrap(new JFun("%+", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Pls, o.car(), o.car(1)) ))),
@@ -1365,7 +1359,8 @@ public class Vm {
 					$("%def", "read", wrap(new JFun("Read", (ArgsList) o-> cons(begin, parseBytecode(uncked(()-> parse(read()))))))),
 					$("%def", "dotco", wrap(new JFun("Dotco", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? dotco : inert(dotco=o.car()) ))),
 					$("%def", "doasrt",  wrap(new JFun("Doasrt", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doasrt : inert(doasrt=o.car()) ))),
-					$("%def", "ctapv", wrap(new JFun("Ctapv", (n,o)-> checkR(n, o, 0, 1, Boolean.class),
+					$("%def", "ctapv", wrap(new JFun("Ctapv",
+						(n,o)-> checkR(n, o, 0, 1, Boolean.class),
 						(l,o)-> l == 0 ? ctapv
 								: inert(ctapv = o.car(),
 									bind(null, theEnv,
@@ -1423,6 +1418,7 @@ public class Vm {
 		loop: for (;;) {
 			switch (read()) {
 				case "" : break loop;
+				case "\n": break;
 				case String exp: try {
 					print(exec(parse(exp)));
 				}

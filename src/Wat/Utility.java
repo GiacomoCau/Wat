@@ -2,6 +2,7 @@ package Wat;
 
 import static Wat.Utility.PrimitiveWrapper.toPrimitive;
 import static java.lang.Character.toUpperCase;
+import static java.lang.System.arraycopy;
 import static java.lang.System.in;
 import static java.lang.System.out;
 import static java.lang.reflect.Array.newInstance;
@@ -48,6 +49,17 @@ public class Utility {
 		return f.apply(a, b);
 	}
 	
+	public static <T> T[] tailAdd(T[] first, T ... second) {
+		T[] res = copyOf(first, first.length + second.length);
+		arraycopy(second, 0, res, first.length, second.length);
+		return res;
+	}
+	public static <T> T[] headAdd(T[] first, T ... second) {
+		T[] res = copyOf(second, first.length + second.length);
+		arraycopy(first, 0, res, second.length, first.length);
+		return res;
+	}
+	
 	public static String capitalize(String s) {
 		return toUpperCase(s.charAt(0)) + s.substring(1);
 	}
@@ -73,8 +85,14 @@ public class Utility {
 		return o==null ? "" : f.apply(o);
 	}
 	
+	public static <T> T ifnull(T t, T s) {
+		return t != null ? t : s;
+	}
 	public static <T> T ifnull(T t, Supplier<T> s) {
 		return t != null ? t : s.get();
+	}
+	public static <T,R> R ifnull(T t, R r, Function<T, R> f) {
+		return t != null ? f.apply(t) : r;
 	}
 	
 	public static <T> T uncked(Callable<T> t) {
