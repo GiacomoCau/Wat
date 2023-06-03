@@ -125,12 +125,12 @@ public class Vm {
 	boolean instr = false; // intern string
 	boolean prstk = false; // print stack
 	boolean aquote = true; // auto quote list
-	boolean nullf = false; // null false
 	
 	int prtrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
+	int ttrue = 0; // type true: 0:true, 1:!false, 2:!(or false null), 3:!(or false null inert), 4:!(or false null inert zero)
 	int prenv = 3; // print environment
 	int bndret = 0; // bind return: 0:inert 1:rhs 2:prev
-	private int bndret(Object o) {
+	private Object bndret(Object o) {
 		return switch (o) {
 			case null-> bndret;
 			case Inert i-> 0; 
@@ -320,7 +320,7 @@ public class Vm {
 			*/
 			for (var env=this; env!=null; env=env.parent)
 				if (env.map.containsKey(name)) return env.def(name, value);
-			return error("not found: " + name );
+			return error("unbound symbol: " + name);
 		};
 		Object def(K name, Object value) {
 			if (prtrc >= 6) print("    bind: ", name, "=", value, " in: ", this); return map.put(name, value);
@@ -353,13 +353,19 @@ public class Vm {
 		public Box (Object val) { this.value = val; }
 		@Override public Object apply(List o) {
  			var chk = checkR(this, o, 0, 2);
-			if (!(chk instanceof Integer len)) return chk;
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 			return switch (len) {
 				case 0-> value;
 				default-> switch (bndret(len != 2 ? null : o.car())) {
-					case 0-> inert(value = o.car());
-					case 1-> value = o.car(1);
-					default-> { var v = value; value = o.car(1); yield v; }
+					case Suspension s-> s;
+					case Integer i-> switch(i) {
+						case 0-> inert(value = o.car());
+						case 1-> value = o.car(1);
+						case 2-> { var v = value; value = o.car(1); yield v; }
+						default-> error("invalid bndret value: " + i);
+					};
+					case Object obj-> error("not an integer: " + obj);
 			    }; 
 			};
 		}
@@ -382,14 +388,20 @@ public class Vm {
 		}
 		@Override public Object apply(List o) {
 			var chk = checkR(this, o, 1, 3, Keyword.class); // (:key) | (:key value) | (:key :key value)
-			if (!(chk instanceof Integer len)) return chk;
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 			var key = o.<Keyword>car();
 			return switch (len) { 
 				case 1-> containsKey(key) ? get(key) : error("field non found: " + key);
 				default-> switch (bndret(len != 3 ? null : o.car(1))) {
-					case 0-> inert(put(key, o.car(len-1)));
-					case 1-> {var v = o.car(len-1); put(key, v); yield v; }
-					default-> put(key, o.car(len-1));
+					case Suspension s-> s;
+					case Integer i-> switch(i) {
+						case 0-> inert(put(key, o.car(len-1)));
+						case 1-> { var v = o.car(len-1); put(key, v); yield v; }
+						case 2-> put(key, o.car(len-1));
+						default-> error("invalid bndret value: " + i);
+					};
+					case Object obj-> error("not an integer: " + obj);
 			    }; 
 			};
 		}
@@ -398,7 +410,7 @@ public class Vm {
 	Class extend(Symbol className, Class superClass) {
 		try {
 			if (!className.name.matches("[A-Z][a-zA-Z_0-9]*")) return error("invalid class name: " + className);
-			if (superClass != null && !of(Obj.class, Box.class).anyMatch(rc-> rc.isAssignableFrom(superClass))) return error("invalid extendible " + superClass);
+			if (superClass != null && !of(Obj.class, Box.class).anyMatch(rc-> rc.isAssignableFrom(superClass))) return error("invalid class: " + superClass);
 			var c = Class.forName("Ext." + className);
 			out.println("Warning: class " + className + " is already defined!");
 			return c;
@@ -563,7 +575,8 @@ public class Vm {
 	class Vau implements Combinable  {
 		public Object combine(Env e, List o) {
 			var chk = checkM(this, o, 2); // o = (pt ep) | (pt ep x ...)
-			if (!(chk instanceof Integer len)) return chk;
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 			var pt = o.car();
 			var ep = o.car(1);
 			if (ep == null) return error("not #ignore or a symbol: #null of: " + cons(this, o));
@@ -577,21 +590,30 @@ public class Vm {
 		Def(boolean def) {this.def = def; }
 		public Object combine(Env e, List o) {
 			var chk = checkR(this, o, 2, 3);  // o = (pt arg) | (pt key arg)
-			if (!(chk instanceof Integer len)) return chk;
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 			var pt = o.car();
 			if (!(pt instanceof Symbol)) {
 				if (!(pt instanceof Cons)) return error("not a symbol or parameter tree: " + ifnull(pt, "()") + " of: " + cons(this, o));
 				var msg = checkPt(cons(this, o), pt); if (msg != null) return msg;
 			}
 			var dbg = dbg(e, this, o);
-			return pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> bind(dbg, def, bndret(len != 3 ? null : o.car(1)), e, pt, res));
+			return pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> 
+				switch (bndret(len != 3 ? null : o.car(1))) {
+					case Suspension s-> s;
+					case Integer i-> i >= 0 && i <= 2 ? bind(dbg, def, i, e, pt, res) : error("invalid bndret value: " + i);
+					case Object obj-> error("not an integer: " + obj);
+				}
+			);
 		}
 		public String toString() { return def ? "%Def" : "%Set!"; }
 	};
 	/* TODO non più necessario
 	class DefStar implements Combinable  {
 		public Object combine(Env e, List o) {
-			checkO(this, o, 1, -1); // o = (pt arg ...)
+			var chk = checkM(this, o, 1); // o = (pt arg ...)
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 			var pt = o.car();
 			if (!(pt instanceof Symbol)) {
 				if (!(pt instanceof Cons)) return error("not a symbol or parameter tree: " + pt + " in: " + cons(this, o));
@@ -606,7 +628,8 @@ public class Vm {
 	class Eval implements Combinable  {
 		public Object combine(Env e, List o) {
 			var chk = checkN(this, o, 2, null, Env.class); // o = (x eo)
-			if (!(chk instanceof Integer len)) return chk;
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 			return evaluate(o.car(1), o.car());
 		}
 		public String toString() { return "%Eval"; }
@@ -638,36 +661,38 @@ public class Vm {
 	class If implements Combinable  {
 		public Object combine(Env e, List o) {
 			var chk = checkR(this, o, 2, 3); // o = (test then) | (test then else) 
-			if (!(chk instanceof Integer len)) return chk;
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 			var test = o.car();
 			return tco(()-> pipe(dbg(e, this, o), ()-> getTco(evaluate(e, test)), res->
-				!(res instanceof Boolean) 
-				? error("not a boolean: " + res)
-				: istrue(res)
-				? evaluate(e, o.car(1))
-				: o.cdr(1) == null ? inert : evaluate(e, o.car(2))
-				//: o.cdr(1) == null ? inert : ()-> begin.combine(e, o.cdr(1))
+				switch (istrue(res)) {
+					case Suspension s-> s;
+					case Boolean b-> b
+						? evaluate(e, o.car(1))
+						: o.cdr(1) == null ? inert : evaluate(e, o.car(2));
+						//: o.cdr(1) == null ? inert : ()-> begin.combine(e, o.cdr(1))
+					case Object obj-> error("not a boolean: " + obj);
+				}
 			));
 		}
 		public String toString() { return "%If"; }
 	}
-	boolean istrue(Object res) {
-		//return res instanceof Boolean b ? b : nullf ?  res != null : error("not a boolean: " + res);
-		return res instanceof Boolean b && b; // Kernel Wat Lispx
-		//return !(res instanceof Boolean b && !b); // Scheme Racket Guile
-		//return res != null && !(res instanceof Boolean b && !b);
-		//return res != null && res != inert && !(res instanceof Boolean b && !b);
-		
-		//return Utility.equals(res, true); // Kernel Wat Lispx
-		//return !Utility.equals(res, false); // Scheme Racket Guile
-		//return !Utility.equals(res, false, null);
-		//return !Utility.equals(res, false, null, ignore);
-		//return !Utility.equals(res, false, null, ignore, 0);  
+	Object istrue(Object res) {
+		return switch (ttrue) {
+			case 0-> res instanceof Boolean b ? b : error("not a boolean: " + res); // Kernel Wat Lispx
+			//case 1-> !(res instanceof Boolean b && !b); // Scheme Racket Guile
+			case 1-> !Utility.equals(res, false); // Scheme Racket Guile
+			case 2-> !Utility.equals(res, false, null);
+			case 3-> !Utility.equals(res, false, null, ignore);
+			case 4-> !Utility.equals(res, false, null, ignore, 0);
+			default-> res instanceof Boolean b ? b : error("not a boolean: " + res); // Kernel Wat Lispx
+		};
 	}
 	class Loop implements Combinable  {
 		public Object combine(Env e, List o) {
 			var chk = checkM(this, o, 1); // o = (x ...)
-			if (!(chk instanceof Integer len)) return chk;
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 			return combine(null, e, o);
 		}
 		public Object combine(Resumption r, Env e, List o) {
@@ -681,7 +706,8 @@ public class Vm {
 	class Catch implements Combinable {
 		public Object combine(Env e, List o) {
 			var chk = checkR(this, o, 2, 3); // o = (tag x) | (tag x hdl) -> (tag x apv1)
-			if (!(chk instanceof Integer len)) return chk;
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 			var tag = o.car();
 			var x = o.car(1);
 			var hdl = len == 2 ? null : o.car(2);
@@ -714,7 +740,8 @@ public class Vm {
 	class Throw implements Combinable {
 		public Object combine(Env e, List o) {
 			var chk = checkR(this, o, 1, 2); // o = (tag) | (tag value)
-			if (!(chk instanceof Integer len)) return chk;
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 			var tag = o.car();
 			var value = len == 1 ? inert : o.car(1);
 			throw new Value(tag, ctapv ? value : pipe(dbg(e, this, tag, value), ()-> getTco(evaluate(e, value))));
@@ -725,7 +752,8 @@ public class Vm {
 		public Object combine(Env e, List o) { return combine(null, e, o); }
 		public Object combine(Resumption r, Env e, List o) {
 			var chk = checkM(this, o, 1); // o = (x cln)
-			if (!(chk instanceof Integer len)) return chk;
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 			var x = o.car();
 			var cln = o.cdr();
 			try {
@@ -750,7 +778,8 @@ public class Vm {
 	class TakeSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
 			var chk = checkM(this, o, 2, null, or(Ignore.class, Symbol.class)); // o = (prp (or ignore symbol) . body)
-			if (!(chk instanceof Integer len)) return chk;
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 			return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, o.car())),
 				prp-> new Suspension(prp, lambda(e, list(o.<Object>car(1)), o.cdr(1)))
 					.suspend(dbg(e, this, o), rr-> Vm.this.combine(e, rr.s, null)))
@@ -761,7 +790,8 @@ public class Vm {
 	class PushPrompt implements Combinable  {
 		public Object combine(Env e, List o) {
 			var chk = checkN(this, o, 2); // o = (prp apv0) | (prp x) | (prp (begin ...))
-			if (!(chk instanceof Integer len)) return chk;
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 			var prp = o.car();
 			var x = o.car(1);
 			return pushPrompt(null, e, dbg(e, this, o), prp, ()-> x instanceof Apv apv && args(apv) == 0 ? Vm.this.combine(e, apv, null) : evaluate(e, x));
@@ -771,7 +801,8 @@ public class Vm {
 	class PushPromptSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
 			var chk = checkN(this, o, 3); // o = (prp k apv0)
-			if (!(chk instanceof Integer len)) return chk;
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 			var prp = o.car();
 			var o1 = o.car(1); if (!(o1 instanceof Continuation k)) return error("not a continuation: " + o1); 
 			var o2 = o.car(2); if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return error("not a zero args applicative combiner: " + o2);
@@ -799,7 +830,8 @@ public class Vm {
 	class DDef implements Combinable {
 		public Object combine(Env e, List o) {
 			var chk = checkN(this, o, 2, Symbol.class); // o = (var val)
-			if (!(chk instanceof Integer len)) return chk;
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 			var var = o.car();
 			var lookup = e.get(var);
 			if (lookup.isBound && !(lookup.value instanceof DVar)) return error("not a dinamic variable: " + var);
@@ -815,7 +847,8 @@ public class Vm {
 	class DDefStar implements Combinable {
 		public Object combine(Env e, List o) {
 			var chk = checkM(this, o, 2); // o = ((var ...) vals ...)
-			if (!(chk instanceof Integer len)) return chk;
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 			var vars = array(o.car(), Symbol.class);
 			var dVars = new DVar[vars.length];
 			for (int i=0; i<vars.length; i+=1) {
@@ -841,7 +874,8 @@ public class Vm {
 		public Object combine(Env e, List o) { return combine(null, e, o); }
 		public Object combine(Resumption r, Env e, List o) {
 			var chk = checkM(this, o, 2); // o = (((var ...) val ...) x ...)
-			if (!(chk instanceof Integer len)) return chk;
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 			List car = o.car();
 			var vars = array(car.car());
 			var vals = array(car.cdr());
@@ -875,21 +909,23 @@ public class Vm {
 		JFun(Object jfun) {
 			this.jfun = switch (jfun) {
 				case ArgsList al-> al;  
-				case LenList ll-> o-> switch(check.apply(name, o)) {case Integer len-> ll.apply(len, o); case Object err->err; };  
-				case Supplier s-> o-> switch (checkN(jfun, o, 0)) {case Integer len-> s.get(); case Object err-> err; };  
-				case Function f-> o-> switch (checkN(jfun, o, 1)) {case Integer len-> f.apply(o.car()); case Object err-> err; };  
-				case BiFunction f-> o-> switch (checkN(jfun, o, 2)) {case Integer len-> f.apply(o.car(), o.car(1)); case Object err-> err; };
-				case Field f-> o-> uncked(()-> switch (checkR(jfun, o, 1, 2)) { case Integer len-> { if (len == 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; } case Object err-> err; });
+				case LenList ll-> o-> switch(check.apply(name, o)) { case Suspension s-> s; case Integer len-> ll.apply(len, o); case Object chk-> error("not an integer: " + chk); };  
+				case Supplier sp-> o-> switch (checkN(jfun, o, 0)) { case Suspension s-> s; case Integer len-> sp.get(); case Object chk-> error("not an integer: " + chk); };  
+				case Function f-> o-> switch (checkN(jfun, o, 1)) {case Suspension s-> s; case Integer len-> f.apply(o.car()); case Object chk-> error("not an integer: " + chk); };  
+				case BiFunction f-> o-> switch (checkN(jfun, o, 2)) {case Suspension s-> s; case Integer len-> f.apply(o.car(), o.car(1)); case Object chk-> error("not an integer: " + chk); };
+				case Field f-> o-> uncked(()-> switch (checkR(jfun, o, 1, 2)) {case Suspension s-> s; case Integer len-> { if (len == 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; } case Object chk-> error("not an integer: " + chk); });
 				case Method mt-> o-> {
 					var pc = mt.getParameterCount();
 					return switch (!mt.isVarArgs() ? checkN(jfun, o, pc+1) : checkM(jfun, o, pc)) {
+						case Suspension s-> s;
 						case Integer len-> uncked(()-> mt.invoke(o.car(), reorg(mt, array(o.cdr()))));
-						case Object err-> err;
+						case Object chk-> error("not an integer: " + chk);
 					};
 				};
 				case Constructor c-> o-> switch (checkN(jfun, o, c.getParameterCount())) {
+					case Suspension s-> s;
 					case Integer len-> uncked(()-> c.newInstance(reorg(c, array(o))));
-					case Object err-> err;
+					case Object chk-> error("not an integer: " + chk);
 				};
 				default -> error("not a combine: " + jfun);
 			};
@@ -920,67 +956,84 @@ public class Vm {
 	}
 	Object jInvoke(String name) {
 		if (name == null) return error("method name is null");
-		return (ArgsList) o-> {
-			if (!(o instanceof List)) return error("no operands for executing: " + name) ;  
-			Object o0 = o.car();
-			if (o0 == null) return error("receiver is null");
-			Object[] args = array(o, 1);
-			// (@new class . objects)            -> class.getConstructor(getClasses(objects)).newInstance(objects) -> constructor.newInstance(objects)
-			// (@<name> object . objects)        -> object.getClass().getMethod(name, getClasses(objects)).invocke(object, objects) -> method.invoke(object, objects)
-			// (@getConstructor class . classes) -> class.getConstructor(classes) -> constructor
-			// (@getMethod class name . classes) -> class.getMethod(name, classes) -> method
-			// (@getField class name)            -> class.getField(name, classes) -> field
-			if (name.equals("new") && o0 instanceof Class c && of(Obj.class, Box.class).anyMatch(rc-> rc.isAssignableFrom(c)) && (args.length == 0 || args[0].getClass() != Vm.class)) {
-				// (@new Error "assert error!") -> (@new Error vm "assert error!")
-				args = headAdd(args, Vm.this);
-			}
-			var classes = getClasses(args);
-			Executable executable = getExecutable(o0, name, classes);
-			if (executable == null) return error("not found " + executable(name, classes) + " of: " + toString(o0));
-			try {
-				//executable.setAccessible(true);
-				args = reorg(executable, args);
-				return switch (executable) { 
-					case Method m-> m.invoke(o0, args);
-					case Constructor c-> c.newInstance(args);
-				};
-				/* TODO in alternativa al precedente da verificare
-				return apply(v-> isjFun(v) ? wrap(new JFun(name, v)) : v,
-					switch (executable) { 
+		return new ArgsList() {
+			@Override
+			public Object apply(List o) {
+				var chk = checkM("jGetSet", o, 1, Object.class);
+				if (chk instanceof Suspension s) return s;
+				if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
+				Object o0 = o.car();
+				Object[] args = array(o, 1);
+				// (@new class . objects)            -> class.getConstructor(getClasses(objects)).newInstance(objects) -> constructor.newInstance(objects)
+				// (@<name> object . objects)        -> object.getClass().getMethod(name, getClasses(objects)).invocke(object, objects) -> method.invoke(object, objects)
+				// (@getConstructor class . classes) -> class.getConstructor(classes) -> constructor
+				// (@getMethod class name . classes) -> class.getMethod(name, classes) -> method
+				// (@getField class name)            -> class.getField(name, classes) -> field
+				if (name.equals("new") && o0 instanceof Class c && of(Obj.class, Box.class).anyMatch(rc-> rc.isAssignableFrom(c)) && (args.length == 0 || args[0].getClass() != Vm.class)) {
+					// (@new Error "assert error!") -> (@new Error vm "assert error!")
+					args = headAdd(args, Vm.this);
+				}
+				var classes = getClasses(args);
+				Executable executable = getExecutable(o0, name, classes);
+				if (executable == null) return error("not found " + executable(name, classes) + " of: " + Vm.this.toString(o0));
+				try {
+					//executable.setAccessible(true);
+					args = reorg(executable, args);
+					return switch (executable) { 
 						case Method m-> m.invoke(o0, args);
 						case Constructor c-> c.newInstance(args);
-					}
-				);
-				//*/
-			}
-			catch (Throwable thw) {
-				if (thw instanceof InvocationTargetException ite) {
-					switch (ite.getTargetException()) {
-						case Value v: throw v;
-						case Error e: throw e;
-						default: // in errore senza!
-					}
+					};
+					/* TODO in alternativa al precedente da verificare
+					return apply(v-> isjFun(v) ? wrap(new JFun(name, v)) : v,
+						switch (executable) { 
+							case Method m-> m.invoke(o0, args);
+							case Constructor c-> c.newInstance(args);
+						}
+					);
+					//*/
 				}
-				return error("error executing " + executable(name, args) + " of: " + toString(o0) + " with: " + toString(list(args)), thw);
+				catch (Throwable thw) {
+					//if (thw instanceof InvocationTargetException ite && Utility.equals(ite.getTargetException().getClass(), Value.class, Error.class)) throw ite;
+					if (thw instanceof InvocationTargetException ite) {
+						switch (ite.getTargetException()) {
+							case Value v: throw v;
+							case Error e: throw e;
+							default: // in errore senza!
+						}
+					}
+					return error("error executing " + executable(name, args) + " of: " + Vm.this.toString(o0) + " with: " + Vm.this.toString(list(args)), thw);
+				}
+			}
+			@Override
+			public String toString() {
+				return "@" + name;
 			}
 		};
 	}
-	ArgsList jGetSet(String name) {
+	Object jGetSet(String name) {
 		if (name == null) return error("field name is null");
-		return (ArgsList) o-> {
-			var chk = checkR("jGetSet", o, 1, 2);
-			if (!(chk instanceof Integer len)) return chk;
-			var o0 = o.car();
-			// (.<name> object)       -> object.getclass().getField(name).get(object) -> field.get(object) 
-			// (.<name> object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
-			Field field = getField(o0 instanceof Class ? (Class) o0 : o0.getClass(), name);
-			if (field == null) return error("not found field: " + name + " of: " + toString(o0));
-			try {
-				if (len == 1) return field.get(o0);
-				field.set(o0, o.car(1)); return inert;
+		return new ArgsList() {
+			@Override
+			public Object apply(List o) {
+				var chk = checkR("jGetSet", o, 1, 2);
+				if (chk instanceof Suspension s) return s;
+				if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
+				var o0 = o.car();
+				// (.<name> object)       -> object.getclass().getField(name).get(object) -> field.get(object) 
+				// (.<name> object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
+				Field field = getField(o0 instanceof Class ? (Class) o0 : o0.getClass(), name);
+				if (field == null) return error("not found field: " + name + " of: " + Vm.this.toString(o0));
+				try {
+					if (len == 1) return field.get(o0);
+					field.set(o0, o.car(1)); return inert;
+				}
+				catch (Throwable thw) {
+					return error("can't " + (len==1 ? "get" : "set") + " " + name + " of " + Vm.this.toString(o0) + eIf(len == 1, ()-> " with " + Vm.this.toString(o.car(1))));
+				}
 			}
-			catch (Exception e) {
-				return error("can't " + (len==1 ? "get" : "set") + " " + name + " of " + toString(o0) + eIf(len == 1, ()-> " with " + toString(o.car(1))));
+			@Override
+			public String toString() {
+				return "." + name;
 			}
 		};
 	}
@@ -1052,8 +1105,9 @@ public class Vm {
 		return checkR(op, o, min, Integer.MAX_VALUE, cls);
 	}
 	Object checkR(Object op, List o, int min, int max, Object ... cls) {
-		var res = cls.length == 0 ? len(o) : checkT(op, o, min, cls);
-		if (!(res instanceof Integer len)) return res;
+		var chk = cls.length == 0 ? len(o) : checkT(op, o, min, cls);
+		if (chk instanceof Suspension s) return s;
+		if (!(chk instanceof Integer len)) return error("not an integer: " + chk);
 		if (len >= min && len <= max) return len; 
 		return error((len < min ? "less then " + min : "more then " + max) + " operands to combine: " + op + " with: " + o);
 	}
@@ -1062,8 +1116,9 @@ public class Vm {
 		int len=chks.length, i=0;
 		for (var oo=o; oo != null; i+=1, oo=oo.cdr()) {
 			if (len == 0) continue;
-			var res = checkT2(op, o, oo.car, i-min, i < len && i < min ? chks[i] : len <= min ?  null : chks[len-1]);
-			if (res != null) return res;
+			var chk = checkT2(op, o, oo.car, i-min, i < len && i < min ? chks[i] : len <= min ?  null : chks[len-1]);
+			if (chk instanceof Suspension s) return s;
+			if (chk != null) return error("not an null: " + chk);
 		}
 		return i;
 	}
@@ -1074,9 +1129,9 @@ public class Vm {
 			case Object[] chks:
 				if (i > 0) return checkT2(op, o, on, i, chks[i % chks.length]);
 				for (Object chk2: chks) {
-					if (chk2 == null && on == null || chk2 instanceof Class cl && (on instanceof Class cl2 && cl.isAssignableFrom(cl2) || cl.isInstance(on))) return null;
+					if (Utility.equals(on, chk2) || chk2 instanceof Class cl && (cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2))) return null;
 				}
-			default: return error("not a " + toString(chk) + ": " + toString(on) + " to combine: " + toString(op) + " with: " + toString(o));
+			default: return error("not " + (chk instanceof Object[] objs ? "one of " + toString(objs) : "a" + toString(chk)) + ": " + toString(on) + " to combine: " + toString(op) + " with: " + toString(o));
 		}
 	}
 	
@@ -1237,7 +1292,7 @@ public class Vm {
 		var sb = new StringBuilder(); map.entrySet().forEach(e-> sb.insert(0, " " + e)); return sb.toString();
 	}
 	private String executable(String name, Object[] args) {
-		return (name.equals("new") ? "constructor" : "method: " + name) + toString(list(args));
+		return (name.equals("new") ? "constructor: " : "method: " + name) + toString(list(args));
 	}
 	
 	
@@ -1286,7 +1341,7 @@ public class Vm {
 					$("%def", "%takeSubcont", new TakeSubcont()),
 					$("%def", "%pushPrompt", new PushPrompt()),
 					$("%def", "%pushPromptSubcont", wrap(new PushPromptSubcont())),
-					$("%def", "%pushSubcontBarrier", wrap(new JFun("%PushSubcontBarrier", (BiFunction<Object,Env,Object>) (o, e)-> pushSubcontBarrier(null, e, o)))),
+					$("%def", "%pushSubcontBarrier", wrap(new JFun("%PushSubcontBarrier", (n,o)-> checkM(n, o, 2, Env.class), (l,o)-> pushSubcontBarrier(null, o.car(), cons(begin, o.cdr())) ))),
 					// Dynamically-scoped Variables
 					$("%def", "%box", wrap(new JFun("%Box", (Function<Object,Box>) Box::new))),
 					$("%def", "%dVar", wrap(new JFun("%DVar", (Function<Object,DVar>) DVar::new))),
@@ -1326,7 +1381,8 @@ public class Vm {
 					$("%def", "%/", wrap(new JFun("%/", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Dvd, o.car(), o.car(1)) ))),
 					$("%def", "%%", wrap(new JFun("%%", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Rst, o.car(), o.car(1)) ))),
 					//
-					$("%def", "%!", wrap(new JFun("%!", (Function<Object,Boolean>) a-> !istrue(a)))),
+					$("%def", "%!", wrap(new JFun("%!", (Function) a-> switch (istrue(a)) { case Suspension s-> s; case Boolean b-> !b; case Object obj-> error("not a boolean: " + obj); }))),
+					$("%def", "%!!", wrap(new JFun("%!!", (Function) a-> switch (istrue(a)) { case Suspension s-> s; case Boolean b-> b; case Object obj-> error("not a boolean: " + obj); }))),
 					$("%def", "%<", wrap(new JFun("%<", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Ls, o.car(), o.car(1)) ))),
 					$("%def", "%>", wrap(new JFun("%>", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Gt, o.car(), o.car(1)) ))),
 					$("%def", "%<=", wrap(new JFun("%<=", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Le, o.car(), o.car(1)) ))),
@@ -1367,7 +1423,9 @@ public class Vm {
 										list(symbol("%catch"), symbol("%throw")),
 										list((Object) apply(c-> !ctapv ? c : wrap(c), new Catch()),
 											 (Object) apply(t-> !ctapv ? t : wrap(t), new Throw())))) ))),
-					$("%def", "prtrc", wrap(new JFun("Prtrc", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? prtrc : inert(start=level-(dotco ? 0 : 3), prtrc=o.car()) ))),
+					$("%def", "prtrc", wrap(new JFun("Prtrc", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4, 5, 6)), (l,o)-> l == 0 ? prtrc : inert(start=level-(dotco ? 0 : 3), prtrc=o.car()) ))),
+					$("%def", "ttrue", wrap(new JFun("Ttrue", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4)), (l,o)-> l == 0 ? ttrue : inert(ttrue=o.car()) ))),
+					$("%def", "bndret", wrap(new JFun("Bndret", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2)), (l,o)-> l == 0 ? bndret : inert(bndret=o.car()) ))),
 					$("%def", "prenv", wrap(new JFun("Prenv", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? prenv : inert(prenv=o.car()) ))),
 					$("%def", "prstk", wrap(new JFun("Prstk", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prstk : inert(prstk=o.car()) )))
 				)

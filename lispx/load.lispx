@@ -56,7 +56,9 @@
     (%if (%!= (.nxt k) #null)
       (%print-stacktrace (.nxt k)) )
     (%if (prstk) (log "--" k)) ))
-(%def %panic (\ (e) (:log "panic:" e) (%throw #ignore e)))
+(%def %panic (\ (e)
+  ;(log "panic:" e)
+  (%throw #ignore e) ))
 
 (%def Nil #null)
 (%def Boolean &java.lang.Boolean)
@@ -91,11 +93,6 @@
 (%def UnboundMethodError Error)
 (%def PromptNotFoundError Error)
 
-;(%def StandardObject &Wat.Vm$Obj)
-;(%def Condition (%class 'Condition))
-;(%def Error (%class 'Error Condition))
-;(%def TypeError (%class 'TypeError Error))
-
 (%def %take (\ (i l) (%if (%== i 0) #null (%cons (%car l) (%take (%- i 1) (%cdr l))))))
 (%def %list-subseq (\ (l s e)	(%def tail (%nthcdr s l)) (%if (%== e #inert) tail (%take (%- e s) tail))))
 (%def %string-subseq (\ (seq start end) (%if (%== end #inert) (@substring seq start) (@substring seq start end))))
@@ -105,31 +102,10 @@
 (def %progv (\ (var val body)
   ((%wrap %dLet) (cons var val) body) ))
 
-;(defdynamic aa 1)(%progv (list aa) (list 2) (lambda () (dynamic aa))) ; -> 2
-
-;(defmacro assert (v)
-;  (list unless (list %assert v #t)
-;    (list throw #ignore (list @new Error vm "assert error!")) ))
-
 (defmacro %slot-value (obj slot)
    (list obj (list %->keyword slot)))
-
-#|
-(defmacro %slot-value (obj slot)
-   (list '%if (list '%slot-bound-p obj (list '%->keyword slot))
-     (list obj (list '%->keyword slot))
-     (list '%throw #ignore (list '@new 'Error (%$ "slot not found: " slot ))) ))
-
-(defmacro %slot-value (obj slot)
-  (let ((key (list '%->keyword slot)) )
-   (list '%if (list '%slot-bound-p obj key)
-     (list obj key)
-     (list '%throw #ignore (list '@new 'Error (%$ "slot not found: " slot ))) )))
-|#
-
 (defmacro %set-slot-value (obj slot value)
    (list obj (list %->keyword slot) value))
-
 (defmacro %slot-bound-p (obj slot)
    (list (list %jInvoke "isBound") obj (list %->keyword slot)))
 
@@ -139,8 +115,7 @@
 ;(load "lispx/src/print.lispx")
 ;(load "lispx/src/js.lispx")
 
-; test-util.lispx
-; commentare tutto e bastano queste definizioni
+; lasciare commentato, bastano le successive definizioni
 ;(load "lispx/test/test-util.lispx")
 
 (defmacro deftest (name expression . expected?)
@@ -157,23 +132,6 @@
     (list '\ () form #f)
     (list '\ '(r) (list 'typep 'r condition-class)) ))
 
-(defexpr signals-error (form condition-class . slot-specs) env
-  (let ((class (find-class condition-class env)))
-    (block exit
-      (handler-case ((StandardObject (lambda (c)
-                               (if (typep c class)
-                                   (progn
-                                     (loop-let -check-slots- ((slot-specs slot-specs))
-                                       (when (not (null slot-specs))
-                                         (let (((name value . rest-slot-specs) slot-specs))
-                                           (unless (= (slot-value c name) (eval value env))
-                                             (return-from exit #f))
-                                           (-check-slots- rest-slot-specs))))
-                                     (return-from exit #t) )
-                                   (return-from exit #f) ))))
-        (eval form env))
-      #f )))
-
 ;(load "lispx/test/test-util-test.lispx") ;; mai
 ;(load "lispx/test/boot-test.lispx")
 ;(load "lispx/test/cond-sys-test.lispx")
@@ -185,10 +143,9 @@
 ;(load "lispx/test/js-test.lispx")
 ;(load "lispx/test/hierarchy-test.lispx")
 
+#|
 (load "lispx/tool/repl/repl.lispx")
-(%def userBreak error) 
-
 (def uprint print)
 (def repl:%display-prompt
   (\ (level) (if (eq level 0) "* " (%$ level "]"))) )
-
+|#

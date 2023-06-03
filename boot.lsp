@@ -4,7 +4,7 @@
 
 ;; Rename %def
 
-(%def def %def)
+(%def def %def)	
 
 ;; Rename bindings that will be used as provided by VM
 
@@ -21,6 +21,7 @@
 (def % %%)
   
 (def ! %!)
+(def !! %!!)
 (def < %<)
 (def > %>)
 (def <= %<=)
@@ -178,6 +179,7 @@
 
 (assert (expand (wrau pt env a b c)) '(wrap ($vau pt env a b c)))    
 
+
 ;;;; Basic value test
 
 (def\ (zero? n) (== n 0))
@@ -190,35 +192,27 @@
 
 (if (ctapv)
   (then
-    (defMacro (catch exp . hdl)
-      (list* '%catch #ignore (list '\ () exp) hdl) )
-    (defMacro (throw . val)
-      (list* '%throw #ignore val) )
+    (defMacro (catch exp . hdl) (list* '%catch #ignore (list '\ () exp) hdl) )
+    (defMacro (throw . val) (list* '%throw #ignore val) )
 
     (assert (catch (throw)) #inert)
     (assert (catch (throw (\ () 1))) 1)
     (assert (catch (throw (\ () 1)) (\ (x) (+ x 1))) 2)
     
-    (defMacro (catchTag tag exp . hdl)
-      (list* '%catch tag (list '\ () exp) hdl) )
-    (defMacro (throwTag tag . val)
-      (list* '%throw tag val) )
+    (defMacro (catchTag tag exp . hdl) (list* '%catch tag (list '\ () exp) hdl) )
+    (defMacro (throwTag tag . val) (list* '%throw tag val) )
     (def throwTag %throw)
   )
   (else
-    (defMacro (catch x . hdl)
-      (list* '%catch #ignore x hdl))
-    (defMacro (throw . x)
-      (list* '%throw #ignore x))
+    (defMacro (catch exp . hdl) (list* '%catch #ignore exp hdl))
+    (defMacro (throw . val) (list* '%throw #ignore val))
 
     (assert (catch (throw)) #inert)
     (assert (catch (throw 1)) 1)
     (assert (catch (throw 1) (\ (x) (+ x 1))) 2)
 
-    (defVau (catchTag tag exp . hdl) env
-      (eval (list* '%catch (eval tag env) exp hdl) env) )
-    (defVau (throwTag tag . val) env
-      (eval (list* '%throw (eval tag env) val) env) )
+    (defVau (catchTag tag exp . hdl) env (eval (list* '%catch (eval tag env) exp hdl) env) )
+    (defVau (throwTag tag . val) env (eval (list* '%throw (eval tag env) val) env) )
   )
 )
 
@@ -244,11 +238,15 @@
     (eval (cons (unwrap appv) args) env) ))
 
 (defMacro (rec lhs . rhs)
-  (list (list '\ () (list 'def lhs #inert) (list* 'def lhs rhs) lhs)) )
+  (list (list '\ () (list 'def lhs #inert) (list* 'def lhs :rhs rhs))) )
+
+(assert ((rec f (\ (l) (if (null? l) "" ($ (car l) (f (cdr l)))))) '(1 2 3)) "123")
+(assert ((rec f (\ l (if (null? l) "" ($ (car l) (apply f (cdr l)))))) 1 2 3) "123")
 
 (defMacro (rec\ lhs . rhs)
-  (def sym (if (symbol? lhs) lhs (car lhs)))
-  (list (list '\ () (list 'def sym #inert) (list* 'def\ lhs rhs) sym)) )
+  (if (symbol? lhs)
+    (list 'rec lhs (list* '\ (car rhs) (cdr rhs)))
+    (list 'rec (car lhs) (list* '\ (cdr lhs) rhs)) )) 
 
 (assert ((rec\ (f l)   (if (null? l) "" ($ (car l) (f (cdr l))))) '(1 2 3)) "123")
 (assert ((rec\  f (l)  (if (null? l) "" ($ (car l) (f (cdr l))))) '(1 2 3)) "123")

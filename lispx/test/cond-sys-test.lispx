@@ -98,7 +98,6 @@
 (defsuite handler-case
 
   (defclass TestError (Error) ())
-  (def test-error TestError)
 
   (deftest handler-case.0
     (signals-error
