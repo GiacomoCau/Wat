@@ -99,6 +99,9 @@ public class Utility {
 		try {
 			return t.call();
 		}
+		catch (Vm.Error|Vm.Value err) {
+			throw err;
+		}
 		catch (Exception e) {
 			throw new RuntimeException(e);
 		}

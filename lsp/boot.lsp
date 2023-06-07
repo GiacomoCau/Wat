@@ -62,7 +62,7 @@
 (def obj %obj)
 (def reverse %reverse)
 (def rootPrompt %rootPrompt)
-(def string->symbol %string->symbol)
+(def symbol %symbol)
 (def symbolName %internName)
 (def symbol? %symbol?)
 (def keywordName %internName)
@@ -97,14 +97,14 @@
 
 ;;;; Important utilities
 
-(def $vau %vau)
-(def quote ($vau (x) #ignore x))
+(def vau %vau)
+(def quote (vau (x) #ignore x))
 (def quote %quote)
-(def list (wrap ($vau elts #ignore elts)))
+(def list (wrap (vau elts #ignore elts)))
 (def list %list)
-(def $lambda ($vau (formals . body) env (wrap (eval (list* $vau formals #ignore body) env))))
-(def $lambda %\)
-(def theEnv ($vau () e e))
+(def lambda (vau (formals . body) env (wrap (eval (list* vau formals #ignore body) env))))
+(def lambda %\)
+(def theEnv (vau () e e))
 (def theEnv %theEnv)
 
 (def car (\ ((x . #ignore)) x))
@@ -126,8 +126,8 @@
 
 (def makeMacro
   (wrap
-    ($vau (expander) #ignore
-      ($vau operands env
+    (vau (expander) #ignore
+      (vau operands env
         (def !evalMacro (! (evalMacro)))
         (if !evalMacro (evalMacro #t))
         (def exp (eval (cons expander operands) (makeEnv)))
@@ -135,8 +135,8 @@
 
 (def macro
   (makeMacro
-    ($vau (params . body) #ignore
-      (list 'makeMacro (list* '$vau params #ignore body)) )))
+    (vau (params . body) #ignore
+      (list 'makeMacro (list* 'vau params #ignore body)) )))
 
 ; defMacro defVau def\ def*\ rec\ e letrec\ permettono le definizioni con le seguenti due sintassi
 ;    (... name parameters . body)
@@ -157,11 +157,11 @@
 
 (defMacro (defVau lhs . rhs)
   (if (symbol? lhs)
-    (list 'def lhs (list* '$vau (car rhs) (cadr rhs) (cddr rhs)))
-    (list 'def (car lhs) (list* '$vau (cdr lhs) (car rhs) (cdr rhs))) ))
+    (list 'def lhs (list* 'vau (car rhs) (cadr rhs) (cddr rhs)))
+    (list 'def (car lhs) (list* 'vau (cdr lhs) (car rhs) (cdr rhs))) ))
 
-(assert (expand (defVau (succ n) env (eval (list '+ n 1) env))) '(def succ ($vau (n) env (eval (list (%quote +) n 1) env))))
-(assert (expand (defVau succ (n) env (eval (list '+ n 1) env))) '(def succ ($vau (n) env (eval (list (%quote +) n 1) env))))
+(assert (expand (defVau (succ n) env (eval (list '+ n 1) env))) '(def succ (vau (n) env (eval (list (%quote +) n 1) env))))
+(assert (expand (defVau succ (n) env (eval (list '+ n 1) env))) '(def succ (vau (n) env (eval (list (%quote +) n 1) env))))
 
 (defMacro (def* lhs . rhs)
   (list 'def lhs (list* 'list rhs)) )
@@ -175,9 +175,9 @@
 (assert (expand (def\ (succ n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
 
 (defMacro (wrau pt env . body)
-  (list 'wrap (list* '$vau pt env body)))
+  (list 'wrap (list* 'vau pt env body)))
 
-(assert (expand (wrau pt env a b c)) '(wrap ($vau pt env a b c)))    
+(assert (expand (wrau pt env a b c)) '(wrap (vau pt env a b c)))    
 
 
 ;;;; Basic value test
@@ -386,7 +386,7 @@
 
 (def bind? %bind?)
 
-(defVau (ifbind (pt exp) then . else) env
+(defVau (ifbind? (pt exp) then . else) env
   (let1 (env+ (makeEnv env))
     (if (bind? env+ pt (eval exp env))
       (eval then env+)
@@ -394,7 +394,7 @@
         (eval (let1 ((exp) else) exp) env) ))))
 
 (defVau (caseVau . clauses) env 
-  ($vau values #ignore
+  (vau values #ignore
     (let1 loop (clauses clauses)
       (if (null? clauses) #inert ;(error ($ "not a match form for: " values))
         (let ( (env+ (makeEnv env))
@@ -406,7 +406,7 @@
 #| TODO sostituiti dal seguente, eliminare
 (defVau (case\ . clauses) env
   (wrap
-    ($vau values #ignore
+    (vau values #ignore
       (let1 loop (clauses clauses)
         (if (null? clauses) #inert
           (let ( (env+ (makeEnv env))
@@ -517,7 +517,7 @@
           (if (instanceof? test Boolean)
             (if test
               (if (null? body) test
-                (ifbind (('=> apd1) body)
+                (ifbind? (('=> apd1) body)
                   ((eval apd1 env) test) 
                   (apply (wrap begin) body env) ))
               (apply (wrap cond) clauses env) )
@@ -680,7 +680,7 @@
 (defVau (ifOpt? (pt exp) then . else) env
   (let1 (exp (eval exp env))
     (if (cons? exp)
-      (eval (list* (list '$vau (if (symbol? pt) (list pt) pt) #ignore then) exp) env)
+      (eval (list* (list 'vau (if (symbol? pt) (list pt) pt) #ignore then) exp) env)
       (if (null? else) #null
         (eval (let1 ((exp) else) exp) env) ))))
 
@@ -779,9 +779,9 @@
 (assert (block ciclo (def x 1) (loop (if (== x 4) (returnFrom ciclo 7)) (def x (+ x 1)))) 7)
 
 
-;;;; Type parameters check lambda
+;;;; Type parameters check type\
 
-(defMacro (lambda params . body)
+(defMacro (type\ params . body)
   (letrec ((typedParams->namesAndChecks
             (\ (ps)
               (if (cons? ps)
@@ -799,13 +799,13 @@
 (defMacro (the type obj)
   (list 'if (list 'type? obj type) obj (list 'error (list '$ obj " is not a: " type))) )
 
-(assert (expand (lambda (a) (+ a 1))) '(\ (a) (+ a 1)))
-(assert (expand (lambda ((a Integer)) (+ a 1))) '(\ (a) (begin (the Integer a)) (+ a 1)))
+(assert (expand (type\ (a) (+ a 1))) '(\ (a) (+ a 1)))
+(assert (expand (type\ ((a Integer)) (+ a 1))) '(\ (a) (begin (the Integer a)) (+ a 1)))
 
 (defMacro (define lhs . rhs)
   (if (symbol? lhs)
     (list 'def lhs (car rhs))
-    (list 'def (car lhs) (list* 'lambda (cdr lhs) rhs)) ))
+    (list 'def (car lhs) (list* 'type\ (cdr lhs) rhs)) ))
 
 
 ;;;; List utilities
@@ -906,7 +906,7 @@
 |#
 
 (def d\
-  ($vau (var* . body) #ignore
+  (vau (var* . body) #ignore
     (wrau val* env
         (def\ (ckdvar var)
             (def lkp (@get env var))
@@ -1022,7 +1022,7 @@
   (list* (list 'setter getter) new-val args))
 
 (set (setter elt)
-  (lambda (newVal object key)
+  (type\ (newVal object key)
     (set ((jsGetter key) object) newVal) ))
 |#
 
@@ -1108,7 +1108,7 @@
   (%jsFunction (\ args (pushPrompt rootPrompt (apply fun args)))) )
 
 (defMacro (jsLambda params . body)
-  (list 'jsCallback (list* 'lambda params body)))
+  (list 'jsCallback (list* 'type\ params body)))
 
 (def\ (log x . xs)
   (apply @log (list* &console x xs))
@@ -1144,9 +1144,9 @@
 ;;;; Cells
 
 (defPrototype Cell Object (value))
-(def\ (cell value) (new Cell value))
-(def\ (ref (c Cell)) (.value c))
-(set (setter ref) (lambda (newVal (c Cell)) (set (.value c) newVal)))
+(define (cell value) (new Cell value))
+(define (ref (c Cell)) (.value c))
+(set (setter ref) (type\ (newVal (c Cell)) (set (.value c) newVal)))
 |#
 
 
@@ -1184,7 +1184,7 @@
 (assert (begin (def n 1) (++ n) (++ n) (-- n)) 2)
 
 (def\ (assignOp op)
-  ($vau (plc . args) env
+  (vau (plc . args) env
     (def lval (eval plc env))
     (caseType lval
       (Box (match args 
@@ -1212,10 +1212,10 @@
 
 (def Array &java.lang.Object[])
 
-(lambda (arrayMap fun (arr Array))
+(define (arrayMap fun (arr Array))
   (list->array (map fun (array->list arr))) )
 
-(lambda (arrayFilter pred (arr Array))
+(define (arrayFilter pred (arr Array))
   (list->array (filter pred (array->list arr))) )
 
 (defVau (time exp) env

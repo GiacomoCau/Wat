@@ -7,9 +7,9 @@
 
 ;;;;; Wat Test Suite
 
-(assert (lambda))
-(assert (lambda 12 12))
-(assert (lambda "foo" "bar"))
+(assert (\))
+(assert (\ 12 12))
+(assert (\ "foo" "bar"))
 (assert (define))
 (assert (define 12))
 (assert (define 12 12))
@@ -91,21 +91,21 @@
 (define (shift p f) 
   (takeSubcont p sk
     (pushPrompt p
-      (f (lambda (c)
+      (f (\ (c)
            (pushPromptSubcont p sk (c)) )))))
 
 (test test5
   (+ (pushPrompt 'p0
-       (+ (shift 'p0 (lambda (sk)
-                       (+ 100 (sk (lambda () (sk (lambda () 3))))) ))
+       (+ (shift 'p0 (\ (sk)
+                       (+ 100 (sk (\ () (sk (\ () 3))))) ))
           2))
      10)
   117)
 
 (test test51
   (+ 10 (pushPrompt 'p0
-          (+ 2 (shift 'p0 (lambda (sk)
-                            (sk (lambda () (+ 3 100))))))))
+          (+ 2 (shift 'p0 (\ (sk)
+                            (sk (\ () (+ 3 100))))))))
   115)
 
 (define (abortSubcont prompt value)
@@ -113,10 +113,10 @@
 
 (test test52
   (+ (pushPrompt 'p0
-       (+ (shift 'p0 (lambda (sk)
-                       (+ (sk (lambda ()
+       (+ (shift 'p0 (\ (sk)
+                       (+ (sk (\ ()
                                 (pushPrompt 'p1
-                                  (+ 9 (sk (lambda ()
+                                  (+ 9 (sk (\ ()
                                              (abortSubcont 'p1 3)))))))
                           100)))
           2))
@@ -125,10 +125,10 @@
 
 (test test53
   (+ (pushPrompt 'p0
-       (let ((v (shift 'p0 (lambda (sk)
-                             (+ (sk (lambda ()
+       (let ((v (shift 'p0 (\ (sk)
+                             (+ (sk (\ ()
                                       (pushPrompt 'p1
-                                        (+ 9 (sk (lambda ()
+                                        (+ 9 (sk (\ ()
                                                    (abortSubcont 'p1 3)))))))
                                 100)))))
          (+ v 2)))
@@ -137,10 +137,10 @@
 
 (test test54
   (+ (pushPrompt 'p0
-       (let ((v (shift 'p0 (lambda (sk)
-                             (+ (sk (lambda ()
+       (let ((v (shift 'p0 (\ (sk)
+                             (+ (sk (\ ()
                                       (pushPrompt 'p1
-                                        (+ 9 (sk (lambda ()
+                                        (+ 9 (sk (\ ()
                                                    (abortSubcont 'p0 3)))))))
                                 100)))))
          (+ v 2)))
@@ -148,7 +148,7 @@
   124)
 
 (test test6
-  (+ (let ((pushTwice (lambda (sk)
+  (+ (let ((pushTwice (\ (sk)
               (pushSubcont sk (pushSubcont sk 3)))))
        (pushPrompt 'p1
          (pushPrompt 'p2
@@ -159,7 +159,7 @@
   15)
 
 (test test7
-  (+ (let ((pushTwice (lambda (sk)
+  (+ (let ((pushTwice (\ (sk)
               (pushSubcont sk
                 (pushSubcont sk
                   (takeSubcont 'p2 sk2
@@ -174,16 +174,16 @@
   135)
 
 (test test71
-  (+ (let ((pushTwice (lambda (sk)
-              (sk (lambda ()
-                    (sk (lambda ()
-                          (shift 'p2 (lambda (sk2)
-                                       (sk2 (lambda ()
-                                              (sk2 (lambda () 3)))))))))))))
+  (+ (let ((pushTwice (\ (sk)
+              (sk (\ ()
+                    (sk (\ ()
+                          (shift 'p2 (\ (sk2)
+                                       (sk2 (\ ()
+                                              (sk2 (\ () 3)))))))))))))
        (pushPrompt 'p1
          (+ (pushPrompt 'p2
               (+ 10 (pushPrompt 'p3
-                      (shift 'p1 (lambda (sk) (pushTwice sk))))))
+                      (shift 'p1 (\ (sk) (pushTwice sk))))))
             1)))
      100)
   135)
@@ -308,9 +308,9 @@
 (assert (combine and (list (== 1 1) (== 2 2))) #t)
 (assert (combine and (list (!= 1 1) (== 2 2))) #f)
 
-(assert (apply (lambda (x) x) (list 2)) 2)
+(assert (apply (\ (x) x) (list 2)) 2)
 
-(assert (unwrap ($vau () #ignore)))
+(assert (unwrap (vau () #ignore)))
 
 #|
 (let ((obj (object ("x" 1))))

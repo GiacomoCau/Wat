@@ -8,6 +8,10 @@
 ; commentare stringhe in eccesso nelle (%def name expr "..."), troppi parametri per la %def!
 
 (%resetEnv)
+(@clear (.methods vm))
+(ctapv #t)
+(prtrc 1)
+(bndres 1)
 
 (%def \ %\)
 (%def %->symbol  (\ (i) (@intern vm (%if (%instanceof? i &Wat.Vm$Keyword) (@substring (.name i) 1) (.name i)))))
@@ -61,6 +65,7 @@
   (%throw #ignore e) ))
 
 (%def Nil #null)
+(%def Box &Wat.Vm$Box)
 (%def Boolean &java.lang.Boolean)
 (%def Built-in-class &java.lang.Class)
 (%def Class &java.lang.Class)
