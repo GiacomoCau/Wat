@@ -3,42 +3,42 @@
 (defsuite *print-escape*
 
   (deftest *print-escape*.defined
-    (and (typep *print-escape* Dynamic)
-         (typep (dynamic *print-escape*) Boolean))))
+    (and (type? *print-escape* Dynamic)
+         (type? (dget *print-escape*) Boolean))))
 
 (defsuite *print-level?*
 
   (deftest *print-level?*.defined
-    (and (typep *print-level?* Dynamic)
-         (typep (dynamic *print-level?*) List)))
+    (and (type? *print-level?* Dynamic)
+         (type? (dget *print-level?*) List)))
 
-  (defun write-with-level (object level)
-    (dynamic-let ((*print-level?* (some level)))
+  (def\ write-with-level (object level)
+    (dlet ((*print-level?* (some level)))
       (with-standard-output-to-string (write object))))
 
   (deftest *print-level?*.cons
-    (progn
+    (begin
       (def a '(1 (2 (3 (4 (5 (6)))))))
-      (assert (= "#" (write-with-level a 0)))
-      (assert (= "(1 #)" (write-with-level a 1)))
-      (assert (= "(1 (2 #))" (write-with-level a 2)))
-      (assert (= "(1 (2 (3 #)))" (write-with-level a 3)))
-      (assert (= "(1 (2 (3 (4 #))))" (write-with-level a 4)))
-      (assert (= "(1 (2 (3 (4 (5 #)))))" (write-with-level a 5)))
-      (assert (= "(1 (2 (3 (4 (5 (6))))))" (write-with-level a 6)))
-      (assert (= "(1 (2 (3 (4 (5 (6))))))" (write-with-level a 7)))
+      (assert (eq? "#" (write-with-level a 0)))
+      (assert (eq? "(1 #)" (write-with-level a 1)))
+      (assert (eq? "(1 (2 #))" (write-with-level a 2)))
+      (assert (eq? "(1 (2 (3 #)))" (write-with-level a 3)))
+      (assert (eq? "(1 (2 (3 (4 #))))" (write-with-level a 4)))
+      (assert (eq? "(1 (2 (3 (4 (5 #)))))" (write-with-level a 5)))
+      (assert (eq? "(1 (2 (3 (4 (5 (6))))))" (write-with-level a 6)))
+      (assert (eq? "(1 (2 (3 (4 (5 (6))))))" (write-with-level a 7)))
       #t))
 
   (deftest *print-level?*.standard-object
-    (progn
-      (defclass a () (slot))
-      (defun make-a (slot) (make-instance A :slot slot))
+    (begin
+      (defClass a () (slot))
+      (def\ make-a (slot) (makeInstance A :slot slot))
       (def a (make-a (make-a (make-a 12))))
-      (assert (= "#" (write-with-level a 0)))
-      (assert (= "#<a :slot #>" (write-with-level a 1)))
-      (assert (= "#<a :slot #<a :slot #>>" (write-with-level a 2)))
-      (assert (= "#<a :slot #<a :slot #<a :slot 12>>>" (write-with-level a 3)))
-      (assert (= "#<a :slot #<a :slot #<a :slot 12>>>" (write-with-level a 4)))
+      (assert (eq? "#" (write-with-level a 0)))
+      (assert (eq? "#<a :slot #>" (write-with-level a 1)))
+      (assert (eq? "#<a :slot #<a :slot #>>" (write-with-level a 2)))
+      (assert (eq? "#<a :slot #<a :slot #<a :slot 12>>>" (write-with-level a 3)))
+      (assert (eq? "#<a :slot #<a :slot #<a :slot 12>>>" (write-with-level a 4)))
       #t)))
 
 (defsuite write
@@ -49,11 +49,11 @@
 
   (deftest write.1a
     (with-standard-output-to-string
-      (assert (= 1 (write 1))))
+      (assert (eq? 1 (write 1))))
     "1")
 
   (deftest write.2
-    (signals-error
+    (signalsError
      (write)
      match-error))
 
@@ -62,18 +62,18 @@
           (s2 (make-string-output-stream)))
       (write 1 :stream s1)
       (write 2 :stream s2)
-      (and (= "1" (get-output-stream-string s1))
-           (= "2" (get-output-stream-string s2)))))
+      (and (eq? "1" (get-output-stream-string s1))
+           (eq? "2" (get-output-stream-string s2)))))
 
   (deftest write.4a
-    (signals-error
+    (signalsError
      (write "foo" :stream)
      match-error))
 
   (deftest write.4b
-    (signals-error
+    (signalsError
      (write "foo" :stream 12)
-     type-error :datum 12 :expected-type 'OutputStream)))
+     type-error :datum 12 :expectedType 'OutputStream)))
 
 (defsuite write-to-string
 
@@ -86,7 +86,7 @@
     "\"foo\"")
 
   (deftest write-to-string.3
-    (signals-error
+    (signalsError
      (write-to-string)
      match-error)))
 
@@ -98,7 +98,7 @@
 
   (deftest print.1a
     (with-standard-output-to-string
-      (assert (= "foo" (print "foo"))))
+      (assert (eq? "foo" (print "foo"))))
     "\n\"foo\"")
 
   (deftest print.2
@@ -106,7 +106,7 @@
     "\n\"foo\"\n\"bar\"")
 
   (deftest print.3
-    (signals-error
+    (signalsError
      (print)
      match-error))
 
@@ -116,7 +116,7 @@
 
   (deftest print1.1a
     (with-standard-output-to-string
-      (assert (= "foo" (print1 "foo"))))
+      (assert (eq? "foo" (print1 "foo"))))
     "\"foo\"")
 
   (deftest print1.2
@@ -124,7 +124,7 @@
     "\"foo\"\"bar\"")
 
   (deftest print1.3
-    (signals-error
+    (signalsError
      (print1)
      match-error))
 
@@ -134,7 +134,7 @@
 
   (deftest uprint.1a
     (with-standard-output-to-string
-      (assert (= "foo" (uprint "foo"))))
+      (assert (eq? "foo" (uprint "foo"))))
     "\nfoo")
 
   (deftest uprint.2
@@ -142,7 +142,7 @@
     "\nfoo\nbar")
 
   (deftest uprint.3
-    (signals-error
+    (signalsError
      (uprint)
      match-error))
 
@@ -152,11 +152,11 @@
 
   (deftest uprint1.1a
     (with-standard-output-to-string
-      (assert (= "foo" (uprint1 "foo"))))
+      (assert (eq? "foo" (uprint1 "foo"))))
     "foo")
 
   (deftest uprint1.2
-    (signals-error
+    (signalsError
      (uprint1)
      match-error))
 

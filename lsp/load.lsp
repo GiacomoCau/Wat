@@ -10,3 +10,4 @@
 (load "lsp/boot.lsp");
 (load "lsp/test.lsp");
 (load "lsp/testJni.lsp");
+#inert

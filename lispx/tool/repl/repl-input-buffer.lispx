@@ -2,7 +2,7 @@
 ;;; Companion Lisp code to repl-input-buffer.mjs
 ;;;
 
-(defmethod stream-read ((input-buffer repl:input-buffer) . #ignore)
+(defMethod stream-read ((input-buffer repl:input-buffer) . #ignore)
   "Blocking input function for the REPL input buffer.  This gets
 called from `read' when the input stream is a `repl:input-buffer'.
 
@@ -27,19 +27,19 @@ when the input stream is a `repl:input-buffer'."
       ((block trampoline
          ;; Get a stream containing the current contents of the input buffer.
          (let ((stream (repl:%make-input-buffer-stream input-buffer)))
-           (handler-case ((end-of-file
-                           (lambda #ignore
+           (handlerCase ((end-of-file
+                           (\ #ignore
                              ;; We got an end-of-file error: jump into trampoline
                              ;; and save continuation in wake-up function.
-                             (return-from trampoline
-                               (lambda ()
-                                 (take-subcont +root-prompt+ k
+                             (returnFrom trampoline
+                               (\ ()
+                                 (takeSubcont +rootPrompt+ k
                                    (repl:%set-input-buffer-wake-up-function
                                     input-buffer
-                                    (lambda ()
-                                      (push-delim-subcont +root-prompt+ k))))))))
+                                    (\ ()
+                                      (pushDelimSubcont +rootPrompt+ k))))))))
                           (reader-error
-                           (lambda (e)
+                           (\ (e)
                              ;; We got a `reader-error' -- assume the
                              ;; input was faulty, so clear the input
                              ;; buffer to not cause any further
@@ -55,4 +55,4 @@ when the input stream is a `repl:input-buffer'."
                  ;; input we've consumed from the input buffer,
                  ;; and return the object.
                  (repl:%truncate-input-buffer input-buffer stream)
-                 (return-from exit form)))))))))
+                 (returnFrom exit form)))))))))

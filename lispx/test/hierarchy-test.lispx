@@ -2,17 +2,17 @@
 
 (defsuite class-hierarchy
 
-  (defun test-hierarchy (classes)
-    (let ((env (the-environment)))
-      (loop-let -test-classes- ((classes classes) (superclass Object))
+  (def\ test-hierarchy (classes)
+    (let ((env (theEnvironment)))
+      (letloop -test-classes- ((classes classes) (superclass Object))
         (dolist (c classes #t)
           (etypecase c
             (Symbol
-             (let ((class (find-class c env)))
-               (assert (subclassp class superclass))))
+             (let ((class (findClass c env)))
+               (assert (subClass? class superclass))))
             (Cons
-             (let ((class (find-class (car c) env)))
-               (assert (subclassp class superclass))
+             (let ((class (findClass (car c) env)))
+               (assert (subClass? class superclass))
                (-test-classes- (cdr c) class))))))))
 
   (deftest test-hierarchy
@@ -34,7 +34,7 @@
        (input-stream string-input-stream)
        (output-stream string-output-stream
                       js-console-output-stream)
-       (standard-object dynamic
+       (standard-object dget
                         (condition (error type-error
                                           unbound-symbol-error
                                           unbound-slot-error
@@ -45,14 +45,14 @@
                                           reader-error
                                           prompt-not-found-error
                                           restart-error
-                                          simple-error))
-                        handler-frame
-                        restart-handler
+                                          simpleError))
+                        handlerFrame
+                        restartHandler
                         condition-handler)
        continuation)))
 
   (deftest test-hierarchy.sanity-check
-    (signals-error
+    (signalsError
      (test-hierarchy
       '((number
          boolean)))

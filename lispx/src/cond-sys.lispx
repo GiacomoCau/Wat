@@ -18,8 +18,8 @@
 ;; * Both condition and restart handlers are arranged in
 ;;   dynamically-bound handler chains, consisting of individual
 ;;   handler frames.  Each frame binds a number of handlers.  We use
-;;   two dynamic variables, `*condition-handler-frame?*' and
-;;   `*restart-handler-frame?*', to point at the innermost frame of
+;;   two dynamic variables, `*conditionHandlerFrame?*' and
+;;   `*restartHandlerFrame?*', to point at the innermost frame of
 ;;   each chain.  Note that the variables hold options, as indicated
 ;;   by the question mark.
 ;;
@@ -35,18 +35,18 @@
 ;;
 ;; * A condition handler function always receives only a single
 ;;   argument, the condition, whereas a restart handler function
-;;   receives any number of arguments passed to `invoke-restart'.
+;;   receives any number of arguments passed to `invokeRestart'.
 ;;
 ;; * A condition handler function may decline handling a condition by
 ;;   returning normally instead of performing a nonlocal exit; this
 ;;   causes the search for a handler to continue.  In contrast, if a
 ;;   restart handler function returns normally, the restart is
 ;;   considered handled, and its result value is returned from
-;;   `invoke-restart'.
+;;   `invokeRestart'.
 ;;
 ;; * A restart handler may optionally have an interactive function
 ;;   that prompts the user for arguments when the restart is invoked
-;;   by `invoke-restart-interactively'.
+;;   by `invokeRestartInteractively'.
 ;;
 ;; * A restart handler may optionally be associated with a list of
 ;;   conditions, to tell apart restarts belonging to different,
@@ -55,9 +55,9 @@
 ;; We follow the Common Lisp condition system quite closely (including
 ;; details like the condition firewall), with some minor differences:
 ;;
-;; 1) For simplicity, the syntaxes of `handler-case' and
-;;    `restart-case' are equal to the syntaxes of the lower-level
-;;    `handler-bind' and `restart-bind' functions.  There is no extra
+;; 1) For simplicity, the syntaxes of `handlerCase' and
+;;    `restartCase' are equal to the syntaxes of the lower-level
+;;    `handlerBind' and `restartBind' functions.  There is no extra
 ;;    "user interface" processing for the higher-level functions.
 ;;
 ;;    Likewise, `signal' and `error' do not support creating simple
@@ -65,8 +65,8 @@
 ;;    always pass in a fully formed condition yourself.
 ;;
 ;; 2) There is no `with-condition-restarts'.  Instead there is an
-;;    additional keyword, `:associated-conditions', in the
-;;    handler-specs of `restart-bind' and `restart-case' that
+;;    additional keyword, `:associatedConditions', in the
+;;    handlerSpecs of `restartBind' and `restartCase' that
 ;;    establishes the associations.
 ;;
 ;;    Alternatively, `signal' and `error' also support the
@@ -76,108 +76,110 @@
 ;;    A call to `signal' (or `error') with restart handler specs like:
 ;;
 ;;    (signal some-condition
-;;      (continue (lambda () ...)))
+;;      (continue (\ () ...)))
 ;;
 ;;    is equivalent to:
 ;;
-;;    (restart-case ((continue (lambda () ...)
-;;                             :associated-conditions (list some-condition)))
+;;    (restartCase ((continue (\ () ...)
+;;                             :associatedConditions (list some-condition)))
 ;;      (signal some-condition))
 ;;
 ;; 3) Every restart must have a non-nil name; anonymous restarts
 ;;    are not supported.
 
-(defclass HandlerFrame ()
+(defClass HandlerFrame ()
   (handlers
-   parent-frame?)
+   parentFrame?)
   (:documentation "Instances of this class make up the condition and
   |restart handler chains.  Each frame stores a list of HANDLERS and an
   |optional PARENT-FRAME?."))
 
-(defclass ConditionHandler ()
-  (condition-class
-   handler-function)
+(defClass ConditionHandler ()
+  (conditionClass
+   handlerFunction)
   (:documentation "A condition handler is handling a particular
   |CONDITION-CLASS (can be `object' to handle all conditions).  The
   |HANDLER-FUNCTION receives a signalled condition as its single
   |argument."))
 
-(defclass RestartHandler ()
-  (restart-name
-   handler-function
-   interactive-function?
-   associated-conditions)
+(defClass RestartHandler ()
+  (restartName
+   handlerFunction
+   interactiveFunction?
+   associatedConditions)
   (:documentation "A restart handler is handling a particular
   |RESTART-NAME.  The HANDLER-FUNCTION receives the arguments passed to
-  |`invoke-restart'.  The optional INTERACTIVE-FUNCTION? is called by
-  |`invoke-restart-interactively' and should prompt the user for required
+  |`invokeRestart'.  The optional INTERACTIVE-FUNCTION? is called by
+  |`invokeRestartInteractively' and should prompt the user for required
   |arguments.  The ASSOCIATED-CONDITIONS are a list of conditions with
   |which this handler is associated.  If the list is empty, the handler
   |is applicable to any condition.  If it's not empty, the handler is
   |applicable only to conditions in the list."))
 
-(defdynamic *condition-handler-frame?* #null
+(ddef *conditionHandlerFrame?* #null
   "An option holding the innermost condition handler frame.")
 
-(defdynamic *restart-handler-frame?* #null
+(ddef *restartHandlerFrame?* #null
   "An option holding the innermost restart handler frame.")
 
-(defun lispx::make-handler-bind-operator (handler-spec-parser handler-frame-dynamic)
-  "Metaprogramming utility to create `handler-bind' and `restart-bind'.
+
+(def\ lispx::makeHandlerBindOperator (handlerSpecParser handlerFrameDynamic)
+  "Metaprogramming utility to create `handlerBind' and `restartBind'.
   |It is parameterized by a function that parses the handler
-  |specifications of the `handler-bind' and `restart-bind' forms and
+  |specifications of the `handlerBind' and `restartBind' forms and
   |produces handlers from them, as well as the dynamic variable holding
   |the handler chain (the variable itself as a first class object, not
   |its value, so it can be used with `progv')."
-  (vau (handler-specs . forms) env
-    (let ((handler-frame (make-instance
+  (vau (handlerSpecs . forms) env
+    (let ((handlerFrame (makeInstance
                           HandlerFrame
-                          :handlers (mapcar (lambda (spec)
-                                              (handler-spec-parser spec env))
-                                            handler-specs)
-                          :parent-frame? (dynamic handler-frame-dynamic))))
-      (progv (list handler-frame-dynamic) (list (some handler-frame))
-        (eval (list* progn forms) env)))))
+                          :handlers (map (\ (spec)
+                                              (handlerSpecParser spec env))
+                                            handlerSpecs)
+                          :parentFrame? (dget handlerFrameDynamic))))
+      (progv (list handlerFrameDynamic) (list (some handlerFrame))
+        (eval (list* begin forms) env)))))
 
-(def handler-bind
-  (lispx::make-handler-bind-operator
-   (lambda ((class-name function-form) env)
-     (make-instance ConditionHandler
-                    :condition-class
-                    (the Class (find-class class-name env))
-                    :handler-function
-                    (the Function (eval function-form env))))
-   *condition-handler-frame?*)
+(def handlerBind
+  (lispx::makeHandlerBindOperator
+   (\ ((className functionForm) env)
+     (makeInstance ConditionHandler
+                    :conditionClass
+                    (the Class (findClass className env))
+                    :handlerFunction
+                    (the Function (eval functionForm env))))
+   *conditionHandlerFrame?*)
   "Establish condition handlers specified by HANDLER-SPECS around FORMS.
   |$(type fexpr)
-  |$(fn (handler-specs . forms))
-  |$(syntax handler-spec (condition-class handler-function))")
+  |$(fn (handlerSpecs . forms))
+  |$(syntax handler-spec (conditionClass handlerFunction))")
 
-(def restart-bind
-  (lispx::make-handler-bind-operator
-   (lambda ((restart-name function-form . properties) env)
-     (make-instance RestartHandler
-                    :restart-name
-                    (the Symbol restart-name)
-                    :handler-function
-                    (the Function (eval function-form env))
-                    :interactive-function?
-                    (when-option (i-f-form (get? properties :interactive-function))
+(def restartBind
+  (lispx::makeHandlerBindOperator
+   (\ ((restartName functionForm . properties) env)
+     (makeInstance RestartHandler
+                    :restartName
+                    (the Symbol restartName)
+                    :handlerFunction
+                    (the Function (eval functionForm env))
+                    :interactiveFunction?
+                    (whenOpt (i-f-form (get? properties :interactiveFunction))
                       (some (the Function (eval i-f-form env))))
-                    :associated-conditions
-                    (when-option (a-cs-form (get? properties :associated-conditions))
+                    :associatedConditions
+                    (whenOpt (a-cs-form (get? properties :associatedConditions))
                       (the List (eval a-cs-form env)))))
-   *restart-handler-frame?*)
+   *restartHandlerFrame?*)
   "Establish restart handlers specified by HANDLER-SPECS around FORMS.
-  |You should usually prefer `restart-case'.
+  |You should usually prefer `restartCase'.
   |$(type fexpr)
-  |$(fn (handler-specs . forms))
-  |$(syntax handler-spec (restart-name handler-function . properties))
-  |$(syntax properties (&key interactive-function associated-conditions))")
+  |$(fn (handlerSpecs . forms))
+  |$(syntax handler-spec (restartName handlerFunction . properties))
+  |$(syntax properties (&key interactiveFunction associatedConditions))")
 
-(defun lispx::make-handler-case-operator (handler-bind-operator)
-  "Metaprogramming utility to create `handler-case' / `restart-case'
-  |from `handler-bind' / `restart-bind'.  The `*-case' operators unwind
+
+(def\ lispx::makeHandlerCaseOperator (handlerBindOperator)
+  "Metaprogramming utility to create `handlerCase' / `restartCase'
+  |from `handlerBind' / `restartBind'.  The `*-case' operators unwind
   |the stack before a handler is called.  We do this with an outer exit
   |and an inner trampoline, both wrapped around the original `*-bind'
   |operator.  The original form's handler functions are replaced with
@@ -186,126 +188,129 @@
   |unwind the stack by jumping into the trampoline, and call the original
   |handler function there.  If no condition is signalled / no restart is
   |invoked, we return from the outer exit, ignoring the trampoline."
-  (vau (handler-specs . forms) env
+  (vau (handlerSpecs . forms) env
     (block exit
       ((block trampoline
-         (eval (list handler-bind-operator
-                     (mapcar (lambda ((name function-form . properties))
+         (eval (list handlerBindOperator
+                     (map (\ ((name functionForm . properties))
                                (list* name
-                                      (lambda args
-                                        (return-from trampoline
-                                          (lambda ()
-                                            (apply (eval function-form env) args))))
+                                      (\ args
+                                        (returnFrom trampoline
+                                          (\ ()
+                                            (apply (eval functionForm env) args))))
                                       properties))
-                             handler-specs)
-                     (list return-from exit (list* progn forms)))
+                             handlerSpecs)
+                     (list returnFrom exit (list* begin forms)))
                env))))))
 
-(def handler-case (lispx::make-handler-case-operator handler-bind)
-  "Like `handler-bind', but the stack is unwound before a handler function is called.
+(def handlerCase (lispx::makeHandlerCaseOperator handlerBind)
+  "Like `handlerBind', but the stack is unwound before a handler function is called.
   |$(type fexpr)
-  |$(fn (handler-specs . forms))")
+  |$(fn (handlerSpecs . forms))")
 
-(def restart-case (lispx::make-handler-case-operator restart-bind)
-  "Like `restart-bind', but the stack is unwound before a handler function is called.
+(def restartCase (lispx::makeHandlerCaseOperator restartBind)
+  "Like `restartBind', but the stack is unwound before a handler function is called.
   |$(type fexpr)
-  |$(fn (handler-specs . forms))")
+  |$(fn (handlerSpecs . forms))")
 
-(defun _signal_ (condition)
+
+(def\ _signal_ (condition)
   "Utility to signal the CONDITION.  If the signal is unhandled,
   |return void.  See `signal'."
-  (loop-let -signal- ((handler-frame? (dynamic *condition-handler-frame?*)))
-    ;; Payload to `lispx::find-handler?' is always nil for condition handlers.
-    (if-option ((handler frame) (lispx::find-handler? condition handler-frame? #null))
-      (progn
+  (letloop -signal- ((handlerFrame? (dget *conditionHandlerFrame?*)))
+    ;; Payload to `lispx::findHandler?' is always nil for condition handlers.
+    (ifOpt ((handler frame) (lispx::findHandler? condition handlerFrame? #null))
+      (begin
         ;; Handler found; call it, passing along frame.
-        (lispx::call-condition-handler handler frame condition)
+        (lispx::callConditionHandler handler frame condition)
         ;; Signal unhandled: continue search for handlers.
-        (-signal- (slot-value frame 'parent-frame?)))
+        (-signal- (getSlot frame 'parentFrame?)))
       ;; No handler found, return void.
       #inert)))
 
-(defun lispx::call-condition-handler (handler handler-frame condition)
+(def\ lispx::callConditionHandler (handler handlerFrame condition)
   "Call a condition HANDLER's handler function with the given
   |CONDITION.  During the call, the condition handler chain gets swapped
   |to that chain that was active at the time the handler was established.
   |This is the so-called \"condition firewall\".  The chain gets passed
   |in as the value of HANDLER-FRAME."
-  (dynamic-let ((*condition-handler-frame?* (slot-value handler-frame 'parent-frame?)))
-    (lispx::apply-handler-function handler (list condition))))
+  (dlet ((*conditionHandlerFrame?* (getSlot handlerFrame 'parentFrame?)))
+    (lispx::applyHandlerFunction handler (list condition))))
 
-(defun lispx::apply-handler-function (handler arguments)
+(def\ lispx::applyHandlerFunction (handler arguments)
   "Utility to call a condition or restart HANDLER's handler function
   |with a list of ARGUMENTS."
-  (apply (slot-value handler 'handler-function) arguments))
+  (apply (getSlot handler 'handlerFunction) arguments))
 
-(defun _error_ (condition)
+(def\ _error_ (condition)
   "Utility to signal the CONDITION.  If the condition is unhandled,
   |invoke the debugger.  Therefore never returns normally.  See `error'."
   (signal condition)
-  (invoke-debugger condition))
+  (invokeDebugger condition))
 
-(defun lispx::make-signal-with-restarts-operator (signal-operator)
+
+(def\ lispx::makeSignalWithRestartsOperator (signal-operator)
   "Metaprogramming utility to create the `signal' / `error' operators
-  |that take restart handler-specs from the `_signal_' / `_error_' ones
+  |that take restart handlerSpecs from the `_signal_' / `_error_' ones
   |that don't."
-  (vau (condition . handler-specs) env
+  (vau (condition . handlerSpecs) env
     (let ((c (eval condition env)))
-      (flet ((append-associated-condition (handler-spec)
-               (append handler-spec (list :associated-conditions (list list c)))))
-        (eval (list restart-case (mapcar append-associated-condition handler-specs)
+      (let\ ((append-associated-condition (handler-spec)
+               (append handler-spec (list :associatedConditions (list list c)))))
+        (eval (list restartCase (map append-associated-condition handlerSpecs)
                     (list signal-operator c))
               env)))))
 
-(def signal (lispx::make-signal-with-restarts-operator _signal_)
+(def signal (lispx::makeSignalWithRestartsOperator _signal_)
   "Signal the CONDITION.  If the signal is unhandled, return void.
   |Restart handlers that are associated with the condition can be bound
-  |as per `restart-case'.  The handlers should not specify the
-  |`:associated-conditions' property, as it will be set automatically.
+  |as per `restartCase'.  The handlers should not specify the
+  |`:associatedConditions' property, as it will be set automatically.
   |$(type fexpr)
-  |$(fn (condition . handler-specs))")
+  |$(fn (condition . handlerSpecs))")
 
-(def error (lispx::make-signal-with-restarts-operator _error_)
+(def error (lispx::makeSignalWithRestartsOperator _error_)
   "Signal the CONDITION.  If the condition is unhandled, invoke the
   |debugger.  Therefore never returns normally.
   |Restart handlers that are associated with the condition can be bound
-  |as per `restart-case'.  The handlers should not specify the
-  |`:associated-conditions' property, as it will be set automatically.
+  |as per `restartCase'.  The handlers should not specify the
+  |`:associatedConditions' property, as it will be set automatically.
   |$(type fexpr)
-  |$(fn (condition . handler-specs))")
+  |$(fn (condition . handlerSpecs))")
 
-(defun invoke-restart (restart-designator . arguments)
+
+(def\ invokeRestart (restartDesignator . arguments)
   "Invoke the restart designated by RESTART-DESIGNATOR, which can be a
-  |symbol or a `restart-handler', with the given ARGUMENTS.  Signal an
+  |symbol or a `restartHandler', with the given ARGUMENTS.  Signal an
   |error if the restart is not found."
-  (lispx::invoke-restart-with-arguments-producing-function
-   restart-designator
-   (lambda (#ignore) arguments)))
+  (lispx::invokeRestartWithArgumentsProducingFunction
+   restartDesignator
+   (\ (#ignore) arguments)))
 
-(defun invoke-restart-interactively (restart-designator)
+(def\ invokeRestartInteractively (restartDesignator)
   "Invoke the restart designated by RESTART-DESIGNATOR, which can be a
-  |symbol or a `restart-handler', by prompting the user for arguments via
+  |symbol or a `restartHandler', by prompting the user for arguments via
   |the restart's optional interactive function.  Signal an error if the
   |restart is not found."
-  (lispx::invoke-restart-with-arguments-producing-function
-   restart-designator
-   (lambda (restart-handler)
-     (when-option (i-f (slot-value restart-handler 'interactive-function?))
+  (lispx::invokeRestartWithArgumentsProducingFunction
+   restartDesignator
+   (\ (restartHandler)
+     (whenOpt (i-f (getSlot restartHandler 'interactiveFunction?))
        (i-f)))))
 
-(defun lispx::invoke-restart-with-arguments-producing-function (restart-designator function)
+(def\ lispx::invokeRestartWithArgumentsProducingFunction (restartDesignator function)
   "Utility to invoke the restart designated by RESTART-DESIGNATOR,
-  |which can be a symbol or a `restart-handler', with an arguments list
-  |produced by FUNCTION (which receives a `restart-handler' as argument)."
-  (etypecase restart-designator
+  |which can be a symbol or a `restartHandler', with an arguments list
+  |produced by FUNCTION (which receives a `restartHandler' as argument)."
+  (etypecase restartDesignator
     (Symbol
-     (if-option (restart-handler (find-restart? restart-designator))
-       (lispx::apply-handler-function restart-handler (function restart-handler))
-       (error (make-restart-error restart-designator))))
+     (ifOpt (restartHandler (findRestart? restartDesignator))
+       (lispx::applyHandlerFunction restartHandler (function restartHandler))
+       (error (makeRestartError restartDesignator))))
     (RestartHandler
-     (lispx::apply-handler-function restart-designator (function restart-designator)))))
+     (lispx::applyHandlerFunction restartDesignator (function restartDesignator)))))
 
-(defun lispx::find-handler? (object handler-frame? payload?)
+(def\ lispx::findHandler? (object handlerFrame? payload?)
   "Utility to find both condition handlers and restart handlers.
   |The OBJECT can be either a condition or a restart name.  The
   |HANDLER-FRAME? is the handler frame where the search should start
@@ -314,95 +319,95 @@
   |Return an option of the found handler and the frame establishing it as
   |a two-element list.  The frame is needed so that we can access its
   |parent in the implementation of the condition firewall (see
-  |`lispx::call-condition-handler').
+  |`lispx::callConditionHandler').
   |
   |The PAYLOAD? parameter can be used to pass in an optional condition if
-  |we are looking for a restart handler (see `find-restart?').  If we are
+  |we are looking for a restart handler (see `findRestart?').  If we are
   |looking for a condition handler, it is always nil."
-  (when-option (handler-frame handler-frame?)
+  (whenOpt (handlerFrame handlerFrame?)
     (block found
-      (dolist (handler (slot-value handler-frame 'handlers))
-        (when (lispx::handler-applicable-p handler object payload?)
-          (return-from found (some (list handler handler-frame)))))
-      (lispx::find-handler? object (slot-value handler-frame 'parent-frame?) payload?))))
+      (dolist (handler (getSlot handlerFrame 'handlers))
+        (when (lispx::handlerApplicable? handler object payload?)
+          (returnFrom found (some (list handler handlerFrame)))))
+      (lispx::findHandler? object (getSlot handlerFrame 'parentFrame?) payload?))))
 
-(defun find-restart? (name . condition?)
+(def\ findRestart? (name . condition?)
   "Find a restart handler by NAME, optionally limited to restarts
   |associated with a particular CONDITION?."
-  (when-option ((handler #ignore) (lispx::find-handler?
+  (whenOpt ((handler #ignore) (lispx::findHandler?
                                    name
-                                   (dynamic *restart-handler-frame?*)
+                                   (dget *restartHandlerFrame?*)
                                    condition?))
     (some handler)))
 
-(defgeneric lispx::handler-applicable-p (handler object payload?)
+(defGeneric lispx::handlerApplicable? (handler object payload?)
   (:documentation "Return true if a condition or restart HANDLER is
   |applicable, false otherwise.  The OBJECT can be a condition or a
   |restart name.  The PAYLOAD? is only used for restart handlers, and
   |always nil for condition handlers."))
 
-(defmethod lispx::handler-applicable-p ((handler ConditionHandler) condition #null)
+(defMethod lispx::handlerApplicable? ((handler ConditionHandler) condition #null)
   "A condition handler is applicable if the condition is an instance
   |of its condition class."
-  (typep condition (slot-value handler 'condition-class)))
+  (type? condition (getSlot handler 'conditionClass)))
 
-(defmethod lispx::handler-applicable-p ((handler RestartHandler) restart-name condition?)
+(defMethod lispx::handlerApplicable? ((handler RestartHandler) restartName condition?)
   "A restart handler is applicable to a restart name and optional condition..."
   ;; ...if the restart name matches the handler's restart name, and...
-  (and (eq restart-name (slot-value handler 'restart-name))
+  (and (== restartName (getSlot handler 'restartName))
        ;; ...the handler is applicable to the condition.
-       (lispx::restart-handler-applicable-to-condition-p handler condition?)))
+       (lispx::restartHandlerApplicableToCondition? handler condition?)))
 
-(defun lispx::restart-handler-applicable-to-condition-p (handler condition?)
+(def\ lispx::restartHandlerApplicableToCondition? (handler condition?)
   "A restart handler is applicable to an optional condition..."
-  (if-option (condition condition?)
+  (ifOpt (condition condition?)
     ;; ...if we are looking for restarts associated with a
     ;; particular condition...
-    (let ((a-cs (slot-value handler 'associated-conditions)))
-      (if (null a-cs)
+    (let ((a-cs (getSlot handler 'associatedConditions)))
+      (if (null? a-cs)
           ;; ...if the restart handler is not associated with
           ;; particular conditions,...
           #t
           ;; ...or if the condition we are looking is one of the
           ;; handler's associated conditions.
-          (consp (member condition a-cs))))
+          (cons? (member condition a-cs))))
     ;; ...if we are not looking for restarts associated with a
     ;; particular condition then every handler is applicable.
     #t))
 
-(defun compute-restarts condition?
+(def\ computeRestarts condition?
   "Return the list of currently active restarts, with most recently
   |established ones first, optionally limited to those that are
   |explicitly associated with the supplied CONDITION? or not associated
   |with any condition."
-  (loop-let -compute-restarts- ((restarts '())
-                                (handler-frame? (dynamic *restart-handler-frame?*)))
-    (if-option (handler-frame handler-frame?)
-      (-compute-restarts- (append restarts
-                                  (remove-if
-                                   (lambda (restart)
-                                     (not (lispx::restart-handler-applicable-to-condition-p
+  (letloop -computeRestarts- ((restarts '())
+                                (handlerFrame? (dget *restartHandlerFrame?*)))
+    (ifOpt (handlerFrame handlerFrame?)
+      (-computeRestarts- (append restarts
+                                  (removeIf
+                                   (\ (restart)
+                                     (not (lispx::restartHandlerApplicableToCondition?
                                            restart condition?)))
-                                   (slot-value handler-frame 'handlers)))
-                          (slot-value handler-frame 'parent-frame?))
+                                   (getSlot handlerFrame 'handlers)))
+                          (getSlot handlerFrame 'parentFrame?))
       restarts)))
 
-(defclass RestartError (Error)
-  (restart-name)
+(defClass RestartError (Error)
+  (restartName)
   (:documentation "Signalled when no handler for RESTART-NAME is found."))
 
-(defun make-restart-error (restart-name)
+(def\ makeRestartError (restartName)
   "Create a new `restart-error' for the given RESTART-NAME."
-  (make-instance RestartError :restart-name restart-name))
+  (makeInstance RestartError :restartName restartName))
 
-(defclass SimpleError (Error)
+(defClass SimpleError (Error)
   (message)
   (:documentation "Class for simple errors with a MESSAGE."))
 
-(defun make-simple-error (message)
+(def\ makeSimpleError (message)
   "Create a new simple error with a MESSAGE."
-  (make-instance SimpleError :message message))
+  (makeInstance SimpleError :message message))
 
-(defun simple-error (message)
+(def\ simpleError (message)
   "Signal a simple error with a MESSAGE."
-  (error (make-simple-error message)))
+  (error (makeSimpleError message)))

@@ -3,23 +3,23 @@
 (defsuite stream-tests
 
   (deftest standard-streams-defined
-    (and (typep *standard-input* Dynamic)
-         (typep *standard-output* Dynamic))))
+    (and (type? *standard-input* Dynamic)
+         (type? *standard-output* Dynamic))))
 
 (defsuite string-input-streams
 
   (deftest make-string-input-stream.1
-    (typep (make-string-input-stream "foo") StringInputStream))
+    (type? (make-string-input-stream "foo") StringInputStream))
 
   (deftest make-string-input-stream.2
-    (signals-error
+    (signalsError
      (make-string-input-stream)
      match-error))
 
   (deftest make-string-input-stream.3
-    (signals-error
+    (signalsError
      (make-string-input-stream 12)
-     type-error :datum 12 :expected-type 'String))
+     type-error :datum 12 :expectedType 'String))
 
   (deftest with-standard-input-from-string.1
     (with-standard-input-from-string "foo")
@@ -36,7 +36,7 @@
 (defsuite string-output-streams
 
   (deftest make-string-output-stream.1
-    (typep (make-string-output-stream) StringOutputStream))
+    (type? (make-string-output-stream) StringOutputStream))
 
   (deftest with-standard-output-to-string.1
     (with-standard-output-to-string (print "foo") (print "bar"))
@@ -52,14 +52,14 @@
     "")
 
   (deftest get-output-stream-string.2
-    (signals-error
+    (signalsError
      (get-output-stream-string)
      match-error))
 
   (deftest get-output-stream-string.3
-    (signals-error
+    (signalsError
      (get-output-stream-string 1)
-     type-error :datum 1 :expected-type 'StringOutputStream)))
+     type-error :datum 1 :expectedType 'StringOutputStream)))
 
 (defsuite fresh-line
 
@@ -71,6 +71,6 @@
     (let ((sos (make-string-output-stream)))
       (with-standard-output-to-string
        (fresh-line) (uprint1 "a") (fresh-line)
-       (fresh-line sos) (dynamic-let ((*standard-output* sos)) (uprint1 "b")) (fresh-line sos)
-       (assert (= "\nb\n" (get-output-stream-string sos)))))
+       (fresh-line sos) (dlet ((*standard-output* sos)) (uprint1 "b")) (fresh-line sos)
+       (assert (eq? "\nb\n" (get-output-stream-string sos)))))
     "\na\n"))

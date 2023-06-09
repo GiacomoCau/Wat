@@ -910,18 +910,18 @@
     (wrau val* env
         (def\ (ckdvar var)
             (def lkp (@get env var))
-            (def dv (.value lkp))
-            ;(if (or (and (null? body) (null? dv)) (instanceof? dv DVar)) dv
+            (def ndv (.value lkp))
+            ;(if (or (and (null? body) (null? ndv)) (instanceof? ndv DVar)) ndv
             ;  (error ($ "not " (if (null? body) "null or " "") "a dynamic value: " var)) )
-            (if (or (and (null? body) (! (.isBound lkp))) (instanceof? dv DVar)) dv
+            (if (or (and (null? body) (! (.isBound lkp))) (instanceof? ndv DVar)) ndv
               (error ($ "not " (if (null? body) "unbound or " "") "a dynamic value: " var)) ))
-        (def dv* (map ckdvar var*))
-        (unless (null? body) (def old* (map (\ (dv) (dv)) dv*)))
-        (forEach (\ (dv var val) (if (instanceof? dv DVar) (dv val) (@def env var (dvar val)) )) dv* var* (if (null? val*) (map (\ (var) #null) var*) val*))
+        (def ndv* (map ckdvar var*))
+        (unless (null? body) (def old* (map (\ (ndv) (if (null? ndv) ndv (ndv))) ndv*)))
+        (forEach (\ (ndv var val) (if (instanceof? ndv DVar) (ndv val) (@def env var (dvar val)) )) ndv* var* (if (null? val*) (map (\ (var) #null) var*) val*))
         (unless (null? body)
           (finally
             (eval (list* 'begin body) env) 
-            (forEach (\ (dv old) (dv old)) dv* old*) )))))
+            (forEach (\ (ndv old) (ndv old)) ndv* old*) )))))
 
 ;((d\ (d e) (print e)) 4 5)     
 ;((d\ (d e)) 6 7)
@@ -946,10 +946,10 @@
       (list* 'dlet* (cdr bindings) body) )))
       
 (def a (dvar 1))
-(assert (expand (ddef a 1)) '((d\ (a)) 1))
-(assert (expand (ddef* (a b) 1 2)) '((d\ (a b)) 1 2))  
-(assert (expand (progv (a b) (3 4)  (+ (a) (b)))) '((d\ (a b) (+ (a) (b))) 3 4))
-(assert (expand (dlet ((a 3) (b 4)) (+ (a) (b)))) '((d\ (a b) (+ (a) (b))) 3 4))
+(assert (expand (ddef a 1)) '((d\ (a)) 1) )
+(assert (expand (ddef* (a b) 1 2)) '((d\ (a b)) 1 2) )  
+(assert (expand (progv (a b) (3 4)  (+ (a) (b)))) '((d\ (a b) (+ (a) (b))) 3 4) )
+(assert (expand (dlet ((a 3) (b 4)) (+ (a) (b)))) '((d\ (a b) (+ (a) (b))) 3 4) )
 (ddef* (a b) 1 2)
 (assert (progv (a b) (3 4)  (+ (a) (b))) 7)
 (assert (dlet ((a 3) (b 4)) (+ (a) (b))) 7)

@@ -1,514 +1,514 @@
-(defsuite handler-bind
+(defsuite handlerBind
 
-  (defclass TestError (Error) ())
+  (defClass TestError (Error) ())
 
-  (deftest handler-bind.0
-    (signals-error
-     (handler-bind)
+  (deftest handlerBind.0
+    (signalsError
+     (handlerBind)
      MatchError))
 
-  (deftest handler-bind.0b
-    (handler-bind ())
+  (deftest handlerBind.0b
+    (handlerBind ())
     #inert)
 
-  (deftest handler-bind.1
-    (handler-bind ()
+  (deftest handlerBind.1
+    (handlerBind ()
       1 2 (+ 1 2))
     3)
 
-  (deftest handler-bind.2
-    (handler-bind ((SimpleError (lambda (e) 'whatever)))
+  (deftest handlerBind.2
+    (handlerBind ((SimpleError (\ (e) 'whatever)))
       1 2 (+ 1 2))
     3)
 
-  (deftest handler-bind.3
-    (handler-bind ((SimpleError (lambda (e) 'whatever))
-                   (TestError (lambda (e) 'whatever)))
+  (deftest handlerBind.3
+    (handlerBind ((SimpleError (\ (e) 'whatever))
+                   (TestError (\ (e) 'whatever)))
       1 2 (+ 1 2))
     3)
 
-  (deftest handler-bind.no-handler
-    (handler-bind ((TestError (lambda (e) 'whatever)))
-      (signal (make-simple-error "foo")))
+  (deftest handlerBind.no-handler
+    (handlerBind ((TestError (\ (e) 'whatever)))
+      (signal (makeSimpleError "foo")))
     #inert)
 
-  (deftest handler-bind.unhandled
-    (handler-bind ((SimpleError (lambda (e) 'whatever)))
-      (signal (make-simple-error "foo")))
+  (deftest handlerBind.unhandled
+    (handlerBind ((SimpleError (\ (e) 'whatever)))
+      (signal (makeSimpleError "foo")))
     #inert)
 
-  (deftest handler-bind.decline
+  (deftest handlerBind.decline
     (block b
-      (handler-bind ((SimpleError (lambda (e) (return-from b 1))))
-        (handler-bind ((SimpleError (lambda (e) 'decline)))
-          (signal (make-simple-error "foo")))))
+      (handlerBind ((SimpleError (\ (e) (returnFrom b 1))))
+        (handlerBind ((SimpleError (\ (e) 'decline)))
+          (signal (makeSimpleError "foo")))))
     1)
 
-  (deftest handler-bind.handled
+  (deftest handlerBind.handled
     (block b
-      (handler-bind ((SimpleError (lambda (e)
-                                     (assert (= "foo" (slot-value e 'message)))
-                                     (return-from b 1))))
-        (signal (make-simple-error "foo"))))
+      (handlerBind ((SimpleError (\ (e)
+                                     (assert (eq? "foo" (getSlot e 'message)))
+                                     (returnFrom b 1))))
+        (signal (makeSimpleError "foo"))))
     1)
 
-  (deftest handler-bind.nested
+  (deftest handlerBind.nested
     (block b
-      (handler-bind ((SimpleError (lambda (e) (return-from b 'outer))))
-        (handler-bind ((SimpleError (lambda (e) (return-from b 'inner))))
-          (signal (make-simple-error "foo")))))
+      (handlerBind ((SimpleError (\ (e) (returnFrom b 'outer))))
+        (handlerBind ((SimpleError (\ (e) (returnFrom b 'inner))))
+          (signal (makeSimpleError "foo")))))
     'inner)
 
-  (deftest handler-bind.resignal
+  (deftest handlerBind.resignal
     (block b
-      (handler-bind ((SimpleError (lambda (e) (return-from b 'outer))))
-        (handler-bind ((SimpleError (lambda (e) (signal e))))
-          (signal (make-simple-error "foo")))))
+      (handlerBind ((SimpleError (\ (e) (returnFrom b 'outer))))
+        (handlerBind ((SimpleError (\ (e) (signal e))))
+          (signal (makeSimpleError "foo")))))
     'outer)
 
-  (deftest handler-bind.firewall
+  (deftest handlerBind.firewall
     (block b
-      (handler-bind ((TestError (lambda (e) (return-from b 'outer))))
-        (handler-bind ((SimpleError (lambda (e)
-                                       (signal (make-instance TestError)))))
-          (handler-bind ((TestError (lambda (e) (return-from b 'inner))))
-            (signal (make-simple-error "foo"))))))
+      (handlerBind ((TestError (\ (e) (returnFrom b 'outer))))
+        (handlerBind ((SimpleError (\ (e)
+                                       (signal (makeInstance TestError)))))
+          (handlerBind ((TestError (\ (e) (returnFrom b 'inner))))
+            (signal (makeSimpleError "foo"))))))
     'outer)
 
-  (deftest handler-bind.multiple.1
+  (deftest handlerBind.multiple.1
     (block b
-      (handler-bind ((TestError (lambda (e) (return-from b 'test)))
-                     (SimpleError (lambda (e) (return-from b 'simple))))
-        (signal (make-simple-error "foo"))))
+      (handlerBind ((TestError (\ (e) (returnFrom b 'test)))
+                     (SimpleError (\ (e) (returnFrom b 'simple))))
+        (signal (makeSimpleError "foo"))))
     'simple)
 
-  (deftest handler-bind.multiple.2
+  (deftest handlerBind.multiple.2
     (block b
-      (handler-bind ((TestError (lambda (e) (return-from b 'test)))
-                     (SimpleError (lambda (e) (return-from b 'simple))))
-        (signal (make-instance TestError))))
+      (handlerBind ((TestError (\ (e) (returnFrom b 'test)))
+                     (SimpleError (\ (e) (returnFrom b 'simple))))
+        (signal (makeInstance TestError))))
     'test)
 
-  (deftest handler-bind.anything
+  (deftest handlerBind.anything
     (block b
-      (handler-bind ((Object (lambda (e) (return-from b e))))
+      (handlerBind ((Object (\ (e) (returnFrom b e))))
         (signal "foo")))
     "foo"))
 
-(defsuite handler-case
+(defsuite handlerCase
 
-  (defclass TestError (Error) ())
+  (defClass TestError (Error) ())
 
-  (deftest handler-case.0
-    (signals-error
-     (handler-case)
+  (deftest handlerCase.0
+    (signalsError
+     (handlerCase)
      MatchError))
 
-  (deftest handler-case.0b
-    (handler-case ())
+  (deftest handlerCase.0b
+    (handlerCase ())
     #inert)
 
-  (deftest handler-case.1
-    (handler-case ()
+  (deftest handlerCase.1
+    (handlerCase ()
       1 2 (+ 1 2))
     3)
 
-  (deftest handler-case.2
-    (handler-case ((SimpleError (lambda (e) 'whatever)))
+  (deftest handlerCase.2
+    (handlerCase ((SimpleError (\ (e) 'whatever)))
       1 2 (+ 1 2))
     3)
 
-  (deftest handler-case.3
-    (handler-case ((SimpleError (lambda (e) 'whatever))
-                   (TestError (lambda (e) 'whatever)))
+  (deftest handlerCase.3
+    (handlerCase ((SimpleError (\ (e) 'whatever))
+                   (TestError (\ (e) 'whatever)))
       1 2 (+ 1 2))
     3)
 
-  (deftest handler-case.no-handler
-    (handler-case ((TestError (lambda (e) 'whatever)))
-      (signal (make-simple-error "foo")))
+  (deftest handlerCase.no-handler
+    (handlerCase ((TestError (\ (e) 'whatever)))
+      (signal (makeSimpleError "foo")))
     #inert)
 
-  (deftest handler-case.handled
-    (handler-case ((SimpleError (lambda (e)
-                                   (assert (= "foo" (slot-value e 'message)))
+  (deftest handlerCase.handled
+    (handlerCase ((SimpleError (\ (e)
+                                   (assert (eq? "foo" (getSlot e 'message)))
                                    'whatever)))
-      (signal (make-simple-error "foo")))
+      (signal (makeSimpleError "foo")))
     'whatever)
 
-  (deftest handler-case.nested
-    (handler-case ((SimpleError (lambda (e) 'outer)))
-      (handler-case ((SimpleError (lambda (e) 'inner)))
-        (signal (make-simple-error "foo"))))
+  (deftest handlerCase.nested
+    (handlerCase ((SimpleError (\ (e) 'outer)))
+      (handlerCase ((SimpleError (\ (e) 'inner)))
+        (signal (makeSimpleError "foo"))))
     'inner)
 
-  (deftest handler-case.resignal
-    (handler-case ((SimpleError (lambda (e) 'outer)))
-      (handler-case ((SimpleError (lambda (e) (signal e))))
-        (signal (make-simple-error "foo"))))
+  (deftest handlerCase.resignal
+    (handlerCase ((SimpleError (\ (e) 'outer)))
+      (handlerCase ((SimpleError (\ (e) (signal e))))
+        (signal (makeSimpleError "foo"))))
     'outer)
 
-  (deftest handler-case.multiple.1
-    (handler-case ((TestError (lambda (e) 'test))
-                   (SimpleError (lambda (e) 'simple)))
-      (signal (make-simple-error "foo")))
+  (deftest handlerCase.multiple.1
+    (handlerCase ((TestError (\ (e) 'test))
+                   (SimpleError (\ (e) 'simple)))
+      (signal (makeSimpleError "foo")))
     'simple)
 
-  (deftest handler-case.multiple.2
-    (handler-case ((TestError (lambda (e) 'test))
-                   (SimpleError (lambda (e) 'simple)))
-      (signal (make-instance TestError)))
+  (deftest handlerCase.multiple.2
+    (handlerCase ((TestError (\ (e) 'test))
+                   (SimpleError (\ (e) 'simple)))
+      (signal (makeInstance TestError)))
     'test)
 
-  (deftest handler-case.anything
-    (handler-case ((Object (lambda (e) e)))
+  (deftest handlerCase.anything
+    (handlerCase ((Object (\ (e) e)))
       (signal "foo"))
     "foo"))
 
-(defsuite restart-bind
+(defsuite restartBind
 
-  (deftest restart-bind.0
-    (signals-error
-     (restart-bind)
+  (deftest restartBind.0
+    (signalsError
+     (restartBind)
      MatchError))
 
-  (deftest restart-bind.0b
-    (restart-bind ())
+  (deftest restartBind.0b
+    (restartBind ())
     #inert)
 
-  (deftest restart-bind.1
-    (restart-bind ()
+  (deftest restartBind.1
+    (restartBind ()
       1 2 (+ 1 2))
     3)
 
-  (deftest restart-bind.2
-    (restart-bind ((continue (lambda () 'whatever)))
+  (deftest restartBind.2
+    (restartBind ((continue (\ () 'whatever)))
       1 2 (+ 1 2))
     3)
 
-  (deftest restart-bind.3
-    (restart-bind ((continue (lambda () 'whatever))
-                   (abort (lambda () 'whatever)))
+  (deftest restartBind.3
+    (restartBind ((continue (\ () 'whatever))
+                   (abort (\ () 'whatever)))
       1 2 (+ 1 2))
     3)
 
-  (deftest restart-bind.no-handler.1
-    (signals-error
-     (invoke-restart 'continue)
-     RestartError :restart-name 'continue))
+  (deftest restartBind.no-handler.1
+    (signalsError
+     (invokeRestart 'continue)
+     RestartError :restartName 'continue))
 
-  (deftest restart-bind.no-handler.2
-    (signals-error
-     (restart-bind ((continue (lambda () 'whatever)))
-       (invoke-restart 'abort))
-     RestartError :restart-name 'abort))
+  (deftest restartBind.no-handler.2
+    (signalsError
+     (restartBind ((continue (\ () 'whatever)))
+       (invokeRestart 'abort))
+     RestartError :restartName 'abort))
 
-  (deftest restart-bind.no-handler.1a
-    (signals-error
-     (invoke-restart-interactively 'continue)
-     RestartError :restart-name 'continue))
+  (deftest restartBind.no-handler.1a
+    (signalsError
+     (invokeRestartInteractively 'continue)
+     RestartError :restartName 'continue))
 
-  (deftest restart-bind.no-handler.2a
-    (signals-error
-     (restart-bind ((continue (lambda () 'whatever)))
-       (invoke-restart-interactively 'abort))
-     RestartError :restart-name 'abort))
+  (deftest restartBind.no-handler.2a
+    (signalsError
+     (restartBind ((continue (\ () 'whatever)))
+       (invokeRestartInteractively 'abort))
+     RestartError :restartName 'abort))
 
-  (deftest restart-bind.no-exit.1
-    (restart-bind ((continue (lambda () 'whatever)))
-      (invoke-restart 'continue))
+  (deftest restartBind.no-exit.1
+    (restartBind ((continue (\ () 'whatever)))
+      (invokeRestart 'continue))
     'whatever)
 
-  (deftest restart-bind.no-exit.2
-    (restart-bind ((continue (lambda () 'whatever)))
-      (if-option (restart-handler (find-restart? 'continue))
-        (invoke-restart restart-handler)
+  (deftest restartBind.no-exit.2
+    (restartBind ((continue (\ () 'whatever)))
+      (ifOpt (restartHandler (findRestart? 'continue))
+        (invokeRestart restartHandler)
         (assert #f)))
     'whatever)
 
-  (deftest restart-bind.handled
+  (deftest restartBind.handled
     (block b
-      (restart-bind ((abort (lambda (arg1 arg2)
-                              (assert (= 1 arg1))
-                              (assert (= 2 arg2))
-                              (return-from b 3))))
-        (invoke-restart 'abort (+ 0 1) (+ 1 1))))
+      (restartBind ((abort (\ (arg1 arg2)
+                              (assert (eq? 1 arg1))
+                              (assert (eq? 2 arg2))
+                              (returnFrom b 3))))
+        (invokeRestart 'abort (+ 0 1) (+ 1 1))))
     3)
 
-  (deftest restart-bind.nested
+  (deftest restartBind.nested
     (block b
-      (restart-bind ((continue (lambda () (return-from b 'outer))))
-        (restart-bind ((continue (lambda () (return-from b 'inner))))
-          (invoke-restart 'continue))))
+      (restartBind ((continue (\ () (returnFrom b 'outer))))
+        (restartBind ((continue (\ () (returnFrom b 'inner))))
+          (invokeRestart 'continue))))
     'inner)
 
-  (deftest restart-bind.reinvoke
+  (deftest restartBind.reinvoke
     (block b
-      (restart-bind ((y (lambda (val) (return-from b (+ val 1)))))
-        (restart-bind ((x (lambda (val) (invoke-restart 'y (+ val 1)))))
-          (invoke-restart 'x 1))))
+      (restartBind ((y (\ (val) (returnFrom b (+ val 1)))))
+        (restartBind ((x (\ (val) (invokeRestart 'y (+ val 1)))))
+          (invokeRestart 'x 1))))
     3)
 
-  (deftest restart-bind.no-firewall
+  (deftest restartBind.no-firewall
     (block b
-      (restart-bind ((r1 (lambda () (return-from b 'outer))))
-        (restart-bind ((r2 (lambda () (invoke-restart 'r1))))
-          (restart-bind ((r1 (lambda () (return-from b 'inner))))
-            (invoke-restart 'r2)))))
+      (restartBind ((r1 (\ () (returnFrom b 'outer))))
+        (restartBind ((r2 (\ () (invokeRestart 'r1))))
+          (restartBind ((r1 (\ () (returnFrom b 'inner))))
+            (invokeRestart 'r2)))))
     'inner)
 
-  (deftest restart-bind.multiple.1
+  (deftest restartBind.multiple.1
     (block b
-      (restart-bind ((r1 (lambda (arg) (return-from b (- 100 arg))))
-                     (r2 (lambda (arg) (return-from b (+ 100 arg)))))
-        (invoke-restart 'r2 1)))
+      (restartBind ((r1 (\ (arg) (returnFrom b (- 100 arg))))
+                     (r2 (\ (arg) (returnFrom b (+ 100 arg)))))
+        (invokeRestart 'r2 1)))
     101)
 
-  (deftest restart-bind.multiple.2
+  (deftest restartBind.multiple.2
     (block b
-      (restart-bind ((r1 (lambda (arg) (return-from b (- 100 arg))))
-                     (r2 (lambda (arg) (return-from b (+ 100 arg)))))
-        (invoke-restart 'r1 1)))
+      (restartBind ((r1 (\ (arg) (returnFrom b (- 100 arg))))
+                     (r2 (\ (arg) (returnFrom b (+ 100 arg)))))
+        (invokeRestart 'r1 1)))
     99))
 
-(defsuite restart-case
+(defsuite restartCase
 
-  (deftest restart-case.0
-    (signals-error
-     (restart-case)
+  (deftest restartCase.0
+    (signalsError
+     (restartCase)
      MatchError))
 
-  (deftest restart-case.0b
-    (restart-case ())
+  (deftest restartCase.0b
+    (restartCase ())
     #inert)
 
-  (deftest restart-case.1
-    (restart-case ()
+  (deftest restartCase.1
+    (restartCase ()
       1 2 (+ 1 2))
     3)
 
-  (deftest restart-case.2
-    (restart-case ((continue (lambda () 'whatever)))
+  (deftest restartCase.2
+    (restartCase ((continue (\ () 'whatever)))
       1 2 (+ 1 2))
     3)
 
-  (deftest restart-case.3
-    (restart-case ((continue (lambda () 'whatever))
-                   (abort (lambda () 'whatever)))
+  (deftest restartCase.3
+    (restartCase ((continue (\ () 'whatever))
+                   (abort (\ () 'whatever)))
       1 2 (+ 1 2))
     3)
 
-  (deftest restart-case.no-handler.1
-    (signals-error
-     (invoke-restart 'continue)
-     RestartError :restart-name 'continue))
+  (deftest restartCase.no-handler.1
+    (signalsError
+     (invokeRestart 'continue)
+     RestartError :restartName 'continue))
 
-  (deftest restart-case.no-handler.2
-    (signals-error
-     (restart-case ((continue (lambda () 'whatever)))
-       (invoke-restart 'abort))
-     RestartError :restart-name 'abort))
+  (deftest restartCase.no-handler.2
+    (signalsError
+     (restartCase ((continue (\ () 'whatever)))
+       (invokeRestart 'abort))
+     RestartError :restartName 'abort))
 
-  (deftest restart-case.no-exit.1
-    (restart-case ((continue (lambda () 'whatever)))
-      (invoke-restart 'continue))
+  (deftest restartCase.no-exit.1
+    (restartCase ((continue (\ () 'whatever)))
+      (invokeRestart 'continue))
     'whatever)
 
-  (deftest restart-case.no-exit.2
-    (restart-case ((continue (lambda () 'whatever)))
-      (if-option (restart-handler (find-restart? 'continue))
-        (invoke-restart restart-handler)
+  (deftest restartCase.no-exit.2
+    (restartCase ((continue (\ () 'whatever)))
+      (ifOpt (restartHandler (findRestart? 'continue))
+        (invokeRestart restartHandler)
         (assert #f)))
     'whatever)
 
-  (deftest restart-case.handled
-    (restart-case ((abort (lambda (arg1 arg2)
-                            (assert (= 1 arg1))
-                            (assert (= 2 arg2))
+  (deftest restartCase.handled
+    (restartCase ((abort (\ (arg1 arg2)
+                            (assert (eq? 1 arg1))
+                            (assert (eq? 2 arg2))
                             3)))
-      (invoke-restart 'abort (+ 0 1) (+ 1 1)))
+      (invokeRestart 'abort (+ 0 1) (+ 1 1)))
     3)
 
-  (deftest restart-case.nested
-    (restart-case ((continue (lambda () 'outer)))
-      (restart-case ((continue (lambda () 'inner)))
-        (invoke-restart 'continue)))
+  (deftest restartCase.nested
+    (restartCase ((continue (\ () 'outer)))
+      (restartCase ((continue (\ () 'inner)))
+        (invokeRestart 'continue)))
     'inner)
 
-  (deftest restart-case.nested2
-    (restart-case ((r1 (lambda () 'outer)))
-      (restart-case ((r1 (lambda ()  (invoke-restart 'r1)))
-                     (r2 (lambda ())))
-        (invoke-restart 'r1)))
+  (deftest restartCase.nested2
+    (restartCase ((r1 (\ () 'outer)))
+      (restartCase ((r1 (\ ()  (invokeRestart 'r1)))
+                     (r2 (\ ())))
+        (invokeRestart 'r1)))
     'outer)
 
-  (deftest restart-case.reinvoke
-    (restart-case ((y (lambda (val) (+ val 1))))
-      (restart-case ((x (lambda (val) (invoke-restart 'y (+ val 1)))))
-        (invoke-restart 'x 1)))
+  (deftest restartCase.reinvoke
+    (restartCase ((y (\ (val) (+ val 1))))
+      (restartCase ((x (\ (val) (invokeRestart 'y (+ val 1)))))
+        (invokeRestart 'x 1)))
     3)
 
-  (deftest restart-case.no-firewall
-    (restart-case ((r1 (lambda () 'outer)))
-      (restart-case ((r2 (lambda () (invoke-restart 'r1))))
-        (restart-case ((r1 (lambda () 'inner)))
-          (invoke-restart 'r2))))
+  (deftest restartCase.no-firewall
+    (restartCase ((r1 (\ () 'outer)))
+      (restartCase ((r2 (\ () (invokeRestart 'r1))))
+        (restartCase ((r1 (\ () 'inner)))
+          (invokeRestart 'r2))))
     'outer)
 
-  (deftest restart-case.parallel
-    (restart-case ((r1 (lambda () 'outer)))
-      (restart-case ((r1 (lambda () 'inner))
-                     (r2 (lambda () (invoke-restart 'r1))))
-        (invoke-restart 'r2)))
+  (deftest restartCase.parallel
+    (restartCase ((r1 (\ () 'outer)))
+      (restartCase ((r1 (\ () 'inner))
+                     (r2 (\ () (invokeRestart 'r1))))
+        (invokeRestart 'r2)))
     'outer)
 
-  (deftest restart-case.multiple.1
-    (restart-case ((r1 (lambda (arg) (- 100 arg)))
-                   (r2 (lambda (arg) (+ 100 arg))))
-      (invoke-restart 'r2 1))
+  (deftest restartCase.multiple.1
+    (restartCase ((r1 (\ (arg) (- 100 arg)))
+                   (r2 (\ (arg) (+ 100 arg))))
+      (invokeRestart 'r2 1))
     101)
 
-  (deftest restart-case.multiple.2
-    (restart-case ((r1 (lambda (arg) (- 100 arg)))
-                   (r2 (lambda (arg) (+ 100 arg))))
-      (invoke-restart 'r1 1))
+  (deftest restartCase.multiple.2
+    (restartCase ((r1 (\ (arg) (- 100 arg)))
+                   (r2 (\ (arg) (+ 100 arg))))
+      (invokeRestart 'r1 1))
     99))
 
-(defsuite find-restart?
+(defsuite findRestart?
 
-  (deftest find-restart?.0
-    (signals-error
-     (find-restart?)
+  (deftest findRestart?.0
+    (signalsError
+     (findRestart?)
      MatchError))
 
-  (deftest find-restart?.1
-    (find-restart? 'foo)
+  (deftest findRestart?.1
+    (findRestart? 'foo)
     #null)
 
-  (deftest find-restart?.1b
-    (restart-bind ((bar (lambda ())))
-      (find-restart? 'foo))
+  (deftest findRestart?.1b
+    (restartBind ((bar (\ ())))
+      (findRestart? 'foo))
     #null)
 
-  (deftest find-restart?.2
-    (find-restart? 'foo (make-simple-error "foo"))
+  (deftest findRestart?.2
+    (findRestart? 'foo (makeSimpleError "foo"))
     #null)
 
-  (deftest find-restart?.3
+  (deftest findRestart?.3
     (block exit
-      (restart-bind ((x (lambda (arg) (return-from exit (+ 1000 arg)))))
-        (if-option (r (find-restart? 'x))
-          (progn
-            (assert (= (slot-value r 'restart-name) 'x))
-            (assert (= (slot-value r 'associated-conditions) '()))
-            (invoke-restart r 1))
+      (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg)))))
+        (ifOpt (r (findRestart? 'x))
+          (begin
+            (assert (eq? (getSlot r 'restartName) 'x))
+            (assert (eq? (getSlot r 'associatedConditions) '()))
+            (invokeRestart r 1))
           (assert #f))))
     1001)
 
-  (deftest find-restart?.3b
-    (restart-case ((x (lambda (arg) (+ 1000 arg))))
-      (if-option (r (find-restart? 'x))
-        (progn
-          (assert (= (slot-value r 'restart-name) 'x))
-          (assert (= (slot-value r 'associated-conditions) '()))
-          (invoke-restart r 1))
+  (deftest findRestart?.3b
+    (restartCase ((x (\ (arg) (+ 1000 arg))))
+      (ifOpt (r (findRestart? 'x))
+        (begin
+          (assert (eq? (getSlot r 'restartName) 'x))
+          (assert (eq? (getSlot r 'associatedConditions) '()))
+          (invokeRestart r 1))
         (assert #f)))
     1001)
 
-  (deftest find-restart?.4
+  (deftest findRestart?.4
     (block exit
-      (def c (make-simple-error "foo"))
-      (restart-bind ((x (lambda (arg) (return-from exit (+ 1000 arg)))
-                        :associated-conditions (list c)))
-        (if-option (r (find-restart? 'x c))
-          (progn
-            (assert (= (slot-value r 'restart-name) 'x))
-            (assert (= (slot-value r 'associated-conditions) (list c)))
-            (invoke-restart r 1))
+      (def c (makeSimpleError "foo"))
+      (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg)))
+                        :associatedConditions (list c)))
+        (ifOpt (r (findRestart? 'x c))
+          (begin
+            (assert (eq? (getSlot r 'restartName) 'x))
+            (assert (eq? (getSlot r 'associatedConditions) (list c)))
+            (invokeRestart r 1))
           (assert #f))))
     1001)
 
-  (deftest find-restart?.4b
-    (progn
-      (def c (make-simple-error "foo"))
-      (restart-bind ((x (lambda (arg) (+ 1000 arg))
-                        :associated-conditions (list c)))
-        (if-option (r (find-restart? 'x c))
-          (progn
-            (assert (= (slot-value r 'restart-name) 'x))
-            (assert (= (slot-value r 'associated-conditions) (list c)))
-            (invoke-restart r 1))
+  (deftest findRestart?.4b
+    (begin
+      (def c (makeSimpleError "foo"))
+      (restartBind ((x (\ (arg) (+ 1000 arg))
+                        :associatedConditions (list c)))
+        (ifOpt (r (findRestart? 'x c))
+          (begin
+            (assert (eq? (getSlot r 'restartName) 'x))
+            (assert (eq? (getSlot r 'associatedConditions) (list c)))
+            (invokeRestart r 1))
           (assert #f))))
     1001)
 
-  (deftest find-restart?.5
+  (deftest findRestart?.5
     (block exit
-      (def c (make-simple-error "foo"))
-      (restart-bind ((x (lambda (arg) (return-from exit (+ 1000 arg)))
-                        :associated-conditions (list c)))
-        (restart-bind ((x (lambda (arg) (return-from exit (- 1000 arg)))))
-          (if-option (r (find-restart? 'x c))
-            (invoke-restart r 1)
+      (def c (makeSimpleError "foo"))
+      (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg)))
+                        :associatedConditions (list c)))
+        (restartBind ((x (\ (arg) (returnFrom exit (- 1000 arg)))))
+          (ifOpt (r (findRestart? 'x c))
+            (invokeRestart r 1)
             (assert #f)))))
     999)
 
-  (deftest find-restart?.5b
-    (progn
-      (def c (make-simple-error "foo"))
-      (restart-case ((x (lambda (arg) (+ 1000 arg))
-                        :associated-conditions (list c)))
-        (restart-case ((x (lambda (arg) (- 1000 arg))))
-          (if-option (r (find-restart? 'x c))
-            (invoke-restart r 1)
+  (deftest findRestart?.5b
+    (begin
+      (def c (makeSimpleError "foo"))
+      (restartCase ((x (\ (arg) (+ 1000 arg))
+                        :associatedConditions (list c)))
+        (restartCase ((x (\ (arg) (- 1000 arg))))
+          (ifOpt (r (findRestart? 'x c))
+            (invokeRestart r 1)
             (assert #f)))))
     999)
 
-  (deftest find-restart?.6
+  (deftest findRestart?.6
     (block exit
-      (def c (make-simple-error "foo"))
-      (def d (make-simple-error "bar"))
-      (restart-bind ((x (lambda (arg) (return-from exit (+ 1000 arg)))
-                        :associated-conditions (list c)))
-        (restart-bind ((x (lambda (arg) (return-from exit (- 1000 arg)))
-                          :associated-conditions (list d)))
-          (if-option (r (find-restart? 'x c))
-            (invoke-restart r 1)
+      (def c (makeSimpleError "foo"))
+      (def d (makeSimpleError "bar"))
+      (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg)))
+                        :associatedConditions (list c)))
+        (restartBind ((x (\ (arg) (returnFrom exit (- 1000 arg)))
+                          :associatedConditions (list d)))
+          (ifOpt (r (findRestart? 'x c))
+            (invokeRestart r 1)
             (assert #f)))))
     1001)
 
-  (deftest find-restart?.6b
-    (progn
-      (def c (make-simple-error "foo"))
-      (def d (make-simple-error "bar"))
-      (restart-case ((x (lambda (arg) (+ 1000 arg))
-                        :associated-conditions (list c)))
-        (restart-case ((x (lambda (arg) (- 1000 arg))
-                          :associated-conditions (list d)))
-          (if-option (r (find-restart? 'x c))
-            (invoke-restart r 1)
+  (deftest findRestart?.6b
+    (begin
+      (def c (makeSimpleError "foo"))
+      (def d (makeSimpleError "bar"))
+      (restartCase ((x (\ (arg) (+ 1000 arg))
+                        :associatedConditions (list c)))
+        (restartCase ((x (\ (arg) (- 1000 arg))
+                          :associatedConditions (list d)))
+          (ifOpt (r (findRestart? 'x c))
+            (invokeRestart r 1)
             (assert #f)))))
     1001))
 
-(defsuite compute-restarts
+(defsuite computeRestarts
 
-  (deftest compute-restarts.1
-    (compute-restarts)
+  (deftest computeRestarts.1
+    (computeRestarts)
     '())
 
-  (defun restart-names condition?
-    (let ((restarts (apply compute-restarts condition?)))
-      (mapcar (lambda (restart)
-                (slot-value restart 'restart-name))
+  (def\ restart-names condition?
+    (let ((restarts (apply computeRestarts condition?)))
+      (map (\ (restart)
+                (getSlot restart 'restartName))
               restarts)))
 
-  (deftest compute-restarts.1
-    (restart-case ((outer1 (lambda ()))
-                   (outer2 (lambda ())))
-      (restart-case ((middle1 (lambda ()))
-                     (middle2 (lambda ())))
-        (restart-case ((inner1 (lambda ()))
-                       (inner2 (lambda ())))
-          (assert (= (restart-names)
+  (deftest computeRestarts.1
+    (restartCase ((outer1 (\ ()))
+                   (outer2 (\ ())))
+      (restartCase ((middle1 (\ ()))
+                     (middle2 (\ ())))
+        (restartCase ((inner1 (\ ()))
+                       (inner2 (\ ())))
+          (assert (eq? (restart-names)
                      '(inner1
                        inner2
                        middle1
@@ -517,31 +517,31 @@
                        outer2)))
           #t))))
 
-  (deftest compute-restarts.2
-    (progn
-      (def c (make-simple-error "foo"))
-      (def d (make-simple-error "bar"))
-      (restart-case ((outer1 (lambda ()))
-                     (outer2 (lambda ()) :associated-conditions (list c)))
-        (restart-case ((middle1 (lambda ()) :associated-conditions (list c))
-                       (middle2 (lambda ())))
-          (restart-case ((inner1 (lambda ()) :associated-conditions (list c d))
-                         (inner2 (lambda ())))
-            (assert (= (restart-names)
+  (deftest computeRestarts.2
+    (begin
+      (def c (makeSimpleError "foo"))
+      (def d (makeSimpleError "bar"))
+      (restartCase ((outer1 (\ ()))
+                     (outer2 (\ ()) :associatedConditions (list c)))
+        (restartCase ((middle1 (\ ()) :associatedConditions (list c))
+                       (middle2 (\ ())))
+          (restartCase ((inner1 (\ ()) :associatedConditions (list c d))
+                         (inner2 (\ ())))
+            (assert (eq? (restart-names)
                        '(inner1
                          inner2
                          middle1
                          middle2
                          outer1
                          outer2)))
-            (assert (= (restart-names c)
+            (assert (eq? (restart-names c)
                        '(inner1
                          inner2
                          middle1
                          middle2
                          outer1
                          outer2)))
-            (assert (= (restart-names d)
+            (assert (eq? (restart-names d)
                        '(inner1
                          inner2
                          middle2
@@ -551,54 +551,54 @@
 (defsuite signal
 
   (deftest signal.0
-    (signals-error
+    (signalsError
      (signal)
      MatchError))
 
   (deftest signal.1
-    (signal (make-simple-error "foo"))
+    (signal (makeSimpleError "foo"))
     #inert)
 
   (deftest signal.2
-    (signals-error
-     (signal (make-instance StandardObject :x 1 :y 2))
+    (signalsError
+     (signal (makeInstance StandardObject :x 1 :y 2))
      StandardObject :x 1 :y 2))
 
   (deftest signal.3
-    (handler-bind ((SimpleError (lambda (e)
-                                   (invoke-restart 'continue 12))))
-      (signal (make-simple-error "Foo!")
-        (abort (lambda (value) (* value 10)))
-        (continue (lambda (value) (* value 2)))))
+    (handlerBind ((SimpleError (\ (e)
+                                   (invokeRestart 'continue 12))))
+      (signal (makeSimpleError "Foo!")
+        (abort (\ (value) (* value 10)))
+        (continue (\ (value) (* value 2)))))
     24)
 
   (deftest signal.3b
-    (handler-bind ((SimpleError (lambda (e)
-                                   (invoke-restart 'abort 12))))
-      (signal (make-simple-error "Foo!")
-        (abort (lambda (value) (* value 10)))
-        (continue (lambda (value) (* value 2)))))
+    (handlerBind ((SimpleError (\ (e)
+                                   (invokeRestart 'abort 12))))
+      (signal (makeSimpleError "Foo!")
+        (abort (\ (value) (* value 10)))
+        (continue (\ (value) (* value 2)))))
     120)
 
   (deftest signal.4
-    (restart-case ((abort (lambda (value) (* 1000 value))))
-      (handler-bind ((SimpleError (lambda (e)
-                                     (invoke-restart 'abort 12))))
+    (restartCase ((abort (\ (value) (* 1000 value))))
+      (handlerBind ((SimpleError (\ (e)
+                                     (invokeRestart 'abort 12))))
         ;; Silly?  Yeah, probably.
-        (signal (signal (make-simple-error "Foo!"))
-          (abort (lambda (value) (* value 10)))
-          (continue (lambda (value) (* value 2))))))
+        (signal (signal (makeSimpleError "Foo!"))
+          (abort (\ (value) (* value 10)))
+          (continue (\ (value) (* value 2))))))
     12000)
 
   (deftest signal.4b
     (block b
-      (restart-case ((abort (lambda (value) (* 1000 value))))
-        (handler-bind ((SimpleError (lambda (e)
-                                       (invoke-restart 'abort 12))))
-          (signal (signal (make-simple-error "Foo!")
-                    (abort (lambda (value) (return-from b (* 10000 value)))))
-            (abort (lambda (value) (* value 10)))
-            (continue (lambda (value) (* value 2)))))))
+      (restartCase ((abort (\ (value) (* 1000 value))))
+        (handlerBind ((SimpleError (\ (e)
+                                       (invokeRestart 'abort 12))))
+          (signal (signal (makeSimpleError "Foo!")
+                    (abort (\ (value) (returnFrom b (* 10000 value)))))
+            (abort (\ (value) (* value 10)))
+            (continue (\ (value) (* value 2)))))))
     120000)
 
   ;;; Test that `signal' (and `error' likewise) associates the
@@ -606,89 +606,89 @@
   (deftest signal.associations
     (dolist (signal-operator (list signal error) #t)
       (block ok ; so that the test doesn't fail when testing `error'.
-        (handler-bind ((SimpleError
-                        (lambda (e)
-                          (let* ((handler (optional (find-restart? 'r e)))
-                                 (a-cs (slot-value handler 'associated-conditions)))
-                            (assert (consp (member e a-cs)))
-                            (return-from ok)))))
-          (signal-operator (make-simple-error "error!")
-            (r (lambda () 1))))))))
+        (handlerBind ((SimpleError
+                        (\ (e)
+                          (let* ((handler (opt (findRestart? 'r e)))
+                                 (a-cs (getSlot handler 'associatedConditions)))
+                            (assert (cons? (member e a-cs)))
+                            (returnFrom ok)))))
+          (signal-operator (makeSimpleError "error!")
+            (r (\ () 1))))))))
 
-(defsuite invoke-restart
+(defsuite invokeRestart
 
-  (deftest invoke-restart.0
-    (signals-error
-     (invoke-restart)
+  (deftest invokeRestart.0
+    (signalsError
+     (invokeRestart)
      MatchError))
 
-  (deftest invoke-restart.1
-    (signals-error
-     (invoke-restart "foo")
+  (deftest invokeRestart.1
+    (signalsError
+     (invokeRestart "foo")
      TypeError :datum "foo")))
 
-(defsuite invoke-restart-interactively
+(defsuite invokeRestartInteractively
 
-  (deftest invoke-restart-interactively.1
-    (restart-bind ((r1 (lambda (arg1 arg2) (+ arg1 arg2))
-                       :interactive-function (lambda () (list 1 2))))
-      (invoke-restart-interactively 'r1))
+  (deftest invokeRestartInteractively.1
+    (restartBind ((r1 (\ (arg1 arg2) (+ arg1 arg2))
+                       :interactiveFunction (\ () (list 1 2))))
+      (invokeRestartInteractively 'r1))
     3)
 
-  (deftest invoke-restart-interactively.1a
-    (restart-bind ((r1 (lambda (arg1 arg2) (+ arg1 arg2))
-                       :interactive-function (lambda () (list 1 2))))
-      (invoke-restart-interactively (optional (find-restart? 'r1))))
+  (deftest invokeRestartInteractively.1a
+    (restartBind ((r1 (\ (arg1 arg2) (+ arg1 arg2))
+                       :interactiveFunction (\ () (list 1 2))))
+      (invokeRestartInteractively (opt (findRestart? 'r1))))
     3)
 
-  (deftest invoke-restart-interactively.1b
-    (restart-bind ((r1 (lambda () (+ 1 2))))
-      (invoke-restart-interactively 'r1))
+  (deftest invokeRestartInteractively.1b
+    (restartBind ((r1 (\ () (+ 1 2))))
+      (invokeRestartInteractively 'r1))
     3)
 
-  (deftest invoke-restart-interactively.1c
-    (restart-bind ((r1 (lambda () (+ 1 2))))
-      (invoke-restart-interactively (optional (find-restart?'r1))))
+  (deftest invokeRestartInteractively.1c
+    (restartBind ((r1 (\ () (+ 1 2))))
+      (invokeRestartInteractively (opt (findRestart?'r1))))
     3)
 
-  (deftest invoke-restart-interactively.2
-    (signals-error
-     (restart-bind ((r1 (lambda (arg1 arg2) (+ arg1 arg2))
-                        :interactive-function (lambda () '())))
-       (invoke-restart-interactively 'r1))
+  (deftest invokeRestartInteractively.2
+    (signalsError
+     (restartBind ((r1 (\ (arg1 arg2) (+ arg1 arg2))
+                        :interactiveFunction (\ () '())))
+       (invokeRestartInteractively 'r1))
      MatchError))
 
-  (deftest invoke-restart-interactively.3
-    (signals-error
-     (restart-bind ((r1 (lambda (arg1) arg1)
-                        :interactive-function (lambda () '(1 2 3))))
-       (invoke-restart-interactively 'r1))
+  (deftest invokeRestartInteractively.3
+    (signalsError
+     (restartBind ((r1 (\ (arg1) arg1)
+                        :interactiveFunction (\ () '(1 2 3))))
+       (invokeRestartInteractively 'r1))
      MatchError)))
 
 (defsuite |Condition Handling in the Lisp Language Family|
   ;; Adapted from https://www.nhplace.com/kent/Papers/Condition-Handling-2001.html
 
-  (defclass UnboundVariable (Error) (name))
+  (defClass UnboundVariable (Error) (name))
 
   (deftest* firewall.1
     (let ((result
-           (handler-case ((UnboundVariable (lambda (c) (list 'outer c))))
-             (handler-bind ((Error (lambda (#ignore)
-                                     (error (make-instance UnboundVariable :name 'fred)))))
-               (handler-case ((UnboundVariable (lambda (c) (list 'inner c))))
+           (handlerCase ((UnboundVariable (\ (c) (list 'outer c))))
+             (handlerBind ((Error (\ (#ignore)
+                                     (error (makeInstance UnboundVariable :name 'fred)))))
+               (handlerCase ((UnboundVariable (\ (c) (list 'inner c))))
                  ;; Signal an arbitrary error:
-                 (simple-error "Not an UNBOUND-VARIABLE error."))))))
-      (assert (and (eq (car result) 'outer)
-                   (typep (cadr result) UnboundVariable)
-                   (eq (slot-value (cadr result) 'name) 'fred)))))
+                 (simpleError "Not an UNBOUND-VARIABLE error."))))))
+      (assert (and (== (car result) 'outer)
+                   (type? (cadr result) UnboundVariable)
+                   (== (getSlot (cadr result) 'name) 'fred)))))
 
   (deftest* firewall.2
     (let ((result
-           (handler-case ((UnboundVariable (lambda (c) (list 'outer c))))
-             (handler-bind ((Error (lambda (#ignore)
-                                     (error (make-instance UnboundVariable :name 'fred)))))
-               (handler-case ((UnboundVariable (lambda (c) (list 'inner c))))
-                 (error (make-instance UnboundVariable :name 'marvin)))))))
-      (assert (and (eq (car result) 'inner)
-                   (typep (cadr result) UnboundVariable)
-                   (eq (slot-value (cadr result) 'name) 'marvin))))))
+           (handlerCase ((UnboundVariable (\ (c) (list 'outer c))))
+             (handlerBind ((Error (\ (#ignore)
+                                     (error (makeInstance UnboundVariable :name 'fred)))))
+               (handlerCase ((UnboundVariable (\ (c) (list 'inner c))))
+                 (error (makeInstance UnboundVariable :name 'marvin)))))))
+      (assert (and (== (car result) 'inner)
+                   (type? (cadr result) UnboundVariable)
+                   (== (getSlot (cadr result) 'name) 'marvin))))))

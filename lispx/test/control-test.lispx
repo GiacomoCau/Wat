@@ -3,7 +3,7 @@
 ;;; Fibers
 
 ;; The following implementation of fibers follows the one at URL
-;; `http://okmij.org/ftp/continuations/implementations.html#dynamic-wind'
+;; `http://okmij.org/ftp/continuations/implementations.html#dget-wind'
 ;;
 ;; We're calling them fibers instead of coroutines so as to not
 ;; conflict with the built-in coroutine operators.
@@ -11,610 +11,610 @@
 ;; We use it for testing that built-in operators properly suspend and
 ;; resume.
 
-(defconstant +fiber-prompt+ 'fiber-prompt
+(defConstant +fiber-prompt+ 'fiber-prompt
   "The prompt used for delimiting fibers.")
 
-(defclass YieldRecord ()
+(defClass YieldRecord ()
   (value continuation)
   (:documentation "Instances of this class are yielded."))
 
-(defun make-yield-record (v k)
+(def\ makeYieldRecord (v k)
   "Create a new yield record with the given yielded value and resume continuation."
-  (make-instance YieldRecord :value v :continuation k))
+  (makeInstance YieldRecord :value v :continuation k))
 
-(defun fiber-yield v?
+(def\ fiberYield v?
   "Yield a value (which defaults to void)."
-  (take-subcont +fiber-prompt+ k
-    (make-yield-record (optional v?) k)))
+  (takeSubcont +fiber-prompt+ k
+    (makeYieldRecord (opt v?) k)))
 
-(defun fiber-resume (yield-record . v?)
+(def\ fiberResume (yield-record . v?)
   "Resume a suspended fiber with a value (which defaults to void)."
-  (push-delim-subcont +fiber-prompt+ (slot-value yield-record 'continuation)
-    (optional v?)))
+  (pushDelimSubcont +fiber-prompt+ (getSlot yield-record 'continuation)
+    (opt v?)))
 
-(defmacro fiber body
+(defMacro fiber body
   "Evaluate the body expressions as a fiber."
-  (list* push-prompt '+fiber-prompt+ body))
+  (list* pushPrompt '+fiber-prompt+ body))
 
-(defun run-fiber (thunk)
+(def\ runFiber (thunk)
   "Get all values yielded by a fiber, and its final result, and
   |collect them in a list."
-  (loop-let -run- ((result (fiber (thunk))))
-    (if (typep result YieldRecord)
-        (cons (slot-value result 'value) (-run- (fiber-resume result)))
+  (letloop -run- ((result (fiber (thunk))))
+    (if (type? result YieldRecord)
+        (cons (getSlot result 'value) (-run- (fiberResume result)))
         (list result))))
 
-(defun run-fiber-with-values (thunk values)
-  "Like `run-fiber' but uses a list of values that are sent to the
-  |fiber with `fiber-resume'."
-  (loop-let -run- ((result (fiber (thunk))) (values values))
-    (if (typep result YieldRecord)
-        (cons (slot-value result 'value)
-              (-run- (fiber-resume result (car values)) (cdr values)))
+(def\ runFiberWithValues (thunk values)
+  "Like `runFiber' but uses a list of values that are sent to the
+  |fiber with `fiberResume'."
+  (letloop -run- ((result (fiber (thunk))) (values values))
+    (if (type? result YieldRecord)
+        (cons (getSlot result 'value)
+              (-run- (fiberResume result (car values)) (cdr values)))
         (list result))))
 
 (defsuite fibers
 
   (deftest fiber.1
-    (fiber 1 2 (= 1 1))
+    (fiber 1 2 (eq? 1 1))
     #t)
 
   (deftest fiber.2
-    (progn
-      (def yield-record (fiber 1 2 (+ (fiber-yield (= 1 1)) 3)))
-      (assert (typep yield-record YieldRecord))
-      (assert (= #t (slot-value yield-record 'value)))
-      (assert (= 33 (fiber-resume yield-record 30))))
+    (begin
+      (def yield-record (fiber 1 2 (+ (fiberYield (eq? 1 1)) 3)))
+      (assert (type? yield-record YieldRecord))
+      (assert (eq? #t (getSlot yield-record 'value)))
+      (assert (eq? 33 (fiberResume yield-record 30))))
     #inert)
 
-  (deftest fiber.progn.1
-    (run-fiber
-     (lambda ()
-       (progn
-         (fiber-yield 1)
-         (fiber-yield 2)
+  (deftest fiber.begin.1
+    (runFiber
+     (\ ()
+       (begin
+         (fiberYield 1)
+         (fiberYield 2)
          3)))
     '(1 2 3))
 
-  (deftest fiber.progn.2
-    (run-fiber-with-values
-     (lambda ()
-       (progn
-         (fiber-yield 1)
-         (fiber-yield 2)))
+  (deftest fiber.begin.2
+    (runFiberWithValues
+     (\ ()
+       (begin
+         (fiberYield 1)
+         (fiberYield 2)))
      '(#inert 3))
     '(1 2 3))
 
   (deftest fiber.vau.1
-    (run-fiber
-     (lambda ()
+    (runFiber
+     (\ ()
        ((vau () #ignore
-          (fiber-yield 1)
-          (fiber-yield 2)
+          (fiberYield 1)
+          (fiberYield 2)
           3))))
     '(1 2 3))
 
   (deftest fiber.vau.2
-    (run-fiber-with-values
-     (lambda ()
+    (runFiberWithValues
+     (\ ()
        ((vau () #ignore
-          (fiber-yield 1)
-          (fiber-yield 2))))
+          (fiberYield 1)
+          (fiberYield 2))))
      '(#inert 3))
     '(1 2 3))
 
-  (deftest fiber.lambda.1
-    (run-fiber
-     (lambda ()
-       ((lambda ()
-          (fiber-yield 1)
-          (fiber-yield 2)
+  (deftest fiber.\.1
+    (runFiber
+     (\ ()
+       ((\ ()
+          (fiberYield 1)
+          (fiberYield 2)
           3))))
     '(1 2 3))
 
-  (deftest fiber.lambda.2
-    (run-fiber-with-values
-     (lambda ()
-       ((lambda ()
-          (fiber-yield 1)
-          (fiber-yield 2))))
+  (deftest fiber.\.2
+    (runFiberWithValues
+     (\ ()
+       ((\ ()
+          (fiberYield 1)
+          (fiberYield 2))))
      '(#inert 3))
     '(1 2 3))
 
   (deftest fiber.def.1
-    (run-fiber
-     (lambda ()
-       (def (x y) (list (fiber-yield 1) (fiber-yield 2)))
+    (runFiber
+     (\ ()
+       (def (x y) (list (fiberYield 1) (fiberYield 2)))
        (list x y)))
     '(1 2 (#inert #inert)))
 
   (deftest fiber.def.2
-    (run-fiber-with-values
-     (lambda ()
-       (def (x y) (list (fiber-yield 1) (fiber-yield 2)))
+    (runFiberWithValues
+     (\ ()
+       (def (x y) (list (fiberYield 1) (fiberYield 2)))
        (list x y))
      '(3 4))
     '(1 2 (3 4)))
 
   (deftest fiber.if.1
-    (run-fiber
-     (lambda ()
-       (if #t (fiber-yield 1) (fiber-yield 2))))
+    (runFiber
+     (\ ()
+       (if #t (fiberYield 1) (fiberYield 2))))
     '(1 #inert))
 
   (deftest fiber.if.2
-    (run-fiber-with-values
-     (lambda ()
-       (if #t (fiber-yield 1) (fiber-yield 2)))
+    (runFiberWithValues
+     (\ ()
+       (if #t (fiberYield 1) (fiberYield 2)))
      '(3))
     '(1 3))
 
   (deftest fiber.if.3
-    (run-fiber
-     (lambda ()
-       (if #f (fiber-yield 1) (fiber-yield 2))))
+    (runFiber
+     (\ ()
+       (if #f (fiberYield 1) (fiberYield 2))))
     '(2 #inert))
 
   (deftest fiber.if.4
-    (run-fiber-with-values
-     (lambda ()
-       (if #f (fiber-yield 1) (fiber-yield 2)))
+    (runFiberWithValues
+     (\ ()
+       (if #f (fiberYield 1) (fiberYield 2)))
      '(3))
     '(2 3))
 
   (deftest fiber.if.5
-    (run-fiber-with-values
-     (lambda ()
-       (if (fiber-yield 1) (fiber-yield 2) (fiber-yield 3)))
+    (runFiberWithValues
+     (\ ()
+       (if (fiberYield 1) (fiberYield 2) (fiberYield 3)))
      '(#t 4))
     '(1 2 4))
 
   (deftest fiber.if.6
-    (run-fiber-with-values
-     (lambda ()
-       (if (fiber-yield 1) (fiber-yield 2) (fiber-yield 3)))
+    (runFiberWithValues
+     (\ ()
+       (if (fiberYield 1) (fiberYield 2) (fiberYield 3)))
      '(#f 4))
     '(1 3 4))
 
   (deftest fiber.if.7
-    (run-fiber-with-values
-     (lambda ()
-       (if (progn (fiber-yield 1) (fiber-yield 2))
-           (progn (fiber-yield 3) (fiber-yield 3.5))
-           (progn (fiber-yield 4) (fiber-yield 4.5))))
+    (runFiberWithValues
+     (\ ()
+       (if (begin (fiberYield 1) (fiberYield 2))
+           (begin (fiberYield 3) (fiberYield 3.5))
+           (begin (fiberYield 4) (fiberYield 4.5))))
      '(#inert #t #inert 5))
     '(1 2 3 3.5 5))
 
   (deftest fiber.if.8
-    (run-fiber-with-values
-     (lambda ()
-       (if (progn (fiber-yield 1) (fiber-yield 2))
-           (progn (fiber-yield 3) (fiber-yield 3.5))
-           (progn (fiber-yield 4) (fiber-yield 4.5))))
+    (runFiberWithValues
+     (\ ()
+       (if (begin (fiberYield 1) (fiberYield 2))
+           (begin (fiberYield 3) (fiberYield 3.5))
+           (begin (fiberYield 4) (fiberYield 4.5))))
      '(#inert #f #inert 5))
     '(1 2 4 4.5 5))
 
   (deftest fiber.loop.1
-    (run-fiber
-     (lambda ()
+    (runFiber
+     (\ ()
        (def ct 1)
-       (def env (the-environment))
+       (def env (theEnvironment))
        (block exit
          (loop
-          (if (= ct 5)
-              (return-from exit ct)
-              (progn
-                (fiber-yield ct)
-                (fiber-yield (- ct))
+          (if (eq? ct 5)
+              (returnFrom exit ct)
+              (begin
+                (fiberYield ct)
+                (fiberYield (- ct))
                 (set env ct (+ ct 1))))))))
     '(1 -1 2 -2 3 -3 4 -4 5))
 
   (deftest fiber.block.1
-    (run-fiber
-     (lambda ()
+    (runFiber
+     (\ ()
        (block b
-         (fiber-yield 1)
-         (fiber-yield 2)
+         (fiberYield 1)
+         (fiberYield 2)
          3)))
     '(1 2 3))
 
   (deftest fiber.block.2
-    (run-fiber-with-values
-     (lambda ()
+    (runFiberWithValues
+     (\ ()
        (block b
-         (fiber-yield 1)
-         (fiber-yield 2)))
+         (fiberYield 1)
+         (fiberYield 2)))
      '(#inert 3))
     '(1 2 3))
 
   (deftest fiber.block.3
-    (run-fiber
-     (lambda ()
+    (runFiber
+     (\ ()
        (block b
-         (fiber-yield 1)
-         (fiber-yield 2)
-         (return-from b 3))))
+         (fiberYield 1)
+         (fiberYield 2)
+         (returnFrom b 3))))
     '(1 2 3))
 
   (deftest fiber.block.4
-    (run-fiber-with-values
-     (lambda ()
+    (runFiberWithValues
+     (\ ()
        (block b
-         (fiber-yield 1)
-         (return-from b (fiber-yield 2))))
+         (fiberYield 1)
+         (returnFrom b (fiberYield 2))))
      '(#inert 3))
     '(1 2 3))
 
   (deftest fiber.catch.1
-    (run-fiber
-     (lambda ()
+    (runFiber
+     (\ ()
        (catch 'b
-         (fiber-yield 1)
-         (fiber-yield 2)
+         (fiberYield 1)
+         (fiberYield 2)
          3)))
     '(1 2 3))
 
   (deftest fiber.catch.2
-    (run-fiber-with-values
-     (lambda ()
+    (runFiberWithValues
+     (\ ()
        (catch 'b
-         (fiber-yield 1)
-         (fiber-yield 2)))
+         (fiberYield 1)
+         (fiberYield 2)))
      '(#inert 3))
     '(1 2 3))
 
   (deftest fiber.catch.3
-    (run-fiber
-     (lambda ()
+    (runFiber
+     (\ ()
        (catch 'b
-         (fiber-yield 1)
-         (fiber-yield 2)
+         (fiberYield 1)
+         (fiberYield 2)
          (throw 'b 3))))
     '(1 2 3))
 
   (deftest fiber.catch.4
-    (run-fiber-with-values
-     (lambda ()
+    (runFiberWithValues
+     (\ ()
        (catch 'b
-         (fiber-yield 1)
-         (throw 'b (fiber-yield 2))))
+         (fiberYield 1)
+         (throw 'b (fiberYield 2))))
      '(#inert 3))
     '(1 2 3))
 
-  (deftest fiber.unwind-protect.1
-    (run-fiber-with-values
-     (lambda ()
-       (unwind-protect (fiber-yield 1)
-         (fiber-yield 2)
-         (fiber-yield 2.5)
+  (deftest fiber.finally.1
+    (runFiberWithValues
+     (\ ()
+       (finally (fiberYield 1)
+         (fiberYield 2)
+         (fiberYield 2.5)
          3))
      '(4 #inert #inert))
     '(1 2 2.5 4))
 
-  (deftest fiber.unwind-protect.2
-    (run-fiber-with-values
-     (lambda ()
+  (deftest fiber.finally.2
+    (runFiberWithValues
+     (\ ()
        (block exit
-         (unwind-protect (return-from exit (fiber-yield 1))
-           (fiber-yield 2)
-           (fiber-yield 2.5)
+         (finally (returnFrom exit (fiberYield 1))
+           (fiberYield 2)
+           (fiberYield 2.5)
            3)))
      '(4 #inert #inert))
     '(1 2 2.5 4))
 
-  (deftest fiber.unwind-protect.3
-    (run-fiber-with-values
-     (lambda ()
+  (deftest fiber.finally.3
+    (runFiberWithValues
+     (\ ()
        (block exit
-         (unwind-protect (return-from exit 4)
-           (fiber-yield 2)
-           (fiber-yield 2.5)
+         (finally (returnFrom exit 4)
+           (fiberYield 2)
+           (fiberYield 2.5)
            3)))
      '(#inert #inert))
     '(2 2.5 4))
 
-  (deftest fiber.unwind-protect.4
-    (run-fiber-with-values
-     (lambda ()
+  (deftest fiber.finally.4
+    (runFiberWithValues
+     (\ ()
        (block exit
-         (unwind-protect (progn (fiber-yield 1) (fiber-yield 1.5))
-           (fiber-yield 2)
-           (fiber-yield 2.5)
+         (finally (begin (fiberYield 1) (fiberYield 1.5))
+           (fiberYield 2)
+           (fiberYield 2.5)
            3)))
      '(#inert 4 #inert #inert))
     '(1 1.5 2 2.5 4))
 
   (deftest fiber.progv.1
-    (run-fiber
-     (lambda ()
-       (defdynamic *x*)
+    (runFiber
+     (\ ()
+       (ddef *x*)
        (progv (list *x*) (list 1)
-         (fiber-yield (dynamic *x*))
-         (fiber-yield (dynamic *x*))
+         (fiberYield (dget *x*))
+         (fiberYield (dget *x*))
          (progv (list *x*) (list 2)
-           (fiber-yield (dynamic *x*))
-           (fiber-yield (dynamic *x*))
+           (fiberYield (dget *x*))
+           (fiberYield (dget *x*))
            3))))
     '(1 1 2 2 3))
 
   (deftest fiber.progv.2
-    (run-fiber-with-values
-     (lambda ()
-       (defdynamic *x*)
+    (runFiberWithValues
+     (\ ()
+       (ddef *x*)
        (progv (list *x*) (list 1)
-         (fiber-yield (dynamic *x*))
-         (fiber-yield (dynamic *x*))
+         (fiberYield (dget *x*))
+         (fiberYield (dget *x*))
          (progv (list *x*) (list 2)
-           (fiber-yield (dynamic *x*))
-           (fiber-yield (dynamic *x*)))))
+           (fiberYield (dget *x*))
+           (fiberYield (dget *x*)))))
      '(#inert #inert #inert 3))
     '(1 1 2 2 3))
 
   (deftest fiber.fun.1
-    (run-fiber
-     (lambda ()
-       (list (fiber-yield 1) (fiber-yield 2))))
+    (runFiber
+     (\ ()
+       (list (fiberYield 1) (fiberYield 2))))
     '(1 2 (#inert #inert)))
 
   (deftest fiber.fun.2
-    (run-fiber-with-values
-     (lambda () (list (fiber-yield 1) (fiber-yield 2)))
+    (runFiberWithValues
+     (\ () (list (fiberYield 1) (fiberYield 2)))
      '(3 4))
     '(1 2 (3 4))))
 
 ;;; Basic Operator Tests
 
-(defsuite push-prompt
+(defsuite pushPrompt
 
-  (deftest push-prompt.1
-    (signals-error
-     (push-prompt)
+  (deftest pushPrompt.1
+    (signalsError
+     (pushPrompt)
      MatchError))
 
-  (deftest push-prompt.2
-    (push-prompt 'p)
+  (deftest pushPrompt.2
+    (pushPrompt 'p)
     #inert)
 
-  (deftest push-prompt.3
-    (push-prompt 'p 1 2 (= 1 1))
+  (deftest pushPrompt.3
+    (pushPrompt 'p 1 2 (eq? 1 1))
     #t)
 
-  (deftest push-prompt.4
-    (progn
+  (deftest pushPrompt.4
+    (begin
       (block ret
-        (push-prompt 'p
-          (assert (prompt-set-p 'p))
-          (return-from ret)))
-      (assert (not (prompt-set-p 'p))))
+        (pushPrompt 'p
+          (assert (promptSet? 'p))
+          (returnFrom ret)))
+      (assert (not (promptSet? 'p))))
     #inert)
 
-  (deftest push-prompt.5
-    (progn
-      (assert (not (prompt-set-p 'p)))
-      (assert (not (prompt-set-p 'q)))
-      (push-prompt 'p
-        (assert (prompt-set-p 'p))
-        (assert (not (prompt-set-p 'q)))
-        (push-prompt 'q
-          (assert (prompt-set-p 'p))
-          (assert (prompt-set-p 'q)))
-        (assert (prompt-set-p 'p))
-        (assert (not (prompt-set-p 'q))))
-      (assert (not (prompt-set-p 'p)))
-      (assert (not (prompt-set-p 'q))))
+  (deftest pushPrompt.5
+    (begin
+      (assert (not (promptSet? 'p)))
+      (assert (not (promptSet? 'q)))
+      (pushPrompt 'p
+        (assert (promptSet? 'p))
+        (assert (not (promptSet? 'q)))
+        (pushPrompt 'q
+          (assert (promptSet? 'p))
+          (assert (promptSet? 'q)))
+        (assert (promptSet? 'p))
+        (assert (not (promptSet? 'q))))
+      (assert (not (promptSet? 'p)))
+      (assert (not (promptSet? 'q))))
     #inert))
 
-(defsuite take-subcont
+(defsuite takeSubcont
 
-  (deftest take-subcont.1
-    (signals-error
-     (take-subcont)
+  (deftest takeSubcont.1
+    (signalsError
+     (takeSubcont)
      MatchError))
 
-  (deftest take-subcont.2
-    (signals-error
-     (take-subcont 'p)
+  (deftest takeSubcont.2
+    (signalsError
+     (takeSubcont 'p)
      MatchError))
 
-  (deftest take-subcont.3
-    (signals-error
-     (take-subcont 'p #ignore)
+  (deftest takeSubcont.3
+    (signalsError
+     (takeSubcont 'p #ignore)
      PromptNotFoundError :prompt 'p))
 
-  (deftest take-subcont.4
-    (signals-error
-     (push-prompt 'p (take-subcont 'q #ignore))
+  (deftest takeSubcont.4
+    (signalsError
+     (pushPrompt 'p (takeSubcont 'q #ignore))
      PromptNotFoundError :prompt 'q))
 
-  (deftest take-subcont.5
-    (push-prompt 'p (take-subcont 'p #ignore))
+  (deftest takeSubcont.5
+    (pushPrompt 'p (takeSubcont 'p #ignore))
     #inert)
 
-  (deftest take-subcont.6
-    (push-prompt 'p (take-subcont 'p #ignore (= 1 1)))
+  (deftest takeSubcont.6
+    (pushPrompt 'p (takeSubcont 'p #ignore (eq? 1 1)))
     #t)
 
-  (deftest take-subcont.7
-    (push-prompt 'p (take-subcont 'p k (push-delim-subcont 'p k (= 1 1))))
+  (deftest takeSubcont.7
+    (pushPrompt 'p (takeSubcont 'p k (pushDelimSubcont 'p k (eq? 1 1))))
     #t))
 
-(defsuite push-delim-subcont
+(defsuite pushDelimSubcont
 
-  (deftest push-delim-subcont.1
-    (signals-error
-     (push-delim-subcont)
+  (deftest pushDelimSubcont.1
+    (signalsError
+     (pushDelimSubcont)
      MatchError))
 
-  (deftest push-delim-subcont.2
-    (signals-error
-     (push-delim-subcont 'p)
+  (deftest pushDelimSubcont.2
+    (signalsError
+     (pushDelimSubcont 'p)
      MatchError))
 
-  (deftest push-delim-subcont.3
-    (signals-error
-     (push-delim-subcont 'p 12)
+  (deftest pushDelimSubcont.3
+    (signalsError
+     (pushDelimSubcont 'p 12)
      TypeError :datum 12))
 
-  (deftest push-delim-subcont.4
-    (let ((k (push-prompt 'p (+ 100 (take-subcont 'p k k)))))
-      (assert (= 102 (push-delim-subcont 'p k (+ 1 1))))
-      (assert (= 120 (push-delim-subcont 'p k (+ 10 10)))))
+  (deftest pushDelimSubcont.4
+    (let ((k (pushPrompt 'p (+ 100 (takeSubcont 'p k k)))))
+      (assert (eq? 102 (pushDelimSubcont 'p k (+ 1 1))))
+      (assert (eq? 120 (pushDelimSubcont 'p k (+ 10 10)))))
     #inert)
 
-  (deftest push-delim-subcont.5
-    (let ((k (push-prompt 'p (push-prompt 'q (take-subcont 'p k k)))))
-      (push-delim-subcont 'p k
-        (assert (prompt-set-p 'q))
-        (assert (prompt-set-p 'p))))
+  (deftest pushDelimSubcont.5
+    (let ((k (pushPrompt 'p (pushPrompt 'q (takeSubcont 'p k k)))))
+      (pushDelimSubcont 'p k
+        (assert (promptSet? 'q))
+        (assert (promptSet? 'p))))
     #inert))
 
-(defsuite prompt-set-p
+(defsuite promptSet?
 
-  (deftest prompt-set-p.1
-    (signals-error
-     (prompt-set-p)
+  (deftest promptSet?.1
+    (signalsError
+     (promptSet?)
      MatchError))
 
-  (deftest prompt-set-p.2
-    (prompt-set-p 'p)
+  (deftest promptSet?.2
+    (promptSet? 'p)
     #f)
 
-  (deftest prompt-set-p.3
-    (push-prompt 'p (progn (prompt-set-p 'p)))
+  (deftest promptSet?.3
+    (pushPrompt 'p (begin (promptSet? 'p)))
     #t))
 
-(defsuite push-subcont-barrier
+(defsuite pushSubcontBarrier
 
-  (deftest push-subcont-barrier.1
-    (signals-error
-     (push-subcont-barrier
-      (take-subcont 'p1 sk))
+  (deftest pushSubcontBarrier.1
+    (signalsError
+     (pushSubcontBarrier
+      (takeSubcont 'p1 sk))
      PromptNotFoundError :prompt 'p1))
 
-  (deftest push-subcont-barrier.2
-    (signals-error
-     (push-prompt 'p1
-       (push-subcont-barrier
-         (take-subcont 'p1 sk)))
+  (deftest pushSubcontBarrier.2
+    (signalsError
+     (pushPrompt 'p1
+       (pushSubcontBarrier
+         (takeSubcont 'p1 sk)))
      PromptNotFoundError :prompt 'p1)
     #f))
 
 (defsuite dynamics
 
-  (deftest defdynamic.1
-    (progn
-      (defdynamic *x* 1)
-      (defdynamic *y* (+ 1 1))
-      (assert (= (dynamic *x*) 1))
-      (assert (= (dynamic *y*) 2))
-      (dynamic-let ((*x* 3))
-        (assert (= (dynamic *x*) 3))
-        (assert (= (dynamic *y*) 2))
-        (dynamic-let ((*y* 4))
-          (assert (= (dynamic *x*) 3))
-          (assert (= (dynamic *y*) 4)))
-        (assert (= (dynamic *x*) 3))
-        (assert (= (dynamic *y*) 2)))
-      (assert (= (dynamic *x*) 1))
-      (assert (= (dynamic *y*) 2)))
+  (deftest ddef.1
+    (begin
+      (ddef *x* 1)
+      (ddef *y* (+ 1 1))
+      (assert (eq? (dget *x*) 1))
+      (assert (eq? (dget *y*) 2))
+      (dlet ((*x* 3))
+        (assert (eq? (dget *x*) 3))
+        (assert (eq? (dget *y*) 2))
+        (dlet ((*y* 4))
+          (assert (eq? (dget *x*) 3))
+          (assert (eq? (dget *y*) 4)))
+        (assert (eq? (dget *x*) 3))
+        (assert (eq? (dget *y*) 2)))
+      (assert (eq? (dget *x*) 1))
+      (assert (eq? (dget *y*) 2)))
     #inert)
 
-  (deftest* defdynamic.redefine
-    (defdynamic *a* (+ 1 1))
+  (deftest* ddef.redefine
+    (ddef *a* (+ 1 1))
     (def old-a *a*)
-    (assert (= (dynamic *a*) 2))
-    (assert (= (dynamic old-a) 2))
-    (defdynamic *a* (+ 2 2))
-    (assert (= (dynamic *a*) 4))
-    (assert (= (dynamic old-a) 4))
-    (assert (eq old-a *a*))
-    (defdynamic *a*)
-    (assert (= (dynamic *a*) #inert))
-    (assert (= (dynamic old-a) #inert))
-    (assert (eq old-a *a*)))
+    (assert (eq? (dget *a*) 2))
+    (assert (eq? (dget old-a) 2))
+    (ddef *a* (+ 2 2))
+    (assert (eq? (dget *a*) 4))
+    (assert (eq? (dget old-a) 4))
+    (assert (== old-a *a*))
+    (ddef *a*)
+    (assert (eq? (dget *a*) #inert))
+    (assert (eq? (dget old-a) #inert))
+    (assert (== old-a *a*)))
 
   (deftest progv.1
-    (progn
-      (defdynamic *x* 1)
-      (defdynamic *y* 2)
-      (assert (= (dynamic *x*) 1))
-      (assert (= (dynamic *y*) 2))
+    (begin
+      (ddef *x* 1)
+      (ddef *y* 2)
+      (assert (eq? (dget *x*) 1))
+      (assert (eq? (dget *y*) 2))
       (progv (list *x*) (list 3)
-        (assert (= (dynamic *x*) 3))
-        (assert (= (dynamic *y*) 2))
+        (assert (eq? (dget *x*) 3))
+        (assert (eq? (dget *y*) 2))
         (progv (list *y*) (list 4)
-          (assert (= (dynamic *x*) 3))
-          (assert (= (dynamic *y*) 4)))
-        (assert (= (dynamic *x*) 3))
-        (assert (= (dynamic *y*) 2)))
-      (assert (= (dynamic *x*) 1))
-      (assert (= (dynamic *y*) 2)))
+          (assert (eq? (dget *x*) 3))
+          (assert (eq? (dget *y*) 4)))
+        (assert (eq? (dget *x*) 3))
+        (assert (eq? (dget *y*) 2)))
+      (assert (eq? (dget *x*) 1))
+      (assert (eq? (dget *y*) 2)))
     #inert)
 
-  (deftest dynamic.1
-    (progn
-      (defdynamic *foo*)
-      (assert (= (dynamic *foo*) #inert))
-      (assert (typep *foo* Dynamic))
-      (assert (typep *foo* Box))
-      (assert (typep *foo* Object))
-      (assert (subclassp Dynamic Box))
-      (assert (subclassp Dynamic Object)))
+  (deftest dget.1
+    (begin
+      (ddef *foo*)
+      (assert (eq? (dget *foo*) #inert))
+      (assert (type? *foo* Dynamic))
+      (assert (type? *foo* Box))
+      (assert (type? *foo* Object))
+      (assert (subClass? Dynamic Box))
+      (assert (subClass? Dynamic Object)))
     #inert)
 
-  (deftest set-dynamic.1
-    (progn
-      (defdynamic *bar*)
-      (dynamic-let ((*bar* 1))
-        (set-dynamic *bar* 2)
-        (assert (= 2 (dynamic *bar*)))
-        (dynamic-let ((*bar* 3))
-          (assert (= 3 (dynamic *bar*))))
-        (assert (= 2 (dynamic *bar*)))
-        (set-dynamic *bar* 4)
-        (assert (= 4 (dynamic *bar*))))
-      (assert (= #inert (dynamic *bar*)))
+  (deftest dset.1
+    (begin
+      (ddef *bar*)
+      (dlet ((*bar* 1))
+        (dset *bar* 2)
+        (assert (eq? 2 (dget *bar*)))
+        (dlet ((*bar* 3))
+          (assert (eq? 3 (dget *bar*))))
+        (assert (eq? 2 (dget *bar*)))
+        (dset *bar* 4)
+        (assert (eq? 4 (dget *bar*))))
+      (assert (eq? #inert (dget *bar*)))
       #t))
 
-  (deftest dynamic-let*.1
-    (dynamic-let* () (+ 1 1))
+  (deftest dlet*.1
+    (dlet* () (+ 1 1))
     2)
 
-  (deftest dynamic-let*.2
-    (progn
-      (defdynamic *x* 1)
-      (dynamic-let* ((*x* 2)) (+ 1 (dynamic *x*))))
+  (deftest dlet*.2
+    (begin
+      (ddef *x* 1)
+      (dlet* ((*x* 2)) (+ 1 (dget *x*))))
     3)
 
-  (deftest dynamic-let*.2
-    (progn
-      (defdynamic *x* 1)
-      (defdynamic *y* 0)
-      (dynamic-let* ((*x* 2) (*y* (+ (dynamic *x*) 1)))
-        (list (dynamic *x*) (dynamic *y*))))
+  (deftest dlet*.2
+    (begin
+      (ddef *x* 1)
+      (ddef *y* 0)
+      (dlet* ((*x* 2) (*y* (+ (dget *x*) 1)))
+        (list (dget *x*) (dget *y*))))
     '(2 3))
 
-  (deftest dynamic-let-sanity-check
-    (progn
-      (defdynamic *x* 1)
-      (defdynamic *y* 0)
-      (dynamic-let ((*x* 2) (*y* (+ (dynamic *x*) 1)))
-        (list (dynamic *x*) (dynamic *y*))))
+  (deftest dlet-sanity-check
+    (begin
+      (ddef *x* 1)
+      (ddef *y* 0)
+      (dlet ((*x* 2) (*y* (+ (dget *x*) 1)))
+        (list (dget *x*) (dget *y*))))
     '(2 2)))
 
 (defsuite built-in-prompts
 
   (deftest |Default prompt exists|
-    (boundp '+default-prompt+ (the-environment)))
+    (bound? '+defaultPrompt+ (theEnvironment)))
 
   (deftest |Root prompt exists|
-    (boundp '+root-prompt+ (the-environment)))
+    (bound? '+rootPrompt+ (theEnvironment)))
 
   (deftest |Root prompt is set|
     ;; I have no idea why this works.  I mean it's the right thing,
     ;; but it's unclear how it interacts with test-util.lispx's
     ;; Mocha stuff that runs this test.
-    (take-subcont +root-prompt+ #ignore)
+    (takeSubcont +rootPrompt+ #ignore)
     #inert))
 
 ;;; Simple Control Operators
@@ -623,18 +623,18 @@
 
   (deftest loop.1
     (let ((ct 0))
-      (def env (the-environment))
+      (def env (theEnvironment))
       (block exit
-        (loop 'just-a-symbol-to-test-implicit-progn
-              (if (= ct 10)
-                  (return-from exit ct)
+        (loop 'just-a-symbol-to-test-implicit-begin
+              (if (eq? ct 10)
+                  (returnFrom exit ct)
                   (set env ct (+ ct 1))))))
     10))
 
 (defsuite catch/throw
 
   (deftest catch.1
-    (signals-error
+    (signalsError
      (catch)
      MatchError))
 
@@ -643,19 +643,19 @@
     #inert)
 
   (deftest catch.3
-    (catch 'x 1 2 3 (= 1 1))
+    (catch 'x 1 2 3 (eq? 1 1))
     #t)
 
   (deftest catch.4
-    (catch 'x 1 (throw 'x (= 1 2)) 3 (= 1 1))
+    (catch 'x 1 (throw 'x (eq? 1 2)) 3 (eq? 1 1))
     #f)
 
   (deftest catch.5
-    (catch 'x 1 (throw 'x) 3 (= 1 1))
+    (catch 'x 1 (throw 'x) 3 (eq? 1 1))
     #inert)
 
   (deftest catch.6
-    (catch 'x 1 (catch 'y (throw 'x 44)) 3 (= 1 1))
+    (catch 'x 1 (catch 'y (throw 'x 44)) 3 (eq? 1 1))
     44)
 
   (deftest catch.7
@@ -670,10 +670,10 @@
     (catch 'x 1 (catch 'y (throw 'y)))
     #inert))
 
-(defsuite block/return-from
+(defsuite block/returnFrom
 
   (deftest block.1
-    (signals-error
+    (signalsError
      (block)
      MatchError))
 
@@ -682,65 +682,65 @@
     #inert)
 
   (deftest block.3
-    (block x 1 2 3 (= 1 1))
+    (block x 1 2 3 (eq? 1 1))
     #t)
 
   (deftest block.4
-    (block x 1 (return-from x (= 1 2)) 3 (= 1 1))
+    (block x 1 (returnFrom x (eq? 1 2)) 3 (eq? 1 1))
     #f)
 
   (deftest block.5
-    (block x 1 (return-from x) 3 (= 1 1))
+    (block x 1 (returnFrom x) 3 (eq? 1 1))
     #inert)
 
   (deftest block.6
-    (block x 1 (block y (return-from x (= 1 2))) 3 (= 1 1))
+    (block x 1 (block y (returnFrom x (eq? 1 2))) 3 (eq? 1 1))
     #f)
 
   (deftest block.7
-    (block x 1 (block y (return-from y 2)) 3 (= 1 1))
+    (block x 1 (block y (returnFrom y 2)) 3 (eq? 1 1))
     #t)
 
   (deftest block.8
-    (block x 1 (block y (return-from y 2)))
+    (block x 1 (block y (returnFrom y 2)))
     2)
 
   (deftest block.9
-    (block x 1 (block y (return-from y)))
+    (block x 1 (block y (returnFrom y)))
     #inert))
 
-(defsuite unwind-protect
+(defsuite finally
 
-  (deftest unwind-protect.1
-    (signals-error
-     (unwind-protect)
+  (deftest finally.1
+    (signalsError
+     (finally)
      MatchError))
 
-  (deftest unwind-protect.2
-    (unwind-protect (= 1 1))
+  (deftest finally.2
+    (finally (eq? 1 1))
     #t)
 
-  (deftest unwind-protect.3
-    (progn
-      (def env (the-environment))
-      (+ (unwind-protect 1 2 3 (set env x 10))
+  (deftest finally.3
+    (begin
+      (def env (theEnvironment))
+      (+ (finally 1 2 3 (set env x 10))
          x))
     11)
 
-  (deftest unwind-protect.4
-    (progn
-      (def env (the-environment))
+  (deftest finally.4
+    (begin
+      (def env (theEnvironment))
       (+ (block exit
-           (unwind-protect (return-from exit 1) 2 3 (set env x 10)))
+           (finally (returnFrom exit 1) 2 3 (set env x 10)))
          x))
     11)
 
-  (deftest unwind-protect.5
+  (deftest finally.5
     (block exit
-      (unwind-protect 1 2 3 (return-from exit 4)))
+      (finally 1 2 3 (returnFrom exit 4)))
     4)
 
-  (deftest unwind-protect.6
+  (deftest finally.6
     (block exit
-      (unwind-protect (return-from exit 1) 2 3 (return-from exit 4)))
+      (finally (returnFrom exit 1) 2 3 (returnFrom exit 4)))
     4))

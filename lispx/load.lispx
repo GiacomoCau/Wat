@@ -13,45 +13,50 @@
 (prtrc 1)
 (bndres 1)
 
-(%def Null #null)
+(%def Apv &Wat.Vm$Apv)
 (%def Box &Wat.Vm$Box)
 (%def Boolean &java.lang.Boolean)
-(%def Built-in-class &java.lang.Class)
 (%def Class &java.lang.Class)
+(%def Combinable &Wat.Vm$Combinable)
+(%def Condition &Wat.Vm$Condition)
 (%def Cons &Wat.Vm$Cons)
-(%def Environment &Wat.Vm$Env)
-(%def Fexpr &Wat.Vm$Opv)
-(%def Function &Wat.Vm$Apv)
+(%def DVar &Wat.Vm$DVar)
+(%def Env &Wat.Vm$Env)
+(%def Error &Wat.Vm$Error)
 (%def Intern &Wat.Vm$Intern)
 (%def Integer &java.lang.Integer)
 (%def List &Wat.Vm$List)
+(%def Null #null)
 (%def Number &java.lang.Number)
 (%def Object &java.lang.Object)
+(%def Opvr &Wat.Vm$Opv)
 (%def Symbol &Wat.Vm$Symbol)
 (%def Keyword &Wat.Vm$Keyword)
 (%def Obj &Wat.Vm$Obj)
-(%def Operator &Wat.Vm$Combinable)
-(%def StandardClass &java.lang.Class)
+(%def Opv &Wat.Vm$Opv)
 (%def String &java.lang.String)
 (%def Throwable &java.lang.Throwable)
 (%def Inert &Wat.Vm$Inert)
 (%def Ignore &Wat.Vm$Ignore)
-(%def Operator &Wat.Vm$Combinable)
 (%def Utility &Wat.Utility)
 
-(%def StandardObject &Wat.Vm$Obj)
-(%def Dynamic &Wat.Vm$DVar)
-(%def Condition &Wat.Vm$Condition)
-(%def Error &Wat.Vm$Error)
+(%def BuiltInClass Class)
+(%def Dynamic DVar)
+(%def Environment Env)
+(%def Fexpr Opv)
+(%def Function Apv)
+(%def Operator Combinable)
+(%def StandardClass Class)
+(%def StandardObject Obj)
 
-(%def TypeError Error)
-(%def MatchError Error)
-(%def UnboundSymbolError Error)
-(%def OutOfBoundsError Error)
 (%def AssertionError Error)
-(%def UnboundSlotError Error)
-(%def UnboundMethodError Error)
+(%def MatchError Error)
+(%def OutOfBoundsError Error)
 (%def PromptNotFoundError Error)
+(%def UnboundSymbolError Error)
+(%def UnboundSlotError Error)
+(%def TypeError Error)
+(%def UnboundMethodError Error)
 
 (%def \ %\)
 
@@ -61,112 +66,90 @@
 (%def %the (\ (class value)
   (if (%instanceof? class Class)
     (if (%instanceof? value class) value
-      (%error (%$ "" "not a {:expected-type}: {:datum}") :type 'type :datum value :expected-type (%intern (@getSimpleName class))) )
-    (%error (%$ "" "not a {:expected-type}: {:datum}") :type 'type :datum class :expected-type (%intern (@getSimpleName Class))) )))
+      (%error (%$ "" "not a {:expectedType}: {:datum}") :type 'type :datum value :expectedType (%intern (@getSimpleName class))) )
+    (%error (%$ "" "not a {:expectedType}: {:datum}") :type 'type :datum class :expectedType (%intern (@getSimpleName Class))) )))
 
 (%def %className (\ (class) (@getCanonicalName (%the Class class))))
 (%def %className (\ (class) (@getSimpleName (%the Class class))))
+(%def %className (\ (class) (%intern (@getSimpleName (%the Class class)))))
 
-(%def %->symbol  (\ (i) (%symbol (%internName i))))
-(%def %->keyword (\ (i) (%keyword (%internName i))))
+(%def %->symbol  (\ (i) (if (%symbol? i) i (%symbol (%internName i)))))
+(%def %->keyword (\ (i) (if (%keyword? i) i (%keyword (%internName i)))))
 
-(%def %= %eq?)
+(%def eq? %eq?)
 (%def %assert assert)
-(%def %add-method %addMethod)
-(%def %boundp %bound?)
-(%def %class-name %className)
-(%def %class-of %classOf)
-(%def %class-symbol %->symbol)
-(%def %eq %==)
-(%def %find-method %getMethod)
-(%def %function-symbol %->symbol)
-(%def %keyword-symbol %->keyword)
-(%def %length %len) 
-(%def %list-length %len)
+(%def %classSymbol %->symbol)
+(%def %functionSymbol %->symbol)
+(%def %keywordSymbol %->keyword)
 (%def %nth (\ (i l) (%the Integer i) (@car (%the Cons l) i)))
-(%def %nthcdr (\ (i l) (%the Integer i) (%if (%zero? i) l (@cdr (%the Cons l) (%- i 1)))))
-(%def %make-environment %makeEnv)
-(%def %make-instance %obj)
-(%def %make-standard-class (\ (name superclass) (%class name superclass)))
-;(%def %make-standard-class (\ (name superclass) (%class (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass)))
-(%def %progn %begin)
-(%def %push-delim-subcont %pushPromptSubcont)
-(%def %push-prompt (%wrap %pushPrompt))
-(%def %push-subcont-barrier %pushSubcontBarrier)
-(%def %symbol-name %internName)
-(%def %subclassp %subClass?)
-(%def %take-subcont %takeSubcont)
+(%def %nthCdr (\ (i l) (%the Integer i) (%if (%zero? i) l (@cdr (%the Cons l) (%- i 1)))))
+(%def %makeInstance %obj)
+(%def %makeStandardClass (\ (name superclass) (%class name superclass)))
+;(%def %makeStandardClass (\ (name superclass) (%class (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass)))
+(%def %pushDelimSubcont %pushPromptSubcont)
+(%def %pushPrompt ((\ (%pushPrompt) (%wrap %pushPrompt)) %pushPrompt))
+(%def %symbolName %internName)
 (%def %test test)
-(%def %typep (\ (object class) (%type? object (%if (%null? class) class (%the Class class)))))
-;(%def %typep %type?) ; TODO assert-type.3 va male verificare
-(%def %unwind-protect %finally)
-(%def %variable-symbol %->symbol)
-;(%def %wrap ((\ (%wrap) (\ (op) (%wrap (%the Operator op)))) %wrap) )
+(%def %variableSymbol %->symbol)
 
 (%def list* %list*)
 
-(%def +root-prompt+ %rootPrompt)
-(%def %print-stacktrace
+(%def +rootPrompt+ %rootPrompt)
+(%def %printStacktrace
   (\ (k)
     (%if (%!= (.nxt k) #null)
-      (%print-stacktrace (.nxt k)) )
+      (%printStacktrace (.nxt k)) )
     (%if (prstk) (log "--" k)) ))
 (%def %panic (\ (e)
   ;(log "panic:" e)
   (%throw #ignore e) ))
 
 (%def %take (\ (i l) (%if (%zero? i) #null (%cons (%car l) (%take (%- i 1) (%cdr l))))))
-(%def %list-subseq (\ (l s e) (%the Integer s) (%if (%! (%inert? e)) (%the Integer e)) (%def tail (%nthcdr s l)) (%if (%inert? e) tail (%take (%- e s) tail))))
-(%def %string-subseq (\ (seq start end) (%if (%inert? end) (@substring (%the String seq) (%the Integer start)) (@substring (%the String seq) (%the Integer start) (%the Integer end)))))
+(%def %listSubseq (\ (l s e) (%the Integer s) (%if (%! (%inert? e)) (%the Integer e)) (%def tail (%nthCdr s l)) (%if (%inert? e) tail (%take (%- e s) tail))))
+(%def %stringSubseq (\ (seq start end) (%if (%inert? end) (@substring (%the String seq) (%the Integer start)) (@substring (%the String seq) (%the Integer start) (%the Integer end)))))
 
 (load "lispx/src/boot.lispx")
 
-(def unwind-protect %unwind-protect)
-(def take-subcont %take-subcont)
+(def finally %finally)
+(def takeSubcont %takeSubcont)
 
 (def %progv (\ (var val body)
   ((%wrap %dLet) (cons var val) body) ))
 
-;(defmacro %slot-value (obj slot)
-;   (list (list '%the 'StandardObject obj) (list '%the 'Intern slot)) )
-(def %slot-value (\ (obj slot)
+(def %getSlot (\ (obj slot)
   ((%the StandardObject obj) (%the Intern slot)) ))
 
-;(defmacro %set-slot-value (obj slot value)
-;   (list (list '%the 'StandardObject obj) (list '%the 'Intern slot) value) )
-(def %set-slot-value (\ (obj slot value)
+(def %setSlot (\ (obj slot value)
   ((%the StandardObject obj) (%the Intern slot) value) ))
 
-;(defmacro %slot-bound-p (obj slot)
-;  (list (%jInvoke "isBound") (list '%the 'StandardObject obj) (list '%the 'Intern slot)) )
-(def %slot-bound-p (\ (obj slot)
+(def %slotBound? (\ (obj slot)
   (@isBound (%the StandardObject obj) (%the Intern slot)) ))
 
    
-; vedi signals-error più avanti o in test-util per codice simile
+; vedi signalsError più avanti o in test-util per codice simile
 (def checkSlot 
-  (\ (c slot-specs)
-    (loop-let next ((slot-specs slot-specs))
-      (if (%null? slot-specs) #t
-        (let (((name value . rest-slot-specs) slot-specs))
-          (if (or (%! (%slot-bound-p c name)) (%! (%= (slot-value c name) value))) #f
-            (next rest-slot-specs) ))))))
+  (\ (c slotSpecs)
+    (letloop next ((slotSpecs slotSpecs))
+      (if (null? slotSpecs) #t
+        (let (((name value . rest-slotSpecs) slotSpecs))
+          (if (or (%! (%slotBound? c name)) (%! (eq? (getSlot c name) value))) #f
+            (next rest-slotSpecs) ))))))
 
-(defun lispx::make-typecase-with-default-function (default)
+(def\ lispx::makeTypecaseWithDefaultFunction (default)
   (vau (keyform . clauses) env
     (let ((key (eval keyform env)))
-      (loop-let -typecase- ((clauses clauses))
-        (if (null clauses) (default key)
-          (let* ( (((test . forms) . rest-clauses) clauses)
+      (letloop -typecase- ((clauses clauses))
+        (if (null? clauses) (default key)
+          (let* ( (((test . forms) . restClauses) clauses)
                   (symbol? (%symbol? test))
-                  (class-name (if symbol? test (car test)))
-                  (class (find-class class-name env)) )
-            (if (and (typep key class) (or symbol? (checkSlot key (mapcar (\ (c) (eval c env)) (cdr test)))))
-              (eval (list* progn forms) env)
-              (-typecase- rest-clauses) )))))))
+                  (className (if symbol? test (car test)))
+                  (class (findClass className env)) )
+            (if (and (type? key class) (or symbol? (checkSlot key (map (\ (c) (eval c env)) (cdr test)))))
+              (eval (list* begin forms) env)
+              (-typecase- restClauses) )))))))
 
-(def typecase (lispx::make-typecase-with-default-function (\ (#ignore) #inert)))
-(def etypecase (lispx::make-typecase-with-default-function (\ (key) (error (make-type-error key Object)))))
+(def typecase (lispx::makeTypecaseWithDefaultFunction (\ (#ignore) #inert)))
+(def etypecase (lispx::makeTypecaseWithDefaultFunction (\ (key) (error (makeTypeError key Object)))))
 
 ;(typecase (%obj StandardObject :a 3) ((Error) #t)) ;-> #inert
 ;(typecase (%obj StandardObject :a 3) (StandardObject #t)) ;-> #t
@@ -182,33 +165,33 @@
 ; lasciare commentato, bastano le successive definizioni
 ;(load "lispx/test/test-util.lispx")
 
-(defmacro deftest (name expression . expected?)
-  (list %test name expression (optional expected? #t)))
+(defMacro deftest (name expression . expected?)
+  (list %test name expression (opt expected? #t)))
 
-(defmacro deftest* (name . forms)
+(defMacro deftest* (name . forms)
   (list deftest name (list* prog1 #t forms)) )
 
-(defexpr defsuite (name . forms) env
-  (eval (list* progn forms) env) )
+(defVau defsuite (name . forms) env
+  (eval (list* begin forms) env) )
 
 (def userBreak error)
 
-(defexpr signals-error (form condition-class . slot-specs) env
-  (let ((class (find-class condition-class env)))
+(defVau signalsError (form conditionClass . slotSpecs) env
+  (let ((class (findClass conditionClass env)))
     (block exit
-      (handler-case 
-        ( (StandardObject
-            (lambda (obj)
-              (if (typep obj class)
-                (progn
-                  (loop-let -check-slots- ((slot-specs slot-specs))
-                    (when (not (null slot-specs))
-                      (let (((name value . rest-slot-specs) slot-specs))
-                        (unless (= (slot-value obj name) (eval value env))
-                          (return-from exit #f))
-                        (-check-slots- rest-slot-specs) )))
-                  (return-from exit #t) )
-                (return-from exit #f) ))))
+      (handlerCase (
+        (StandardObject
+          (\ (obj)
+            (if (type? obj class)
+              (begin
+                (letloop -check-slots- ((slotSpecs slotSpecs))
+                  (when (not (null? slotSpecs))
+                    (let (((name value . rest-slotSpecs) slotSpecs))
+                      (unless (eq? (getSlot obj name) (eval value env))
+                        (returnFrom exit #f))
+                      (-check-slots- rest-slotSpecs) )))
+                (returnFrom exit #t) )
+              (returnFrom exit #f) ))) )
         (eval form env) )
       #f )))
 
@@ -219,24 +202,24 @@
 (load "lispx/test/control-test.lispx")
 
 #|
-(defun runFiber (thunk . values)
-  (loop-let -run- ((result (fiber (thunk))) (values values))
-    (if (typep result YieldRecord)
-        (cons (slot-value result 'value)
-              (if (null values)
-                (-run- (fiber-resume result) #null)
-                (-run- (fiber-resume result (car values)) (cdr values)) ))
+(def\ runFiber* (thunk . values)
+  (letloop -run- ((result (fiber (thunk))) (values values))
+    (if (type? result YieldRecord)
+        (cons (getSlot result 'value)
+              (if (null? values)
+                (-run- (fiberResume result) #null)
+                (-run- (fiberResume result (car values)) (cdr values)) ))
         (list result))))
 
-(run-fiber (\() (fiber-yield 1) (fiber-yield 2) 3)) -> (1 2 3)
+(runFiber (\() (fiberYield 1) (fiberYield 2) 3)) -> (1 2 3)
 
-(run-fiber-with-values (\() (if (fiber-yield 1) 2 3)) (#t)) -> (1 2)
-(run-fiber-with-values (\() (if (fiber-yield 1) 2 3)) (#f)) -> (1 3)
-(run-fiber-with-values (\() (if (fiber-yield 1) (fiber-yield 2) 3)) #t) -> {Error ... 
+(runFiberWithValues (\() (if (fiberYield 1) 2 3)) (#t)) -> (1 2)
+(runFiberWithValues (\() (if (fiberYield 1) 2 3)) (#f)) -> (1 3)
+(runFiberWithValues (\() (if (fiberYield 1) (fiberYield 2) 3)) #t) -> {Error ... 
 
-(runFiber (\() (if (fiber-yield 1) (fiber-yield 2) 3)) #t) -> (1 2 #inert)
-(runFiber (\() (if (fiber-yield 1) (fiber-yield 2) 3)) #t 4) -> (1 2 4)
-(runFiber (\() ((\ (a b) (+ a b)) (fiber-yield 1) (fiber-yield 2)) ) 3 4) -> (1 2 7)
+(runFiber* (\() (if (fiberYield 1) (fiberYield 2) 3)) #t) -> (1 2 #inert)
+(runFiber* (\() (if (fiberYield 1) (fiberYield 2) 3)) #t 4) -> (1 2 4)
+(runFiber* (\() ((\ (a b) (+ a b)) (fiberYield 1) (fiberYield 2)) ) 3 4) -> (1 2 7)
 |#
 
 ;(load "lispx/test/stream-test.lispx")
@@ -248,7 +231,6 @@
 #|
 (load "lispx/tool/repl/repl.lispx")
 (def uprint print)
-(def repl:%display-prompt
-  (\ (level) (if (eq level 0) "* " (%$ level "]"))) )
+;(def repl:%displayPrompt (\ (level) (if (== level 0) "* " (%$ level "]"))) )
 (repl:run)
 |#

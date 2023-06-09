@@ -316,7 +316,7 @@ public class Vm {
 				if (prtrc >= 6) print("     set: ", key, "=", value, " in: ", env);
 				return env.def(key, value);
 			}
-			return error("unbound symbol: {symbol}", "type", symbol("unbound-symbol"), "symbol", key, "environment", this);
+			return error("unbound symbol: {symbol}", "type", symbol("unboundSymbol"), "symbol", key, "environment", this);
 		};
 		Object def(K key, Object value) {
 			if (prtrc >= 6) print("    bind: ", key, "=", value, " in: ", this);
@@ -329,7 +329,7 @@ public class Vm {
 		}
 		Object lookup(K key) {
 			var lookup = get(key);
-			if (!lookup.isBound) return error("unbound symbol: {symbol}", "type", symbol("unbound-symbol"), "symbol", key, "environment", this);
+			if (!lookup.isBound) return error("unbound symbol: {symbol}", "type", symbol("unboundSymbol"), "symbol", key, "environment", this);
 			if (prtrc >= 6) print("  lookup: ", lookup.value); return lookup.value;
 		}
 		boolean isParent(Env other) {
@@ -403,7 +403,7 @@ public class Vm {
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 			var key = toKey(o.car());
 			return switch (len) { 
-				case 1-> Utility.apply(v-> v != null || map.containsKey(key) ? v : error("slot non found: {slot-name} in: {object}", "type", symbol("unbound-slot"), "slot-name", o.car(), "object", this), map.get(key));
+				case 1-> Utility.apply(v-> v != null || map.containsKey(key) ? v : error("slot non found: {slotName} in: {object}", "type", symbol("unboundSlot"), "slotName", o.car(), "object", this), map.get(key));
 				default-> switch (bndres(len != 3 ? null : o.car(1))) {
 					case Suspension s-> s;
 					case Integer i-> switch(i) {
@@ -509,7 +509,7 @@ public class Vm {
 			var ms = methods.get(c); if (ms == null) continue;
 			var m = ms.get(name); if (m != null) return m;
 		} while (c != null && (c = c.getSuperclass()) != null);
-		return error("method: {method-name} not found for: {class}!", "type", symbol("unbound-method"), "method-name", name, "class", cls);
+		return error("method: {methodName} not found for: {class}!", "type", symbol("unboundMethod"), "methodName", name, "class", cls);
 	}	
 	
 	
@@ -1014,7 +1014,7 @@ public class Vm {
 				}
 				var classes = getClasses(args);
 				Executable executable = getExecutable(o0, name, classes);
-				if (executable == null) return error("not found {executable} of: {object}", "type", symbol("unbound-executable"), "executable", executable(name, classes), "object", Vm.this.toString(o0));
+				if (executable == null) return error("not found {executable} of: {object}", "type", symbol("unboundExecutable"), "executable", executable(name, classes), "object", Vm.this.toString(o0));
 				try {
 					//executable.setAccessible(true);
 					args = reorg(executable, args);
@@ -1056,7 +1056,7 @@ public class Vm {
 				// (.<name> object)       -> object.getclass().getField(name).get(object) -> field.get(object) 
 				// (.<name> object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
 				Field field = getField(o0 instanceof Class ? (Class) o0 : o0.getClass(), name);
-				if (field == null) return error("not found slot: {slot-name} of: {object}", "type", symbol("unbound-slot"), "slot-name", name, "object", Vm.this.toString(o0));
+				if (field == null) return error("not found slot: {slotName} of: {object}", "type", symbol("unboundSlot"), "slotName", name, "object", Vm.this.toString(o0));
 				try {
 					if (len == 1) return field.get(o0);
 					field.set(o0, o.car(1)); return inert;
@@ -1081,10 +1081,10 @@ public class Vm {
 		if (userBreak == null) throw err;
 		return (T) pipe(dbg(theEnv, "userBreak", err), ()-> getTco(evaluate(theEnv, list(userBreak, err)))); 
 	}
-	<T> T typeError(String msg, Object datum, Object expectedType) { return error(new Error(msg, "type", symbol("type"), "datum", datum, "expected-type", expectedType)); }
-	<T> T unboundSymbolError(String msg, String name, Env env) { return error(new Error(msg, "type", symbol("unbound-symbol"), "symbol", name, "env", env)); }
-	<T> T unboundSlotError(String msg, String name, Object object) { return error(new Error(msg, "type", symbol("unbound-slot"), "name", name, "object", object)); }
-	<T> T unboundMethodError(String msg, String name, Object object) { return error(new Error(msg, "type", symbol("unbound-method"), "name", name, "object", object)); }
+	<T> T typeError(String msg, Object datum, Object expectedType) { return error(new Error(msg, "type", symbol("type"), "datum", datum, "expectedType", expectedType)); }
+	<T> T unboundSymbolError(String msg, String name, Env env) { return error(new Error(msg, "type", symbol("unboundSymbol"), "symbol", name, "env", env)); }
+	<T> T unboundSlotError(String msg, String name, Object object) { return error(new Error(msg, "type", symbol("unboundSlot"), "name", name, "object", object)); }
+	<T> T unboundMethodError(String msg, String name, Object object) { return error(new Error(msg, "type", symbol("unboundMethod"), "name", name, "object", object)); }
 	public class Error extends Condition {
 		private static final long serialVersionUID = 1L;
 		public Error(Object ... objs) { super(objs); }
@@ -1163,7 +1163,7 @@ public class Vm {
 					if (Utility.equals(on, chk2) || chk2 instanceof Class cl && (cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2))) return null;
 				}
 			default: return typeError(
-				"not " + (chk instanceof Object[] objs ? "one of " : "a ") + "{expected-type}: {datum} to combine: " + toString(op) + " with: " + toString(o),
+				"not " + (chk instanceof Object[] objs ? "one of " : "a ") + "{expectedType}: {datum} to combine: " + toString(op) + " with: " + toString(o),
 				on, chk == null ? symbol("Null")
 				: chk instanceof Class cl ? symbol(cl.getSimpleName())
 				: cons(symbol("or"), list(stream((Object[]) chk).map(obj-> symbol(obj == null ? "Null" : obj instanceof Class cl ? cl.getSimpleName() : Vm.this.toString(obj))).toArray() ))

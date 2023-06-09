@@ -2,46 +2,49 @@
 ;;; LispX REPL
 ;;;
 
-(defconstant repl:+environment+ (the-environment)
+(defConstant repl:+environment+ (theEnvironment)
   "The environment in which REPL expressions are evaluated.")
 
-(defdynamic repl:*debug-level* 0
+(ddef repl:*debugLevel* 0
   "Current debug level.  0 if we are not in the debugger.")
 
-(defun repl:run ()
+(def\ repl:run ()
   "Run a REPL."
   (loop
     ;; The internal REPL-ABORT restart causes the loop to begin from
     ;; the start again.  The user actually uses ABORT, described
     ;; below.
-    (restart-case ((repl-abort (lambda () #| nothing to do here, just unwind |#)))
-      (repl:%display-prompt (dynamic repl:*debug-level*))
-      (print (eval (read (dynamic repl:*debug-level*)) repl:+environment+)))))
+    (restartCase ((replAbort (\ () #| nothing to do here, just unwind |#)))
+      ;(repl:%displayPrompt (dget repl:*debugLevel*))
+      ;(log 3 (dget repl:*debugLevel*))
+      
+      (print (eval (read (dget repl:*debugLevel*)) repl:+environment+)))))
 
-(defun repl:run-debugger-loop (condition k)
+(def\ repl:runDebuggerLoop (condition k)
   "Run a debug REPL.  Prints a banner and then runs a normal REPL."
   (uprint "Debugger invoked on condition:")
-  (print condition)
-  (uprint "Available restarts -- use (invoke-restart 'name ...) to invoke:")
-  (mapc (lambda (restart)
+  (print "    " condition)
+  (uprint "\nAvailable restarts -- use (invokeRestart 'name ...) to invoke:")
+  (mapc (\ (restart)
           ;; Don't print our internal REPL-ABORT restart.
-          (unless (eq (slot-value restart 'restart-name) 'repl-abort)
-            (print (slot-value restart 'restart-name))))
-        (compute-restarts condition))
+          (unless (== (getSlot restart 'restartName) 'replAbort)
+            (print "    " (getSlot restart 'restartName))))
+        (computeRestarts condition))
   (when (prstk)
     (uprint "Backtrace:")
-    (%print-stacktrace k) )
+    (%printStacktrace k) )
   (repl:run))
 
-;; Overwrite built-in `invoke-debugger'.  This gets called for all
+;; Overwrite built-in `invokeDebugger'.  This gets called for all
 ;; unhandled conditions.
-(defun invoke-debugger (condition)
+(def\ invokeDebugger (condition)
   ;; Immediately grab the stack trace, so we don't include any of the
   ;; below frames in it.
-  (take-subcont +root-prompt+ k
-    (push-delim-subcont +root-prompt+ k
+  (takeSubcont +rootPrompt+ k
+    (pushDelimSubcont +rootPrompt+ k
       ;; Increase debug level.
-      (dynamic-let ((repl:*debug-level* (+ (dynamic repl:*debug-level*) 1)))
+      (dlet ((repl:*debugLevel* (+ (dget repl:*debugLevel*) 1)))
+        ;(log 1 (dget repl:*debugLevel*))
         ;; We use a system of two restarts to abort.  The user invokes
         ;; the ABORT restart to break out of a nested debug level.
         ;; Internally this invokes the REPL-ABORT restart which lands
@@ -49,20 +52,20 @@
         ;; two-restart approach is needed because otherwise REPL-ABORT
         ;; would land the user back in the debug loop they came from.
         ;; Maybe there's a simpler solution but I haven't found one.
-        (restart-case ((abort (lambda () (invoke-restart 'repl-abort))))
-          ;; Add some extra restarts to `unbound-symbol-error' because
+        (restartCase ((abort (\ () (invokeRestart 'replAbort))))
+          ;; Add some extra restarts to `UnboundSymbolError' because
           ;; it demos well and makes designers of other languages
           ;; squirt blood from their eyes.
           (typecase condition
-            ((Error :type 'unbound-symbol)
-             (let ((symbol (slot-value condition 'symbol))
-                   (env (slot-value condition 'environment)))
-               (restart-case ((continue (lambda () (eval symbol env))
-                                        :associated-conditions (list condition))
-                              (use-value (lambda (value) value)
-                                         :associated-conditions (list condition))
-                              (store-value (lambda (value) (eval (list 'def symbol value) env))
-                                           :associated-conditions (list condition)))
-                 (repl:run-debugger-loop condition k))))
+            ((Error :type 'unboundSymbol)
+             (let ((symbol (getSlot condition 'symbol))
+                   (env (getSlot condition 'environment)))
+               (restartCase ( (continue (\ () (eval symbol env))
+                                        :associatedConditions (list condition))
+                              (useValue (\ (value) value)
+                                         :associatedConditions (list condition))
+                              (storeValue (\ (value) (eval (list 'def symbol value) env))
+                                           :associatedConditions (list condition)))
+                 (repl:runDebuggerLoop condition k))))
             (Object
-             (repl:run-debugger-loop condition k))))))))
+             (repl:runDebuggerLoop condition k))))))))
