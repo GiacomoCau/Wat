@@ -90,6 +90,7 @@ import javax.tools.SimpleJavaFileObject;
 	arg: argument
 	args: arguments
 	e: environment
+	de: environment
 	eo: environment operand
 	ep: environment parameter
 	xe: extended environment
@@ -124,16 +125,16 @@ public class Vm {
 
 	boolean dotco = true; // do tco
 	boolean doasrt = true; // do assert
-	boolean ctapv = true; // applicative catch & throw
+	boolean ctapv = false; // applicative catch & throw
 	boolean instr = false; // intern string
 	boolean prstk = false; // print stack
-	boolean prwrn = true; // print warning
+	boolean prwrn = false; // print warning
 	boolean aquote = false; // auto quote list
 	
-	int prtrc = 1; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
+	int prtrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
 	int ttrue = 0; // type true: 0:true, 1:!false, 2:!(or false null), 3:!(or false null inert), 4:!(or false null inert zero)
 	int prenv = 3; // print environment
-	int bndres = 1; // bind result: 0:inert 1:rhs 2:prev
+	int bndres = 0; // bind result: 0:inert 1:rhs 2:prev
 	private Object bndres(Object o) {
 		return switch (o) {
 			case null-> bndres;
@@ -226,6 +227,15 @@ public class Vm {
 	// Tail Call Optimization
 	interface Tco extends Supplier {};
 	Object tco(Tco tco) { return dotco ? tco : tco.get(); }
+	/* utile per debug!
+	class Tco implements Supplier {
+		Supplier tco;
+		Tco(Supplier tco) { this.tco = tco; }
+		@Override public Object get() { return tco.get(); }
+		@Override public String toString() { return "Tco"; }
+	};
+	Object tco(Supplier tco) { return dotco ? new Tco(tco) : tco.get(); }
+	*/
 	<T> T getTco(Object o) { while (o instanceof Tco tco) o = tco.get(); return (T) o; }
 	
 	
@@ -422,7 +432,7 @@ public class Vm {
 			var matcher = keyword.matcher(msg); if (!matcher.find()) return msg;
 			var sb = new StringBuffer(); do {
 				String s = matcher.group(1), k = toKey(s); var v = map.get(k);
-				matcher.appendReplacement(sb, Vm.this.toString(v != null || map.containsKey(k) ? v :  "{"+ s +"}" ));
+				matcher.appendReplacement(sb, Vm.this.toString(v != null || map.containsKey(k) ? v :  "{"+ s +"}" ).replace("\\", "\\\\"));
 			} while(matcher.find());
 			matcher.appendTail(sb);
 			return sb.toString();
@@ -936,6 +946,45 @@ public class Vm {
 		}
 		public String toString() { return "%DLet"; }
 	}
+	class DLambda implements Combinable {
+		public Object combine(Env e, List o) { return combine(null, e, o); }
+		public Object combine(Resumption r, Env e, List o) {
+			var chk = checkM(this, o, 1, list(Symbol.class)); // o = ((var ...) x ...)
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
+			var vars = array(o.car());
+			var len = vars.length;
+			var body = o.cdr();
+			return new Apv( new Combinable() {
+				public Object combine(Env de, List o) { return combine(null, de, o); }
+				public Object combine(Resumption r, Env de, List o) {
+					var vals = o == null ? new Object[len] : array(o);
+					if (vals.length != len) return error("not same length: " + list(vars) + " and " + o);
+					var olds = new Object[len];
+					var ndvs = new Object[len];
+					for (int i=0; i<len; i+=1) {
+						var lookup = de.get(vars[i]);
+						if (body == null && !lookup.isBound) continue;
+						if ((ndvs[i] = lookup.value) instanceof DVar dvar) { olds[i] = dvar.value; continue; }
+						return typeError("not a dinamic variable: {datum}", vars[i], symbol("DVar"));
+					}
+					for (int i=0; i<len; i+=1) {
+						if (ndvs[i] instanceof DVar dvar) dvar.value = vals[i]; else de.def(vars[i], new DVar(vals[i]));
+					}
+					if (body == null) return switch (bndres) { case 0-> inert; case 1-> vals[len-1]; case 2-> olds[len-1]; default-> 1; };  
+					try {
+						Object res = r != null ? r.resume() : getTco(begin.combine(e, body));
+						return res instanceof Suspension s ? s.suspend(dbg(e, this, o), rr-> combine(rr, e, o)) : res;
+					}
+					finally {
+						for (int i=0; i<len; i+=1) if (ndvs[i] instanceof DVar dvar) dvar.value = olds[i];
+					}
+				}
+				@Override public String toString() { return "{%DOpv " + o.car() + eIfnull(body, ()-> " " + apply(s-> s.substring(1, s.length()-1), Vm.this.toString(body))) + "}"; }
+			});
+		}
+		public String toString() { return "%D\\"; }
+	}
 	
 	
 	// Java Native Interface
@@ -1014,7 +1063,7 @@ public class Vm {
 				}
 				var classes = getClasses(args);
 				Executable executable = getExecutable(o0, name, classes);
-				if (executable == null) return error("not found {executable} of: {object}", "type", symbol("unboundExecutable"), "executable", executable(name, classes), "object", Vm.this.toString(o0));
+				if (executable == null) return error("not found {executable} of: {object}", "type", symbol("unboundExecutable"), "executable", Vm.this.toString(name, classes), "object", Vm.this.toString(o0));
 				try {
 					//executable.setAccessible(true);
 					args = reorg(executable, args);
@@ -1022,14 +1071,6 @@ public class Vm {
 						case Method m-> m.invoke(o0, args);
 						case Constructor c-> c.newInstance(args);
 					};
-					/* TODO in alternativa al precedente da verificare
-					return apply(v-> isjFun(v) ? wrap(new JFun(name, v)) : v,
-						switch (executable) { 
-							case Method m-> m.invoke(o0, args);
-							case Constructor c-> c.newInstance(args);
-						}
-					);
-					//*/
 				}
 				catch (Throwable thw) {
 					if (thw instanceof InvocationTargetException ite) {
@@ -1039,7 +1080,7 @@ public class Vm {
 							default: // in errore senza!
 						}
 					}
-					return error("error executing " + executable(name, args) + " of: " + Vm.this.toString(o0) + " with: " + Vm.this.toString(list(args)), thw);
+					return error("error executing " + Vm.this.toString(name, args) + " of: " + Vm.this.toString(o0) + " with: " + Vm.this.toString(list(args)), thw);
 				}
 			}
 			@Override public String toString() { return "@" + name; }
@@ -1157,18 +1198,27 @@ public class Vm {
 		switch (chk) {
 			case null: return null;
 			case Class cl when on instanceof Class cl2 && cl.isAssignableFrom(cl2) || cl.isInstance(on): return null;
+			case List l:
+				if (!(on instanceof List onl)) break;
+				for (; onl != null; onl = onl.cdr()) {
+					var chkl = checkT2(op, o, onl.car, i, l.car);
+					if (chkl instanceof Suspension s) return s;
+					if (chkl != null) return typeError("not an null: {datum}", chkl, symbol("Null"));
+				}
+				return null;
 			case Object[] chks:
 				if (i > 0) return checkT2(op, o, on, i, chks[i % chks.length]);
 				for (Object chk2: chks) {
 					if (Utility.equals(on, chk2) || chk2 instanceof Class cl && (cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2))) return null;
 				}
-			default: return typeError(
-				"not " + (chk instanceof Object[] objs ? "one of " : "a ") + "{expectedType}: {datum} to combine: " + toString(op) + " with: " + toString(o),
-				on, chk == null ? symbol("Null")
-				: chk instanceof Class cl ? symbol(cl.getSimpleName())
-				: cons(symbol("or"), list(stream((Object[]) chk).map(obj-> symbol(obj == null ? "Null" : obj instanceof Class cl ? cl.getSimpleName() : Vm.this.toString(obj))).toArray() ))
-			);
+			default: break;
 		}
+		return typeError(
+			"not " + (chk instanceof Object[] objs ? "one of " : "a ") + "{expectedType}: {datum} to combine: " + toString(op) + " with: " + toString(o),
+			on, chk == null ? symbol("Null")
+			: chk instanceof Class cl ? symbol(cl.getSimpleName())
+			: cons(symbol("or"), list(stream((Object[]) chk).map(obj-> symbol(obj == null ? "Null" : obj instanceof Class cl ? cl.getSimpleName() : Vm.this.toString(obj))).toArray() ))
+		);
 	}
 	
 	
@@ -1327,8 +1377,8 @@ public class Vm {
 	public static String reverseMap(Map map) {
 		var sb = new StringBuilder(); map.entrySet().forEach(e-> sb.insert(0, " " + e)); return sb.toString();
 	}
-	private String executable(String name, Object[] args) {
-		return (name.equals("new") ? "constructor: " : "method: " + name) + toString(list(args));
+	private String toString(String name, Object[] args) {
+		return (name.equals("new") ? "constructor: " : "method: " + name) + ifnull(args, "()", a-> toString(list(a)));
 	}
 	
 	
@@ -1386,6 +1436,7 @@ public class Vm {
 					$("%def", "%dDef", new DDef()),
 					$("%def", "%dDef*", new DDefStar()),
 					$("%def", "%dLet", new DLet()),
+					$("%def", "%d\\", new DLambda()),
 					// Errors
 					$("%def", "%rootPrompt", rootPrompt),
 					$("%def", "%error", wrap(new JFun("%Error", (ArgsList) o-> ((ArgsList) jInvoke("error")).apply(listStar(this, o))))),
@@ -1425,7 +1476,7 @@ public class Vm {
 					$("%def", "%<=", wrap(new JFun("%<=", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Le, o.car(), o.car(1)) ))),
 					$("%def", "%>=", wrap(new JFun("%>=", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Ge, o.car(), o.car(1)) ))),
 					//
-					$("%def", "%~", wrap(new JFun("%~", (n,o)-> checkN(n, o, 1, Number.class), (l,o)-> ~o.<Integer>car() ))),
+					$("%def", "%~", wrap(new JFun("%~", (n,o)-> checkN(n, o, 1, Integer.class), (l,o)-> ~o.<Integer>car() ))),
 					$("%def", "%&", wrap(new JFun("%&", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(And, o.car(), o.car(1)) ))),
 					$("%def", "%|", wrap(new JFun("%|", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Or, o.car(), o.car(1)) ))),
 					$("%def", "%^", wrap(new JFun("%^", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Xor, o.car(), o.car(1)) ))),
@@ -1442,14 +1493,14 @@ public class Vm {
 					$("%def", "%\\", $("%vau", $("formals", ".", "body"), "env", $("%wrap", $("%eval", $("%list*", "%vau", "formals", ignore, "body"), "env")) )),
 					//
 					$("%def", "vm", this),
-					$("%def", "test", test),
-					$("%def", "assert", vmAssert),
+					$("%def", "%test", test),
+					$("%def", "%assert", vmAssert),
 					$("%def", "toString", wrap(new JFun("ToString", (Function<Object,String>) obj-> toString(obj)))),
 					$("%def", "log", wrap(new JFun("Log", (ArgsList) o-> log(array(o))))),
 					$("%def", "print", wrap(new JFun("Print", (ArgsList) o-> print(array(o))))),
 					$("%def", "write", wrap(new JFun("Write", (ArgsList) o-> write(array(o))))),
 					$("%def", "load", wrap(new JFun("Load", (Function<String, Object>) nf-> uncked(()-> loadText(nf))))),
-					$("%def", "read", wrap(new JFun("Read", (ArgsList) o-> cons(begin, parseBytecode(uncked(()-> parse(read()))))))),
+					$("%def", "read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> cons(begin, parseBytecode(uncked(()-> parse(read(l == 0 ? 0 : o.<Integer>car())))))))),
 					$("%def", "dotco", wrap(new JFun("Dotco", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? dotco : inert(dotco=o.car()) ))),
 					$("%def", "doasrt",  wrap(new JFun("Doasrt", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doasrt : inert(doasrt=o.car()) ))),
 					$("%def", "ctapv", wrap(new JFun("Ctapv",
@@ -1535,7 +1586,7 @@ public class Vm {
 	public void main() throws Exception {
 		//*
 		var milli = currentTimeMillis();
-		loadText("lispx/load.lispx");
+		loadText("lispx/vm.lispx");
 		print("start time: " + (currentTimeMillis() - milli));
 		repl();
 		//*/

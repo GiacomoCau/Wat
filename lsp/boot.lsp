@@ -37,6 +37,7 @@
 
 (def append %append)
 (def array->list %array->list)
+(def assert %assert)
 (def begin %begin)
 (def cons %cons)
 (def cons? %cons?)
@@ -56,7 +57,7 @@
 (def list->array %list->array)
 (def loop %loop)
 (def makeEnv %makeEnv)
-(def nil? %null?)
+(def null? %null?)
 (def not %!)
 (def null? %null?)
 (def obj %obj)
@@ -67,6 +68,7 @@
 (def symbol? %symbol?)
 (def keywordName %internName)
 (def keyword? %keyword?)
+(def test %test)
 (def type? %type?)
 (def unwrap %unwrap)
 (def wrap %wrap)
@@ -302,8 +304,8 @@
 
 (def letLoop let\)
 
-(assert (letLoop sum ((a '(1 2)) (b '(3 4))) (if (nil? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
-(assert (letLoop (sum (a '(1 2)) (b '(3 4))) (if (nil? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
+(assert (letLoop sum ((a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
+(assert (letLoop (sum (a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
 
 (defMacro (let1 lhs . rhs)
   (if (symbol? lhs)
@@ -325,7 +327,7 @@
 (assert (let ((a 1)) a) 1)
     
 (defMacro (let* bindings . body)
-  (if (nil? bindings)
+  (if (null? bindings)
       (list* 'let () body)
       (list 'let
         (list (car bindings))
@@ -461,7 +463,7 @@
  
 #| TODO sostituito dal seguente, eliminare
 (defVau (cond . clauses) env
-  (if (nil? clauses) #inert
+  (if (null? clauses) #inert
     (let1 (((test . body) . clauses) cla uses)
       (if (== test 'else)
         (apply (wrap begin) body env) 
@@ -470,14 +472,14 @@
           (apply (wrap cond) clauses env) )))))
 
 (defVau (cond . clauses) env
-  (if (nil? clauses) #inert
+  (if (null? clauses) #inert
     (let1 (((test . body) . clauses) cla uses)
       (if (if (== test 'else) #t (eval test env))
         (apply (wrap begin) body env)
         (apply (wrap cond) clauses env) ))))
 
 (defVau (cond . clauses) env
-  (if (nil? clauses) #inert
+  (if (null? clauses) #inert
     (let1 (((test . body) . clauses) clauses)
       (if (== test 'else)
         (apply (wrap begin) body env)
@@ -491,7 +493,7 @@
             (apply (wrap cond) clauses env) ))))))
 
 (defVau (cond . clauses) env
-  (if (nil? clauses) #inert
+  (if (null? clauses) #inert
     (let1 (((test . body) . clauses) clauses)
       (if (== test 'else)
         (apply (wrap begin) body env)
@@ -509,7 +511,7 @@
                 (apply (wrap cond) clauses env) )) ))))))
 
 (defVau (cond . clauses) env
-  (if (nil? clauses) #inert
+  (if (null? clauses) #inert
     (let1 (((test . body) . clauses) clauses)
       (if (== test 'else)
         (apply (wrap begin) body env)
@@ -526,7 +528,7 @@
                 ((eval apd1 env) test)
                 (apply (wrap cond) clauses env) )) ))))))
 (defVau (cond . clauses) env
-  (if (nil? clauses) #inert
+  (if (null? clauses) #inert
     (let1 (((test . body) . clauses) clauses)
       (if (== test 'else)
         (apply (wrap begin) body env)
@@ -544,7 +546,7 @@
                 (apply (wrap cond) clauses env) )) ))))))
 |#
 (defVau (cond . clauses) env
-  (if (nil? clauses) #inert
+  (if (null? clauses) #inert
     (let1 (((test . body) . clauses) clauses)
       (if (== test 'else)
         (apply (wrap begin) body env)
@@ -565,16 +567,16 @@
 (assert (begin (def a 1) (cond (a (\(a) (== a 1)) => (\(a) (+ a 1))))) 2) 
 
 (defVau (and . x) e
-  (cond ((nil? x)         #t)
-        ((nil? (cdr x))   (eval (car x) e))
+  (cond ((null? x)         #t)
+        ((null? (cdr x))   (eval (car x) e))
         ((eval (car x) e) (apply (wrap and) (cdr x) e))
         (else             #f)))
 
 (def && and)
 
 (defVau (or . x) e
-  (cond ((nil? x)         #f)
-        ((nil? (cdr x))   (eval (car x) e))
+  (cond ((null? x)         #f)
+        ((null? (cdr x))   (eval (car x) e))
         ((eval (car x) e) #t)
         (else             (apply (wrap or) (cdr x) e))))
 
@@ -836,8 +838,8 @@
 (def\ (reduceL f init . lst*)
   (if (null? lst*) (error "none lists"))
   (if (null? (cdr lst*))
-    ((rec\ (reduce acc lst) (if (nil? lst) acc (reduce (f acc (car lst)) (cdr lst)) )) init (car lst*))
-    ((rec\ (reduce* acc lst*) (if (nil? (car lst*)) acc (reduce* (%apply* f acc (map car lst*)) (map cdr lst*)) )) init lst*) ))
+    ((rec\ (reduce acc lst) (if (null? lst) acc (reduce (f acc (car lst)) (cdr lst)) )) init (car lst*))
+    ((rec\ (reduce* acc lst*) (if (null? (car lst*)) acc (reduce* (%apply* f acc (map car lst*)) (map cdr lst*)) )) init lst*) ))
 
 (assert (reduceL + 0 '(1 2 3 4)) 10)
 (assert (reduceL (\ (init lst) (+ init (reduceL * 1 lst))) 0 '(1 2 3 4) '(1 2 3 4)) 30)
@@ -846,24 +848,24 @@
 (def\ (reduceR f init . lst*)
   (if (null? lst*) (error "none lists"))
   (if (null? (cdr lst*))
-    ((rec\ (reduce acc lst) (if (nil? lst) acc (f (reduce acc (cdr lst)) (car lst)) )) init (car lst*))
-    ((rec\ (reduce* acc lst*) (if (nil? (car lst*)) acc (%apply* f (reduce* acc (map cdr lst*)) (map cadr lst*)) )) init lst*) ))
+    ((rec\ (reduce acc lst) (if (null? lst) acc (f (reduce acc (cdr lst)) (car lst)) )) init (car lst*))
+    ((rec\ (reduce* acc lst*) (if (null? (car lst*)) acc (%apply* f (reduce* acc (map cdr lst*)) (map cadr lst*)) )) init lst*) ))
 
 (assert (reduceR cons () '(1 2 3 4)) '((((() . 4) . 3) . 2) . 1))
 
 (def\ (foldL f init . lst*)
   (if (null? lst*) (error "none lists"))
   (if (null? (cdr lst*))
-    ((rec\ (foldl acc lst) (if (nil? lst) acc (foldl (f (car lst) acc) (cdr lst)) )) init (car lst*))
-    ((rec\ (foldl* acc lst*) (if (nil? (car lst*)) acc (foldl* (%apply* f (map car lst*) acc) (map cdr lst*)) )) init lst*) ))
+    ((rec\ (foldl acc lst) (if (null? lst) acc (foldl (f (car lst) acc) (cdr lst)) )) init (car lst*))
+    ((rec\ (foldl* acc lst*) (if (null? (car lst*)) acc (foldl* (%apply* f (map car lst*) acc) (map cdr lst*)) )) init lst*) ))
 
 (assert (foldL cons () '(1 2 3 4)) '(4 3 2 1))
 
 (def\ (foldR f init . lst*)
   (if (null? lst*) (error "none lists"))
   (if (null? (cdr lst*))
-    ((rec\ (foldr acc lst) (if (nil? lst) acc (f (car lst) (foldr acc (cdr lst)) ) )) init (car lst*))
-    ((rec\ (foldr* acc lst*) (if (nil? (car lst*)) acc (%apply* f (map car lst*) (foldr* acc (map cdr lst*)) ) )) init lst*) ))
+    ((rec\ (foldr acc lst) (if (null? lst) acc (f (car lst) (foldr acc (cdr lst)) ) )) init (car lst*))
+    ((rec\ (foldr* acc lst*) (if (null? (car lst*)) acc (%apply* f (map car lst*) (foldr* acc (map cdr lst*)) ) )) init lst*) ))
 
 (assert (foldR cons () '(1 2 3 4)) '(1 2 3 4))
 
@@ -903,7 +905,6 @@
     env ))
 
 (assert (begin (ddef* (a b) 1 2) (dlet ((a 2)) (assert (dval a) 2)) (dval b)) 2)
-|#
 
 (def d\
   (vau (var* . body) #ignore
@@ -925,31 +926,32 @@
 
 ;((d\ (d e) (print e)) 4 5)     
 ;((d\ (d e)) 6 7)
+|#
 
 (defMacro (ddef var . val)
-  (list (list 'd\ (list (the Symbol var))) (opt? val #null) ))
+  (list (list '%d\ (list (the Symbol var))) (opt? val #null) ))
 
 (defMacro (ddef* var* . val*)
-  (list* (list 'd\ var*) val*) )
+  (list* (list '%d\ var*) val*) )
 
 (defMacro (progv var* val* exp . exps)
-  (list* (list* 'd\ var* exp exps) val*) )
+  (list* (list* '%d\ var* exp exps) val*) )
 
 (defMacro (dlet bindings exp . exps)
-  (list* (list* 'd\ (map car bindings) exp exps) (map cadr bindings)) )  
+  (list* (list* '%d\ (map car bindings) exp exps) (map cadr bindings)) )  
 
 (defMacro (dlet* bindings . body)
-  (if (nil? bindings)
+  (if (null? bindings)
     (list* 'begin body)
     (list 'dlet
 	  (list (car bindings))
       (list* 'dlet* (cdr bindings) body) )))
       
 (def a (dvar 1))
-(assert (expand (ddef a 1)) '((d\ (a)) 1) )
-(assert (expand (ddef* (a b) 1 2)) '((d\ (a b)) 1 2) )  
-(assert (expand (progv (a b) (3 4)  (+ (a) (b)))) '((d\ (a b) (+ (a) (b))) 3 4) )
-(assert (expand (dlet ((a 3) (b 4)) (+ (a) (b)))) '((d\ (a b) (+ (a) (b))) 3 4) )
+(assert (expand (ddef a 1)) '((%d\ (a)) 1) )
+(assert (expand (ddef* (a b) 1 2)) '((%d\ (a b)) 1 2) )  
+(assert (expand (progv (a b) (3 4)  (+ (a) (b)))) '((%d\ (a b) (+ (a) (b))) 3 4) )
+(assert (expand (dlet ((a 3) (b 4)) (+ (a) (b)))) '((%d\ (a b) (+ (a) (b))) 3 4) )
 (ddef* (a b) 1 2)
 (assert (progv (a b) (3 4)  (+ (a) (b))) 7)
 (assert (dlet ((a 3) (b 4)) (+ (a) (b))) 7)
@@ -1064,7 +1066,7 @@
 (def\ (relationalOp binop)
   (rec\ (op arg1 arg2 . rest)
     (if (binop arg1 arg2)
-      (if (nil? rest) #t
+      (if (null? rest) #t
         (apply op (list* arg2 rest)))
       #f )))
 
@@ -1095,7 +1097,7 @@
 
 (def\ (negativeOp binop unit)
   (\ (arg1 . rest)
-    (if (nil? rest)
+    (if (null? rest)
       (binop unit arg1)
       (reduceL binop arg1 rest) )))
 

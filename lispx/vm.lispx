@@ -77,7 +77,6 @@
 (%def %->keyword (\ (i) (if (%keyword? i) i (%keyword (%internName i)))))
 
 (%def eq? %eq?)
-(%def %assert assert)
 (%def %classSymbol %->symbol)
 (%def %functionSymbol %->symbol)
 (%def %keywordSymbol %->keyword)
@@ -89,7 +88,6 @@
 (%def %pushDelimSubcont %pushPromptSubcont)
 (%def %pushPrompt ((\ (%pushPrompt) (%wrap %pushPrompt)) %pushPrompt))
 (%def %symbolName %internName)
-(%def %test test)
 (%def %variableSymbol %->symbol)
 
 (%def list* %list*)
@@ -234,3 +232,5 @@
 ;(def repl:%displayPrompt (\ (level) (if (== level 0) "* " (%$ level "]"))) )
 (repl:run)
 |#
+
+"vm started!"
