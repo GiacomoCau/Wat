@@ -221,7 +221,7 @@
 
   (deftest restartBind.no-exit.2
     (restartBind ((continue (\ () 'whatever)))
-      (ifOpt (restartHandler (findRestart? 'continue))
+      (ifOpt? (restartHandler (findRestart? 'continue))
         (invokeRestart restartHandler)
         (assert #f)))
     'whatever)
@@ -316,7 +316,7 @@
 
   (deftest restartCase.no-exit.2
     (restartCase ((continue (\ () 'whatever)))
-      (ifOpt (restartHandler (findRestart? 'continue))
+      (ifOpt? (restartHandler (findRestart? 'continue))
         (invokeRestart restartHandler)
         (assert #f)))
     'whatever)
@@ -397,7 +397,7 @@
   (deftest findRestart?.3
     (block exit
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg)))))
-        (ifOpt (r (findRestart? 'x))
+        (ifOpt? (r (findRestart? 'x))
           (begin
             (assert (eq? (getSlot r 'restartName) 'x))
             (assert (eq? (getSlot r 'associatedConditions) '()))
@@ -407,7 +407,7 @@
 
   (deftest findRestart?.3b
     (restartCase ((x (\ (arg) (+ 1000 arg))))
-      (ifOpt (r (findRestart? 'x))
+      (ifOpt? (r (findRestart? 'x))
         (begin
           (assert (eq? (getSlot r 'restartName) 'x))
           (assert (eq? (getSlot r 'associatedConditions) '()))
@@ -420,7 +420,7 @@
       (def c (makeSimpleError "foo"))
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg)))
                         :associatedConditions (list c)))
-        (ifOpt (r (findRestart? 'x c))
+        (ifOpt? (r (findRestart? 'x c))
           (begin
             (assert (eq? (getSlot r 'restartName) 'x))
             (assert (eq? (getSlot r 'associatedConditions) (list c)))
@@ -433,7 +433,7 @@
       (def c (makeSimpleError "foo"))
       (restartBind ((x (\ (arg) (+ 1000 arg))
                         :associatedConditions (list c)))
-        (ifOpt (r (findRestart? 'x c))
+        (ifOpt? (r (findRestart? 'x c))
           (begin
             (assert (eq? (getSlot r 'restartName) 'x))
             (assert (eq? (getSlot r 'associatedConditions) (list c)))
@@ -447,7 +447,7 @@
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg)))
                         :associatedConditions (list c)))
         (restartBind ((x (\ (arg) (returnFrom exit (- 1000 arg)))))
-          (ifOpt (r (findRestart? 'x c))
+          (ifOpt? (r (findRestart? 'x c))
             (invokeRestart r 1)
             (assert #f)))))
     999)
@@ -458,7 +458,7 @@
       (restartCase ((x (\ (arg) (+ 1000 arg))
                         :associatedConditions (list c)))
         (restartCase ((x (\ (arg) (- 1000 arg))))
-          (ifOpt (r (findRestart? 'x c))
+          (ifOpt? (r (findRestart? 'x c))
             (invokeRestart r 1)
             (assert #f)))))
     999)
@@ -471,7 +471,7 @@
                         :associatedConditions (list c)))
         (restartBind ((x (\ (arg) (returnFrom exit (- 1000 arg)))
                           :associatedConditions (list d)))
-          (ifOpt (r (findRestart? 'x c))
+          (ifOpt? (r (findRestart? 'x c))
             (invokeRestart r 1)
             (assert #f)))))
     1001)
@@ -484,7 +484,7 @@
                         :associatedConditions (list c)))
         (restartCase ((x (\ (arg) (- 1000 arg))
                           :associatedConditions (list d)))
-          (ifOpt (r (findRestart? 'x c))
+          (ifOpt? (r (findRestart? 'x c))
             (invokeRestart r 1)
             (assert #f)))))
     1001))
@@ -608,7 +608,7 @@
       (block ok ; so that the test doesn't fail when testing `error'.
         (handlerBind ((SimpleError
                         (\ (e)
-                          (let* ((handler (opt (findRestart? 'r e)))
+                          (let* ((handler (opt? (findRestart? 'r e)))
                                  (a-cs (getSlot handler 'associatedConditions)))
                             (assert (cons? (member e a-cs)))
                             (returnFrom ok)))))
@@ -638,7 +638,7 @@
   (deftest invokeRestartInteractively.1a
     (restartBind ((r1 (\ (arg1 arg2) (+ arg1 arg2))
                        :interactiveFunction (\ () (list 1 2))))
-      (invokeRestartInteractively (opt (findRestart? 'r1))))
+      (invokeRestartInteractively (opt? (findRestart? 'r1))))
     3)
 
   (deftest invokeRestartInteractively.1b
@@ -648,7 +648,7 @@
 
   (deftest invokeRestartInteractively.1c
     (restartBind ((r1 (\ () (+ 1 2))))
-      (invokeRestartInteractively (opt (findRestart?'r1))))
+      (invokeRestartInteractively (opt? (findRestart?'r1))))
     3)
 
   (deftest invokeRestartInteractively.2

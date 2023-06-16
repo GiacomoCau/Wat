@@ -30,6 +30,8 @@ import java.util.function.Supplier;
 
 public class Utility {
 	
+	public static int more = Integer.MAX_VALUE;
+	
 	public static Object[] $(Object... objects) {
 		return objects;
 	}
@@ -162,15 +164,18 @@ public class Utility {
 		if (op == null) throw new RuntimeException("no operator for this operands");
 		return a instanceof Integer i1 && b instanceof Integer i2
 			? op.i.apply(i1, i2)
+			: a instanceof Long l1 && b instanceof Long l2
+			? op.l.apply(l1, l2)
 			: op.d.apply(a.doubleValue(), b.doubleValue())
 		;
 		/*
-		return (a, b)->
-			a instanceof Double d ? op.d.apply(d, b.doubleValue())
-			: b instanceof Double d ? op.d.apply(a.doubleValue(), d)
-			: op.i.apply(a.intValue(), b.intValue())
-		;
-		*/
+		return switch (a) {
+			case Double d-> op.d.apply(d, b.doubleValue());
+			case Long l-> op.l.apply(l, b.longValue());
+			case Integer i-> op.i.apply(i, b.intValue());
+			default-> throw new RuntimeException("unknow type");
+		};
+		//*/
 	}	
 	
 	public static boolean isInstance(Object o, Class ... cs) {

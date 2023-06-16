@@ -25,12 +25,12 @@
 (def\ fiberYield v?
   "Yield a value (which defaults to void)."
   (takeSubcont +fiber-prompt+ k
-    (makeYieldRecord (opt v?) k)))
+    (makeYieldRecord (opt? v?) k)))
 
 (def\ fiberResume (yield-record . v?)
   "Resume a suspended fiber with a value (which defaults to void)."
   (pushDelimSubcont +fiber-prompt+ (getSlot yield-record 'continuation)
-    (opt v?)))
+    (opt? v?)))
 
 (defMacro fiber body
   "Evaluate the body expressions as a fiber."

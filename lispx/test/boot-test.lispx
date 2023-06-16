@@ -2887,19 +2887,19 @@
 (defsuite opt
 
   (deftest opt.1
-    (opt '())
+    (opt? '())
     #inert)
 
   (deftest opt.2
-    (opt '() "default")
+    (opt? '() "default")
     "default")
 
   (deftest opt.3
-    (opt (some 1))
+    (opt? (some 1))
     1)
 
   (deftest opt.4
-    (opt (some 1) "default")
+    (opt? (some 1) "default")
     1)
 
   (deftest opt.5
@@ -2909,16 +2909,16 @@
 
   (deftest opt.6
     (signalsError
-     (opt 1)
+     (opt? 1)
      TypeError :datum 1 :expectedType 'Cons))
 
   (deftest opt.lazy.1
-    (opt (some 1) (error (makeSimpleError "foo")))
+    (opt? (some 1) (error (makeSimpleError "foo")))
     1)
 
   (deftest opt.lazy.2
     (signalsError
-     (opt #null (error (makeSimpleError "foo")))
+     (opt? #null (error (makeSimpleError "foo")))
      SimpleError :message "foo")))
 
 (defsuite opt*
@@ -2959,12 +2959,12 @@
      MatchError))
 
   (deftest getOpt.2
-    (getOpt (some 2))
+    (getOpt? (some 2))
     2)
 
   (deftest getOpt.3
     (signalsError
-     (getOpt #null)
+     (getOpt? #null)
      SimpleError :message "Option is nil")))
 
 (defsuite some
@@ -2986,13 +2986,13 @@
 (defsuite ifOpt
 
   (deftest ifOpt.1
-    (ifOpt (x (some 12))
+    (ifOpt? (x (some 12))
                x
                14)
     12)
 
   (deftest ifOpt.2
-    (ifOpt (x #null)
+    (ifOpt? (x #null)
                x
                14)
     14)
@@ -3004,37 +3004,37 @@
 
   (deftest ifOpt.4
     (signalsError
-     (ifOpt (name))
+     (ifOpt? (name))
      MatchError))
 
   (deftest ifOpt.4.2
     (signalsError
-     (ifOpt (name) then)
+     (ifOpt? (name) then)
      MatchError))
 
   (deftest ifOpt.5
     (signalsError
-     (ifOpt (name option))
+     (ifOpt? (name option))
      MatchError))
 
   (deftest ifOpt.6
     (signalsError
-     (ifOpt (name option) then)
+     (ifOpt? (name option) then)
      MatchError)))
 
 (defsuite whenOpt
 
   (deftest whenOpt.0
-    (whenOpt (x (some 12)))
+    (whenOpt? (x (some 12)))
     #inert)
 
   (deftest whenOpt.1
-    (whenOpt (x (some 12))
+    (whenOpt? (x (some 12))
                  x)
     12)
 
   (deftest whenOpt.2
-    (whenOpt (x #null)
+    (whenOpt? (x #null)
                  x)
     #null)
 
@@ -3045,21 +3045,21 @@
 
   (deftest whenOpt.4
     (signalsError
-     (whenOpt (name))
+     (whenOpt? (name))
      MatchError)))
 
 (defsuite unlessOpt
 
   (deftest unlessOpt.0
-    (unlessOpt (some 12) 2 3 (+ 2 2))
+    (unlessOpt? (some 12) 2 3 (+ 2 2))
     #null)
 
   (deftest unlessOpt.1
-    (unlessOpt #null 2 3 (+ 2 2))
+    (unlessOpt? #null 2 3 (+ 2 2))
     4)
 
   (deftest unlessOpt.2
-    (unlessOpt #null)
+    (unlessOpt? #null)
     #inert)
 
   (deftest unlessOpt.3

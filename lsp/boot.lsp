@@ -600,14 +600,14 @@
 
 (assert (assoc 'b '((a 1) (b 2) (c 3) (d 4))) '(b 2))
 
-(def\ (get key lst)
+(def\ (get? key lst)
   (let\ (loop (lst lst)) 
      (if (null? lst) #null
        (let1 ((k v . lst) lst)
          (if (== k key) (list v) (loop lst)) ))))
 
-(assert (get :b '(:a 1 :b 2 :c 3)) '(2)) 
-(assert (get 'b '(a 1 b 2 c 3)) '(2)) 
+(assert (get? :b '(:a 1 :b 2 :c 3)) '(2)) 
+(assert (get? 'b '(a 1 b 2 c 3)) '(2)) 
 
 
 ;;; Case CaseType

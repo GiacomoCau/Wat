@@ -122,7 +122,7 @@
 (def\ throw (tag . result?)
   "Abort to a nesting catch tag established by `catch' and pass the
   |optional RESULT? (defaults to void) to it."
-  (%throw tag (opt result?)))
+  (%throw tag (opt? result?)))
 
 (defMacro loop forms
   "Evaluate the FORMS in an infinite loop."
@@ -385,7 +385,7 @@
   |void) from the block named BLOCK-NAME.  It is an error to return from
   |a block whose dynamic extent has ended.
   |$(fn (blockName . value?))"
-  (blockName (opt value?)))
+  (blockName (opt? value?)))
 
 (defMacro finally (protectedForm . cleanupForms)
   "Evaluate the PROTECTED-FORM and return its result.  Regardless of
@@ -451,10 +451,10 @@
   |function that encapsulates a mutable value.  Calling the box without
   |arguments returns the value.  Calling the box with an argument sets
   |the value."
-  (def value (opt initialValue?))
+  (def value (opt? initialValue?))
   (def env (theEnvironment))
   (\ newValue?
-    (ifOpt (newValue newValue?)
+    (ifOpt? (newValue newValue?)
       (set env value newValue)
       value)))
 
@@ -559,8 +559,8 @@
   |ITEM if found, nil otherwise.  The KEY function is applied to
   |each list element before comparison (defaults to `identity').
   |$(fn (item list &key test key))"
-  (let ((test (opt (get? keywords :test) ==))
-        (key (opt (get? keywords :key) identity)))
+  (let ((test (opt? (get? keywords :test) ==))
+        (key (opt? (get? keywords :key) identity)))
     (letloop -member- ((items list))
       (if (null? items)
           #null
@@ -711,7 +711,7 @@
   ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
   (dolist (slotSpec slotSpecs) (the Symbol slotSpec))
   (let ((className (classSymbol name))
-        (superclass (findClass (opt superclass? 'StandardObject) env)))
+        (superclass (findClass (opt? superclass? 'StandardObject) env)))
     ;(if (bound? className env)
     ;   (%reinitialize-standard-class (eval className env) superclass)
         (eval (list def className (%makeStandardClass name superclass)) env))
@@ -794,13 +794,13 @@
   list."))
 
 (defMethod subseq ((seq List) start . end?)
-  (%listSubseq seq start (opt end?)))
+  (%listSubseq seq start (opt? end?)))
 
 (defMethod subseq ((seq Null) start . end?)
-  (%listSubseq seq start (opt end?)))
+  (%listSubseq seq start (opt? end?)))
 
 (defMethod subseq ((seq String) start . end?)
-  (%stringSubseq seq start (opt end?)))
+  (%stringSubseq seq start (opt? end?)))
 
 ;;; Options
 
@@ -811,7 +811,7 @@
   "Create a one-element list from the VALUE."
   (list value))
 
-(defVau ifOpt ((name option?) then else) env
+(defVau ifOpt? ((name option?) then else) env
   "Destructure the OPTION?.  If it's non-nil, evaluate the THEN form
   |with the NAME bound to the contents of the option.  If it's nil,
   |evaluate the ELSE form."
@@ -823,30 +823,30 @@
                     (car o?))
               env))))
 
-(defMacro whenOpt ((name option?) . forms)
+(defMacro whenOpt? ((name option?) . forms)
   "Destructure the OPTION?.  If it's non-nil, evaluate the FORMS with
   |the NAME bound to the contents of the option.  If it's nil, return nil."
-  (list ifOpt (list name option?) (list* begin forms) #null))
+  (list ifOpt? (list name option?) (list* begin forms) #null))
 
-(defMacro unlessOpt (option? . forms)
+(defMacro unlessOpt? (option? . forms)
   "Destructure the OPTION?.  If it's nil, evaluate the FORMS.  If it's
   |non-nil, return nil."
-  (list ifOpt (list #ignore option?) #null (list* begin forms)))
+  (list ifOpt? (list #ignore option?) #null (list* begin forms)))
 
-(defVau opt (option? . default?) env
+(defVau opt? (option? . default?) env
   "Return the contents of the OPTION?, or the DEFAULT? if the option
   |is nil.  The default itself defaults to void.  The DEFAULT? is
   |evaluated lazily, only when the OPTION? is nil."
-  (ifOpt (value (eval option? env))
+  (ifOpt? (value (eval option? env))
     value
-    (ifOpt (default default?)
+    (ifOpt? (default default?)
       (eval default env)
       #inert)))
 
 (defVau opt* (list . defaults) env
   "Similar to `opt', but provides DEFAULTS for any number of
   |elements of LIST.  This is useful for implementing functions that take
-  |multiple opt arguments.  Each default is evaluated lazily, only
+  |multiple opt? arguments.  Each default is evaluated lazily, only
   |when needed."
   (letloop -opt*- ((list (eval list env)) (defaults defaults))
     (if (null? list)
@@ -857,18 +857,18 @@
             (cons (car list)                (-opt*- (cdr list) #null))
             (cons (car list)                (-opt*- (cdr list) (cdr defaults)))))))
 
-(def\ getOpt (option?)
+(def\ getOpt? (option?)
   "Returns the contents of the OPTION? or signals an error if it is nil."
-  (opt option? (simpleError "Option is nil")))
+  (opt? option? (simpleError "Option is nil")))
 
 ;;; Dynamic Binding
 
 (defVau ddef (name . valueAndDocstring?) env
   "Define a new or update an existing dynamic variable with the given
-  |NAME and opt default VALUE. The opt DOCSTRING is currently
+  |NAME and opt? default VALUE. The opt? DOCSTRING is currently
   |ignored.
-  |$(fn (name &opt value docstring))"
-  (def value (eval (opt valueAndDocstring?) env)) ; treating 2-elt list as option
+  |$(fn (name &opt? value docstring))"
+  (def value (eval (opt? valueAndDocstring?) env)) ; treating 2-elt list as option
   (if (bound? name env)
       (dset (eval name env) value)
       (eval (list def name (makeInstance Dynamic value)) env)))
@@ -880,10 +880,10 @@
   (list (list '%d\ (list var)) (if (null? val+doc) (ddft) (list* (\ (val .  #_) val) val+doc) ) ))
 
 ;(defMacro ddef (var . val+doc)
-;  (list (list '%d\ (list var)) (ifOpt ((val . #_) val+doc) val #inert)) )
+;  (list (list '%d\ (list var)) (ifOpt? ((val . #_) val+doc) val #inert)) )
 
 ;(defMacro ddef (var . val+doc)
-;  (list* (list '%d\ (list var)) (ifOpt ((val . #_) (list val+doc)) (list val) #null)) )
+;  (list* (list '%d\ (list var)) (ifOpt? ((val . #_) (list val+doc)) (list val) #null)) )
 
 
 (defMacro ddef* (var* . val*)

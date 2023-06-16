@@ -26,7 +26,7 @@
        ;; environments of the current environment, so that bindings
        ;; they create don't affect other tests.
        (assert (eq? (eval expression (makeEnv env))
-                  (eval (opt expected? #t) (makeEnv env))))))))
+                  (eval (opt? expected? #t) (makeEnv env))))))))
 
 (defMacro deftest* (name . forms)
   "Run the FORMS as a test identified by NAME, but unlike `deftest',

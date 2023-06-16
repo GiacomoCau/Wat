@@ -12,6 +12,7 @@ import static Wat.Utility.getField;
 import static Wat.Utility.headAdd;
 import static Wat.Utility.ifnull;
 import static Wat.Utility.isInstance;
+import static Wat.Utility.more;
 import static Wat.Utility.or;
 import static Wat.Utility.read;
 import static Wat.Utility.reorg;
@@ -555,14 +556,14 @@ public class Vm {
 			}
 			case null-> {
 				if (rhs == null) yield null;
-				throw new RuntimeException("too many arguments" /*+ ", none expected,"*/ + ", found: " + toString(rhs));
+				throw new RuntimeException(/*"too many arguments" +*/ "none arguments expected" + ", found: " + toString(rhs));
 			}
 			case Cons lc-> {
 				if (lc.car instanceof Symbol s && Utility.equals(s.name, "%quote", "quote")) {
 					if (equals((Object) lc.car(1), rhs)) yield null;
 					throw new RuntimeException("not found literal: " + lc.car(1));
 				}
-				if (!(rhs instanceof Cons rc)) throw new RuntimeException("too few arguments" /*+ ", more expected,"*/ + " found: " + toString(rhs));
+				if (!(rhs instanceof Cons rc)) throw new RuntimeException(/* "too few arguments" +*/ "more arguments expected" + ", found: " + toString(rhs));
 				var v = bind(def, bndret, e, lc.car, rc.car);
 				yield lc.cdr == null && rc.cdr == null ? v : bind(def, bndret, e, lc.cdr, rc.cdr);
 			}
@@ -715,7 +716,7 @@ public class Vm {
 	Begin begin = new Begin();
 	class If implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkR(this, o, 2, elsex ? 3 : Integer.MAX_VALUE); // o = (test then) | (test then else) 
+			var chk = checkR(this, o, 2, elsex ? 3 : more); // o = (test then) | (test then else) | (test then else ...)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 			var test = o.car();
@@ -810,7 +811,7 @@ public class Vm {
 			var x = o.car();
 			var cln = o.cdr();
 			try {
-				var res = r != null ? r.resume() : pipe(dbg(e, this, x, cln), ()-> getTco(evaluate(e, x)), v-> cleanup(cln, e, true, v));
+				var res = r != null ? r.resume() : pipe(dbg(e, this, o), ()-> getTco(evaluate(e, x)), v-> cleanup(cln, e, true, v));
 				return res instanceof Suspension s ? s.suspend(dbg(e, this, o), rr-> combine(rr, e, o)) : res;
 			}
 			catch (Throwable thw) {
@@ -1170,16 +1171,16 @@ public class Vm {
 	Object checkPt(Object exp, Object pt, Object ep) { return new PTree(exp, pt, ep).check(); }
 	int args(Apv apv) {
 		return switch(apv.cmb) {
-			case Opv opv-> opv.pt == null ? 0 : opv.pt instanceof Cons c && c.cdr == null && (c.car == ignore || c.car instanceof Symbol) ? 1 : Integer.MAX_VALUE;
-			case JFun jFun-> jFun.jfun instanceof Supplier ? 0 : jFun.jfun instanceof Function ? 1 : Integer.MAX_VALUE;
-			default-> Integer.MAX_VALUE;
+			case Opv opv-> opv.pt == null ? 0 : opv.pt instanceof Cons c && c.cdr == null && (c.car == ignore || c.car instanceof Symbol) ? 1 : more;
+			case JFun jFun-> jFun.jfun instanceof Supplier ? 0 : jFun.jfun instanceof Function ? 1 : more;
+			default-> more;
 		};
 	}
 	Object checkN(Object op, List o, int expt, Object ... cls) {
 		return checkR(op, o, expt, expt, cls);
 	}
 	Object checkM(Object op, List o, int min, Object ... cls) {
-		return checkR(op, o, min, Integer.MAX_VALUE, cls);
+		return checkR(op, o, min, more, cls);
 	}
 	Object checkR(Object op, List o, int min, int max, Object ... cls) {
 		var chk = cls.length == 0 ? len(o) : checkT(op, o, min, cls);
@@ -1524,6 +1525,7 @@ public class Vm {
 					$("%def", "prenv", wrap(new JFun("Prenv", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? prenv : inert(prenv=o.car()) ))),
 					$("%def", "elsex", wrap(new JFun("Elsex", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? elsex : inert(elsex=o.car()) ))),
 					$("%def", "ddft", wrap(new JFun("Ddeft", (n,o)-> checkR(n, o, 0, 1), (l,o)-> l == 0 ? ddft : inert(ddft=o.car()) ))),
+					$("%def", "aquote", wrap(new JFun("Aquote", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? aquote : inert(aquote=o.car()) ))),
 					$("%def", "prstk", wrap(new JFun("Prstk", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prstk : inert(prstk=o.car()) ))),
 					$("%def", "prwrn", wrap(new JFun("Prwrn", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prwrn : inert(prwrn=o.car()) )))
 				)

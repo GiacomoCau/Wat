@@ -8,11 +8,15 @@
 ; commentare stringhe in eccesso nelle (%def name expr "..."), troppi parametri per la %def!
 
 (%resetEnv)
+
+(%def milli (@currentTimeMillis &java.lang.System))
+
 (@clear (.methods vm))
 (ctapv #t)
 (prtrc 0)
 (bndres 1)
 (ddft #inert)
+(aquote #f)
 
 (%def Apv &Wat.Vm$Apv)
 (%def Box &Wat.Vm$Box)
@@ -165,7 +169,7 @@
 ;(load "lispx/test/test-util.lispx")
 
 (defMacro deftest (name expression . expected?)
-  (list %test name expression (opt expected? #t)))
+  (list %test name expression (opt? expected? #t)))
 
 (defMacro deftest* (name . forms)
   (list deftest name (list* prog1 #t forms)) )
@@ -234,4 +238,5 @@
 (repl:run)
 |#
 
-"vm started!"
+(%def milli (%- (@currentTimeMillis &java.lang.System) milli))
+(%$ "vm started in " (%$ milli "ms"))

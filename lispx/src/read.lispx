@@ -9,7 +9,7 @@
   |`*standard-input*').  If EOF is reached, and `eof-error-p' is true
   |(the default), `end-of-file' is signalled. If it is false, `eof-value'
   |is returned (it defaults to void).
-  |$(fn (&opt stream eof-error-p eof-value))"
+  |$(fn (&opt? stream eof-error-p eof-value))"
   (apply stream-read (opt* arguments (dget *standard-input*) #t #inert)))
 
 ;;; Unstable/Experimental API:
