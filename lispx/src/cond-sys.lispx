@@ -137,7 +137,7 @@
                                               (handlerSpecParser spec env))
                                             handlerSpecs)
                           :parentFrame? (dget handlerFrameDynamic))))
-      (progv (list handlerFrameDynamic) (list (some handlerFrame))
+      (progv (handlerFrameDynamic) ((some handlerFrame))
         (eval (list* begin forms) env)))))
 
 (def handlerBind

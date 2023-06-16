@@ -39,10 +39,9 @@
 (def array->list %array->list)
 (def assert %assert)
 (def begin %begin)
+(def bind? %bind?)
 (def cons %cons)
 (def cons? %cons?)
-;(def ddef %dDef)
-;(def ddef* %dDef*)
 (def dval %dVal)
 (def dvar %dVar)
 (def eq? %eq?)
@@ -71,6 +70,7 @@
 (def test %test)
 (def type? %type?)
 (def unwrap %unwrap)
+(def vau %vau)
 (def wrap %wrap)
 
 
@@ -97,9 +97,8 @@
 (def System &java.lang.System)
 
 
-;;;; Important utilities
+;;;; Derivable utilities
 
-(def vau %vau)
 (def quote (vau (x) #ignore x))
 (def quote %quote)
 (def list (wrap (vau elts #ignore elts)))
@@ -108,18 +107,18 @@
 (def lambda %\)
 (def theEnv (vau () e e))
 (def theEnv %theEnv)
-
-(def car (\ ((x . #ignore)) x))
+(def car (\ ((x . #_)) x))
 (def car %car)
-(def cdr (\ ((#ignore . x)) x))
+(def cdr (\ ((#_ . x)) x))
 (def cdr %cdr)
 
-(def compose (\ (f g) (\ (arg) (f (g arg)))))
+(def caar (\ (arg) (car (car arg))))
+(def cadr (\ (arg) (car (cdr arg))))
+(def cdar (\ (arg) (cdr (car arg))))
+(def cddr (\ (arg) (cdr (cdr arg))))
 
-(def caar (compose car car))
-(def cadr (compose car cdr))
-(def cdar (compose cdr car))
-(def cddr (compose cdr cdr))
+(def identity (\ (i) i))
+(def compose (\ (f g) (\ (arg) (f (g arg)))))  
 
 
 ;;;; Macro
@@ -140,9 +139,9 @@
     (vau (params . body) #ignore
       (list 'makeMacro (list* 'vau params #ignore body)) )))
 
-; defMacro defVau def\ def*\ rec\ e letrec\ permettono le definizioni con le seguenti due sintassi
-;    (... name parameters . body)
-;    (... (name . parameters) . body)
+; defMacro defVau def\ def*\ rec\ e letrec\ permettono la definizione delle funzioni con le seguenti due sintassi
+;    (_ name parameters . body)
+;    (_ (name . parameters) . body)
 ; rec rec\ letrec e letrec\ inizializzano a #inert le definizioni prima della valutazione
 
 (def defMacro
@@ -165,6 +164,11 @@
 (assert (expand (defVau (succ n) env (eval (list '+ n 1) env))) '(def succ (vau (n) env (eval (list (%quote +) n 1) env))))
 (assert (expand (defVau succ (n) env (eval (list '+ n 1) env))) '(def succ (vau (n) env (eval (list (%quote +) n 1) env))))
 
+(defMacro (wrau pt env . body)
+  (list 'wrap (list* 'vau pt env body)))
+
+(assert (expand (wrau pt env a b c)) '(wrap (vau pt env a b c)))    
+
 (defMacro (def* lhs . rhs)
   (list 'def lhs (list* 'list rhs)) )
 
@@ -175,11 +179,6 @@
 
 (assert (expand (def\ succ (n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
 (assert (expand (def\ (succ n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
-
-(defMacro (wrau pt env . body)
-  (list 'wrap (list* 'vau pt env body)))
-
-(assert (expand (wrau pt env a b c)) '(wrap (vau pt env a b c)))    
 
 
 ;;;; Basic value test
@@ -381,12 +380,10 @@
   (list 'if test (list* 'begin body)))
 
 (defMacro (unless test . body)
-  (list* 'when (list 'not test) body))
+  (list* 'if test #inert body))
 
 
-;;;; Bind CaseVau Case\ Match
-
-(def bind? %bind?)
+;;;; Ifbind? CaseVau Case\ Match
 
 (defVau (ifbind? (pt exp) then . else) env
   (let1 (env+ (makeEnv env))
@@ -527,6 +524,7 @@
               (if ((eval guard env) test)
                 ((eval apd1 env) test)
                 (apply (wrap cond) clauses env) )) ))))))
+
 (defVau (cond . clauses) env
   (if (null? clauses) #inert
     (let1 (((test . body) . clauses) clauses)
@@ -564,26 +562,26 @@
                    (apply (wrap cond) clauses env) ))
               (else (apply (wrap cond) clauses env)) )))))))
 
-(assert (begin (def a 1) (cond (a (\(a) (== a 1)) => (\(a) (+ a 1))))) 2) 
+(assert (begin (def a 1) (cond (a (\ (a) (== a 1)) => (\ (a) (+ a 1))))) 2) 
 
 (defVau (and . x) e
-  (cond ((null? x)         #t)
-        ((null? (cdr x))   (eval (car x) e))
+  (cond ((null? x)        #t)
+        ((null? (cdr x))  (eval (car x) e))
         ((eval (car x) e) (apply (wrap and) (cdr x) e))
         (else             #f)))
 
 (def && and)
 
 (defVau (or . x) e
-  (cond ((null? x)         #f)
-        ((null? (cdr x))   (eval (car x) e))
+  (cond ((null? x)        #f)
+        ((null? (cdr x))  (eval (car x) e))
         ((eval (car x) e) #t)
         (else             (apply (wrap or) (cdr x) e))))
 
 (def || or)
 
 
-;;;; Finding
+;;;; Member Assoc Get
 
 (def\ (member item lst)
   (let\ (loop (lst lst))
@@ -602,14 +600,14 @@
 
 (assert (assoc 'b '((a 1) (b 2) (c 3) (d 4))) '(b 2))
 
-(def\ (get? key lst)
+(def\ (get key lst)
   (let\ (loop (lst lst)) 
      (if (null? lst) #null
        (let1 ((k v . lst) lst)
          (if (== k key) (list v) (loop lst)) ))))
 
-(assert (get? :b '(:a 1 :b 2 :c 3)) '(2)) 
-(assert (get? 'b '(a 1 b 2 c 3)) '(2)) 
+(assert (get :b '(:a 1 :b 2 :c 3)) '(2)) 
+(assert (get 'b '(a 1 b 2 c 3)) '(2)) 
 
 
 ;;; Case CaseType
@@ -668,7 +666,7 @@
 (assert (caseType (obj Obj :a 1) (Double "double") ((Obj :a 1) "Obj :a 1")) "Obj :a 1")
 
 
-;;;; Options
+;;;; Options ~= if!#null or ifList or ifCons
 
 (defVau (opt? exp dft) env
   (let1 (exp (eval exp env))
@@ -682,7 +680,7 @@
 (defVau (ifOpt? (pt exp) then . else) env
   (let1 (exp (eval exp env))
     (if (cons? exp)
-      (eval (list* (list 'vau (if (symbol? pt) (list pt) pt) #ignore then) exp) env)
+      (eval (list* (list 'vau (if (symbol? pt) (list pt) pt) #_ then) exp) env)
       (if (null? else) #null
         (eval (let1 ((exp) else) exp) env) ))))
 
@@ -929,7 +927,7 @@
 |#
 
 (defMacro (ddef var . val)
-  (list (list '%d\ (list (the Symbol var))) (opt? val #null) ))
+  (list* (list '%d\ (list var)) val) )
 
 (defMacro (ddef* var* . val*)
   (list* (list '%d\ var*) val*) )

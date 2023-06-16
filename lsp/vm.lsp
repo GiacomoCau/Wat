@@ -8,6 +8,7 @@
 (ctapv #f)
 (prtrc 0)
 (bndres 0)
+(ddft #null)
 
 (load "testVm.lsp");
 (load "lsp/boot.lsp");

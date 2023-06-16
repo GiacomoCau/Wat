@@ -12,18 +12,19 @@
   ;|$(fn (arguments))
   ;|$(type function)"
 )
+;(%def list %list) 
 
 (%def vau
   (%vau (parameterTree environmentParameter . forms) env
-    (%eval (list %vau parameterTree environmentParameter
-                 (%list* %begin forms))
+    (%eval (list '%vau parameterTree environmentParameter
+                 (%list* '%begin forms))
            env))
   ;"Construct a fexpr with the given PARAMETER-TREE,
   ;|ENVIRONMENT-PARAMETER, and FORMS.
   ;|$(fn (parameterTree environmentParameter . forms))
   ;|$(type fexpr)"
 )
-(%def vau %vau)
+;(%def vau %vau)
 
 (%def lispx::makeMacro
   (%wrap
@@ -40,11 +41,21 @@
   ;|$(type function)"
 )
 
+(%def evalMacro (%dVar #t))
+(%def lispx::makeMacro
+  (%wrap
+    (%vau (expander) #ignore
+      (%vau operands env
+        (%def !evalMacro (%! (evalMacro)))
+        (%if !evalMacro (evalMacro #t))
+        (%def exp (%eval (%cons expander operands) (%makeEnv)))
+        (%if !evalMacro exp (%eval exp env)) ))))
+
 (%def macro
   (lispx::makeMacro
    (%vau (parameterTree . forms) #ignore
-     (list lispx::makeMacro
-           (%list* vau parameterTree #ignore forms))))
+     (list 'lispx::makeMacro
+           (%list* 'vau parameterTree #ignore forms))))
   ;"Create an anonymous macro with the given PARAMETER-TREE and FORMS.
   ;|$(fn (parameterTree . forms))
   ;|$(type macro)"
@@ -52,39 +63,42 @@
 
 (%def defMacro
   (macro (name parameterTree . forms)
-    (list %def name
-          (%list* macro parameterTree forms)))
+    (list '%def name
+          (%list* 'macro parameterTree forms)))
   ;"Define a macro with the given NAME, PARAMETER-TREE, and FORMS.
   ;|$(fn (name parameterTree . forms))
   ;|$(type macro)"
 )
 
+(defMacro expand (macro)
+  (list 'begin (list 'evalMacro #f) macro))
+
 (defMacro defVau (name parameterTree environmentParameter . forms)
   "Define a fexpr with the given NAME, PARAMETER-TREE,
   |ENVIRONMENT-PARAMETER, and FORMS."
-  (list %def name
-        (%list* vau parameterTree environmentParameter forms)))
+  (list '%def name
+        (%list* 'vau parameterTree environmentParameter forms)))
 
 (defMacro def (definiendTree value . docstring?)
   "Match the DEFINIEND-TREE against the VALUE and place resulting
   |bindings into the current environment.  The optional DOCSTRING? is
   |currently ignored."
-  (list %def definiendTree value))
+  (list '%def definiendTree value))
 
 (defMacro defConstant (name value . docstring?)
   "Define a constant with the given NAME and VALUE.  This is mostly
   |for documentation purposes, as constants are still mutable.  The
   |optional DOCSTRING? is currently ignored."
-  (list def name value))
+  (list 'def name value))
 
 (defMacro \ (parameterTree . forms)
   "Create an anonymous function with the given PARAMETER-TREE and FORMS."
-  (list %wrap (%list* vau parameterTree #ignore forms)))
+  (list '%wrap (%list* 'vau parameterTree #ignore forms)))
 
 (defMacro def\ (name parameterTree . forms)
   "Define a function with the given NAME, PARAMETER-TREE, and FORMS."
-  (list def name
-        (%list* \ parameterTree forms)))
+  (list 'def name
+        (%list* '\ parameterTree forms)))
 
 ;;; Built-Ins
 
@@ -859,6 +873,22 @@
       (dset (eval name env) value)
       (eval (list def name (makeInstance Dynamic value)) env)))
 
+(defMacro ddef (var . val)
+  (list* (list '%d\ (list var)) val) )
+
+(defMacro ddef (var . val+doc)
+  (list (list '%d\ (list var)) (if (null? val+doc) (ddft) (list* (\ (val .  #_) val) val+doc) ) ))
+
+;(defMacro ddef (var . val+doc)
+;  (list (list '%d\ (list var)) (ifOpt ((val . #_) val+doc) val #inert)) )
+
+;(defMacro ddef (var . val+doc)
+;  (list* (list '%d\ (list var)) (ifOpt ((val . #_) (list val+doc)) (list val) #null)) )
+
+
+(defMacro ddef* (var* . val*)
+  (list* (list '%d\ var*) val*) )
+
 (def\ dget (dynamicVariable)
   "Return the current value of the DYNAMIC-VARIABLE."
   (dynamicVariable))
@@ -877,6 +907,9 @@
         (thunk (eval (list* \ () forms) env)))
     (%progv dynamics values thunk)))
 
+(defMacro dlet (bindings exp . exps)
+  (list* (list* '%d\ (map car bindings) exp exps) (map cadr bindings)) )  
+
 (defMacro dlet* (bindings . forms)
   "Evaluate the FORMS with the dynamic variables specified by BINDINGS
   |temporarily bound to new values.  Bindings are established serially as
@@ -891,6 +924,9 @@
   |bound to new VALUES.  The DYNAMIC-VARIABLES and VALUES lists must have
   |the same length."
   (list %progv dynamicVariables values (list* \ () forms)))
+
+(defMacro progv (var* val* exp . exps)
+  (list* (list* '%d\ var* exp exps) val*) )
 
 ;;; Delimited Control Operators
 

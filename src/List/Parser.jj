@@ -175,9 +175,9 @@ TOKEN:	// identifiers
 |	< # jvf: "$" | <letter> >
 |   < # jvn: "_" | <jvf> | <digit> >
 |   < Kwd: ":" (<Sym>)+ >
-|	< Sym: <first> ( <first> | "." | <digit> )* >
+|	< Sym: <first> ( <first> | "#" | <digit> )* >
 |	< # first: <letter> | <special> > 
-|	< # special: [ "-", "&", "!", "=", ">", "<", "%", "+", "?", "/", "*", "$", "_", "@", "|", "~", "^", ":", "\\"] >  // why not also "\\" or "#"  
+|	< # special: [ ".", "@", "-", "&", "!", "=", ">", "<", "%", "+", "?", "/", "*", "$", "_", "|", "~", "^", ":", "\\"] >
 |	< # letter: [ "A"-"Z", "a"-"z" ] >
 |	< # digit: [ "0"-"9" ] >
 }

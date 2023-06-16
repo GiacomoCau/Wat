@@ -35,6 +35,7 @@ import static Wat.Utility.Binop.Xor;
 import static java.lang.Runtime.version;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.System.out;
+import static java.util.Arrays.fill;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Stream.of;
@@ -130,6 +131,9 @@ public class Vm {
 	boolean prstk = false; // print stack
 	boolean prwrn = false; // print warning
 	boolean aquote = false; // auto quote list
+	boolean elsex = false; // else multiple expressions
+	
+	Object ddft = null; // dinamic default: null, inert, ...
 	
 	int prtrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
 	int ttrue = 0; // type true: 0:true, 1:!false, 2:!(or false null), 3:!(or false null inert), 4:!(or false null inert zero)
@@ -711,7 +715,7 @@ public class Vm {
 	Begin begin = new Begin();
 	class If implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkR(this, o, 2, 3); // o = (test then) | (test then else) 
+			var chk = checkR(this, o, 2, elsex ? 3 : Integer.MAX_VALUE); // o = (test then) | (test then else) 
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 			var test = o.car();
@@ -720,8 +724,7 @@ public class Vm {
 					case Suspension s-> s;
 					case Boolean b-> b
 						? evaluate(e, o.car(1))
-						: o.cdr(1) == null ? inert : evaluate(e, o.car(2));
-						//: o.cdr(1) == null ? inert : ()-> begin.combine(e, o.cdr(1))
+						: o.cdr(1) == null ? inert : elsex ? evaluate(e, o.car(2)) : begin.combine(e, o.cdr(1));
 					case Object obj-> typeError("not a boolean: {datum}", obj, symbol("Boolean"));
 				}
 			));
@@ -877,6 +880,7 @@ public class Vm {
 	
 	// Dynamic Variables
 	class DVar extends Box { DVar(Object val) { super(val); }}
+	/* TODO non più necessario, eliminare
 	class DDef implements Combinable {
 		public Object combine(Env e, List o) {
 			var chk = checkN(this, o, 2, Symbol.class); // o = (var val)
@@ -946,6 +950,7 @@ public class Vm {
 		}
 		public String toString() { return "%DLet"; }
 	}
+	*/
 	class DLambda implements Combinable {
 		public Object combine(Env e, List o) { return combine(null, e, o); }
 		public Object combine(Resumption r, Env e, List o) {
@@ -958,7 +963,7 @@ public class Vm {
 			return new Apv( new Combinable() {
 				public Object combine(Env de, List o) { return combine(null, de, o); }
 				public Object combine(Resumption r, Env de, List o) {
-					var vals = o == null ? new Object[len] : array(o);
+					var vals = o == null ? apply(a-> { if (ddft != null) fill(a, ddft); return a; }, new Object[len]) : array(o);
 					if (vals.length != len) return error("not same length: " + list(vars) + " and " + o);
 					var olds = new Object[len];
 					var ndvs = new Object[len];
@@ -1433,9 +1438,11 @@ public class Vm {
 					$("%def", "%box", wrap(new JFun("%Box", (Function<Object,Box>) Box::new))),
 					$("%def", "%dVar", wrap(new JFun("%DVar", (Function<Object,DVar>) DVar::new))),
 					$("%def", "%dVal", wrap(new JFun("%DVal", (n,o)-> checkR(n, o, 1, 2, DVar.class), (l,o)-> apply(dv-> l == 1 ? dv.value : (dv.value=o.car(1)), o.<DVar>car()) ))),
+					/* TODO non più necessario, eliminare
 					$("%def", "%dDef", new DDef()),
 					$("%def", "%dDef*", new DDefStar()),
 					$("%def", "%dLet", new DLet()),
+					*/
 					$("%def", "%d\\", new DLambda()),
 					// Errors
 					$("%def", "%rootPrompt", rootPrompt),
@@ -1515,6 +1522,8 @@ public class Vm {
 					$("%def", "ttrue", wrap(new JFun("Ttrue", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4)), (l,o)-> l == 0 ? ttrue : inert(ttrue=o.car()) ))),
 					$("%def", "bndres", wrap(new JFun("Bndres", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2)), (l,o)-> l == 0 ? bndres : inert(bndres=o.car()) ))),
 					$("%def", "prenv", wrap(new JFun("Prenv", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? prenv : inert(prenv=o.car()) ))),
+					$("%def", "elsex", wrap(new JFun("Elsex", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? elsex : inert(elsex=o.car()) ))),
+					$("%def", "ddft", wrap(new JFun("Ddeft", (n,o)-> checkR(n, o, 0, 1), (l,o)-> l == 0 ? ddft : inert(ddft=o.car()) ))),
 					$("%def", "prstk", wrap(new JFun("Prstk", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prstk : inert(prstk=o.car()) ))),
 					$("%def", "prwrn", wrap(new JFun("Prwrn", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prwrn : inert(prwrn=o.car()) )))
 				)

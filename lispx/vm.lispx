@@ -10,8 +10,9 @@
 (%resetEnv)
 (@clear (.methods vm))
 (ctapv #t)
-(prtrc 1)
+(prtrc 0)
 (bndres 1)
+(ddft #inert)
 
 (%def Apv &Wat.Vm$Apv)
 (%def Box &Wat.Vm$Box)
