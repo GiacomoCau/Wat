@@ -198,7 +198,7 @@
     (runFiber
      (\ ()
        (def ct 1)
-       (def env (theEnvironment))
+       (def env (theEnv))
        (block exit
          (loop
           (if (eq? ct 5)
@@ -605,10 +605,10 @@
 (defsuite built-in-prompts
 
   (deftest |Default prompt exists|
-    (bound? '+defaultPrompt+ (theEnvironment)))
+    (bound? '+defaultPrompt+ (theEnv)))
 
   (deftest |Root prompt exists|
-    (bound? '+rootPrompt+ (theEnvironment)))
+    (bound? '+rootPrompt+ (theEnv)))
 
   (deftest |Root prompt is set|
     ;; I have no idea why this works.  I mean it's the right thing,
@@ -623,7 +623,7 @@
 
   (deftest loop.1
     (let ((ct 0))
-      (def env (theEnvironment))
+      (def env (theEnv))
       (block exit
         (loop 'just-a-symbol-to-test-implicit-begin
               (if (eq? ct 10)
@@ -722,14 +722,14 @@
 
   (deftest finally.3
     (begin
-      (def env (theEnvironment))
+      (def env (theEnv))
       (+ (finally 1 2 3 (set env x 10))
          x))
     11)
 
   (deftest finally.4
     (begin
-      (def env (theEnvironment))
+      (def env (theEnv))
       (+ (block exit
            (finally (returnFrom exit 1) 2 3 (set env x 10)))
          x))

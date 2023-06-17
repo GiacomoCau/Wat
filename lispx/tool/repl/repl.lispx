@@ -2,7 +2,7 @@
 ;;; LispX REPL
 ;;;
 
-(defConstant repl:+environment+ (theEnvironment)
+(defConstant repl:+environment+ (theEnv)
   "The environment in which REPL expressions are evaluated.")
 
 (ddef repl:*debugLevel* 0

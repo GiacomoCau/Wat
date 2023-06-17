@@ -165,7 +165,7 @@
 
   (deftest to-js-function.1
     (let ((x 0))
-      (def env (theEnvironment))
+      (def env (theEnv))
       (let\ ((fun (v1 v2) (set env x (+ v1 v2))))
         (call-js-function (to-js-function fun) 1 2))
       (eq? x 3)))
@@ -216,7 +216,7 @@
 
   (deftest js-\.1
     (let ((x 0))
-      (def env (theEnvironment))
+      (def env (theEnv))
       (let ((fun (js-\ (v1 v2) (set env x (+ v1 v2)))))
         (call-js-function fun 1 2))
       (eq? x 3)))

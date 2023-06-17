@@ -74,28 +74,26 @@
       (%error (%$ "" "not a {:expectedType}: {:datum}") :type 'type :datum value :expectedType (%intern (@getSimpleName class))) )
     (%error (%$ "" "not a {:expectedType}: {:datum}") :type 'type :datum class :expectedType (%intern (@getSimpleName Class))) )))
 
-(%def %className (\ (class) (@getCanonicalName (%the Class class))))
-(%def %className (\ (class) (@getSimpleName (%the Class class))))
 (%def %className (\ (class) (%intern (@getSimpleName (%the Class class)))))
+(%def %symbolName %internName)
 
-(%def %->symbol  (\ (i) (if (%symbol? i) i (%symbol (%internName i)))))
-(%def %->keyword (\ (i) (if (%keyword? i) i (%keyword (%internName i)))))
+(%def %intern->symbol  (\ (i) (if (%symbol? i) i (%symbol (%internName i)))))
+(%def %intern->keyword (\ (i) (if (%keyword? i) i (%keyword (%internName i)))))
 
-(%def eq? %eq?)
-(%def %classSymbol %->symbol)
-(%def %functionSymbol %->symbol)
-(%def %keywordSymbol %->keyword)
+(%def %classSymbol %intern->symbol)
+(%def %functionSymbol %intern->symbol)
+(%def %variableSymbol %intern->symbol)
+(%def %keywordSymbol %intern->keyword)
+
 (%def %nth (\ (i l) (%the Integer i) (@car (%the Cons l) i)))
 (%def %nthCdr (\ (i l) (%the Integer i) (%if (%zero? i) l (@cdr (%the Cons l) (%- i 1)))))
+
 (%def %makeInstance %obj)
 (%def %makeStandardClass (\ (name superclass) (%class name superclass)))
 ;(%def %makeStandardClass (\ (name superclass) (%class (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass)))
+
 (%def %pushDelimSubcont %pushPromptSubcont)
 (%def %pushPrompt ((\ (%pushPrompt) (%wrap %pushPrompt)) %pushPrompt))
-(%def %symbolName %internName)
-(%def %variableSymbol %->symbol)
-
-(%def list* %list*)
 
 (%def +rootPrompt+ %rootPrompt)
 (%def %printStacktrace
@@ -104,7 +102,6 @@
       (%printStacktrace (.nxt k)) )
     (%if (prstk) (log "--" k)) ))
 (%def %panic (\ (e)
-  ;(log "panic:" e)
   (%throw #ignore e) ))
 
 (%def %take (\ (i l) (%if (%zero? i) #null (%cons (%car l) (%take (%- i 1) (%cdr l))))))
@@ -116,9 +113,6 @@
 (def finally %finally)
 (def takeSubcont %takeSubcont)
 
-(def %progv (\ (var val body)
-  ((%wrap %dLet) (cons var val) body) ))
-
 (def %getSlot (\ (obj slot)
   ((%the StandardObject obj) (%the Intern slot)) ))
 
@@ -129,7 +123,7 @@
   (@isBound (%the StandardObject obj) (%the Intern slot)) ))
 
    
-; vedi signalsError piÃ¹ avanti o in test-util per codice simile
+; vedi signalsError più avanti o in test-util per codice simile
 (def checkSlot 
   (\ (c slotSpecs)
     (letloop next ((slotSpecs slotSpecs))
@@ -214,7 +208,7 @@
                 (-run- (fiberResume result (car values)) (cdr values)) ))
         (list result))))
 
-(runFiber (\() (fiberYield 1) (fiberYield 2) 3)) -> (1 2 3)
+(runFiber* (\() (fiberYield 1) (fiberYield 2) 3)) -> (1 2 3)
 
 (runFiberWithValues (\() (if (fiberYield 1) 2 3)) (#t)) -> (1 2)
 (runFiberWithValues (\() (if (fiberYield 1) 2 3)) (#f)) -> (1 3)

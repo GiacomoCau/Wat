@@ -3,7 +3,7 @@
 (defsuite class-hierarchy
 
   (def\ test-hierarchy (classes)
-    (let ((env (theEnvironment)))
+    (let ((env (theEnv)))
       (letloop -test-classes- ((classes classes) (superclass Object))
         (dolist (c classes #t)
           (etypecase c

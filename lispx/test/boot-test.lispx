@@ -221,7 +221,7 @@
 
   (deftest |A fexpr can have multiple body expressions.|
     (begin
-      (def env (theEnvironment))
+      (def env (theEnv))
       (assert (eq? ((vau ops #ignore (set env var 1) ops) x y z)
                  '(x y z)))
       (assert (eq? (eval 'var env) 1)))
@@ -229,7 +229,7 @@
 
   (deftest |The environment parameter receives the current environment.|
     (begin
-      (def env (theEnvironment))
+      (def env (theEnv))
       (== ((vau #ignore e e)) env)))
 
   (deftest |Fexprs are instances of FEXPR, OPERATOR, OBJECT.|
@@ -321,41 +321,41 @@
     (list* 2)
     '2))
 
-(defsuite theEnvironment
+(defsuite theEnv
 
-  (deftest theEnvironment.1
+  (deftest theEnv.1
     (let ((x 1))
-      (eval 'x (theEnvironment)))
+      (eval 'x (theEnv)))
     1)
 
-  (deftest theEnvironment.2
+  (deftest theEnv.2
     (let ((x 1)
-          (env (theEnvironment)))
+          (env (theEnv)))
       (bound? 'x env))
     #f)
 
-  (deftest theEnvironment.3
+  (deftest theEnv.3
     (let* ((x 1)
-           (env (theEnvironment)))
+           (env (theEnv)))
       (bound? 'x env))
     #t)
 
-  (deftest theEnvironment.4
+  (deftest theEnv.4
     (signalsError
-     (theEnvironment #t)
+     (theEnv #t)
      MatchError)))
 
 (defsuite bound?
 
   (deftest bound?.1
-    (bound? 'nope (theEnvironment))
+    (bound? 'nope (theEnv))
     #f)
 
   (deftest bound?.2
-    (bound? 'def\ (theEnvironment)))
+    (bound? 'def\ (theEnv)))
 
   (deftest bound?.3
-    (bound? 'StandardObject (theEnvironment)))
+    (bound? 'StandardObject (theEnv)))
 
   (deftest bound?.4
     (signalsError
@@ -369,7 +369,7 @@
 
   (deftest bound?.6
     (signalsError
-     (bound? 12 (theEnvironment))
+     (bound? 12 (theEnv))
      TypeError :datum 12 :expectedType 'Symbol))
 
   (deftest bound?.7
@@ -379,7 +379,7 @@
 
   (deftest bound?.8
     (signalsError
-     (bound? 12 (theEnvironment) #t)
+     (bound? 12 (theEnv) #t)
      MatchError)))
 
 (defsuite macro
@@ -604,7 +604,7 @@
 
   (deftest begin.3
     (begin
-      (def env (theEnvironment))
+      (def env (theEnv))
       (begin (set env x 1) (set env x 2) x))
     2))
 
@@ -625,7 +625,7 @@
 
   (deftest prog1.4
     (begin
-      (def env (theEnvironment))
+      (def env (theEnv))
       (assert (eq? 4 (prog1 4 (set env x 2))))
       x)
     2))
@@ -633,11 +633,11 @@
 (defsuite eval
 
   (deftest eval.1
-    (eval #null (theEnvironment))
+    (eval #null (theEnv))
     #null)
 
   (deftest eval.2
-    (eval '(eq? 1 2) (theEnvironment))
+    (eval '(eq? 1 2) (theEnv))
     #f)
 
   (deftest eval.3
@@ -652,13 +652,13 @@
 
   (deftest eval.5
     (signalsError
-     (eval 'x (theEnvironment))
+     (eval 'x (theEnv))
      UnboundSymbolError
      :symbol 'x))
 
   (deftest eval.6
     (signalsError
-     (eval '1 (theEnvironment) #t)
+     (eval '1 (theEnv) #t)
      MatchError)))
 
 (defsuite cons
@@ -1491,7 +1491,7 @@
 (defsuite findClass
 
   (deftest findClass.1
-    (== (findClass 'String (theEnvironment))
+    (== (findClass 'String (theEnv))
         (classOf "foo")))
 
   (deftest findClass.2a
@@ -1506,12 +1506,12 @@
 
   (deftest findClass.3
     (signalsError
-     (findClass "string" (theEnvironment))
+     (findClass "string" (theEnv))
      TypeError :datum "string" :expectedType 'Intern))
 
   (deftest findClass.4
     (signalsError
-     (findClass 'does-not-exist (theEnvironment))
+     (findClass 'does-not-exist (theEnv))
      UnboundSymbolError :symbol (classSymbol 'does-not-exist))))
 
 (defsuite makeEnv
@@ -1522,7 +1522,7 @@
     #f)
 
   (deftest makeEnv.2
-    (let* ((env (makeEnv (theEnvironment)))
+    (let* ((env (makeEnv (theEnv)))
            (child (makeEnv env)))
       (assert (not (bound? 'x env)))
       (assert (not (bound? 'x child)))
@@ -1823,7 +1823,7 @@
 
   (deftest mapc.5
     (let ((ct 0))
-      (def env (theEnvironment))
+      (def env (theEnv))
       (mapc (\ (x) (set env ct (+ ct x)))
             '(1 2 3 4))
       ct)
@@ -1906,7 +1906,7 @@
 
   (deftest dolist.7
     (let ((ct 0))
-      (def env (theEnvironment))
+      (def env (theEnv))
       (assert (eq? #inert (dolist (x '(1 2 3 4))
                          'bla
                          (set env ct (+ ct x)))))
@@ -1915,7 +1915,7 @@
 
   (deftest dolist.8
     (let ((ct 0))
-      (def env (theEnvironment))
+      (def env (theEnv))
       (dolist (x '(1 2 3 4) (+ ct 100))
         'bla
         (set env ct (+ ct x))))
@@ -2467,7 +2467,7 @@
   (deftest and.5
     (begin
       (def x 1)
-      (def env (theEnvironment))
+      (def env (theEnv))
       (and #f (set env x 2))
       x)
     1))
@@ -2498,7 +2498,7 @@
   (deftest or.6
     (begin
       (def x 1)
-      (def env (theEnvironment))
+      (def env (theEnv))
       (or #t (set env x 2))
       x)
     1))
@@ -2799,7 +2799,7 @@
     (begin
       (def x 0)
       (def y 0)
-      (def env (theEnvironment))
+      (def env (theEnv))
       (while (< x 5)
         (set env x (+ x 1))
         (set env y (+ y 1)))
@@ -2826,7 +2826,7 @@
     (begin
       (def x 0)
       (def y 0)
-      (def env (theEnvironment))
+      (def env (theEnv))
       (until (> x 4)
         (set env x (+ x 1))
         (set env y (+ y 1)))
@@ -2842,7 +2842,7 @@
   (deftest dotimes.2
     (begin
       (def temp-two 0)
-      (def env (theEnvironment))
+      (def env (theEnv))
       (dotimes (temp-one 10 #t) (set env temp-two (+ temp-two 1)))
       temp-two)
     10)
@@ -2878,7 +2878,7 @@
     (begin
       (def x 0)
       (def y 0)
-      (def env (theEnvironment))
+      (def env (theEnv))
       (dotimes (i 5 (list x y))
         (set env x (+ x 1))
         (set env y (+ y 1))))
@@ -3085,20 +3085,20 @@
 
   (deftest set.1
     (begin
-      (set (theEnvironment) x 1)
+      (set (theEnv) x 1)
       x)
     1)
 
   (deftest set.2
     (begin
       (def x 0)
-      (set (theEnvironment) x 1)
+      (set (theEnv) x 1)
       x)
     1)
 
   (deftest set.3
     (begin
-      (set (theEnvironment) (x y) (list 1 2))
+      (set (theEnv) (x y) (list 1 2))
       (list x y))
     '(1 2))
 
@@ -3109,12 +3109,12 @@
 
   (deftest set.5
     (signalsError
-     (set (theEnvironment))
+     (set (theEnv))
      MatchError))
 
   (deftest set.6
     (signalsError
-     (set (theEnvironment) x)
+     (set (theEnv) x)
      MatchError))
 
   (deftest set.7
