@@ -1196,27 +1196,24 @@ public class Vm {
 			if (len == 0) continue;
 			var chk = checkT2(op, o, oo.car, i-min, i < len && i < min ? chks[i] : len <= min ?  null : chks[len-1]);
 			if (chk instanceof Suspension s) return s;
-			if (chk != null) return typeError("not an null: {datum}", chk, symbol("Null"));
+			if (!(chk instanceof Integer)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 		}
 		return i;
 	}
 	Object checkT2(Object op, Object o, Object on, int i, Object chk) {
 		switch (chk) {
-			case null: return null;
-			case Class cl when on instanceof Class cl2 && cl.isAssignableFrom(cl2) || cl.isInstance(on): return null;
-			case List l:
+			case null: return 0;
+			case Class cl when on instanceof Class cl2 && cl.isAssignableFrom(cl2) || cl.isInstance(on): return 1;
+			case List l: {
 				if (!(on instanceof List onl)) break;
-				for (; onl != null; onl = onl.cdr()) {
-					var chkl = checkT2(op, o, onl.car, i, l.car);
-					if (chkl instanceof Suspension s) return s;
-					if (chkl != null) return typeError("not an null: {datum}", chkl, symbol("Null"));
-				}
-				return null;
-			case Object[] chks:
+				return check(op, onl, l);
+			}
+			case Object[] chks: {
 				if (i > 0) return checkT2(op, o, on, i, chks[i % chks.length]);
-				for (Object chk2: chks) {
-					if (Utility.equals(on, chk2) || chk2 instanceof Class cl && (cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2))) return null;
+				int i2=0; for (Object chk2: chks) {
+					if (Utility.equals(on, chk2) || chk2 instanceof Class cl && (cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2))) return i2+=1;
 				}
+			}
 			default: break;
 		}
 		return typeError(
@@ -1225,6 +1222,15 @@ public class Vm {
 			: chk instanceof Class cl ? symbol(cl.getSimpleName())
 			: cons(symbol("or"), list(stream((Object[]) chk).map(obj-> symbol(obj == null ? "Null" : obj instanceof Class cl ? cl.getSimpleName() : Vm.this.toString(obj))).toArray() ))
 		);
+	}
+	public Object check(Object op, List o, List chk) {
+		int min=0, max=more;
+		if (chk.car instanceof Integer mn) { min = max = mn; chk = chk.cdr(); }
+		if (chk.car instanceof Integer mx) { max = mx; chk = chk.cdr(); }
+		var chk2 = checkR(op, o, min, max, array(chk));
+		if (chk2 instanceof Suspension s) return s;
+		if (chk2 instanceof Integer len) return len;
+		return typeError("not an integer: {datum}", chk2, symbol("Integer"));
 	}
 	
 	
@@ -1265,9 +1271,9 @@ public class Vm {
 		return cons(h.car(), append(h.cdr(), o));
 	}
 	Object listStar(List h) {
-		return h == null ? null : listStar1(h);
+		return h == null ? null : listStarN(h);
 	}
-	Object listStar1(List h) {
+	Object listStarN(List h) {
 		var car = h.car;
 		var cdr = h.cdr();
 		return cdr == null ? car : cons(car, listStar(cdr));
@@ -1496,8 +1502,8 @@ public class Vm {
 					$("%def", "%!=", wrap(new JFun("%!=", (BiFunction<Object,Object,Boolean>) (a,b)-> a instanceof Number ? !a.equals(b) : a != b ))),
 					$("%def", "%eq?", wrap(new JFun("%Eq?", (BiFunction<Object,Object,Boolean>) (a,b)-> Vm.this.equals(a, b) ))),
 					//
-					$("%def", "%quote", $("%vau", $("arg"), ignore, "arg")),
 					$("%def", "%theEnv", $("%vau", null, "env", "env")),
+					$("%def", "%quote", $("%vau", $("arg"), ignore, "arg")),
 					$("%def", "%\\", $("%vau", $("formals", ".", "body"), "env", $("%wrap", $("%eval", $("%list*", "%vau", "formals", ignore, "body"), "env")) )),
 					//
 					$("%def", "vm", this),
@@ -1575,14 +1581,17 @@ public class Vm {
 	public void repl() throws Exception {
 		loop: for (;;) {
 			switch (read()) {
-				case "" : break loop;
 				case "\n": break;
+				case "exit\n" : break loop;
 				case String exp: try {
 					print(exec(parse(exp)));
 				}
 				catch (Throwable thw) {
-					if (prstk) thw.printStackTrace(out);
-					else out.println(/*thw instanceof Obj ? thw : */ "{" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
+					if (prstk)
+						thw.printStackTrace(out);
+					else do 
+						out.println(/*thw instanceof Obj ? thw : */ "{" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
+					while ((thw = thw.getCause()) != null);
 				}
 			}
 		}
@@ -1597,7 +1606,8 @@ public class Vm {
 	public void main() throws Exception {
 		//*
 		var milli = currentTimeMillis();
-		loadText("lispx/vm.lispx");
+		loadText("lsp/vm.lsp");
+		//loadText("lispx/vm.lispx");
 		print("start time: " + (currentTimeMillis() - milli));
 		repl();
 		//*/
