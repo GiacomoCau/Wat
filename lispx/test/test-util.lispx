@@ -71,7 +71,7 @@
       (handlerCase ((StandardObject (\ (c)
                                (if (type? c class)
                                    (begin
-                                     (letloop -check-slots- ((slotSpecs slotSpecs))
+                                     (letLoop -check-slots- ((slotSpecs slotSpecs))
                                        (when (not (null? slotSpecs))
                                          (let (((name value . rest-slotSpecs) slotSpecs))
                                            (unless (eq? (getSlot c name) (eval value env))

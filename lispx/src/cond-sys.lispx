@@ -221,7 +221,7 @@
   #|Utility to signal the CONDITION.  If the signal is unhandled,
    |return void.  See `signal'.
    |#
-  (letloop -signal- ((handlerFrame? (dget *conditionHandlerFrame?*)))
+  (letLoop -signal- ((handlerFrame? (dget *conditionHandlerFrame?*)))
     ;; Payload to `lispx::findHandler?' is always nil for condition handlers.
     (ifOpt? ((handler frame) (lispx::findHandler? condition handlerFrame? #null))
       (begin
@@ -311,11 +311,12 @@
      (whenOpt? (i-f (getSlot restartHandler 'interactiveFunction?))
        (i-f)))))
 
+#| TODO sostituito dal seguente, eliminare
 (def\ lispx::invokeRestartWithArgumentsProducingFunction (restartDesignator function)
-  #|Utility to invoke the restart designated by RESTART-DESIGNATOR,
+  # |Utility to invoke the restart designated by RESTART-DESIGNATOR,
    |which can be a symbol or a `restartHandler', with an arguments list
    |produced by FUNCTION (which receives a `restartHandler' as argument).
-   |#
+   | #
   (etypecase restartDesignator
     (Symbol
      (ifOpt? (restartHandler (findRestart? restartDesignator))
@@ -323,6 +324,21 @@
        (error (makeRestartError restartDesignator))))
     (RestartHandler
      (lispx::applyHandlerFunction restartDesignator (function restartDesignator)))))
+|#
+(def\ lispx::invokeRestartWithArgumentsProducingFunction (restartDesignator function)
+  #|Utility to invoke the restart designated by RESTART-DESIGNATOR,
+   |which can be a symbol or a `RestartHandler', with an arguments list
+   |produced by FUNCTION (which receives a `restartHandler' as argument).
+   |#
+  (caseType restartDesignator
+    (Symbol
+      (ifOpt? (restartHandler (findRestart? restartDesignator))
+        (lispx::applyHandlerFunction restartHandler (function restartHandler))
+        (error (makeRestartError restartDesignator))))
+    (RestartHandler
+      (lispx::applyHandlerFunction restartDesignator (function restartDesignator)))
+    (else
+      (error (makeTypeError restartDesignator '(or Symbol RestartHandler) )) )))
 
 (def\ lispx::findHandler? (object handlerFrame? payload?)
   #|Utility to find both condition handlers and restart handlers.
@@ -401,7 +417,7 @@
    |explicitly associated with the supplied CONDITION? or not associated
    |with any condition.
    |#
-  (letloop -computeRestarts- ((restarts '())
+  (letLoop -computeRestarts- ((restarts '())
                                 (handlerFrame? (dget *restartHandlerFrame?*)))
     (ifOpt? (handlerFrame handlerFrame?)
       (-computeRestarts- (append restarts

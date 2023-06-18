@@ -25,6 +25,7 @@
 (%def Combinable &Wat.Vm$Combinable)
 (%def Condition &Wat.Vm$Condition)
 (%def Cons &Wat.Vm$Cons)
+(%def Double &java.lang.Double)
 (%def DVar &Wat.Vm$DVar)
 (%def Env &Wat.Vm$Env)
 (%def Error &Wat.Vm$Error)
@@ -62,6 +63,8 @@
 (%def UnboundSlotError Error)
 (%def TypeError Error)
 (%def UnboundMethodError Error)
+(%def SimpleError Error)
+(%def RestartError Error)
 
 (%def \ %\)
 
@@ -84,6 +87,8 @@
 (%def %functionSymbol %intern->symbol)
 (%def %variableSymbol %intern->symbol)
 (%def %keywordSymbol %intern->keyword)
+
+(%def %cddr (\ (cons) (%cdr (%cdr cons))))
 
 (%def %nth (\ (i l) (%the Integer i) (@car (%the Cons l) i)))
 (%def %nthCdr (\ (i l) (%the Integer i) (%if (%zero? i) l (@cdr (%the Cons l) (%- i 1)))))
@@ -122,37 +127,6 @@
 (def %slotBound? (\ (obj slot)
   (@isBound (%the StandardObject obj) (%the Intern slot)) ))
 
-   
-; vedi signalsError più avanti o in test-util per codice simile
-(def checkSlot 
-  (\ (c slotSpecs)
-    (letloop next ((slotSpecs slotSpecs))
-      (if (null? slotSpecs) #t
-        (let (((name value . rest-slotSpecs) slotSpecs))
-          (if (or (%! (%slotBound? c name)) (%! (eq? (getSlot c name) value))) #f
-            (next rest-slotSpecs) ))))))
-
-(def\ lispx::makeTypecaseWithDefaultFunction (default)
-  (vau (keyform . clauses) env
-    (let ((key (eval keyform env)))
-      (letloop -typecase- ((clauses clauses))
-        (if (null? clauses) (default key)
-          (let* ( (((test . forms) . restClauses) clauses)
-                  (symbol? (%symbol? test))
-                  (className (if symbol? test (car test)))
-                  (class (findClass className env)) )
-            (if (and (type? key class) (or symbol? (checkSlot key (map (\ (c) (eval c env)) (cdr test)))))
-              (eval (list* begin forms) env)
-              (-typecase- restClauses) )))))))
-
-(def typecase (lispx::makeTypecaseWithDefaultFunction (\ (#ignore) #inert)))
-(def etypecase (lispx::makeTypecaseWithDefaultFunction (\ (key) (error (makeTypeError key Object)))))
-
-;(typecase (%obj StandardObject :a 3) ((Error) #t)) ;-> #inert
-;(typecase (%obj StandardObject :a 3) (StandardObject #t)) ;-> #t
-;(typecase (%obj StandardObject :a 3) ((StandardObject) #t))  
-;(typecase (%obj UnboundSymbolError :type 'unbound) ((UnboundSymbolError :type 'unbound) "ok"))
-
 (load "lispx/src/cond-sys.lispx")
 ;(load "lispx/src/stream.lispx")
 ;(load "lispx/src/read.lispx")
@@ -181,7 +155,7 @@
           (\ (obj)
             (if (type? obj class)
               (begin
-                (letloop -check-slots- ((slotSpecs slotSpecs))
+                (letLoop -check-slots- ((slotSpecs slotSpecs))
                   (when (not (null? slotSpecs))
                     (let (((name value . rest-slotSpecs) slotSpecs))
                       (unless (eq? (getSlot obj name) (eval value env))
@@ -200,7 +174,7 @@
 
 #|
 (def\ runFiber* (thunk . values)
-  (letloop -run- ((result (fiber (thunk))) (values values))
+  (letLoop -run- ((result (fiber (thunk))) (values values))
     (if (type? result YieldRecord)
         (cons (getSlot result 'value)
               (if (null? values)
@@ -228,8 +202,9 @@
 #|
 (load "lispx/tool/repl/repl.lispx")
 (def uprint print)
-;(def repl:%displayPrompt (\ (level) (if (== level 0) "* " (%$ level "]"))) )
 (repl:run)
+x
+(invokeRestart 'abort)
 |#
 
 (%def milli (%- (@currentTimeMillis &java.lang.System) milli))

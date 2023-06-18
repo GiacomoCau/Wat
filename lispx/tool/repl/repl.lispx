@@ -3,10 +3,10 @@
 ;;;
 
 (defConstant repl:+environment+ (theEnv)
-  "The environment in which REPL expressions are evaluated.")
+  #|The environment in which REPL expressions are evaluated.|#)
 
 (ddef repl:*debugLevel* 0
-  "Current debug level.  0 if we are not in the debugger.")
+  #|Current debug level.  0 if we are not in the debugger.|#)
 
 (def\ repl:run ()
   "Run a REPL."
@@ -15,17 +15,14 @@
     ;; the start again.  The user actually uses ABORT, described
     ;; below.
     (restartCase ((replAbort (\ () #| nothing to do here, just unwind |#)))
-      ;(repl:%displayPrompt (dget repl:*debugLevel*))
-      ;(log 3 (dget repl:*debugLevel*))
-      
-      (print (eval (read (dget repl:*debugLevel*)) repl:+environment+)))))
+      (print (eval (read (dget repl:*debugLevel*)) repl:+environment+)) )))
 
 (def\ repl:runDebuggerLoop (condition k)
   "Run a debug REPL.  Prints a banner and then runs a normal REPL."
   (uprint "Debugger invoked on condition:")
   (print "    " condition)
   (uprint "\nAvailable restarts -- use (invokeRestart 'name ...) to invoke:")
-  (mapc (\ (restart)
+  (forEach (\ (restart)
           ;; Don't print our internal REPL-ABORT restart.
           (unless (== (getSlot restart 'restartName) 'replAbort)
             (print "    " (getSlot restart 'restartName))))
@@ -56,16 +53,14 @@
           ;; Add some extra restarts to `UnboundSymbolError' because
           ;; it demos well and makes designers of other languages
           ;; squirt blood from their eyes.
-          (typecase condition
+          (caseType condition
             ((Error :type 'unboundSymbol)
-             (let ((symbol (getSlot condition 'symbol))
-                   (env (getSlot condition 'environment)))
-               (restartCase ( (continue (\ () (eval symbol env))
-                                        :associatedConditions (list condition))
-                              (useValue (\ (value) value)
-                                         :associatedConditions (list condition))
-                              (storeValue (\ (value) (eval (list 'def symbol value) env))
-                                           :associatedConditions (list condition)))
-                 (repl:runDebuggerLoop condition k))))
-            (Object
-             (repl:runDebuggerLoop condition k))))))))
+               (let ( (symbol (getSlot condition 'symbol))
+                      (env (getSlot condition 'environment)) )
+                 (restartCase 
+                   ( (useValue (\ (value) value) :associatedConditions (list condition))
+                     (continue (\ () (eval symbol env)) :associatedConditions (list condition))
+                     (storeValue (\ (value) (eval (list 'def symbol value) env)) :associatedConditions (list condition)) )
+                   (repl:runDebuggerLoop condition k) )))
+            (else
+               (repl:runDebuggerLoop condition k) ) ))))))

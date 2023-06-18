@@ -930,59 +930,41 @@
      (cond (1 #t))
      TypeError :datum 1 :expectedType 'Boolean)))
 
-(defsuite typecase
+(defsuite caseType
 
-  (deftest typecase.1
+  (deftest caseType.1
     (signalsError
-     (typecase)
+     (caseType)
      MatchError))
 
-  (deftest typecase.2
-    (typecase (+ 2 2))
+  (deftest caseType.2
+    (caseType (+ 2 2))
     #inert)
 
-  (deftest typecase.3
-    (typecase (+ 2 2)
+  (deftest caseType.3
+    (caseType (+ 2 2)
       (Object 1)
       (Integer 2))
     1)
 
-  (deftest typecase.4
-    (typecase (+ 2 2)
-      (Integer 2)
-      (Object 1))
-    2))
-
-(defsuite etypecase
-
-  (deftest etypecase.1
-    (signalsError
-     (etypecase)
-     MatchError))
-
-  (deftest etypecase.2
-    (signalsError
-     (etypecase (+ 2 2))
-     TypeError :datum 4))
-
-  (deftest etypecase.3
-    (etypecase (+ 2 2)
-      (Object 1)
-      (Integer 2))
-    1)
-
-  (deftest etypecase.4
-    (etypecase (+ 2 2)
+  (deftest caseType.4
+    (caseType (+ 2 2)
       (Integer 2)
       (Object 1))
     2)
-
-  (deftest etypecase.5
+    
+  (deftest caseType.5
     (signalsError
-     (etypecase (+ 2 2)
+     (caseType (+ 2 2) (else (simpleError "none clause")))
+     SimpleError :message "none clause"))
+
+  (deftest caseType.6
+    (signalsError
+     (caseType (+ 2 2)
        (String 2)
-       (Boolean 1))
-     TypeError :datum 4)))
+       (Boolean 1)
+       (else => (\ (v) (error (makeTypeError v '(or String Boolean))))))
+     TypeError :datum 4 :expectedType '(or String Boolean))) )
 
 (defsuite not
 
@@ -1799,39 +1781,39 @@
     (reduce list '(1 2 3 4) :initialValue 'foo)
     '((((foo 1) 2) 3) 4)))
 
-(defsuite mapc
+(defsuite forEach
 
-  (deftest mapc.1
+  (deftest forEach.1
     (signalsError
-     (mapc)
+     (forEach)
      MatchError))
 
-  (deftest mapc.2
+  (deftest forEach.2
     (signalsError
-     (mapc (\ (x) x))
+     (forEach (\ (x) x))
      MatchError))
 
-  (deftest mapc.3
+  (deftest forEach.3
     (signalsError
-     (mapc "foo" '(1 2 3))
+     (forEach "foo" '(1 2 3))
      TypeError :datum "foo" :expectedType 'Combinable))
 
-  (deftest mapc.4
+  (deftest forEach.4
     (signalsError
-     (mapc (\ (x) x) "foo")
+     (forEach (\ (x) x) "foo")
      TypeError :datum "foo" :expectedType 'Cons))
 
-  (deftest mapc.5
+  (deftest forEach.5
     (let ((ct 0))
       (def env (theEnv))
-      (mapc (\ (x) (set env ct (+ ct x)))
+      (forEach (\ (x) (set env ct (+ ct x)))
             '(1 2 3 4))
       ct)
     10)
 
-  (deftest mapc.6
+  (deftest forEach.6
     (let ((list (list 1 2 3)))
-      (mapc (\ (x)) list))
+      (forEach (\ (x)) list))
     (list 1 2 3)))
 
 (defsuite mapcan
@@ -2754,24 +2736,24 @@
     (labels ())
     #inert))
 
-(defsuite letloop
+(defsuite letLoop
 
-  (deftest letloop.1
+  (deftest letLoop.1
     (signalsError
-     (letloop)
+     (letLoop)
      MatchError))
 
-  (deftest letloop.2
+  (deftest letLoop.2
     (signalsError
-     (letloop -name-)
+     (letLoop -name-)
      MatchError))
 
-  (deftest letloop.3
-    (letloop -name- ())
+  (deftest letLoop.3
+    (letLoop -name- ())
     #inert)
 
-  (deftest letloop.4
-    (letloop -sum- ((as (list 1 2 3))
+  (deftest letLoop.4
+    (letLoop -sum- ((as (list 1 2 3))
                      (bs (list 4 5 6)))
       (if (null? as)
           #null

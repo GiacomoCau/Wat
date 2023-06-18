@@ -1192,15 +1192,15 @@ public class Vm {
 	Object checkT(Object op, List o, int min, Object ... chks) {
 		if (o == null) return 0;
 		int len=chks.length, i=0;
-		for (var oo=o; oo != null; i+=1, oo=oo.cdr()) {
+		for (var ol=o; ol != null; i+=1, ol=ol.cdr()) {
 			if (len == 0) continue;
-			var chk = checkT2(op, o, oo.car, i-min, i < len && i < min ? chks[i] : len <= min ?  null : chks[len-1]);
+			var chk = checkTn(op, o, ol.car, i-min, i < len && i < min ? chks[i] : len <= min ?  null : chks[len-1]);
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 		}
 		return i;
 	}
-	Object checkT2(Object op, Object o, Object on, int i, Object chk) {
+	Object checkTn(Object op, Object o, Object on, int i, Object chk) {
 		switch (chk) {
 			case null: return 0;
 			case Class cl when on instanceof Class cl2 && cl.isAssignableFrom(cl2) || cl.isInstance(on): return 1;
@@ -1209,7 +1209,7 @@ public class Vm {
 				return check(op, onl, l);
 			}
 			case Object[] chks: {
-				if (i > 0) return checkT2(op, o, on, i, chks[i % chks.length]);
+				if (i > 0) return checkTn(op, o, on, i, chks[i % chks.length]);
 				int i2=0; for (Object chk2: chks) {
 					if (Utility.equals(on, chk2) || chk2 instanceof Class cl && (cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2))) return i2+=1;
 				}
@@ -1227,11 +1227,13 @@ public class Vm {
 		int min=0, max=more;
 		if (chk.car instanceof Integer mn) { min = max = mn; chk = chk.cdr(); }
 		if (chk.car instanceof Integer mx) { max = mx; chk = chk.cdr(); }
-		var chk2 = checkR(op, o, min, max, array(chk));
-		if (chk2 instanceof Suspension s) return s;
-		if (chk2 instanceof Integer len) return len;
-		return typeError("not an integer: {datum}", chk2, symbol("Integer"));
+		return switch (checkR(op, o, min, max, array(chk)) ){
+			case Suspension s-> s;
+			case Integer len-> len;
+			case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
+		};
 	}
+
 	
 	
 	// Utilities
@@ -1604,14 +1606,10 @@ public class Vm {
 		new Vm().main();
 	}
 	public void main() throws Exception {
-		//*
 		var milli = currentTimeMillis();
-		loadText("lsp/vm.lsp");
-		//loadText("lispx/vm.lispx");
+		//loadText("lsp/vm.lsp");
+		loadText("lispx/vm.lispx");
 		print("start time: " + (currentTimeMillis() - milli));
 		repl();
-		//*/
-		//extend2(symbol("Obj2"), null);
-		//print(parseBytecode("or","#null","List"));
 	}
 }

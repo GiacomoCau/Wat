@@ -14,8 +14,8 @@
    |$(fn (definiendTree value))
    |$(type fexpr)
    |#
-  %def) 
-
+  %def)
+   
 (def begin
   #|Sequentially evaluate FORMS, returning the value of the last one, or void if there are no forms.
    |$(fn forms)
@@ -31,6 +31,16 @@
    |$(type fexpr)
    |#
   %if)
+
+(def !
+  #|Invert the BOOLEAN.
+   |$(fn (boolean))
+   |$(type function)
+   |$(derivation (if boolean #f #t))
+   |#
+  %!)
+  
+(def not !)
 
 (def loop
   #|Evaluate the FORMS in an infinite loop.
@@ -60,12 +70,16 @@
    |#
   %type?)
 
+(def instanceof? %instanceof?)
+
 (def intern
   #|Get or create the unique symbol with STRING as name.
    |$(fn (string))
    |$(type function)
    |#
   %intern)
+
+(def symbol? %symbol?)
 
 (def symbolName
   #|Return the name of the SYMBOL as a string.
@@ -122,6 +136,9 @@
    |$(type function)
    |#
   %cdr)
+
+(def cadr %cadr)
+(def cddr %cddr)
 
 (def list*
   #|Create a list from the ARGUMENTS so that the last argument becomes
@@ -189,6 +206,14 @@
 
 ;;; Core Forms
 
+(def vau
+  #|Construct a fexpr with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER, and FORMS.
+   |$(fn (parameterTree environmentParameter . forms))
+   |$(type fexpr)
+   |$(derivation (vau (pt ep . forms) env (eval (list 'vau pt ep (list* 'begin forms)) env)))
+   |#
+  %vau)
+
 (def list
   #|Return the list of evaluated ARGUMENTS.
    |$(fn (arguments))
@@ -197,13 +222,21 @@
    |#
   %list) 
 
-(def vau
-  #|Construct a fexpr with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER, and FORMS.
-   |$(fn (parameterTree environmentParameter . forms))
+(def quote
+  #|Return the unevaluated OPERAND.
+   |$(fn (operand))
    |$(type fexpr)
-   |$(derivation (vau (pt ep . forms) env (eval (list 'vau pt ep (list* 'begin forms)) env)))
+   |$(derivation (vau (operand) #ignore operand))
    |#
-  %vau)
+  %quote)
+
+(def theEnv
+  #|Return the current environment.
+   |$(fn ())
+   |$(type fexpr)
+   |$(derivation (vau () environment environment)))
+   |#
+  %theEnv)
 
 (def lispx::makeMacro
   #|Create a macro from an EXPANDER operator.  A macro is an operator
@@ -240,6 +273,12 @@
    (vau (parameterTree . forms) #ignore
      (list 'lispx::makeMacro (list* 'vau parameterTree #ignore forms)) )))
 
+
+; defMacro defVau def\ def*\ rec\ e letrec\ permettono la definizione delle funzioni con due sintassi
+;    (_ name parameters . body)
+;    (_ (name . parameters) . body)
+; rec rec\ letrec e letrec\ inizializzano a #inert le definizioni prima della valutazione
+
 (def defMacro
   #|Define a macro with the given NAME, PARAMETER-TREE, and FORMS.
    |$(fn (name parameterTree . forms))
@@ -248,14 +287,21 @@
   (macro (name parameterTree . forms)
     (list 'def name (list* 'macro parameterTree forms)) ))
 
+(def defMacro
+  (macro (lhs . rhs)
+    (if (symbol? lhs)
+      (list 'def lhs (list* 'macro (car rhs) (cdr rhs)))
+      (list 'def (car lhs) (list* 'macro (cdr lhs) rhs)) )))
+
 (defMacro expand (macro)
   (list 'begin (list 'evalMacro #f) macro) )
 
-(defMacro defVau (name parameterTree environmentParameter . forms)
-  #|Define a fexpr with the given NAME, PARAMETER-TREE,
-   |ENVIRONMENT-PARAMETER, and FORMS.
+(defMacro (defVau lhs . rhs)
+  #|Define a fexpr with the given NAME, PARAMETER-TREE, ENVIRONMENT-PARAMETER, and FORMS.
    |#
-  (list 'def name (list* 'vau parameterTree environmentParameter forms)) )
+  (if (symbol? lhs)
+    (list 'def lhs (list* 'vau (car rhs) (cadr rhs) (cddr rhs)))
+    (list 'def (car lhs) (list* 'vau (cdr lhs) (car rhs) (cdr rhs))) ))
 
 (defMacro defConstant (name value . docstring?)
   #|Define a constant with the given NAME and VALUE.  This is mostly
@@ -263,6 +309,12 @@
    |optional DOCSTRING? is currently ignored.
    |#
   (list 'def name value) )
+
+(defMacro (wrau pt env . body)
+  (list 'wrap (list* 'vau pt env body)))
+
+(defMacro (def* lhs . rhs)
+  (list 'def lhs (list* 'list rhs)) )
 
 (def \
   #|Create an anonymous function with the given PARAMETER-TREE and FORMS.
@@ -277,6 +329,13 @@
    |#
   (list 'def name (list* '\ parameterTree forms)) )
 
+(defMacro (def\ lhs . rhs)
+  #|Define a function with the given NAME, PARAMETER-TREE, and FORMS.
+   |#
+  (if (symbol? lhs)
+    (list 'def lhs (list* '\ (car rhs) (cdr rhs)))
+    (list 'def (car lhs) (list* '\ (cdr lhs) rhs)) ))
+
 
 ;;; Others Built-in 
 
@@ -285,7 +344,7 @@
    |inside it.  The forms may use `throw' to nonlocally exit from the
    |tag.  Usually, `block' should be preferred.
    |#
-  (list %catch tag (list* \ () forms)))
+  (list '%catch tag (list* '\ () forms)))
 
 (def\ throw (tag . result?)
   #|Abort to a nesting catch tag established by `catch' and pass the
@@ -305,7 +364,78 @@
       (panic condition))))
 
 
+;;; Basic macros and functions
+
+(def\ apply (function arguments)
+  #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
+   |#
+  (eval (cons (unwrap function) arguments) (%makeEnv)))
+
+(def\ (apply appv args . env)
+  #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.|#
+  (def env (if (null? env) (makeEnv) ((\ ((env)) env) env))) 
+  (if (%jFun? appv)
+    (@combine (@new JFun vm appv) env args)
+    (eval (cons (unwrap appv) args) env) ))
+
+(defMacro (rec lhs . rhs)
+  (list (list '\ () (list 'def lhs #inert) (list* 'def lhs :rhs rhs))) )
+
+(defMacro (rec\ lhs . rhs)
+  (if (symbol? lhs)
+    (list 'rec lhs (list* '\ (car rhs) (cdr rhs)))
+    (list 'rec (car lhs) (list* '\ (cdr lhs) rhs)) )) 
+
+(def\ map (function list)
+  #|Create a new list by applying the FUNCTION to every element of the LIST.|#
+  (if (null? list)
+      #null
+      (cons (function (car list)) (map function (cdr list)))))
+      
+(def\ (map f . lst*)
+  #|Create a new list by applying the FUNCTION to every element of the LIST.|#
+  (if (null? lst*) (sympleError "none lists"))
+  (if (null? (cdr lst*))
+    ((rec\ (map lst) (if (null? lst) #null (cons (f (car lst)) (map (cdr lst))) )) (car lst*))
+    ((rec\ (map* lst*) (if (null? (car lst*)) #null (cons (apply f (map car lst*)) (map* (map cdr lst*))) )) lst*) ))
+
+(defMacro (def*\ lhs* . rhs*)
+  (list* 'def*
+    (map (\ (lhs) (if (symbol? lhs) lhs (car lhs))) lhs*)
+    (map (\ (lhs rhs) (if (symbol? lhs) (list* '\ (car rhs) (cdr rhs)) (list* '\ (cdr lhs) rhs))) lhs* rhs*) )) 
+
+
 ;;; Lexical Bindings
+
+(def\ (->inert binding) #inert)
+(def\ (->1expr binding) ((\ ((#_ cadr)) cadr) binding))
+(def\ (->begin binding) ((\ ((#_ cadr . exps)) (if (null? exps) cadr (list* 'begin cadr exps))) binding))
+
+(defMacro letLoop (name initializers . forms)
+  #|Labelled recursive loop, analogous to Scheme's named `let'.
+   |Lexically bind a function named NAME with one PARAMETER for every
+   |INITIALIZER and the FORMS as body.  Then immediately apply the
+   |function to a list containing one VALUE for every INITIALIZER and
+   |return the result.  The function is bound per `labels' so it can
+   |recursively refer to itself.
+   |$(syntax initializer (parameter value))
+   |#
+  (list labels (list (list* name (map car initializers) forms))
+        (list* name (map cadr initializers))))
+
+(defMacro (letLoop . args)
+  (if (symbol? (car args))
+    (def (name bindings . body) args)
+    (def ((name . bindings) . body) args))
+  (list*
+    (list* 'rec\ name (map car bindings) body)
+    (map ->1expr bindings) ))
+
+(defMacro (let1 lhs . rhs)
+  (if (symbol? lhs)
+    (list* 'letLoop lhs (list (car rhs)) (cdr rhs))
+    (list (list* '\ (list (car lhs)) rhs)
+      (->1expr lhs) )))
 
 (defMacro let (bindings . forms)
   #|Establish BINDINGS parallelly during the evaluation of FORMS, so
@@ -314,6 +444,12 @@
    |#
   (list* (list* '\ (map car bindings) forms)
          (map cadr bindings)))
+
+(defMacro (let lhs . rhs)
+  (if (symbol? lhs)
+    (list* 'letLoop lhs rhs)
+    (list* (list* '\ (map car lhs) rhs)
+      (map ->1expr lhs) )))
 
 (defMacro let* (bindings . forms)
   #|Establish BINDINGS serially during the evaluation of FORMS, so that
@@ -324,6 +460,17 @@
       (list* 'let () forms) ; Always introduce a new scope.
       (list 'let (list (car bindings))
             (list* 'let* (cdr bindings) forms))))
+
+(defMacro (let* bindings . body)
+  #|Establish BINDINGS serially during the evaluation of FORMS, so that
+   |every binding can refer to previous ones.
+   |$(syntax binding (definiendTree value))
+   |#
+  (if (null? bindings)
+      (list* 'let () body)
+      (list 'let
+        (list (car bindings))
+        (list* 'let* (cdr bindings) body) )))
 
 (defMacro letrec (bindings . forms)
   #|Utility to establish BINDINGS recursively during the evaluation of
@@ -336,6 +483,12 @@
                    (map car bindings)
                    (list* list (map cadr bindings)))
              forms)))
+
+(defMacro (letrec bindings . body)
+  (list* 'let ()
+    (list* 'def* (map car bindings) (map ->inert bindings))
+    (list* 'def* (map car bindings) (map ->1expr bindings))
+    body ))
 
 (def\ lispx::makeFunctionBinding ((name parameterTree . forms))
   #|Utility to turn a function binding as it appears in `let\' and
@@ -357,41 +510,61 @@
    |#
   (list* 'letrec (map lispx::makeFunctionBinding functionBindings) forms))
 
+(defMacro (letrec\ bindings . body)
+  (list* 'let ()
+    (list* 'def* (map (\ ((lhs . rhs)) (if (symbol? lhs) lhs (car lhs))) bindings) (map ->inert bindings))
+    (list* 'def*\ (map car bindings) (map cdr bindings))
+    body ))
 
-;;; Data and Control Flow
+(def labels letrec\)
 
-(def quote
-  #|Return the unevaluated OPERAND.
-   |$(fn (operand))
-   |$(type fexpr)
-   |$(derivation (vau (operand) #ignore operand))
-   |#
-  %quote)
 
-(def theEnv
-  #|Return the current environment.
-   |$(fn ())
-   |$(type fexpr)
-   |$(derivation (vau () environment environment)))
-   |#
-  %theEnv)
-
-(def\ apply (function arguments)
-  #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
-   |#
-  (eval (cons (unwrap function) arguments) (%makeEnv)))
+;;;; Simple control
 
 (defMacro when (test . forms)
-  #|If TEST yields true, evaluate the FORMS as an implicit `begin'.
-   |Otherwise, return void.
-   |#
+  #|If TEST yields true, evaluate the FORMS as an implicit `begin'. Otherwise, return void.|#
   (list if test (list* begin forms) #inert))
 
+(defMacro (when test . body)
+  #|If TEST yields true, evaluate the FORMS as an implicit `begin'. Otherwise, return void.|#
+  (list 'if test (list* 'begin body)))
+
 (defMacro unless (test . forms)
-  #|If TEST yields false, evaluate the FORMS as an implicit `begin'.
-   |Otherwise, return void.
-   |#
+  #|If TEST yields false, evaluate the FORMS as an implicit `begin'. Otherwise, return void.|#
   (list if test #inert (list* begin forms)))
+
+(defMacro (unless test . body)
+  #|If TEST yields false, evaluate the FORMS as an implicit `begin'. Otherwise, return void.|#
+  (list* 'if test #inert body))
+
+
+;;;; Ifbind? CaseVau Case\ Match
+
+(defVau (ifbind? (pt exp) then . else) env
+  (let1 (env+ (makeEnv env))
+    (if (bind? env+ pt (eval exp env))
+      (eval then env+)
+      (unless (null? else)
+        (eval (let1 ((exp) else) exp) env) ))))
+
+(defVau (caseVau . clauses) env 
+  (vau values #ignore
+    (let1 loop (clauses clauses)
+      (if (null? clauses) #inert ;(error ($ "not a match form for: " values))
+        (let ( (env+ (makeEnv env))
+               (((bindings . forms) . clauses) clauses) )
+          (if (if (== bindings 'else) #t (bind? env+ bindings values)) ; or!
+            (eval (list* 'begin forms) env+)
+            (loop clauses) ))))))
+            
+(defMacro (case\ . clauses)
+  (list 'wrap (list* 'caseVau clauses)) )
+
+(defMacro (match exp . clauses)
+  (list (list* 'case\ (map (\ ((a . b)) (list* (if (== a 'else) a (list a)) b)) clauses)) exp) )  
+
+
+;;; Data and Control Flow
 
 (defVau cond clauses env
   #|Multi-armed conditional.
@@ -406,13 +579,30 @@
           (eval (cons begin forms) env)
           (eval (cons cond restClauses) env)))))
 
-(def not
-  #|Invert the BOOLEAN.
-   |$(fn (boolean))
-   |$(type function)
-   |$(derivation (if boolean #f #t))
+(defVau (cond . clauses) env
+  #|Multi-armed conditional.
+   |Go through the CLAUSES in order.  Evaluate the TEST.  If it yields
+   |true, evaluate the FORMS as an implicit `begin'.  If it yields false,
+   |go to the next clause, or return void if there are no more clauses.
+   |$(syntax clause (test . forms))
    |#
-  %!)
+  (unless (null? clauses)
+    (let1 (((test . body) . clauses) clauses)
+      (if (== test 'else)
+        (apply (wrap begin) body env)
+        (let1 (test (eval test env))
+          (if (instanceof? test Boolean)
+            (if test
+              (apply (wrap begin) body env)
+              (apply (wrap cond) clauses env) )
+            (match body
+              (() test)
+              (('=> apv1) ((eval apd1 env) test))
+              ((guard '=> apd1)
+                 (if ((eval guard env) test)
+                   ((eval apd1 env) test)
+                   (apply (wrap cond) clauses env) ))
+              (else (apply (wrap cond) clauses env)) )))))))
 
 (defVau and operands env
   #|Return true if all OPERANDS evaluate to true, false otherwise.  If
@@ -424,6 +614,8 @@
         ((eval (car operands) env) (eval (cons and (cdr operands)) env))
         (#t                        #f)))
 
+(def && and)
+
 (defVau or operands env
   #|Return true if one of the OPERANDS evaluates to true, false
    |otherwise.  If an operand evaluates to true, later operands are not
@@ -434,9 +626,10 @@
         ((eval (car operands) env) #t)
         (#t                        (eval (cons or (cdr operands)) env))))
 
+(def || or)
+
 (defVau while (testForm . forms) env
-  #|Evaluate FORMS while TEST-FORM evaluates to true.
-   |#
+  #|Evaluate FORMS while TEST-FORM evaluates to true.|#
   (let ((forms (list* begin forms)))
     (block exit
       (loop
@@ -445,13 +638,11 @@
             (returnFrom exit))))))
 
 (defMacro until (testForm . forms)
-  #|Evaluate FORMS until TEST-FORM evaluates to true.
-   |#
+  #|Evaluate FORMS until TEST-FORM evaluates to true.|#
   (list* while (list not testForm) forms))
 
 (defMacro dotimes ((var countForm . resultForm?) . bodyForms)
-  #|Cf. Common Lisp's DOTIMES.
-   |#
+  #|Cf. Common Lisp's DOTIMES.|#
   (let\ ((_dotimes_ (n body result)
            (let ((i (box 0)))
              (while (< (i) n)
@@ -462,18 +653,6 @@
           countForm
           (list* \ (list var) bodyForms)
           (list* \ (list var) resultForm?))))
-
-(defMacro letloop (name initializers . forms)
-  #|Labelled recursive loop, analogous to Scheme's named `let'.
-   |Lexically bind a function named NAME with one PARAMETER for every
-   |INITIALIZER and the FORMS as body.  Then immediately apply the
-   |function to a list containing one VALUE for every INITIALIZER and
-   |return the result.  The function is bound per `labels' so it can
-   |recursively refer to itself.
-   |$(syntax initializer (parameter value))
-   |#
-  (list labels (list (list* name (map car initializers) forms))
-        (list* name (map cadr initializers))))
 
 (defVau block (blockName . forms) env
   #|Establish a block named BLOCK-NAME and evaluate the FORMS as an
@@ -511,14 +690,15 @@
     (eval (list* begin forms) env)
     result))
 
+#| TODO sostituito dal seguente, elimintare
 (def\ lispx::makeTypecaseWithDefaultFunction (default)
-  #|Metaprogramming utility used to create `typecase' and `etypecase'.
+  # |Metaprogramming utility used to create `typecase' and `etypecase'.
    |If no matching clause is found, the DEFAULT function is called with
    |the key.
-   |#
+   | #
   (vau (keyform . clauses) env
     (let ((key (eval keyform env)))
-      (letloop -typecase- ((clauses clauses))
+      (letLoop -typecase- ((clauses clauses))
         (if (null? clauses)
             (default key)
             (let ((((className . forms) . restClauses) clauses))
@@ -527,6 +707,35 @@
                   (-typecase- restClauses))))))))
 
 (def typecase
+  # |Multi-armed type test.
+   |Evaluate the KEYFORM.  Go through the CLAUSES.  If the result of
+   |evaluating KEYFORM is an instance of the class named by CLASS-NAME,
+   |evaluate the FORMS as an implicit `begin'.  Otherwise go to the next
+   |clause, or return void if there are no more clauses.
+   |$(type fexpr)
+   |$(fn (keyform . clauses))
+   |$(syntax clause (className . forms))
+   | #
+  (lispx::makeTypecaseWithDefaultFunction (\ (#ignore) #inert)) )
+
+(def etypecase
+  # |Like `typecase' but signal a `TypeError' if no clause matches the KEYFORM.
+   |$(type fexpr)
+   |$(fn (keyform . clauses))
+   |$(syntax clause (className . forms))
+   | #
+   ;; Note: we use Object as :expectedType of the type error which is somewhat nonsensical.
+   ;; The proper/CL way would be to use an OR type spec, but they might get removed from the language.
+  (lispx::makeTypecaseWithDefaultFunction (\ (key) (error (makeTypeError key Object)))) )
+|#
+; vedi signalsError in vm.lispx o test-util per codice simile
+(def\ (checkSlots obj slots)
+  (let1 next (slots slots)
+    (if (null? slots) #t
+      (let1 ((name value . slots) slots)
+        (if (or (! (@isBound obj name)) (! (eq? (obj name) value))) #f
+          (next slots) )))))
+
   #|Multi-armed type test.
    |Evaluate the KEYFORM.  Go through the CLAUSES.  If the result of
    |evaluating KEYFORM is an instance of the class named by CLASS-NAME,
@@ -536,17 +745,19 @@
    |$(fn (keyform . clauses))
    |$(syntax clause (className . forms))
    |#
-  (lispx::makeTypecaseWithDefaultFunction (\ (#ignore) #inert)) )
-
-(def etypecase
-  #|Like `typecase' but signal a `TypeError' if no clause matches the KEYFORM.
-   |$(type fexpr)
-   |$(fn (keyform . clauses))
-   |$(syntax clause (className . forms))
-   |#
-   ;; Note: we use Object as :expectedType of the type error which is somewhat nonsensical.
-   ;; The proper/CL way would be to use an OR type spec, but they might get removed from the language.
-  (lispx::makeTypecaseWithDefaultFunction (\ (key) (error (makeTypeError key Object)))) )
+(defVau (caseType keyform . clauses) env
+  (let1 (key (eval keyform env))
+    (let1 next (clauses clauses)
+      (if (null? clauses) #inert
+        (let1 (((test . forms) . clauses) clauses)
+          (if (|| (== test 'else)
+                  (let* ( (symbol? (%symbol? test))
+                          (class (eval (if symbol? test (car test)) env)) )
+                    (&& (type? key class) (|| symbol? (&& (type? key Obj) (checkSlots key (map (\ (x) (eval x env)) (cdr test))) ))) ))
+            (if (== (car forms) '=>)
+              (let1 ((apd) (cdr forms)) ((eval apd env) key))  
+              (eval (list* 'begin forms) env) )
+            (next clauses) ))))))
 
 (defVau set (environment definiendTree value) dynamicEnvironment
   #|Match the DEFINIEND-TREE against the VALUE in the ENVIRONMENT,
@@ -594,10 +805,24 @@
 (def\ null? (object)
   #|Return true if the OBJECT is nil, false otherwise.|#
   (== object #null))
+  
+(def null?
+  #|Return true if the OBJECT is nil, false otherwise.
+   |$(fn (object))
+   |$(type function)
+   |#
+ %null?)
 
 (def\ cons? (object)
   #|Return true if the OBJECT is a cons, false otherwise.|#
   (type? object Cons))
+  
+(def cons?
+  #|Return true if the OBJECT is a cons, false otherwise.
+   |$(fn (object))
+   |$(type function)
+   |#
+  %cons?)
 
 (def\ caar (cons)
   #|Return the `car' of the `car' of the CONS.|#
@@ -622,6 +847,16 @@
    |directly if the first list is empty.
    |#
   (%append list1 list2))
+  
+(def append
+  #|Append two lists.  The first one must be proper and is copied.  The
+   |second one is not copied (and doesn't even have to be a list). It
+   |becomes the `cdr' of the final cons of the first list, or is returned
+   |directly if the first list is empty.
+   |$(fn (list1 list2))
+   |$(type function)
+   |#
+  %append)
 
 (def\ nth (n list)
   #|Return element number N of LIST, where the `car' is element zero.|#
@@ -631,18 +866,26 @@
   #|Returns the tail of LIST that would be obtained by calling `cdr' N times in succession.|#
   (%nthCdr n list))
 
-(def\ map (function list)
-  #|Create a new list by applying the FUNCTION to every element of the LIST.|#
-  (if (null? list)
-      #null
-      (cons (function (car list)) (map function (cdr list)))))
-
-(def\ mapc (function list)
+(def\ forEach (function list)
   #|Apply the FUNCTION to every element of the LIST for effect.  Return the list.|#
   (unless (null? list)
     (function (car list))
-    (mapc function (cdr list)))
+    (forEach function (cdr list)))
   list)
+
+(def\ (forEach f . lst*)
+  #|Apply the FUNCTION to every element of the LIST for effect.  Return the #inert.|#
+  (if (null? lst*) (%error "none lists"))
+  (if (null? (cdr lst*))
+    ((rec\ (forEach lst) (unless (null? lst) (f (car lst)) (forEach (cdr lst)))) (car lst*))
+    ((rec\ (forEach* lst*) (unless (null? (car lst*)) (apply f (map car lst*)) (forEach* (map cdr lst*)) )) lst*) ))
+
+(def\ (forEach f . lst*)
+  #|Apply the FUNCTION to every element of the LIST for effect.  Return the list.|#
+  (if (null? lst*) (error (makeSimpleError "none lists")))
+  (if (null? (cdr lst*))
+    ((rec\ (forEach lst) (if (null? lst) (car lst*) (f (car lst)) (forEach (cdr lst)))) (car lst*))
+    ((rec\ (forEach* lst*) (if (null? (car lst*)) lst* (apply f (map car lst*)) (forEach* (map cdr lst*)) )) lst*) ))
 
 (def\ mapcan (function list)
   #|Apply the FUNCTION, which must return a list, to every element of the
@@ -683,7 +926,7 @@
    |#
   (let ((test (opt? (get? keywords :test) ==))
         (key (opt? (get? keywords :key) identity)))
-    (letloop -member- ((items list))
+    (letLoop -member- ((items list))
       (if (null? items)
           #null
           (if (test item (key (car items)))
@@ -1008,7 +1251,7 @@
    |elements of LIST.  This is useful for implementing functions that take
    |multiple opt? arguments.  Each default is evaluated lazily, only when needed.
    |#
-  (letloop -opt*- ((list (eval list env)) (defaults defaults))
+  (letLoop -opt*- ((list (eval list env)) (defaults defaults))
     (if (null? list)
         (if (null? defaults)
             #null

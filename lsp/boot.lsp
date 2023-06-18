@@ -139,7 +139,7 @@
     (vau (params . body) #ignore
       (list 'makeMacro (list* 'vau params #ignore body)) )))
 
-; defMacro defVau def\ def*\ rec\ e letrec\ permettono la definizione delle funzioni con le seguenti due sintassi
+; defMacro defVau def\ def*\ rec\ e letrec\ permettono la definizione delle funzioni con due sintassi
 ;    (_ name parameters . body)
 ;    (_ (name . parameters) . body)
 ; rec rec\ letrec e letrec\ inizializzano a #inert le definizioni prima della valutazione
@@ -293,7 +293,7 @@
 (assert (let1\ (f (a 2)) (if (zero? a) 'end (f (- a 1)))) 'end)
 |#
 
-(defMacro (let\ . args)
+(defMacro (letLoop . args)
   (if (symbol? (car args))
     (def (name bindings . body) args)
     (def ((name . bindings) . body) args))
@@ -301,15 +301,12 @@
     (list* 'rec\ name (map car bindings) body)
     (map ->1expr bindings) ))
 
-(def letLoop let\)
-
 (assert (letLoop sum ((a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
 (assert (letLoop (sum (a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
 
 (defMacro (let1 lhs . rhs)
   (if (symbol? lhs)
-    ;(list* 'let1\ lhs (car rhs) (cdr rhs))
-    (list* 'let\ lhs (list (car rhs)) (cdr rhs))
+    (list* 'letLoop lhs (list (car rhs)) (cdr rhs))
     (list (list* '\ (list (car lhs)) rhs)
       (->1expr lhs) )))
       
@@ -319,7 +316,7 @@
 
 (defMacro (let lhs . rhs)
   (if (symbol? lhs)
-    (list* 'let\ lhs rhs)
+    (list* 'letLoop lhs rhs)
     (list* (list* '\ (map car lhs) rhs)
       (map ->1expr lhs) )))
 
@@ -353,25 +350,6 @@
 
 (assert (labels ( ((even? n) (if (zero? n) #t (odd? (- n 1)))) ((odd? n) (if (zero? n) #f (even? (- n 1)))) ) (even? 88) ) #t)
 (assert (labels ( (even? (n) (if (zero? n) #t (odd? (- n 1)))) (odd? (n) (if (zero? n) #f (even? (- n 1)))) ) (even? 88) ) #t)
-
-#| TODO definizioni alternative, eliminare
-(defMacro (letLoop . args)
-  (if (symbol? (car args))
-    (def (name bindings . body) args)
-    (def ((name . bindings) . body) args))
-  (list 'letrec\
-    (list (list* name (map car bindings) body))
-    (list* name (map ->1expr bindings)) ))
-
-(defMacro (letLoop . args)
-  (if (symbol? (car args))
-    (def (name bindings . body) args)
-    (def ((name . bindings) . body) args))
-  (list 'let ()
-    (list 'def name #inert)
-    (list* 'def\ name (map car bindings) body)
-    (list* name (map ->1expr bindings)) ))
-|#
 
 
 ;;;; Simple control
@@ -584,7 +562,7 @@
 ;;;; Member Assoc Get
 
 (def\ (member item lst)
-  (let\ (loop (lst lst))
+  (letLoop (loop (lst lst))
      (if (null? lst) #null
        (if (== item (car lst)) lst
          (loop (cdr lst)) ))))
@@ -593,7 +571,7 @@
 ;(assert (member "b" '("a" "b" "c" "d")) '("b" "c" "d")) ; solo se String interned!
 
 (def\ (assoc item lst)
-  (let\ (loop (lst lst))
+  (letLoop (loop (lst lst))
      (if (null? lst) #null
        (if (== item (caar lst)) (car lst)
          (loop (cdr lst)) ))))
@@ -601,7 +579,7 @@
 (assert (assoc 'b '((a 1) (b 2) (c 3) (d 4))) '(b 2))
 
 (def\ (get? key lst)
-  (let\ (loop (lst lst)) 
+  (letLoop (loop (lst lst)) 
      (if (null? lst) #null
        (let1 ((k v . lst) lst)
          (if (== k key) (list v) (loop lst)) ))))
@@ -636,32 +614,50 @@
               (loop clauses) ))))))
 |#
 
-(def checkSlot 
-  (\ (c slot)
-    (let1 next (slot slot)
-      (if (null? slot) #t
-        (let1 ((name value . slot) slot)
-          (if (or (! (@isBound c name)) (! (eq? (c name) value))) #f
-            (next slot) ))))))
+(def\ (checkSlots obj slots)
+  (let1 next (slots slots)
+    (if (null? slots) #t
+      (let1 ((name value . slots) slots)
+        (if (or (! (@isBound obj name)) (! (eq? (obj name) value))) #f
+          (next slots) )))))
 
-(def\ (evlis env lst)
-  (map (\ (elt) (eval elt env)) lst))
+#| TODO sostituito dal seguente, eliminare
+(defVau (caseType keyform . clauses) env
+  (let1 (key (eval keyform env))
+    (let1 next (clauses clauses)
+      (if (null? clauses) #inert
+        (let1 (((test . forms) . clauses) clauses)
+          (if (== test 'else)
+            (if (== (car forms) '=>)
+              (let1 ((apd) (cdr forms)) ((eval apd env) key))  
+              (eval (list* 'begin forms) env) )          
+            (let* ( (symbol? (%symbol? test))
+                    (className (if symbol? test (car test)))
+                    (class (eval className env)) )
+              (if (&& (type? key class) (|| symbol? (&& (type? key Obj) (checkSlots key (map (\ (x) (eval x env)) (cdr test))))))
+                (if (== (car forms) '=>)
+                  (let1 ((apd) (cdr forms)) ((eval apd env) key))  
+                  (eval (list* 'begin forms) env) )
+                (next clauses) ))))))))
+|#
 
 (defVau (caseType keyform . clauses) env
   (let1 (key (eval keyform env))
     (let1 next (clauses clauses)
-      (if (null? clauses) #inert ;(error ($ "type of " key " not " Object))
+      (if (null? clauses) #inert
         (let1 (((test . forms) . clauses) clauses)
-          (if (== test 'else)
-            (eval (list* 'begin forms) env)
-            (let* ( (symbol? (%symbol? test))
-                    (className (if symbol? test (car test)))
-                    (class (eval className env)) )
-              (if (&& (type? key class) (|| symbol? (&& (type? key Obj) (checkSlot key (evlis env (cdr test))))))
-                (eval (list* 'begin forms) env)
-                (next clauses) ))))))))
+          (if (|| (== test 'else)
+                  (let* ( (symbol? (%symbol? test))
+                          (class (eval (if symbol? test (car test)) env)) )
+                    (&& (type? key class) (|| symbol? (&& (type? key Obj) (checkSlots key (map (\ (x) (eval x env)) (cdr test))) ))) ))
+            (if (== (car forms) '=>)
+              (let1 ((apd) (cdr forms)) ((eval apd env) key))  
+              (eval (list* 'begin forms) env) )
+            (next clauses) ))))))
+
 
 (assert (caseType 2.0 (else 3)) 3)
+(assert (caseType (+ 2 2) (else => (\(v) v))) 4)
 (assert (caseType 2.0 (String "string") (Double "double")) "double")
 (assert (caseType (obj Obj :a 1) (Double "double") ((Obj :a 1) "Obj :a 1")) "Obj :a 1")
 

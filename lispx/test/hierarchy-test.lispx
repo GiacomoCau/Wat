@@ -4,7 +4,7 @@
 
   (def\ test-hierarchy (classes)
     (let ((env (theEnv)))
-      (letloop -test-classes- ((classes classes) (superclass Object))
+      (letLoop -test-classes- ((classes classes) (superclass Object))
         (dolist (c classes #t)
           (etypecase c
             (Symbol
