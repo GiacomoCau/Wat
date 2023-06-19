@@ -437,7 +437,7 @@ public class Vm {
 			var matcher = keyword.matcher(msg); if (!matcher.find()) return msg;
 			var sb = new StringBuffer(); do {
 				String s = matcher.group(1), k = toKey(s); var v = map.get(k);
-				matcher.appendReplacement(sb, Vm.this.toString(v != null || map.containsKey(k) ? v :  "{"+ s +"}" ).replace("\\", "\\\\"));
+				matcher.appendReplacement(sb, Vm.this.toString(v != null || map.containsKey(k) ? v :  "{"+ s +"}" ).replace("\\", "\\\\").replace("$", "\\$"));
 			} while(matcher.find());
 			matcher.appendTail(sb);
 			return sb.toString();
@@ -1033,7 +1033,7 @@ public class Vm {
 					catch (Throwable thw) {
 						switch (thw) {
 							case Value val: throw val;
-							case Error err: return error(err);
+							case Error err: return err;
 							default: return error("error combining: " + this + " with: " + o, thw);
 						}
 					}
@@ -1080,13 +1080,13 @@ public class Vm {
 				}
 				catch (Throwable thw) {
 					if (thw instanceof InvocationTargetException ite) {
-						switch (ite.getTargetException()) {
+						switch (thw = ite.getTargetException()) {
 							case Value v: throw v;
 							case Error e: return error(e);
 							default: // in errore senza!
 						}
 					}
-					return error("error executing " + Vm.this.toString(name, args) + " of: " + Vm.this.toString(o0) + " with: " + Vm.this.toString(list(args)), thw);
+					return error("error executing " + Vm.this.toString(name, args) + " of: " + Vm.this.toString(o0) + " with: " + Vm.this.toString(list(args)),	thw);
 				}
 			}
 			@Override public String toString() { return "@" + name; }
@@ -1143,7 +1143,7 @@ public class Vm {
 		private static final long serialVersionUID = 1L;
 		Object tag, value;
 		Value(Object tag, Object value) {
-			super(Vm.this.toString(tag) + " " + Vm.this.toString(value)); this.tag = tag; this.value = value;
+			super(Vm.this.toString(tag) + " " + Vm.this.toString(value), value instanceof Throwable thw ? thw : null); this.tag = tag; this.value = value;
 		}
 	}
 	class PTree {
@@ -1194,7 +1194,7 @@ public class Vm {
 		int len=chks.length, i=0;
 		for (var ol=o; ol != null; i+=1, ol=ol.cdr()) {
 			if (len == 0) continue;
-			var chk = checkTn(op, o, ol.car, i-min, i < len && i < min ? chks[i] : len <= min ?  null : chks[len-1]);
+			var chk = checkTn(op, o, ol.car, i-min, i < len && i < min ? chks[i] : len <= min ?  null : chks[min + (i-min) % (len-min)]);
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 		}
@@ -1209,15 +1209,15 @@ public class Vm {
 				return check(op, onl, l);
 			}
 			case Object[] chks: {
-				if (i > 0) return checkTn(op, o, on, i, chks[i % chks.length]);
 				int i2=0; for (Object chk2: chks) {
 					if (Utility.equals(on, chk2) || chk2 instanceof Class cl && (cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2))) return i2+=1;
 				}
 			}
-			default: break;
+			default:
+				if (Utility.equals(on, chk)) return 1;
 		}
 		return typeError(
-			"not " + (chk instanceof Object[] objs ? "one of " : "a ") + "{expectedType}: {datum} to combine: " + toString(op) + " with: " + toString(o),
+			"not " + (chk instanceof Object[] objs ? "" : "a ") + "{expectedType}: {datum} to combine: " + toString(op) + " with: " + toString(o),
 			on, chk == null ? symbol("Null")
 			: chk instanceof Class cl ? symbol(cl.getSimpleName())
 			: cons(symbol("or"), list(stream((Object[]) chk).map(obj-> symbol(obj == null ? "Null" : obj instanceof Class cl ? cl.getSimpleName() : Vm.this.toString(obj))).toArray() ))
@@ -1473,7 +1473,7 @@ public class Vm {
 					$("%def", "%list", wrap(new JFun("%List", (ArgsList) o-> o))),
 					$("%def", "%list*", wrap(new JFun("%List*", (ArgsList) this::listStar))),
 					$("%def", "%len", wrap(new JFun("%Len", (n,o)-> checkM(n, o, 1, or(null, List.class)), (l,o)-> len(o.car()) ))),
-					$("%def", "%list->array", wrap(new JFun("%List->array", (n,o)-> checkM(n, o, 1, List.class), (l,o)-> array(o) ))),
+					$("%def", "%list->array", wrap(new JFun("%List->array", (n,o)-> checkM(n, o, 1, List.class), (l,o)-> array(o.car()) ))),
 					$("%def", "%array->list", wrap(new JFun("%Array->list", (n,o)-> checkM(n, o, 1, Boolean.class, Object[].class), (l,o)-> list(o.car(), o.car(1)) ))),
 					$("%def", "%reverse", wrap(new JFun("%Reverse", (n,o)-> checkM(n, o, 1, or(null, List.class)), (l,o)-> reverse(o.car()) ))),
 					$("%def", "%append", wrap(new JFun("%Append", (n,o)-> checkM(n, o, 2, or(null, List.class)), (l,o)-> append(o.car(),o.car(1)) ))),
