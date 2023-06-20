@@ -162,8 +162,8 @@ TOKEN:	// literals
 |	< Double: ((("-")? "0" | <sNat>) ( "d" | "D" | "." (<d09>)+) (<exp>)?) >
 |	< # exp: ["e","E"] <Integer> >
 |	< String:	"\"" ( "\\\"" | ~["\""] )* "\"" >
-|	< USymbol:	"|" ~["|"] ( ~["|"] )* "|" >
-//|	< # sChr: ~["\"","\n","\r","\f","\b","\t"] | "\\" ["\"","n","r","f","b","t"] >
+|	< USym:	"|" ( "\\\\" | "\\|" | ~["|"] )+ "|" >
+//|	< # sChr: "\\" ["\"","n","r","f","b","t"] | ~["\"","\n","\r","\f","\b","\t"] >
 //|	< # sChr: "\\" ["\""] | ~["\""] >
 }
 
@@ -178,7 +178,7 @@ TOKEN:	// identifiers
 |   < Kwd: ":" (<Sym>)+ >
 |	< Sym: <first> ( <first> | "#" | <digit> )* >
 |	< # first: <letter> | <special> > 
-|	< # special: [ ".", "@", "-", "&", "!", "=", ">", "<", "%", "+", "?", "/", "*", "$", "_", "|", "~", "^", ":", "\\"] >
+|	< # special: [ ".", "@", "-", "&", "!", "=", ">", "<", "%", "+", "?", "/", "*", "$", "_", "~", "^", ":", "\\"] | "||" | "\\|" >
 |	< # letter: [ "A"-"Z", "a"-"z" ] >
 |	< # digit: [ "0"-"9" ] >
 }
@@ -198,13 +198,13 @@ Object Elt() throws Exception: {
 	|	t=<Long>	{ return java.lang.Long.parseLong(t.image.substring(0,t.image.length()-1)); }
 	|	t=<Integer>	{ return java.lang.Integer.parseInt(t.image); }
 	|	t=<String>	{ return $("wat-string", toStringTokenImage(t.image)); }
-	|	t=<USymbol>	{ return t.image; }
+	|	t=<USym>	{ return t.image.substring(1,t.image.length()-1).replaceAll("\\\\\\|", "|").replaceAll("\\\\\\\\", "\\\\"); }
 	|	t=<Prim>	{ return classForName(t.image.substring(1)); }	
 	|	t=<ClsId>	{ return classForName(t.image.substring(1)); }	
 	|   t=<GetSet>  { return $("%jGetSet", $("wat-string", t.image.substring(1))); } 
 	|   t=<Invoke>  { return $("%jInvoke", $("wat-string", t.image.substring(1))); } 
 	|	t=<Kwd>     { return t.image; }
-	|	t=<Sym>      { return t.image; }  	
+	|	t=<Sym>      { return t.image.replaceAll("\\\\(.)", "$1"); }  	
 	//|	t=<Sym> ["::" t2=<Sym>] {	return t2 == null ? t.image : $("%eval", $("%quote", t2.image), t.image); }  	
 	|	"'" o=Elt() { return $("%quote", o); }
 	|	"(" ( o=Elt(){ l.add(o); } )+ [ "." o2=Elt() ] ")" {

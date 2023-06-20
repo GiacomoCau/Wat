@@ -15,7 +15,7 @@
    |$(type fexpr)
    |#
   %def)
-   
+
 (def begin
   #|Sequentially evaluate FORMS, returning the value of the last one, or void if there are no forms.
    |$(fn forms)
@@ -216,7 +216,7 @@
 
 (def list
   #|Return the list of evaluated ARGUMENTS.
-   |$(fn (arguments))
+   |$(fn arguments)
    |$(type function)
    |$(derivation (wrap (vau arguments #ignore arguments))
    |#
@@ -232,7 +232,7 @@
 
 (def theEnv
   #|Return the current environment.
-   |$(fn ())
+   |$(fn parent?)
    |$(type fexpr)
    |$(derivation (vau () environment environment)))
    |#
@@ -274,7 +274,7 @@
      (list 'lispx::makeMacro (list* 'vau parameterTree #ignore forms)) )))
 
 
-; defMacro defVau def\ def*\ rec\ e letrec\ permettono la definizione delle funzioni con due sintassi
+; defMacro defVau def\ def*\ rec\ e letrec\ let1\ let\ permettono la definizione delle funzioni con due sintassi
 ;    (_ name parameters . body)
 ;    (_ (name . parameters) . body)
 ; rec rec\ letrec e letrec\ inizializzano a #inert le definizioni prima della valutazione
@@ -296,8 +296,9 @@
 (defMacro expand (macro)
   (list 'begin (list 'evalMacro #f) macro) )
 
-(defMacro (defVau lhs . rhs)
-  #|Define a fexpr with the given NAME, PARAMETER-TREE, ENVIRONMENT-PARAMETER, and FORMS.
+(defMacro defVau (lhs . rhs)
+  #|Define a fexpr with the given NAME, PARAMETER-TREE,
+   |ENVIRONMENT-PARAMETER, and FORMS.
    |#
   (if (symbol? lhs)
     (list 'def lhs (list* 'vau (car rhs) (cadr rhs) (cddr rhs)))
@@ -410,6 +411,7 @@
 (def\ (->inert binding) #inert)
 (def\ (->1expr binding) ((\ ((#_ cadr)) cadr) binding))
 (def\ (->begin binding) ((\ ((#_ cadr . exps)) (if (null? exps) cadr (list* 'begin cadr exps))) binding))
+(def\ (->name\ (lhs . rhs)) (if (symbol? lhs)  (list lhs (list* '\ (car rhs) (cdr rhs))) (list (car lhs) (list* '\ (cdr lhs) rhs))))
 
 (defMacro letLoop (name initializers . forms)
   #|Labelled recursive loop, analogous to Scheme's named `let'.
@@ -494,7 +496,7 @@
   #|Utility to turn a function binding as it appears in `let\' and
    |`labels' into a binding for `let' or `letrec'.
    |#
-  (list (functionSymbol name) (list* '\ parameterTree forms)))
+  (list name (list* '\ parameterTree forms)))
 
 (defMacro let\ (functionBindings . forms)
   #|Establish FUNCTION-BINDINGS parallelly during evaluation of FORMS,
@@ -502,6 +504,9 @@
    |$(syntax functionBinding (name parameterTree . forms))
    |#
   (list* 'let (map lispx::makeFunctionBinding functionBindings) forms))
+
+(defMacro (let\ bindings . body)
+  (list* 'let (map ->name\ bindings) body))
 
 (defMacro labels (functionBindings . forms)
   #|Establish FUNCTION-BINDINGS recursively during evaluation of FORMS,
@@ -512,7 +517,7 @@
 
 (defMacro (letrec\ bindings . body)
   (list* 'let ()
-    (list* 'def* (map (\ ((lhs . rhs)) (if (symbol? lhs) lhs (car lhs))) bindings) (map ->inert bindings))
+    (list* 'def* (map (\ ((lhs . #_)) (if (symbol? lhs) lhs (car lhs))) bindings) (map ->inert bindings))
     (list* 'def*\ (map car bindings) (map cdr bindings))
     body ))
 
@@ -522,7 +527,9 @@
 ;;;; Simple control
 
 (defMacro when (test . forms)
-  #|If TEST yields true, evaluate the FORMS as an implicit `begin'. Otherwise, return void.|#
+  #|If TEST yields true, evaluate the FORMS as an implicit `begin'.
+   |Otherwise, return void.
+   |#
   (list if test (list* begin forms) #inert))
 
 (defMacro (when test . body)
@@ -530,7 +537,9 @@
   (list 'if test (list* 'begin body)))
 
 (defMacro unless (test . forms)
-  #|If TEST yields false, evaluate the FORMS as an implicit `begin'. Otherwise, return void.|#
+  #|If TEST yields false, evaluate the FORMS as an implicit `begin'.
+   |Otherwise, return void.
+   |#
   (list if test #inert (list* begin forms)))
 
 (defMacro (unless test . body)
@@ -581,10 +590,15 @@
 
 (defVau (cond . clauses) env
   #|Multi-armed conditional.
-   |Go through the CLAUSES in order.  Evaluate the TEST.  If it yields
-   |true, evaluate the FORMS as an implicit `begin'.  If it yields false,
-   |go to the next clause, or return void if there are no more clauses.
-   |$(syntax clause (test . forms))
+   |Go through the CLAUSES in order.  Evaluate the TEST.
+   |If it yields true, evaluate the FORMS as an implicit `begin'.
+   |If it yields false, go to the next clause,
+   |or return void if there are no more clauses.
+   |$(syntax clauses (clause . clauses))
+   |$(syntax clause (test->bool . forms))
+   |$(syntax clause (test))
+   |$(syntax clause (test => apv1))
+   |$(syntax clause (test guard => apv1))
    |#
   (unless (null? clauses)
     (let1 (((test . body) . clauses) clauses)
@@ -597,10 +611,10 @@
               (apply (wrap cond) clauses env) )
             (match body
               (() test)
-              (('=> apv1) ((eval apd1 env) test))
-              ((guard '=> apd1)
+              (('=> apv1) ((eval apv1 env) test))
+              ((guard '=> apv1)
                  (if ((eval guard env) test)
-                   ((eval apd1 env) test)
+                   ((eval apv1 env) test)
                    (apply (wrap cond) clauses env) ))
               (else (apply (wrap cond) clauses env)) )))))))
 
@@ -629,7 +643,8 @@
 (def || or)
 
 (defVau while (testForm . forms) env
-  #|Evaluate FORMS while TEST-FORM evaluates to true.|#
+  #|Evaluate FORMS while TEST-FORM evaluates to true.
+   |#
   (let ((forms (list* begin forms)))
     (block exit
       (loop
@@ -638,11 +653,13 @@
             (returnFrom exit))))))
 
 (defMacro until (testForm . forms)
-  #|Evaluate FORMS until TEST-FORM evaluates to true.|#
+  #|Evaluate FORMS until TEST-FORM evaluates to true.
+   |#
   (list* while (list not testForm) forms))
 
 (defMacro dotimes ((var countForm . resultForm?) . bodyForms)
-  #|Cf. Common Lisp's DOTIMES.|#
+  #|Cf. Common Lisp's DOTIMES.
+   |#
   (let\ ((_dotimes_ (n body result)
            (let ((i (box 0)))
              (while (< (i) n)
@@ -736,17 +753,19 @@
         (if (or (! (@isBound obj name)) (! (eq? (obj name) value))) #f
           (next slots) )))))
 
+(defVau (caseType key . clauses) env
   #|Multi-armed type test.
    |Evaluate the KEYFORM.  Go through the CLAUSES.  If the result of
    |evaluating KEYFORM is an instance of the class named by CLASS-NAME,
    |evaluate the FORMS as an implicit `begin'.  Otherwise go to the next
    |clause, or return void if there are no more clauses.
+   |$(fn (key . clauses))
    |$(type fexpr)
-   |$(fn (keyform . clauses))
+   |$(syntax clauses (clause . clauses))
    |$(syntax clause (className . forms))
+   |$(syntax clause ((className . slotSpecs) . forms))
    |#
-(defVau (caseType keyform . clauses) env
-  (let1 (key (eval keyform env))
+  (let1 (key (eval key env))
     (let1 next (clauses clauses)
       (if (null? clauses) #inert
         (let1 (((test . forms) . clauses) clauses)
@@ -755,7 +774,7 @@
                           (class (eval (if symbol? test (car test)) env)) )
                     (&& (type? key class) (|| symbol? (&& (type? key Obj) (checkSlots key (map (\ (x) (eval x env)) (cdr test))) ))) ))
             (if (== (car forms) '=>)
-              (let1 ((apd) (cdr forms)) ((eval apd env) key))  
+              (let1 ((apv) (cdr forms)) ((eval apv env) key))  
               (eval (list* 'begin forms) env) )
             (next clauses) ))))))
 
@@ -783,6 +802,15 @@
     (ifOpt? (newValue newValue?)
       (set env value newValue)
       value)))
+(def box
+  #|Create a new box with the optional INITIAL-VALUE?.  A box is a
+   |function that encapsulates a mutable value.  Calling the box without
+   |arguments returns the value.  Calling the box with an argument sets
+   |the value.
+   |$(fn initialValue?)
+   |$(type function)
+   |#
+  %box)
 
 (def\ assert (boolean)
   #|Signal an error if the BOOLEAN is false.  Otherwise return void.
@@ -1079,7 +1107,7 @@
 
 (def\ findClass (name environment)
   #|Look up a class based on its NAME symbol (evaluated) in the given ENVIRONMENT.|#
-  (eval (classSymbol name) environment))
+  (eval (the Symbol name) environment))
 
 (def\ className (class)
   #|Return the name symbol of the CLASS.|#
@@ -1100,13 +1128,8 @@
    |#
    ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
   (dolist (slotSpec slotSpecs) (the Symbol slotSpec))
-  (let ((className (classSymbol name))
-        (superclass (findClass (opt? superclass? 'StandardObject) env)))
-    ;(if (bound? className env)
-    ;   (%reinitialize-standard-class (eval className env) superclass)
-        (eval (list def className (%makeStandardClass name superclass)) env))
-    ;)
-)
+  (let ((superclass (findClass (opt? superclass? 'StandardObject) env)))
+    (eval (list def name (%makeStandardClass name superclass)) env)) )
 
 
 ;;; Generic Functions
@@ -1117,7 +1140,7 @@
    |$(syntax property (:documentation docstring))
    |#
   (let\ ((generic args (apply (%getMethod (classOf (car args)) name) args)))
-    (eval (list def (functionSymbol name) generic) env)))
+    (eval (list def name generic) env)))
 
 (defVau defMethod (name ((receiver className) . parameters) . forms) env
   #|Add a new method to the generic function named by NAME specialized
@@ -1165,7 +1188,7 @@
   #|Shorthand for `assertType'.  Signal a `type-error' if the OBJECT
    |is not an instance of the class named by CLASS-NAME.
    |#
-  (assertType (eval object env) (findClass className env)))
+  (assertType (eval object env) (eval (%the Symbol className) env)))
 
 
 ;;; Sequences
@@ -1281,7 +1304,7 @@
   (list* (list '%d\ (list var)) val) )
 
 ;(defMacro ddef (var . val+doc)
-;  (list (list '%d\ (list var)) (if (null? val+doc) (ddft) (list* (\ (val .  #_) val) val+doc) ) ))
+;  (list (list '%d\ (list var)) (if (null? val+doc) (bdft) (list* (\ (val .  #_) val) val+doc) ) ))
 
 ;(defMacro ddef (var . val+doc)
 ;  (list (list '%d\ (list var)) (ifOpt? ((val . #_) val+doc) val #inert)) )

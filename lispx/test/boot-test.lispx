@@ -156,7 +156,7 @@
   (deftest the.3
     (signalsError
      (the #t #f)
-     TypeError :datum #t :expectedType 'Intern))
+     TypeError :datum #t :expectedType 'Symbol))
 
   (deftest the.4
     (signalsError
@@ -1489,7 +1489,7 @@
   (deftest findClass.3
     (signalsError
      (findClass "string" (theEnv))
-     TypeError :datum "string" :expectedType 'Intern))
+     TypeError :datum "string" :expectedType 'Symbol))
 
   (deftest findClass.4
     (signalsError

@@ -41,13 +41,27 @@ import Wat.Vm.Symbol;
 public class Prova {
 	
 	public static void main(String[] args) {
-		//out.println(Boolean.TRUE == true);
-		//out.println(Boolean.FALSE == true);
+		//out.println(Pattern.compile("\\|").matcher("\\|").quoteReplacement("|"));
+		//out.println("\\|".replaceAll("\\|", Matcher.quoteReplacement("__")));
+		//out.println("\\|".replaceAll("\\\\|", "!"));
+		out.println("\\|".replaceAll("\\\\\\|", "|"));
+		out.println("\\\\".replaceAll("\\\\\\\\", "\\\\"));
+		out.println("\\(".replaceAll("\\\\(.)", "$1"));
+		out.println("\\|".replaceAll("\\\\(.)", "$1"));
+	}
+
+	public static void check() {
+		Object[][] a = { $(1, 2, Integer.class, String.class),  $(1, 2, Integer.class, String.class) };
+		Object[] b = $(1, 2, Integer.class, String.class);
+		Arrays.copyOfRange(b, 1, b.length);
+	}
+
+	static void trueFalse() {
+		out.println(Boolean.TRUE == true);
+		out.println(Boolean.FALSE == true);
 		//out.println(new Object() == true);
 		//Object obj = null; out.println(obj == true);
-		//out.println(Utility.equals(0, null, false, 0));
-		var f = (Function<Number, Object>) a-> a;
-		out.println(f.getClass().getTypeParameters()[0]);
+		out.println(Utility.equals(0, null, false, 0));
 	} 
 
 	//class $ {}

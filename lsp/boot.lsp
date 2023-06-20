@@ -29,7 +29,7 @@
   
 (def ~ %~)
 (def & %&)
-;(def | %|) ;; TODO lo vedrebbe come unescaped symbol!
+(def \| %\|)
 (def ^ %^)
 (def << %<<)
 (def >> %>>)
@@ -139,7 +139,7 @@
     (vau (params . body) #ignore
       (list 'makeMacro (list* 'vau params #ignore body)) )))
 
-; defMacro defVau def\ def*\ rec\ e letrec\ permettono la definizione delle funzioni con due sintassi
+; defMacro defVau def\ def*\ rec\ e letrec\ let1\ let\ permettono la definizione delle funzioni con due sintassi
 ;    (_ name parameters . body)
 ;    (_ (name . parameters) . body)
 ; rec rec\ letrec e letrec\ inizializzano a #inert le definizioni prima della valutazione
@@ -279,19 +279,7 @@
 (def\ (->inert binding) #inert)
 (def\ (->1expr binding) ((\ ((#_ cadr)) cadr) binding))
 (def\ (->begin binding) ((\ ((#_ cadr . exps)) (if (null? exps) cadr (list* 'begin cadr exps))) binding))
-
-#|
-(defMacro (let1\ . args)
-  (if (symbol? (car args))
-    (def (name binding . body) args)
-    (def ((name binding) . body) args))
-  (list
-    (list* 'rec\ name (list (car binding)) body)
-    (->1expr binding) ))
-
-(assert (let1\  f (a 2)  (if (zero? a) 'end (f (- a 1)))) 'end)
-(assert (let1\ (f (a 2)) (if (zero? a) 'end (f (- a 1)))) 'end)
-|#
+(def\ (->name\ (lhs . rhs)) (if (symbol? lhs)  (list lhs (list* '\ (car rhs) (cdr rhs))) (list (car lhs) (list* '\ (cdr lhs) rhs))))
 
 (defMacro (letLoop . args)
   (if (symbol? (car args))
@@ -314,6 +302,12 @@
 ;(assert (let1 (a 1 2) a) 2) ; need ->begin
 (assert (let1 f (a 2) (if (zero? a) 'end (f (- a 1)))) 'end)
 
+(defMacro (let1\ binding . body)
+  (list* 'let1 (->name\ binding) body))
+
+(assert (let1\ (f (a) a) (f 5)) 5)
+(assert (let1\ ((f a) a) (f 5)) 5)
+
 (defMacro (let lhs . rhs)
   (if (symbol? lhs)
     (list* 'letLoop lhs rhs)
@@ -321,6 +315,11 @@
       (map ->1expr lhs) )))
 
 (assert (let ((a 1)) a) 1)
+    
+(defMacro (let\ bindings . body)
+  (list* 'let (map ->name\ bindings) body))
+  
+(assert (expand (let\ ((f1 (a) a) ((f2 b) b)) 1)) '(let ((f1 (\ (a) a)) (f2 (\ (b) b))) 1))
     
 (defMacro (let* bindings . body)
   (if (null? bindings)
@@ -342,14 +341,13 @@
 
 (defMacro (letrec\ bindings . body)
   (list* 'let ()
-    (list* 'def* (map (\ ((lhs . rhs)) (if (symbol? lhs) lhs (car lhs))) bindings) (map ->inert bindings))
+    (list* 'def* (map (\ ((lhs . #_)) (if (symbol? lhs) lhs (car lhs))) bindings) (map ->inert bindings))
     (list* 'def*\ (map car bindings) (map cdr bindings))
     body ))
 
 (def labels letrec\)
 
-(assert (labels ( ((even? n) (if (zero? n) #t (odd? (- n 1)))) ((odd? n) (if (zero? n) #f (even? (- n 1)))) ) (even? 88) ) #t)
-(assert (labels ( (even? (n) (if (zero? n) #t (odd? (- n 1)))) (odd? (n) (if (zero? n) #f (even? (- n 1)))) ) (even? 88) ) #t)
+(assert (labels ( ((even? n) (if (zero? n) #t (odd? (- n 1)))) (odd? (n) (if (zero? n) #f (even? (- n 1)))) ) (even? 88) ) #t)
 
 
 ;;;; Simple control
@@ -533,10 +531,10 @@
               (apply (wrap cond) clauses env) )
             (match body
               (() test)
-              (('=> apv1) ((eval apd1 env) test))
-              ((guard '=> apd1)
+              (('=> apv1) ((eval apv1 env) test))
+              ((guard '=> apv1)
                  (if ((eval guard env) test)
-                   ((eval apd1 env) test)
+                   ((eval apv1 env) test)
                    (apply (wrap cond) clauses env) ))
               (else (apply (wrap cond) clauses env)) )))))))
 
@@ -597,22 +595,11 @@
         (let1 (((values . forms) . clauses) clauses)
           (if (or (== values 'else) (cons? (member value values)))
             (if (== (car forms) '=>)
-              (let1 ((apd) (cdr forms)) ((eval apd env) value))  
+              (let1 ((apv) (cdr forms)) ((eval apv env) value))  
               (eval (list* 'begin forms) env) )
             (loop clauses) ))))))
 
 (assert (case 3 ((2 4 6 8) 'pair) ((1 3 5 7 9) 'odd)) 'odd) 
-
-#| TODO sostituito dal seguente, eliminare
-(defVau (caseType keyform . clauses) env
-    (let1 (key (eval keyform env))
-      (let1 loop (clauses clauses)
-        (if (null? clauses) #inert ;(error ($ "type of " key " not " Object))
-          (let1 (((class . forms) . clauses) clauses)
-            (if (or (== class 'else) (type? key (eval class env)))
-              (eval (list* 'begin forms) env)
-              (loop clauses) ))))))
-|#
 
 (def\ (checkSlots obj slots)
   (let1 next (slots slots)
@@ -621,28 +608,8 @@
         (if (or (! (@isBound obj name)) (! (eq? (obj name) value))) #f
           (next slots) )))))
 
-#| TODO sostituito dal seguente, eliminare
-(defVau (caseType keyform . clauses) env
-  (let1 (key (eval keyform env))
-    (let1 next (clauses clauses)
-      (if (null? clauses) #inert
-        (let1 (((test . forms) . clauses) clauses)
-          (if (== test 'else)
-            (if (== (car forms) '=>)
-              (let1 ((apd) (cdr forms)) ((eval apd env) key))  
-              (eval (list* 'begin forms) env) )          
-            (let* ( (symbol? (%symbol? test))
-                    (className (if symbol? test (car test)))
-                    (class (eval className env)) )
-              (if (&& (type? key class) (|| symbol? (&& (type? key Obj) (checkSlots key (map (\ (x) (eval x env)) (cdr test))))))
-                (if (== (car forms) '=>)
-                  (let1 ((apd) (cdr forms)) ((eval apd env) key))  
-                  (eval (list* 'begin forms) env) )
-                (next clauses) ))))))))
-|#
-
-(defVau (caseType keyform . clauses) env
-  (let1 (key (eval keyform env))
+(defVau (caseType key . clauses) env
+  (let1 (key (eval key env))
     (let1 next (clauses clauses)
       (if (null? clauses) #inert
         (let1 (((test . forms) . clauses) clauses)
@@ -651,10 +618,9 @@
                           (class (eval (if symbol? test (car test)) env)) )
                     (&& (type? key class) (|| symbol? (&& (type? key Obj) (checkSlots key (map (\ (x) (eval x env)) (cdr test))) ))) ))
             (if (== (car forms) '=>)
-              (let1 ((apd) (cdr forms)) ((eval apd env) key))  
+              (let1 ((apv) (cdr forms)) ((eval apv env) key))  
               (eval (list* 'begin forms) env) )
             (next clauses) ))))))
-
 
 (assert (caseType 2.0 (else 3)) 3)
 (assert (caseType (+ 2 2) (else => (\(v) v))) 4)
@@ -662,11 +628,11 @@
 (assert (caseType (obj Obj :a 1) (Double "double") ((Obj :a 1) "Obj :a 1")) "Obj :a 1")
 
 
-;;;; Options ~= if!#null or ifList or ifCons
+;;;; Options ~= if!#null or ifList
 
 (defVau (opt? exp dft) env
   (let1 (exp (eval exp env))
-    (if (cons? exp)
+    (if (list? exp)
       (let1 ((val) exp) val)
       (eval dft env) ))) 
 
@@ -675,7 +641,7 @@
 
 (defVau (ifOpt? (pt exp) then . else) env
   (let1 (exp (eval exp env))
-    (if (cons? exp)
+    (if (list? exp)
       (eval (list* (list 'vau (if (symbol? pt) (list pt) pt) #_ then) exp) env)
       (if (null? else) #null
         (eval (let1 ((exp) else) exp) env) ))))
@@ -803,6 +769,12 @@
     (list 'def lhs (car rhs))
     (list 'def (car lhs) (list* 'type\ (cdr lhs) rhs)) ))
 
+(def\ ck\| o (list->array o))
+(def ck+ (.MAX_VALUE Integer))
+(def\ check (op o . ck) (@check vm op o ck))
+(assert (check 'pp '(1 (:a 1 :b 2) c 3) 1 ck+ Integer (list Keyword Integer) Symbol (ck\| 3 4)) 4)
+(assert (check 'pp '(a 1 2) 'a 1 2) 3)
+(assert (check 'pp '(a 1 2) (ck\| '(b 3) '(a 1 2))) 3) ; TODO da ripensare check!
 
 ;;;; List utilities
 
@@ -1151,7 +1123,7 @@
 (def box %box)
 
 (defMacro (defBox name . value?)
-  (list 'def name (list 'box (opt? value? #null)) ))
+  (list 'def name (list* 'box value?)) )
 
 
 ;;;; Auto Increment/Decrement and Assignement Operator

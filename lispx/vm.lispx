@@ -15,7 +15,7 @@
 (ctapv #t)
 (prtrc 0)
 (bndres 1)
-(ddft #inert)
+(bdft #inert)
 (aquote #f)
 
 (%def Apv &Wat.Vm$Apv)

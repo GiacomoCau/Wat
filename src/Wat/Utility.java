@@ -573,6 +573,7 @@ public class Utility {
 					case '"'-> inString = false;
 				}
 				else if (inUSymbol) switch (c) {
+					case '\\'-> inEscape = true;
 					case '|'-> inUSymbol = false;
 				}
 				else if (inComment) switch (c) {
@@ -599,6 +600,7 @@ public class Utility {
 					case '#'-> sMlComment = true;
 					case '('-> open += 1;
 					case ')'-> close += 1;
+					case '\\'-> inEscape = true;
 				}
 				if (c >= 32 || inUSymbol) s.append((char) c);
 			}

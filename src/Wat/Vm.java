@@ -134,7 +134,7 @@ public class Vm {
 	boolean aquote = false; // auto quote list
 	boolean elsex = false; // else multiple expressions
 	
-	Object ddft = null; // dinamic default: null, inert, ...
+	Object bdft = null; // box/dinamic default: null, inert, ...
 	
 	int prtrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
 	int ttrue = 0; // type true: 0:true, 1:!false, 2:!(or false null), 3:!(or false null inert), 4:!(or false null inert zero)
@@ -409,7 +409,7 @@ public class Vm {
 			var field = map.toString().substring(1);
 			return "{&" + getClass().getCanonicalName() // or .getSimpleName()?
 				+ eIfnull(getMessage(), m-> " " + Vm.this.toString(true, m))
-				+ eIfnull(getCause(), t-> " " + t.getClass().getSimpleName())
+				//+ eIfnull(getCause(), t-> " " + t.getClass().getSimpleName())
 				+ (field.length() == 1 ? field : " " + field) ;
 		}
 		@Override public Object apply(List o) {
@@ -964,7 +964,7 @@ public class Vm {
 			return new Apv( new Combinable() {
 				public Object combine(Env de, List o) { return combine(null, de, o); }
 				public Object combine(Resumption r, Env de, List o) {
-					var vals = o == null ? apply(a-> { if (ddft != null) fill(a, ddft); return a; }, new Object[len]) : array(o);
+					var vals = o == null ? apply(a-> { if (bdft != null) fill(a, bdft); return a; }, new Object[len]) : array(o);
 					if (vals.length != len) return error("not same length: " + list(vars) + " and " + o);
 					var olds = new Object[len];
 					var ndvs = new Object[len];
@@ -1082,7 +1082,7 @@ public class Vm {
 					if (thw instanceof InvocationTargetException ite) {
 						switch (thw = ite.getTargetException()) {
 							case Value v: throw v;
-							case Error e: return error(e);
+							case Error e: return e;
 							default: // in errore senza!
 						}
 					}
@@ -1146,6 +1146,9 @@ public class Vm {
 			super(Vm.this.toString(tag) + " " + Vm.this.toString(value), value instanceof Throwable thw ? thw : null); this.tag = tag; this.value = value;
 		}
 	}
+	
+	
+	// Check parameter tree syntax
 	class PTree {
 		private Object exp, pt, ep;
 		private Set syms = new HashSet();
@@ -1176,6 +1179,9 @@ public class Vm {
 			default-> more;
 		};
 	}
+	
+	
+	// Check parameters type value
 	Object checkN(Object op, List o, int expt, Object ... cls) {
 		return checkR(op, o, expt, expt, cls);
 	}
@@ -1187,40 +1193,59 @@ public class Vm {
 		if (chk instanceof Suspension s) return s;
 		if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 		if (len >= min && len <= max) return len; 
-		return error((len < min ? "less then " + min : "more then " + max) + " operands to combine: " + op + " with: " + o);
+		return error((len < min ? "less then " + min : "more then " + max) + " operands check: " + toString(op) + " with: " + toString(o));
 	}
 	Object checkT(Object op, List o, int min, Object ... chks) {
 		if (o == null) return 0;
 		int len=chks.length, i=0;
 		for (var ol=o; ol != null; i+=1, ol=ol.cdr()) {
 			if (len == 0) continue;
-			var chk = checkTn(op, o, ol.car, i-min, i < len && i < min ? chks[i] : len <= min ?  null : chks[min + (i-min) % (len-min)]);
+			var chk = checkTn(op, o, ol, i-min, i < len && i < min ? chks[i] : len <= min ?  null : chks[min + (i-min) % (len-min)]);
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
+			if (!(chk instanceof Integer i2)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
+			if (i2 > 1) return i+i2;
 		}
 		return i;
 	}
-	Object checkTn(Object op, Object o, Object on, int i, Object chk) {
+	Object checkTn(Object op, Object o, List ol, int i, Object chk) {
+		var on = ol.car;
 		switch (chk) {
-			case null: return 0;
-			case Class cl when on instanceof Class cl2 && cl.isAssignableFrom(cl2) || cl.isInstance(on): return 1;
+			case null: return 1;
+			case Class cl when  cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2): return 1;
 			case List l: {
 				if (!(on instanceof List onl)) break;
-				return check(op, onl, l);
+				return switch (check(op, onl, l)) {
+					case Suspension s-> s;
+					case Integer i2-> 1;
+					default-> typeError("not an integer: {datum}", chk, symbol("Integer"));
+				};
 			}
 			case Object[] chks: {
-				int i2=0; for (Object chk2: chks) {
-					if (Utility.equals(on, chk2) || chk2 instanceof Class cl && (cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2))) return i2+=1;
+				for (Object chk2: chks) {
+					if (Utility.equals(on, chk2)) return 1;
+					if (chk2 instanceof Class cl && (cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2))) return 1;
+					if (chk2 instanceof List l2) try {
+						switch (check(op, ol, l2)) {
+							case Suspension s: return s;
+							case Integer i2: return i2;
+							default: continue;
+						}
+					}
+					catch (Throwable thw) {
+						continue;
+					}
 				}
+				break;
 			}
 			default:
 				if (Utility.equals(on, chk)) return 1;
 		}
 		return typeError(
-			"not " + (chk instanceof Object[] objs ? "" : "a ") + "{expectedType}: {datum} to combine: " + toString(op) + " with: " + toString(o),
+			"not " + (chk instanceof Object[] objs ? "" : "a ") + "{expectedType}: {datum} check: " + toString(op) + " with: " + toString(o),
 			on, chk == null ? symbol("Null")
 			: chk instanceof Class cl ? symbol(cl.getSimpleName())
-			: cons(symbol("or"), list(stream((Object[]) chk).map(obj-> symbol(obj == null ? "Null" : obj instanceof Class cl ? cl.getSimpleName() : Vm.this.toString(obj))).toArray() ))
+			: chk instanceof Object[] oa ? cons(symbol("or"), list(stream(oa).map(obj-> symbol(obj == null ? "Null" : obj instanceof Class cl ? cl.getSimpleName() : Vm.this.toString(obj))).toArray() ))
+			: chk
 		);
 	}
 	public Object check(Object op, List o, List chk) {
@@ -1233,7 +1258,6 @@ public class Vm {
 			case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
 		};
 	}
-
 	
 	
 	// Utilities
@@ -1373,6 +1397,7 @@ public class Vm {
 	
 	
 	// Stringification
+	public String toString() { return "Vm"; }	
 	String toString(Object o) { return toString(false, o); }
 	String toString(boolean t, Object o) {
 		return switch (o) {
@@ -1444,8 +1469,8 @@ public class Vm {
 					$("%def", "%pushPromptSubcont", wrap(new PushPromptSubcont())),
 					$("%def", "%pushSubcontBarrier", wrap(new JFun("%PushSubcontBarrier", (n,o)-> checkM(n, o, 2, Env.class), (l,o)-> pushSubcontBarrier(null, o.car(), cons(begin, o.cdr())) ))),
 					// Dynamically-scoped Variables
-					$("%def", "%box", wrap(new JFun("%Box", (Function<Object,Box>) Box::new))),
-					$("%def", "%dVar", wrap(new JFun("%DVar", (Function<Object,DVar>) DVar::new))),
+					$("%def", "%box", wrap(new JFun("%Box", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new Box(l == 0 ? bdft : o.car)))),
+					$("%def", "%dVar", wrap(new JFun("%DVar", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new DVar(l == 0 ? bdft : o.car)))),
 					$("%def", "%dVal", wrap(new JFun("%DVal", (n,o)-> checkR(n, o, 1, 2, DVar.class), (l,o)-> apply(dv-> l == 1 ? dv.value : (dv.value=o.car(1)), o.<DVar>car()) ))),
 					/* TODO non più necessario, eliminare
 					$("%def", "%dDef", new DDef()),
@@ -1532,7 +1557,7 @@ public class Vm {
 					$("%def", "bndres", wrap(new JFun("Bndres", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2)), (l,o)-> l == 0 ? bndres : inert(bndres=o.car()) ))),
 					$("%def", "prenv", wrap(new JFun("Prenv", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? prenv : inert(prenv=o.car()) ))),
 					$("%def", "elsex", wrap(new JFun("Elsex", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? elsex : inert(elsex=o.car()) ))),
-					$("%def", "ddft", wrap(new JFun("Ddeft", (n,o)-> checkR(n, o, 0, 1), (l,o)-> l == 0 ? ddft : inert(ddft=o.car()) ))),
+					$("%def", "bdft", wrap(new JFun("Bdft", (n,o)-> checkR(n, o, 0, 1), (l,o)-> l == 0 ? bdft : inert(bdft=o.car()) ))),
 					$("%def", "aquote", wrap(new JFun("Aquote", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? aquote : inert(aquote=o.car()) ))),
 					$("%def", "prstk", wrap(new JFun("Prstk", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prstk : inert(prstk=o.car()) ))),
 					$("%def", "prwrn", wrap(new JFun("Prwrn", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prwrn : inert(prwrn=o.car()) )))
@@ -1607,9 +1632,10 @@ public class Vm {
 	}
 	public void main() throws Exception {
 		var milli = currentTimeMillis();
-		//loadText("lsp/vm.lsp");
+		loadText("lsp/vm.lsp");
 		loadText("lispx/vm.lispx");
 		print("start time: " + (currentTimeMillis() - milli));
+		print("(load \"lsp/vm.lsp\")(load \"lispx/vm.lispx\")");
 		repl();
 	}
 }
