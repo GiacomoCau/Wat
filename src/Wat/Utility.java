@@ -118,10 +118,12 @@ public class Utility {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		out.println(toSource("a\nb"));
-		out.println(toString("a\\nb"));
-		out.println(toSource(toString("a\\nb")));
-		out.println(toString(toSource("a\nb")));
+		//out.println(toSource("a\nb"));
+		//out.println(toString("a\\nb"));
+		//out.println(toSource(toString("a\\nb")));
+		//out.println(toString(toSource("a\nb")));
+		
+		out.println(read());
 	}
 	
 	private static Set<Entry<String,String>> control = of("\"", "\\\\\"", "\n", "\\\\n", "\t", "\\\\t", "\r", "\\\\r", "\b", "\\\\b", "\f", "\\\\f").entrySet();
@@ -555,9 +557,12 @@ public class Utility {
 		return read(lv, in);
 	}
 	static public String read(int lv, InputStream in) throws IOException {
+		return read(lv, in, false);
+	}
+	static public String read(int lv, InputStream in, boolean inMlComment) throws IOException {
 		var s = new StringBuilder();
 		int open = 0, close = 0;
-		boolean inEscape = false, inString = false, inUSymbol = false, inComment=false, sMlComment=false, inMlComment=false, eMlComment=false;
+		boolean inEscape = false, inString = false, inUSymbol = false, inComment=false, sMlComment=false, eMlComment=false;
 		do {
 			//out.println("loop");
 			var oc = close-open;
@@ -581,16 +586,21 @@ public class Utility {
 					case '\n'-> inComment = false;
 				}
 				else if (eMlComment) switch (c) {
-					case '#'-> inMlComment = eMlComment = false;
+					case '#'-> { return s.toString(); }
 					default -> inUSymbol = !(eMlComment = false);
 				}
 				else if (inMlComment) switch (c) {
 					case '"'-> inString = true;
 					case ';'-> inComment = true;
 					case '|'-> eMlComment = true;
+					case '#'-> sMlComment = true;
 				}
 				else if (sMlComment) switch (c) {
-					case '|'-> inMlComment = !(sMlComment = false);
+					case '|'-> {
+						s.append((char) c);
+						s.append(read(lv, in, !(sMlComment = false)));
+						c = '#';
+					}
 					default -> sMlComment = false;
 				}
 				else switch (c) {

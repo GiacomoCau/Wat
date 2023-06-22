@@ -123,11 +123,15 @@ public class Parser {
 
 PARSER_END(Parser)
 
-SKIP:	// white spaces
-{	"#|" : MLC | ";" : CMT | < (" " | "\t" | "\r" | "\n")+  >
+TOKEN_MGR_DECLS : {
+  int MLCD;
 }
-<MLC> SKIP: { "|#" : DEFAULT }
-<MLC> MORE: { "\"" : SMLC | ";" : CMLC | < ~[] > }
+
+SKIP:	// white spaces
+{	"#|" { MLCD++; } : MLC | ";" : CMT | < (" " | "\t" | "\r" | "\n")+ >
+}
+<MLC> SKIP: { "|#" { SwitchTo( --MLCD == 0 ? DEFAULT : MLC ); } }
+<MLC> MORE: { "#|" { MLCD++; } | "\"" : SMLC | ";" : CMLC | < ~[] > }
 <SMLC> SKIP: { "\"" : MLC } 
 
 <CMLC> SKIP: { < (("\r")? "\n") > : MLC }
