@@ -2981,7 +2981,7 @@
 
   (deftest ifOpt.3
     (signalsError
-     (ifOpt)
+     (ifOpt?)
      MatchError))
 
   (deftest ifOpt.4

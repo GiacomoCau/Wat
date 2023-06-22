@@ -559,7 +559,7 @@
 (defVau (caseVau . clauses) env 
   (vau values #ignore
     (let1 loop (clauses clauses)
-      (if (null? clauses) #inert ;(error ($ "not a match form for: " values))
+      (if (null? clauses) #inert
         (let ( (env+ (makeEnv env))
                (((bindings . forms) . clauses) clauses) )
           (if (if (== bindings 'else) #t (bind? env+ bindings values)) ; or!
@@ -709,10 +709,10 @@
 
 #| TODO sostituito dal seguente, elimintare
 (def\ lispx::makeTypecaseWithDefaultFunction (default)
-  # |Metaprogramming utility used to create `typecase' and `etypecase'.
+  #|Metaprogramming utility used to create `typecase' and `etypecase'.
    |If no matching clause is found, the DEFAULT function is called with
    |the key.
-   | #
+   |#
   (vau (keyform . clauses) env
     (let ((key (eval keyform env)))
       (letLoop -typecase- ((clauses clauses))
@@ -724,7 +724,7 @@
                   (-typecase- restClauses))))))))
 
 (def typecase
-  # |Multi-armed type test.
+  #|Multi-armed type test.
    |Evaluate the KEYFORM.  Go through the CLAUSES.  If the result of
    |evaluating KEYFORM is an instance of the class named by CLASS-NAME,
    |evaluate the FORMS as an implicit `begin'.  Otherwise go to the next
@@ -732,15 +732,15 @@
    |$(type fexpr)
    |$(fn (keyform . clauses))
    |$(syntax clause (className . forms))
-   | #
+   |#
   (lispx::makeTypecaseWithDefaultFunction (\ (#ignore) #inert)) )
 
 (def etypecase
-  # |Like `typecase' but signal a `TypeError' if no clause matches the KEYFORM.
+  #|Like `typecase' but signal a `TypeError' if no clause matches the KEYFORM.
    |$(type fexpr)
    |$(fn (keyform . clauses))
    |$(syntax clause (className . forms))
-   | #
+   |#
    ;; Note: we use Object as :expectedType of the type error which is somewhat nonsensical.
    ;; The proper/CL way would be to use an OR type spec, but they might get removed from the language.
   (lispx::makeTypecaseWithDefaultFunction (\ (key) (error (makeTypeError key Object)))) )
@@ -847,6 +847,13 @@
   
 (def cons?
   #|Return true if the OBJECT is a cons, false otherwise.
+   |$(fn (object))
+   |$(type function)
+   |#
+  %cons?)
+
+(def list?
+  #|Return true if the OBJECT is a list, false otherwise.
    |$(fn (object))
    |$(type function)
    |#
@@ -1246,17 +1253,32 @@
                     (car o?))
               env))))
 
+(def\ (\1||+ forms) 
+  (if (null? forms) #null (if (null? (cdr forms)) (car forms) (list* 'begin forms))) )
+
+(defVau ifOpt? ((pt opt?) then . else) env
+  (let ((opt? (eval opt? env)))
+    (if (null? opt?)
+        (if (null? else) #null (eval (\1||+ else) env))
+        (eval (list (list 'vau (list pt) #ignore then) (car opt?)) env))))
+
 (defMacro whenOpt? ((name option?) . forms)
   #|Destructure the OPTION?.  If it's non-nil, evaluate the FORMS with
    |the NAME bound to the contents of the option.  If it's nil, return nil.
    |#
   (list ifOpt? (list name option?) (list* begin forms) #null))
 
+(defMacro whenOpt? ((pt opt?) . forms)
+  (list 'ifOpt? (list pt opt?) (\1||+ forms)))
+
 (defMacro unlessOpt? (option? . forms)
   #|Destructure the OPTION?.  If it's nil, evaluate the FORMS.  If it's
    |non-nil, return nil.
    |#
   (list ifOpt? (list #ignore option?) #null (list* begin forms)))
+
+(defMacro unlessOpt? (opt? . forms)
+  (list* 'ifOpt? (list #ignore opt?) #null (\1||+ forms)) )
 
 (defVau opt? (option? . default?) env
   #|Return the contents of the OPTION?, or the DEFAULT? if the option
@@ -1302,19 +1324,6 @@
 
 (defMacro ddef (var . val)
   (list* (list '%d\ (list var)) val) )
-
-;(defMacro ddef (var . val+doc)
-;  (list (list '%d\ (list var)) (if (null? val+doc) (bdft) (list* (\ (val .  #_) val) val+doc) ) ))
-
-;(defMacro ddef (var . val+doc)
-;  (list (list '%d\ (list var)) (ifOpt? ((val . #_) val+doc) val #inert)) )
-
-;(defMacro ddef (var . val+doc)
-;  (list* (list '%d\ (list var)) (ifOpt? ((val . #_) (list val+doc)) (list val) #null)) )
-
-
-(defMacro ddef* (var* . val*)
-  (list* (list '%d\ var*) val*) )
 
 (def\ dget (dynamicVariable)
   #|Return the current value of the DYNAMIC-VARIABLE.|#
