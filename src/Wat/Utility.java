@@ -27,6 +27,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import List.ParseException;
+
 
 public class Utility {
 	
@@ -103,6 +105,9 @@ public class Utility {
 		}
 		catch (Vm.Error|Vm.Value err) {
 			throw err;
+		}
+		catch (ParseException e) {
+			throw new RuntimeException("ParseException " + e.getMessage().replaceAll("\r\n", " ").replaceAll("\\.\\.\\.", "").replaceAll(" +", " "));
 		}
 		catch (Exception e) {
 			throw new RuntimeException(e);

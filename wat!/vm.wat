@@ -11,9 +11,9 @@
 (bdft #null)
 
 (load "testVm.lsp");
-(load "lsp/boot.lsp");
-(load "lsp/test.lsp");
-(load "lsp/testJni.lsp");
+(load "testJni.lsp");
+(load "wat!/boot.wat");
+(load "wat!/test.wat");
 
 (%def milli (%- (@currentTimeMillis &java.lang.System) milli))
 (%$ "vm started in " (%$ milli "ms"))

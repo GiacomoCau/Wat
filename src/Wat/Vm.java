@@ -406,9 +406,17 @@ public class Vm {
 			};
 		}
 		@Override public String toString() {
-			var field = map.toString().substring(1);
-			return "{&" + getClass().getCanonicalName() // or .getSimpleName()?
-				+ eIfnull(getMessage(), m-> " " + Vm.this.toString(true, m))
+			var s = "";
+			for (Throwable thw = this; thw != null; thw = thw.getCause()) {
+				if (thw instanceof Exception && !(thw instanceof RuntimeException)) break;
+				s += (s.length() == 0 ? "" : "\n") + (thw instanceof Obj obj ? toString(obj) : "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
+			}
+			return s;
+		}
+		public String toString(Obj obj) {
+			var field = obj.map.toString().substring(1);
+			return "{&" + obj.getClass().getCanonicalName() // or .getSimpleName()?
+				+ eIfnull(obj.getMessage(), m-> " " + Vm.this.toString(true, m))
 				//+ eIfnull(getCause(), t-> " " + t.getClass().getSimpleName())
 				+ (field.length() == 1 ? field : " " + field) ;
 		}
@@ -881,77 +889,6 @@ public class Vm {
 	
 	// Dynamic Variables
 	class DVar extends Box { DVar(Object val) { super(val); }}
-	/* TODO non più necessario, eliminare
-	class DDef implements Combinable {
-		public Object combine(Env e, List o) {
-			var chk = checkN(this, o, 2, Symbol.class); // o = (var val)
-			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
-			var var = o.car();
-			var lookup = e.get(var);
-			if (lookup.isBound && !(lookup.value instanceof DVar)) return error("not a dinamic variable: " + var);
-			DVar dVar = (DVar) lookup.value;
-			return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, o.car(1))), val-> {
-					if (dVar != null) dVar.value = val; else bind(null, e, var, new DVar(val));
-					return inert;
-				}
-			);
-		}
-		public String toString() { return "%DDef"; }
-	}
-	class DDefStar implements Combinable {
-		public Object combine(Env e, List o) {
-			var chk = checkM(this, o, 2); // o = ((var ...) vals ...)
-			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
-			var vars = array(o.car(), Symbol.class);
-			var dVars = new DVar[vars.length];
-			for (int i=0; i<vars.length; i+=1) {
-				var var = vars[i];
-				var lookup = e.get(var);
-				if (!lookup.isBound) continue;
-				if (!(lookup.value instanceof DVar dVar)) return typeError("not a dinamic variable: {datum}", var, symbol("DVar"));
-				dVars[i] = dVar;
-			}
-			return pipe(dbg(e, this, o), ()-> map(car-> getTco(evaluate(e, car)), o.cdr()), args-> {
-					var vals = array((List) args);
-					if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
-					for (int i=0; i<dVars.length; i+=1) {
-						var dVar = dVars[i]; if (dVar != null) dVar.value = vals[i]; else bind(dbg(e, this, o), e, vars[i], new DVar(vals[i]));
-					}
-					return inert;
-				}
-			);
-		}
-		public String toString() { return "%DDef*"; }
-	}
-	class DLet implements Combinable {
-		public Object combine(Env e, List o) { return combine(null, e, o); }
-		public Object combine(Resumption r, Env e, List o) {
-			var chk = checkM(this, o, 2); // o = (((var ...) val ...) x ...)
-			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
-			List car = o.car();
-			var vars = array(car.car());
-			var vals = array(car.cdr());
-			if (vars.length != vals.length) return error("not same length: " + vars + " and " + vals);
-			var olds = new Object[vals.length];
-			for (int i=0; i<vars.length; i+=1) {
-				if (!(vars[i] instanceof DVar dvar)) return typeError("not a dinamic variable: {datum}", vars[i], symbol("DVar"));
-				olds[i] = dvar.value;
-				dvar.value = vals[i];
-			}
-			try {
-				Object res = r != null ? r.resume() : getTco(len == 2 && o.car(1) instanceof Apv apv && args(apv) == 0 ? Vm.this.combine(e, apv, null) : begin.combine(e, o.cdr()));
-				return res instanceof Suspension s ? s.suspend(dbg(e, this, o), rr-> combine(rr, e, o)) : res;
-			}
-			finally {
-				for (int i=0; i<vars.length; i+=1) ((DVar) vars[i]).value = olds[i];
-			}
-		}
-		public String toString() { return "%DLet"; }
-	}
-	*/
 	class DLambda implements Combinable {
 		public Object combine(Env e, List o) { return combine(null, e, o); }
 		public Object combine(Resumption r, Env e, List o) {
@@ -1049,11 +986,11 @@ public class Vm {
 	boolean isjFun(Object obj) {
 		return isInstance(obj, Supplier.class, Function.class, BiFunction.class, Executable.class, Field.class);
 	}
-	Object jInvoke(String name) {
+	Object at(String name) {
 		if (name == null) return typeError("method name is null", name, symbol("String"));
 		return new ArgsList() {
 			@Override public Object apply(List o) {
-				var chk = checkM("jGetSet", o, 1, Object.class);
+				var chk = checkM("At", o, 1, Object.class);
 				if (chk instanceof Suspension s) return s;
 				if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 				Object o0 = o.car();
@@ -1092,11 +1029,11 @@ public class Vm {
 			@Override public String toString() { return "@" + name; }
 		};
 	}
-	Object jGetSet(String name) {
+	Object dot(String name) {
 		if (name == null) return typeError("field name is null", name, symbol("String"));
 		return new ArgsList() {
 			@Override public Object apply(List o) {
-				var chk = checkR("jGetSet", o, 1, 2);
+				var chk = checkR("Dot", o, 1, 2);
 				if (chk instanceof Suspension s) return s;
 				if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 				var o0 = o.car();
@@ -1158,7 +1095,7 @@ public class Vm {
 				if (!(pt instanceof Cons)) return typeError("not a #null, #ignore, symbol or parameters tree: {datum} of: " + exp, pt, parseBytecode("or", "Null", "Ignore", "Symbol", "Cons") );
 				var msg = check(pt); if (msg != null) return msg;
 			}
-			if (ep == null /* %def! && %set! */ || ep == ignore) return syms.size() > 0 ? null : typeError("no one #null #ignore or symbol in: {datum} of: " + exp, pt, parseBytecode("or", "Null", "Ignore", "Symbol"));
+			if (ep == null /* %def && %set! */ || ep == ignore) return syms.size() > 0 ? null : typeError("no one #null #ignore or symbol in: {datum} of: " + exp, pt, parseBytecode("or", "Null", "Ignore", "Symbol"));
 			if (!(ep instanceof Symbol sym)) return typeError("not a #ignore or symbol: {datum} of: " + exp, ep, parseBytecode("or", "Ignore", "Symbol"));
 			return !syms.contains(sym) ? null : error("not a unique symbol: {datum} in: {expr}", "datum", ep, "expr", exp);
 		}
@@ -1361,7 +1298,7 @@ public class Vm {
 			catch (Throwable thw) {
 				if (len == 2) return true;
 				if (prstk) thw.printStackTrace(out);
-				else print(name, exp, " throw ", "{" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
+				else print(name, exp, " throw ", "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
 			}
 			return false;
 		}
@@ -1472,24 +1409,19 @@ public class Vm {
 					$("%def", "%box", wrap(new JFun("%Box", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new Box(l == 0 ? bdft : o.car)))),
 					$("%def", "%dVar", wrap(new JFun("%DVar", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new DVar(l == 0 ? bdft : o.car)))),
 					$("%def", "%dVal", wrap(new JFun("%DVal", (n,o)-> checkR(n, o, 1, 2, DVar.class), (l,o)-> apply(dv-> l == 1 ? dv.value : (dv.value=o.car(1)), o.<DVar>car()) ))),
-					/* TODO non più necessario, eliminare
-					$("%def", "%dDef", new DDef()),
-					$("%def", "%dDef*", new DDefStar()),
-					$("%def", "%dLet", new DLet()),
-					*/
 					$("%def", "%d\\", new DLambda()),
 					// Errors
 					$("%def", "%rootPrompt", rootPrompt),
-					$("%def", "%error", wrap(new JFun("%Error", (ArgsList) o-> ((ArgsList) jInvoke("error")).apply(listStar(this, o))))),
+					$("%def", "%error", wrap(new JFun("%Error", (ArgsList) o-> ((ArgsList) at("error")).apply(listStar(this, o))))),
 					// Java Interface
 					$("%def", "%jFun?", wrap(new JFun("%JFun?", (Function<Object,Boolean>) this::isjFun))),
-					$("%def", "%jInvoke", wrap(new JFun("%JInvoke", (Function<String,Object>) this::jInvoke))),
-					$("%def", "%jGetSet", wrap(new JFun("%JGetSet", (Function<String,Object>) this::jGetSet))),
-					$("%def", "%instanceof?", wrap(new JFun("%Instanceof?", (n,o)-> checkN(n, o, 2, null, Class.class), (l,o)-> o.<Class>car(1).isInstance(o.car()) ))),
+					$("%def", "%at", wrap(new JFun("%At", (Function<String,Object>) this::at))),
+					$("%def", "%dot", wrap(new JFun("%Dot", (Function<String,Object>) this::dot))),
+					$("%def", "%instanceOf?", wrap(new JFun("%InstanceOf?", (n,o)-> checkN(n, o, 2, null, Class.class), (l,o)-> o.<Class>car(1).isInstance(o.car()) ))),
 					// Object System
 					$("%def", "%addMethod", wrap(new JFun("%AddMethod", (n,o)-> checkN(n, o, 3, or(null, Class.class), Symbol.class, Apv.class), (l,o)-> addMethod(o.car(), o.car(1), o.car(2)) ))),
 					$("%def", "%getMethod", wrap(new JFun("%GetMethod", (n,o)-> checkN(n, o, 2, or(null, Class.class), Symbol.class), (l,o)-> getMethod(o.car(), o.car(1)) ))),
-					$("%def", "%obj", wrap(new JFun("%Obj", (n,o)-> checkM(n, o, 1, or(Box.class, Obj.class), or(Symbol.class, Keyword.class), null), (l,o)-> ((ArgsList) jInvoke("new")).apply(listStar(o.car(), Vm.this, o.cdr)) ))),
+					$("%def", "%obj", wrap(new JFun("%Obj", (n,o)-> checkM(n, o, 1, or(Box.class, Obj.class), or(Symbol.class, Keyword.class), null), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr)) ))),
 					$("%def", "%class", wrap(new JFun("%Class", (n,o)-> checkR(n, o, 1, 2, Symbol.class, or(Box.class, Obj.class)), (l,o)-> extend(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr())) ))),
 					$("%def", "%subClass?", wrap(new JFun("%SubClass?", (n,o)-> checkN(n, o, 2, Class.class, Class.class), (l,o)-> o.<Class>car(1).isAssignableFrom(o.car()) ))),
 					$("%def", "%type?",  wrap(new JFun("%Type?", (n,o)-> checkN(n, o, 2, null, or(null, Class.class)), (l,o)-> apply((o1, c)-> c == null ? o1 == null /*: o1 == null ? !c.isPrimitive()*/ : o1 != null && c.isAssignableFrom(o1.getClass()), o.car(), o.<Class>car(1)) ))),
@@ -1617,7 +1549,7 @@ public class Vm {
 					if (prstk)
 						thw.printStackTrace(out);
 					else do 
-						out.println(/*thw instanceof Obj ? thw : */ "{" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
+						out.println(/*thw instanceof Obj ? thw : */ "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
 					while ((thw = thw.getCause()) != null);
 				}
 			}
@@ -1632,10 +1564,10 @@ public class Vm {
 	}
 	public void main() throws Exception {
 		var milli = currentTimeMillis();
-		loadText("lsp/vm.lsp");
+		loadText("wat!/vm.wat");
 		loadText("lispx/vm.lispx");
 		print("start time: " + (currentTimeMillis() - milli));
-		print("(load \"lsp/vm.lsp\")(load \"lispx/vm.lispx\")");
+		print("(load \"wat!/vm.wat\")(load \"lispx/vm.lispx\")");
 		repl();
 	}
 }

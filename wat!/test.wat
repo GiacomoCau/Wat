@@ -3,13 +3,13 @@
 ;;;; Utilities
 
 (define (exit v)
-  (take-subcont root-prompt #ignore v) )
+  (takeSubcont %rootPrompt #ignore v) )
 
 ;;;;; Wat Test Suite
 
-(assert (lambda))
-(assert (lambda 12 12))
-(assert (lambda "foo" "bar"))
+(assert (\))
+(assert (\ 12 12))
+(assert (\ "foo" "bar"))
 (assert (define))
 (assert (define 12))
 (assert (define 12 12))
@@ -18,202 +18,288 @@
 (assert (begin 1) 1)
 (assert (begin 1 2) 2)
 
-;;;; Delimited Dynamic Binding Tests
+
+;;;; Delimited Control Operators Tests
 
 ;; adapted from 
 
-(define (new-prompt) (list #null))
+(define (newPrompt) (list #null))
 
-(define (abort-prompt p e)
-  (take-subcont p #ignore e))
+(define (abortPrompt p e)
+  (takeSubcont p #ignore e))
 
-(test 'test1
-  (let ((p (new-prompt)))
-    (push-prompt p 1))
+(test test1
+  (let ((p (newPrompt)))
+    (pushPrompt p 1))
   1)
   
-(test 'test2
-  (let ((p (new-prompt)))
-    (+ (push-prompt p (push-prompt p 5))
+(test test2
+  (let ((p (newPrompt)))
+    (+ (pushPrompt p (pushPrompt p 5))
       4))
   9)
   
-(test 'test3
-  (let ((p (new-prompt)))
-    (+ (push-prompt p (+ (abort-prompt p 5) 6))
+(test test3
+  (let ((p (newPrompt)))
+    (+ (pushPrompt p (+ (abortPrompt p 5) 6))
       4))
   9)
 
-(test 'test3-1
-  (let ((p (new-prompt)))
-    (+ (push-prompt p (push-prompt p (+ (abort-prompt p 5) 6)))
+(test test31
+  (let ((p (newPrompt)))
+    (+ (pushPrompt p (pushPrompt p (+ (abortPrompt p 5) 6)))
       4))
   9)
 
-(test 'test3-2
-  (let ((p (new-prompt)))
-    (let ((v (push-prompt p
-	       (let* ((v1 (push-prompt p (+ (abort-prompt p 5) 6)))
-		      (v1 (abort-prompt p 7)))
-		 (+ v1 10)))))
-      (+ v 20)))
+(test test32
+  (let ((p (newPrompt)))
+    (let ((v (pushPrompt p
+	       (let* ((v1 (pushPrompt p (+ (abortPrompt p 5) 6)))
+                  (v1 (abortPrompt p 7)))
+             (+ v1 10) ))))
+      (+ v 20) ))
   27)
 
-(test 'test3-3
-  (let ((p (new-prompt)))
-    (let ((v (push-prompt p (let*
-	    ((v1 (push-prompt p (+ 6 (abort-prompt p 5))))
-		 (v1 (abort-prompt p 7)) )
-		(+ v1 10) ))))
-      (abort-prompt p 9)
+(test test33
+  (let ((p (newPrompt)))
+    (let ((v (pushPrompt p
+           (let* ((v1 (pushPrompt p (+ 6 (abortPrompt p 5))))
+                  (v1 (abortPrompt p 7)) )
+             (+ v1 10) ))))
+      (abortPrompt p 9)
       (+ v 20) ))
   )
 ; gives prompt not found: (#null)
 
-;; (test-check 'test3-3-1
-;;   (let ((p (new-prompt)))
-;;     (let ((v (push-prompt p
-;; 	       (let* ((v1 (push-prompt p (+ (abort-prompt p 5) 6)))
-;; 		      (v1 (abort-prompt p 7)))
-;; 		 (+ v1 10)))))
-;;       (prompt-set? p))) ; give unbound: prompt-set?
+;; (testCheck test331
+;;   (let ((p (newPrompt)))
+;;     (let ((v (pushPrompt p
+;; 	       (let* ((v1 (pushPrompt p (+ (abortPrompt p 5) 6)))
+;;            (v1 (abortPrompt p 7)))
+;;       (+ v1 10)))))
+;;       (promptSet? p))) ; give unbound: promptSet?
 ;;   #f)
 
-(test 'test4
-  (let ((p (new-prompt)))
-    (+ (push-prompt p 
-	     (+ (take-subcont p sk (push-prompt p (push-subcont sk 5)))
+(test test4
+  (let ((p (newPrompt)))
+    (+ (pushPrompt p 
+	     (+ (takeSubcont p sk (pushPrompt p (pushSubcont sk 5)))
 	        10) )
        20) )
   35 )
 
 (define (shift p f) 
-  (take-subcont p sk
-    (push-prompt p
-      (f (lambda (c)
-           (push-prompt-subcont p sk (c)) )))))
+  (takeSubcont p sk
+    (pushPrompt p
+      (f (\ (c)
+           (pushPromptSubcont p sk (c)) )))))
 
-(test 'test5
-  (+ (push-prompt 'p0
-       (+ (shift 'p0 (lambda (sk)
-                       (+ 100 (sk (lambda () (sk (lambda () 3))))) ))
+(test test5
+  (+ (pushPrompt 'p0
+       (+ (shift 'p0 (\ (sk)
+                       (+ 100 (sk (\ () (sk (\ () 3))))) ))
           2))
      10)
   117)
 
-(test 'test5-1
-  (+ 10 (push-prompt 'p0
-          (+ 2 (shift 'p0 (lambda (sk)
-                            (sk (lambda () (+ 3 100))))))))
+(test test51
+  (+ 10 (pushPrompt 'p0
+          (+ 2 (shift 'p0 (\ (sk)
+                            (sk (\ () (+ 3 100))))))))
   115)
 
-(define (abort-subcont prompt value)
-  (take-subcont prompt #ignore value))
+(define (abortSubcont prompt value)
+  (takeSubcont prompt #ignore value))
 
-(test 'test5-2
-  (+ (push-prompt 'p0
-       (+ (shift 'p0 (lambda (sk)
-                       (+ (sk (lambda ()
-                                (push-prompt 'p1
-                                  (+ 9 (sk (lambda ()
-                                             (abort-subcont 'p1 3)))))))
+(test test52
+  (+ (pushPrompt 'p0
+       (+ (shift 'p0 (\ (sk)
+                       (+ (sk (\ ()
+                                (pushPrompt 'p1
+                                  (+ 9 (sk (\ ()
+                                             (abortSubcont 'p1 3)))))))
                           100)))
           2))
      10)
   115)
 
-(test 'test5-3
-  (+ (push-prompt 'p0
-       (let ((v (shift 'p0 (lambda (sk)
-                             (+ (sk (lambda ()
-                                      (push-prompt 'p1
-                                        (+ 9 (sk (lambda ()
-                                                   (abort-subcont 'p1 3)))))))
+(test test53
+  (+ (pushPrompt 'p0
+       (let ((v (shift 'p0 (\ (sk)
+                             (+ (sk (\ ()
+                                      (pushPrompt 'p1
+                                        (+ 9 (sk (\ ()
+                                                   (abortSubcont 'p1 3)))))))
                                 100)))))
          (+ v 2)))
      10)
   115)
 
-(test 'test5-4
-  (+ (push-prompt 'p0
-       (let ((v (shift 'p0 (lambda (sk)
-                             (+ (sk (lambda ()
-                                      (push-prompt 'p1
-                                        (+ 9 (sk (lambda ()
-                                                   (abort-subcont 'p0 3)))))))
+(test test54
+  (+ (pushPrompt 'p0
+       (let ((v (shift 'p0 (\ (sk)
+                             (+ (sk (\ ()
+                                      (pushPrompt 'p1
+                                        (+ 9 (sk (\ ()
+                                                   (abortSubcont 'p0 3)))))))
                                 100)))))
          (+ v 2)))
      10)
   124)
 
-(test 'test6
-  (+ (let ((push-twice (lambda (sk)
-              (push-subcont sk (push-subcont sk 3)))))
-       (push-prompt 'p1
-         (push-prompt 'p2
-           (+ (take-subcont 'p1 sk
-                (push-twice sk))
+(test test6
+  (+ (let ((pushTwice (\ (sk)
+              (pushSubcont sk (pushSubcont sk 3)))))
+       (pushPrompt 'p1
+         (pushPrompt 'p2
+           (+ (takeSubcont 'p1 sk
+                (pushTwice sk))
               1))))
      10)
   15)
 
-(test 'test7
-  (+ (let ((push-twice (lambda (sk)
-              (push-subcont sk
-                (push-subcont sk
-                  (take-subcont 'p2 sk2
-                    (push-subcont sk2
-                      (push-subcont sk2 3))))))))
-       (push-prompt 'p1
-         (+ (push-prompt 'p2
-              (+ 10 (push-prompt 'p3
-                      (take-subcont 'p1 sk (push-twice sk)))))
+(test test7
+  (+ (let ((pushTwice (\ (sk)
+              (pushSubcont sk
+                (pushSubcont sk
+                  (takeSubcont 'p2 sk2
+                    (pushSubcont sk2
+                      (pushSubcont sk2 3))))))))
+       (pushPrompt 'p1
+         (+ (pushPrompt 'p2
+              (+ 10 (pushPrompt 'p3
+                      (takeSubcont 'p1 sk (pushTwice sk)))))
             1)))
      100)
   135)
 
-(test 'test7-1
-  (+ (let ((push-twice (lambda (sk)
-              (sk (lambda ()
-                    (sk (lambda ()
-                          (shift 'p2 (lambda (sk2)
-                                       (sk2 (lambda ()
-                                              (sk2 (lambda () 3)))))))))))))
-       (push-prompt 'p1
-         (+ (push-prompt 'p2
-              (+ 10 (push-prompt 'p3
-                      (shift 'p1 (lambda (sk) (push-twice sk))))))
+(test test71
+  (+ (let ((pushTwice (\ (sk)
+              (sk (\ ()
+                    (sk (\ ()
+                          (shift 'p2 (\ (sk2)
+                                       (sk2 (\ ()
+                                              (sk2 (\ () 3)))))))))))))
+       (pushPrompt 'p1
+         (+ (pushPrompt 'p2
+              (+ 10 (pushPrompt 'p3
+                      (shift 'p1 (\ (sk) (pushTwice sk))))))
             1)))
      100)
   135)
 
-|#
-(define-operative (block block-name . forms) env
-  (let ((tag (list #null))) ; cons up a fresh object as tag
-    (let ((escape (lambda (value) (throw-tag tag value))))
-      (catch-tag tag
-        (eval (list (list* lambda (list block-name) forms)
-                    escape)
-              env)))))
 
-(define (return-from block-name . value?)
-    (block-name (optional value?)))
+;;;; Dynamic Binding Tests
 
-(define optional (lambda value? (if (== value? ()) () (car value?))))
-(assert (optional) ())
-(assert (optional 1) 1)
+(test defdynamic.1
+  (begin
+    (ddef* (x y) 1 (+ 1 1))
+    (assert (dval x) 1)
+    (assert (dval y) 2)
+    (dlet* ((x 3))
+      (assert (dval x) 3)
+      (assert (dval y) 2)
+      (dlet* ((y 4))
+        (assert (dval x) 3)
+        (assert (dval y) 4))
+      (assert (dval x) 3)
+      (assert (dval y) 2))
+    (assert (dval x) 1)
+    (assert (dval y) 2))
+  #t)
+  
+(test defdynamic.redefine
+  (begin  
+    (ddef a (+ 1 1))
+    (def oa a)
+    (assert (dval a) 2)
+    (assert (dval oa) 2)
+    (ddef a (+ 2 2))
+    (assert (dval a) 4)
+    (assert (dval oa) 4)
+    (assert (eq? oa a) #t)
+    (ddef a #null)
+    (assert (dval a) #null)
+    (assert (eq? oa a) #t) )
+  #t )
 
-(define unwind-protect finally)
+(test progv.1
+  (begin
+    (ddef* (*x* *y*) 1 2)
+    (assert (dval *x*) 1)
+    (assert (dval *y*) 2)
+    (progv (*x*) (3)
+      (assert (dval *x*) 3)
+      (assert (dval *y*) 2)
+      (progv (*y*) (4)
+        (assert (dval *x*) 3)
+        (assert (dval *y*) 4) )
+      (assert (dval *x*) 3)
+      (assert (dval *y*) 2) )
+    (assert (dval *x*) 1)
+    (assert (dval *y*) 2) )
+  #t )
+    
 #|
+  (deftest dynamic.1
+    (progn
+      (defdynamic *foo*)
+      (assert (= (dynamic *foo*) #void))
+      (assert (= (slot-value *foo* 'value) #void))
+      (assert (typep *foo* #^dynamic))
+      (assert (typep *foo* #^standard-object))
+      (assert (typep *foo* #^object))
+      (assert (subclassp #^dynamic #^standard-object))
+      (assert (subclassp #^dynamic #^object)))
+    #void)
+|#
 
-(assert (catch-tag a (throw-tag a)) #inert)
-(assert (catch-tag a (throw-tag a 2)) 2)
+(test set-dynamic.1
+  (begin
+    (ddef *bar* #null)
+    (dlet ((*bar* 1))
+      (dval *bar* 2)
+      (assert (dval *bar*) 2)
+      (dlet ((*bar* 3))
+        (assert (dval *bar*) 3) )
+      (assert (dval *bar*) 2)
+      (dval *bar* 4)
+      (assert (dval *bar*) 4) )
+    (assert (dval *bar*) #null) )
+  #t )
+
+(test dynamic-let*.1
+  (dlet* () (+ 1 1))
+  2)
+
+(test dynamic-let*.2
+  (begin
+    (ddef *x* 1)
+    (dlet* ((*x* 2)) (+ 1 (dval *x*))))
+  3)
+
+(test dynamic-let*.2
+  (begin
+    (ddef* (*x* *y*) 1 0)
+    (dlet* ((*x* 2) (*y* (+ (dval *x*) 1)))
+      (list (dval *x*) (dval *y*))))
+  '(2 3))
+
+(test dynamic-let-sanity-check
+  (begin
+    (ddef* (*x* *y*) 1 0)
+    (dlet ((*x* 2) (*y* (+ (dval *x*) 1)))
+      (list (dval *x*) (dval *y*))))
+  '(2 2) )
+
+(assert (catchTag 'a (throwTag 'a)) #inert)
+(assert (catchTag 'a (throwTag 'a 2)) 2)
 
 (assert (finally (== 1 1)) #t)
 (assert (begin (+ (finally 1 2 3 (define x 10)) x)) 11)
-(assert (+ (catch-tag a (finally (throw-tag a 1) 2 3 (define x 10))) x) 11)
-(assert (catch-tag a (finally 1 2 3 (throw-tag a 4))) 4)
-(assert (catch-tag a (finally (throw-tag a 1) 2 3 (throw-tag a (+ 2 2)))) 4)
+(assert (+ (catchTag 'a (finally (throwTag 'a 1) 2 3 (def x 10))) 10) 11)
+(assert (catchTag 'a (finally 1 2 3 (throwTag 'a 4))) 4)
+(assert (catchTag 'a (finally (throwTag 'a 1) 2 3 (throwTag 'a (+ 2 2)))) 4)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -222,22 +308,22 @@
 (assert (combine and (list (== 1 1) (== 2 2))) #t)
 (assert (combine and (list (!= 1 1) (== 2 2))) #f)
 
-(assert (apply (lambda (x) x) (list 2)) 2)
+(assert (apply (\ (x) x) (list 2)) 2)
 
-(assert (unwrap ($vau () #ignore)))
+(assert (unwrap (vau () #ignore)))
 
-|#
+#|
 (let ((obj (object ("x" 1))))
   (set (.x obj) 2)
-  (assert-equal 2 (.x obj))
+  (assertEqual 2 (.x obj))
   ;(set (@ obj "x") 3) ; give not a combiner: [object Undefined] in: (3 obj "x")
   (set (.x obj) 3)
-  (assert-equal 3 (.x obj)) )
+  (assertEqual 3 (.x obj)) )
 
-(assert-equal &x #undefined)
+(assertEqual &x #undefined)
 (set &x 2)
-(assert-equal &x 2)
-#|
+(assertEqual &x 2)
+|#
 
 (assert (* 1 2 3 4) 24)
 (assert (*) 1)
@@ -251,7 +337,7 @@
 (assert (/ 5) (/ 1 5))
 (assert (/ 54 2 3) 9)
 
-(assert (toString (reverse-list (list 3 2 1))) (toString (list 1 2 3)))
+(assert (toString (reverse (list 3 2 1))) (toString (list 1 2 3)))
 
 (assert (log "logging" 1 2 3) "logging")
 
@@ -266,14 +352,11 @@
 (assert (<= 1 1 2 3 4 5 5) #t)
 (assert (< 1 1 2 3 4 5 5) #f)
 
-(define (test-tco n) (if (<= n 0) n (test-tco (- n 1))))
-(assert (test-tco 400) 0)
-
 (exit "finito")
 
-|#
+#|
 (let ((x (cell 0)))
   (while (< (ref x) 10)
     (++ (ref x)))
-  (assert-equal 10 (ref x)) )
-#|
+  (assertEqual 10 (ref x)) )
+|#

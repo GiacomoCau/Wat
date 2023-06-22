@@ -70,7 +70,7 @@
    |#
   %type?)
 
-(def instanceof? %instanceof?)
+(def instanceOf? %instanceOf?)
 
 (def intern
   #|Get or create the unique symbol with STRING as name.
@@ -311,8 +311,8 @@
    |#
   (list 'def name value) )
 
-(defMacro (wrau pt env . body)
-  (list 'wrap (list* 'vau pt env body)))
+(defMacro (wrau pt ep . body)
+  (list 'wrap (list* 'vau pt ep body)))
 
 (defMacro (def* lhs . rhs)
   (list 'def lhs (list* 'list rhs)) )
@@ -605,7 +605,7 @@
       (if (== test 'else)
         (apply (wrap begin) body env)
         (let1 (test (eval test env))
-          (if (instanceof? test Boolean)
+          (if (instanceOf? test Boolean)
             (if test
               (apply (wrap begin) body env)
               (apply (wrap cond) clauses env) )
@@ -745,6 +745,7 @@
    ;; The proper/CL way would be to use an OR type spec, but they might get removed from the language.
   (lispx::makeTypecaseWithDefaultFunction (\ (key) (error (makeTypeError key Object)))) )
 |#
+
 ; vedi signalsError in vm.lispx o test-util per codice simile
 (def\ (checkSlots obj slots)
   (let1 next (slots slots)
