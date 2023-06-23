@@ -7,24 +7,28 @@
 ;; First, some preliminary definitions.
 
 (def\ abortSubcont (prompt value)
-  "Utility that captures the continuation but just ignores it."
+  #|Utility that captures the continuation but just ignores it.
+   |#
   (takeSubcont prompt #ignore value))
 
 (defMacro pushSubcont (k . forms)
-  "We don't have `pushSubcont' but for these tests we can emulate it
-  |with a `pushDelimSubcont' that pushes an unused prompt."
+  #|We don't have `pushSubcont' but for these tests we can emulate it
+   |with a `pushDelimSubcont' that pushes an unused prompt.
+   |#
   (list* pushDelimSubcont #ignore k forms))
 
 (def\ shift (p f)
-  "The `shift' operator, adapted from the file `delimcc.ml'."
+  #|The `shift' operator, adapted from the file `delimcc.ml'.
+   |#
   (takeSubcont p sk
     (pushPrompt p
       (f (\ (c)
            (pushDelimSubcont p sk (c)))))))
 
 (def\ promptSet? (prompt)
-  "Return true if a prompt is set, false otherwise.
-  |(Note that this leads to stack growth, i.e. leaks.)"
+  #|Return true if a prompt is set, false otherwise.
+   |(Note that this leads to stack growth, i.e. leaks.)
+   |#
   (handlerCase ((PromptNotFoundError (\ #ignore #f)))
     (takeSubcont prompt k (pushDelimSubcont prompt k #t))))
 
@@ -179,8 +183,9 @@
 ;; `dynvar-scheme48-problem.scm' of the DBplusDC distribution, available
 ;; at the URL `http://okmij.org/ftp/Computation/dget-binding.html'
 
-(def\ dsetPrv (dynvar value)
-  "Set the value of a dget variable and return the old value."
+(def\ dset:prv (dynvar value)
+  #|Set the value of a dget variable and return the old value.
+   |#
   (prog1 (dget dynvar)
     (dset dynvar value)))
 
@@ -222,7 +227,7 @@
       (dlet ((*p* 1))
         (let* ((v1 (dget *p*))
                (v2 (dlet ((*p* 2))
-                     (let ((v3 (dsetPrv *p* 12))
+                     (let ((v3 (dset:prv *p* 12))
                            (v4 (dget *p*)))
                        (list v3 v4)))))
           (let ((v5 (dget *p*)))

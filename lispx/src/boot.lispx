@@ -238,6 +238,8 @@
    |#
   %theEnv)
 
+(def evalMacro (%dVar #t))
+
 (def lispx::makeMacro
   #|Create a macro from an EXPANDER operator.  A macro is an operator
    |that receives an operand and produces a form (by calling the expander
@@ -246,16 +248,6 @@
    |$(fn (expander))
    |$(type function)
    |#
-  (wrap
-    (vau (expander) #ignore
-      (vau operand env
-        (eval
-          (eval (cons expander operand) (makeEnv))
-          env )))))
-
-(def evalMacro (%dVar #t))
-
-(def lispx::makeMacro
   (wrap
     (vau (expander) #ignore
       (vau operands env
@@ -274,20 +266,19 @@
      (list 'lispx::makeMacro (list* 'vau parameterTree #ignore forms)) )))
 
 
-; defMacro defVau def\ def*\ rec\ e letrec\ let1\ let\ permettono la definizione delle funzioni con due sintassi
+; defMacro defVau def\ def*\ rec\ let1\ let1rec\ let\ letrec\ permettono la definizione con due sintassi
+;
 ;    (_ name parameters . body)
 ;    (_ (name . parameters) . body)
-; rec rec\ letrec e letrec\ inizializzano a #inert le definizioni prima della valutazione
+;
+; rec rec\ let1rec let1rec\ letrec letrec\ inizializzano a #inert le definizioni prima della valutazione
 
 (def defMacro
   #|Define a macro with the given NAME, PARAMETER-TREE, and FORMS.
    |$(fn (name parameterTree . forms))
+   |$(fn ((name parameterTree) . forms))
    |$(type macro)
    |#
-  (macro (name parameterTree . forms)
-    (list 'def name (list* 'macro parameterTree forms)) ))
-
-(def defMacro
   (macro (lhs . rhs)
     (if (symbol? lhs)
       (list 'def lhs (list* 'macro (car rhs) (cdr rhs)))
@@ -299,6 +290,9 @@
 (defMacro defVau (lhs . rhs)
   #|Define a fexpr with the given NAME, PARAMETER-TREE,
    |ENVIRONMENT-PARAMETER, and FORMS.
+   |$(fn (name parameterTree . forms))
+   |$(fn ((name parameterTree) . forms))
+   |$(type macro)
    |#
   (if (symbol? lhs)
     (list 'def lhs (list* 'vau (car rhs) (cadr rhs) (cddr rhs)))
@@ -306,8 +300,7 @@
 
 (defMacro defConstant (name value . docstring?)
   #|Define a constant with the given NAME and VALUE.  This is mostly
-   |for documentation purposes, as constants are still mutable.  The
-   |optional DOCSTRING? is currently ignored.
+   |for documentation purposes, as constants are still mutable.
    |#
   (list 'def name value) )
 
@@ -332,6 +325,9 @@
 
 (defMacro (def\ lhs . rhs)
   #|Define a function with the given NAME, PARAMETER-TREE, and FORMS.
+   |$(fn (name parameterTree . forms))
+   |$(fn ((name parameterTree) . forms))
+   |$(type macro)
    |#
   (if (symbol? lhs)
     (list 'def lhs (list* '\ (car rhs) (cdr rhs)))
@@ -367,13 +363,10 @@
 
 ;;; Basic macros and functions
 
-(def\ apply (function arguments)
-  #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
-   |#
-  (eval (cons (unwrap function) arguments) (%makeEnv)))
-
 (def\ (apply appv args . env)
-  #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.|#
+  #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
+   |$(type function)
+   |#
   (def env (if (null? env) (makeEnv) ((\ ((env)) env) env))) 
   (if (%jFun? appv)
     (@combine (@new JFun vm appv) env args)
@@ -387,14 +380,9 @@
     (list 'rec lhs (list* '\ (car rhs) (cdr rhs)))
     (list 'rec (car lhs) (list* '\ (cdr lhs) rhs)) )) 
 
-(def\ map (function list)
-  #|Create a new list by applying the FUNCTION to every element of the LIST.|#
-  (if (null? list)
-      #null
-      (cons (function (car list)) (map function (cdr list)))))
-      
 (def\ (map f . lst*)
-  #|Create a new list by applying the FUNCTION to every element of the LIST.|#
+  #|Create a new list by applying the FUNCTION to every element of the LIST.
+   |#
   (if (null? lst*) (sympleError "none lists"))
   (if (null? (cdr lst*))
     ((rec\ (map lst) (if (null? lst) #null (cons (f (car lst)) (map (cdr lst))) )) (car lst*))
@@ -411,21 +399,51 @@
 (def\ (->inert binding) #inert)
 (def\ (->1expr binding) ((\ ((#_ cadr)) cadr) binding))
 (def\ (->begin binding) ((\ ((#_ cadr . exps)) (if (null? exps) cadr (list* 'begin cadr exps))) binding))
-(def\ (->name\ (lhs . rhs)) (if (symbol? lhs)  (list lhs (list* '\ (car rhs) (cdr rhs))) (list (car lhs) (list* '\ (cdr lhs) rhs))))
+(def\ (->name\ (lhs . rhs)) (if (symbol? lhs) (list lhs (list* '\ (car rhs) (cdr rhs))) (list (car lhs) (list* '\ (cdr lhs) rhs))))
+(def\ (->name binding) (if (symbol? binding) binding (car binding)))
 
-(defMacro letLoop (name initializers . forms)
+
+(defMacro (let1Loop . args)
+  (if (symbol? (car args))
+    (def (name binding . body) args)
+    (def ((name . binding) . body) args))
+  (list
+    (list* 'rec\ name (list (car binding)) body)
+    (->1expr binding) ))
+
+(defMacro (let1 lhs . rhs)
+  (if (symbol? lhs)
+    (list* 'let1Loop lhs (car rhs) (cdr rhs))
+    (list (list* '\ (list (car lhs)) rhs)
+      (->1expr lhs) )))
+
+(defMacro (let1\ binding . body)
+  (list* 'let1 (->name\ binding) body))
+
+(defMacro (let1rec binding . body)
+  (list* 'let ()
+    (list 'def (car binding) (->inert binding))
+    (list 'def (car binding) (->1expr binding))
+    body ))
+
+(defMacro (let1rec\ binding . body)
+  (list* 'let ()
+    (list 'def (->name (car binding)) #inert)
+    (list* 'def\ (car binding) (cdr binding))
+    body ))
+
+
+(defMacro (letLoop . args)
   #|Labelled recursive loop, analogous to Scheme's named `let'.
    |Lexically bind a function named NAME with one PARAMETER for every
    |INITIALIZER and the FORMS as body.  Then immediately apply the
    |function to a list containing one VALUE for every INITIALIZER and
    |return the result.  The function is bound per `labels' so it can
    |recursively refer to itself.
-   |$(syntax initializer (parameter value))
+   |$(fn (initializers . body))
+   |$(fn (name initializers . body))
+   |$(syntax initializers ((parameter value) . initializers)
    |#
-  (list labels (list (list* name (map car initializers) forms))
-        (list* name (map cadr initializers))))
-
-(defMacro (letLoop . args)
   (if (symbol? (car args))
     (def (name bindings . body) args)
     (def ((name . bindings) . body) args))
@@ -433,40 +451,52 @@
     (list* 'rec\ name (map car bindings) body)
     (map ->1expr bindings) ))
 
-(defMacro (let1 lhs . rhs)
-  (if (symbol? lhs)
-    (list* 'letLoop lhs (list (car rhs)) (cdr rhs))
-    (list (list* '\ (list (car lhs)) rhs)
-      (->1expr lhs) )))
-
-(defMacro let (bindings . forms)
+(defMacro (let lhs . rhs)
   #|Establish BINDINGS parallelly during the evaluation of FORMS, so
    |that no binding can refer to the other ones.
-   |$(syntax binding (definiendTree value))
+   |$(fn (bindings . body))
+   |$(fn (name bindings . body))
+   |$(syntax bindings ((parameter value) . bindings)
    |#
-  (list* (list* '\ (map car bindings) forms)
-         (map cadr bindings)))
-
-(defMacro (let lhs . rhs)
   (if (symbol? lhs)
     (list* 'letLoop lhs rhs)
     (list* (list* '\ (map car lhs) rhs)
       (map ->1expr lhs) )))
 
-(defMacro let* (bindings . forms)
-  #|Establish BINDINGS serially during the evaluation of FORMS, so that
-   |every binding can refer to previous ones.
-   |$(syntax binding (definiendTree value))
+(defMacro (let\ bindings . body)
+  #|Establish FUNCTION-BINDINGS parallelly during evaluation of FORMS,
+   |so that no function can refer to the other ones.
+   |$(syntax functionBinding (name parameterTree . forms))
    |#
-  (if (null? bindings)
-      (list* 'let () forms) ; Always introduce a new scope.
-      (list 'let (list (car bindings))
-            (list* 'let* (cdr bindings) forms))))
+  (list* 'let (map ->name\ bindings) body))
+
+(defMacro (letrec bindings . body)
+  #|Utility to establish BINDINGS recursively during the evaluation of
+   |FORMS.  Used by `labels'.
+   |#
+  (list* 'let ()
+    (list* 'def* (map car bindings) (map ->inert bindings))
+    (list* 'def* (map car bindings) (map ->1expr bindings))
+    body ))
+
+(defMacro (letrec\ bindings . body)
+  (list* 'let ()
+    (list* 'def* (map (\ (binding) (->name (car binding))) bindings) (map ->inert bindings))
+    (list* 'def*\ (map car bindings) (map cdr bindings))
+    body ))
+
+(def labels
+  #|Establish FUNCTION-BINDINGS recursively during evaluation of FORMS,
+   |so that every function can refer to the other ones.
+   |$(syntax functionBinding (name parameterTree . forms))
+   |#
+  letrec\)
+
 
 (defMacro (let* bindings . body)
   #|Establish BINDINGS serially during the evaluation of FORMS, so that
    |every binding can refer to previous ones.
-   |$(syntax binding (definiendTree value))
+   |$(syntax bindings ((definiendTree value) . bindings))
    |#
   (if (null? bindings)
       (list* 'let () body)
@@ -474,82 +504,25 @@
         (list (car bindings))
         (list* 'let* (cdr bindings) body) )))
 
-(defMacro letrec (bindings . forms)
-  #|Utility to establish BINDINGS recursively during the evaluation of
-   |FORMS.  Used by `labels'.
-   |#
-  (if (null? bindings)
-      (list* 'let () forms) ; Always introduce a new scope.
-      (list* 'let ()
-             (list 'def
-                   (map car bindings)
-                   (list* list (map cadr bindings)))
-             forms)))
-
-(defMacro (letrec bindings . body)
-  (list* 'let ()
-    (list* 'def* (map car bindings) (map ->inert bindings))
-    (list* 'def* (map car bindings) (map ->1expr bindings))
-    body ))
-
-(def\ lispx::makeFunctionBinding ((name parameterTree . forms))
-  #|Utility to turn a function binding as it appears in `let\' and
-   |`labels' into a binding for `let' or `letrec'.
-   |#
-  (list name (list* '\ parameterTree forms)))
-
-(defMacro let\ (functionBindings . forms)
-  #|Establish FUNCTION-BINDINGS parallelly during evaluation of FORMS,
-   |so that no function can refer to the other ones.
-   |$(syntax functionBinding (name parameterTree . forms))
-   |#
-  (list* 'let (map lispx::makeFunctionBinding functionBindings) forms))
-
-(defMacro (let\ bindings . body)
-  (list* 'let (map ->name\ bindings) body))
-
-(defMacro labels (functionBindings . forms)
-  #|Establish FUNCTION-BINDINGS recursively during evaluation of FORMS,
-   |so that every function can refer to the other ones.
-   |$(syntax functionBinding (name parameterTree . forms))
-   |#
-  (list* 'letrec (map lispx::makeFunctionBinding functionBindings) forms))
-
-(defMacro (letrec\ bindings . body)
-  (list* 'let ()
-    (list* 'def* (map (\ ((lhs . #_)) (if (symbol? lhs) lhs (car lhs))) bindings) (map ->inert bindings))
-    (list* 'def*\ (map car bindings) (map cdr bindings))
-    body ))
-
-(def labels letrec\)
-
 
 ;;;; Simple control
 
-(defMacro when (test . forms)
-  #|If TEST yields true, evaluate the FORMS as an implicit `begin'.
-   |Otherwise, return void.
-   |#
-  (list if test (list* begin forms) #inert))
-
 (defMacro (when test . body)
-  #|If TEST yields true, evaluate the FORMS as an implicit `begin'. Otherwise, return void.|#
+  #|If TEST yields true, evaluate the FORMS as an implicit `begin'. Otherwise, return inert.
+   |#
   (list 'if test (list* 'begin body)))
 
-(defMacro unless (test . forms)
-  #|If TEST yields false, evaluate the FORMS as an implicit `begin'.
-   |Otherwise, return void.
-   |#
-  (list if test #inert (list* begin forms)))
-
 (defMacro (unless test . body)
-  #|If TEST yields false, evaluate the FORMS as an implicit `begin'. Otherwise, return void.|#
+  #|If TEST yields false, evaluate the FORMS as an implicit `begin'. Otherwise, return inert.
+   |#
   (list* 'if test #inert body))
 
 
-;;;; Ifbind? CaseVau Case\ Match
+;;;; Bind? IfBind? CaseVau Case\ Match
 
-(defVau (ifbind? (pt exp) then . else) env
+(def bind? %bind?)
+
+(defVau (ifBind? (pt exp) then . else) env
   (let1 (env+ (makeEnv env))
     (if (bind? env+ pt (eval exp env))
       (eval then env+)
@@ -645,7 +618,7 @@
 (defVau while (testForm . forms) env
   #|Evaluate FORMS while TEST-FORM evaluates to true.
    |#
-  (let ((forms (list* begin forms)))
+  (let ((forms (list* 'begin forms)))
     (block exit
       (loop
         (if (eval testForm env)
@@ -655,7 +628,7 @@
 (defMacro until (testForm . forms)
   #|Evaluate FORMS until TEST-FORM evaluates to true.
    |#
-  (list* while (list not testForm) forms))
+  (list* while (list 'not testForm) forms))
 
 (defMacro dotimes ((var countForm . resultForm?) . bodyForms)
   #|Cf. Common Lisp's DOTIMES.
@@ -668,8 +641,8 @@
              (result (i)))))
     (list _dotimes_
           countForm
-          (list* \ (list var) bodyForms)
-          (list* \ (list var) resultForm?))))
+          (list* '\ (list var) bodyForms)
+          (list* '\ (list var) resultForm?))))
 
 (defVau block (blockName . forms) env
   #|Establish a block named BLOCK-NAME and evaluate the FORMS as an
@@ -678,12 +651,19 @@
    |Note that unlike in Common Lisp, there is no separate namespace for
    |block names; a block is named in the normal variable namespace.
    |#
-  (let ((tag (list #inert))) ; cons up a fresh object as tag
-    (let\ ((escape (value) (throw tag value)))
+  (let1 (tag (list #inert)) ; cons up a fresh object as tag
+    (let1\ (escape (value) (throw tag value))
       (catch tag
-        (eval (list (list* \ (list blockName) forms)
-                    escape)
+        (eval (list (list* '\ (list blockName) forms) escape)
               env)))))
+#|
+(defVau block (blockName . forms) env
+  (def tag (list #inert)) ; cons up a fresh object as tag
+  (def\ (escape value) (throw tag value))
+  (catch tag
+    (eval (list (list* '\ (list blockName) forms) escape)
+          env )))
+|#
 
 (def\ returnFrom (blockName . value?)
   #|Abort evaluation and return the optional VALUE? (which defaults to
@@ -693,58 +673,20 @@
    |#
   (blockName (opt? value?)))
 
-(defMacro finally (protectedForm . cleanupForms)
+(def finally
   #|valuate the PROTECTED-FORM and return its result.  Regardless of
    |whether the protected form returns normally, or via a nonlocal exit or
    |panic, the CLEANUP-FORMS are evaluated after the protected form.
+   |$(fn (protectedForm . cleanupForms))
    |#
-  (list %finally protectedForm (list* begin cleanupForms)))
+  %finally)
 
 (defVau prog1 (form . forms) env
   #|Evaluate FORM and any additional FORMS, and return the result of FORM.
    |#
-  (let ((result (eval form env)))
+  (let1 (result (eval form env))
     (eval (list* begin forms) env)
     result))
-
-#| TODO sostituito dal seguente, elimintare
-(def\ lispx::makeTypecaseWithDefaultFunction (default)
-  #|Metaprogramming utility used to create `typecase' and `etypecase'.
-   |If no matching clause is found, the DEFAULT function is called with
-   |the key.
-   |#
-  (vau (keyform . clauses) env
-    (let ((key (eval keyform env)))
-      (letLoop -typecase- ((clauses clauses))
-        (if (null? clauses)
-            (default key)
-            (let ((((className . forms) . restClauses) clauses))
-              (if (type? key (findClass className env))
-                  (eval (list* begin forms) env)
-                  (-typecase- restClauses))))))))
-
-(def typecase
-  #|Multi-armed type test.
-   |Evaluate the KEYFORM.  Go through the CLAUSES.  If the result of
-   |evaluating KEYFORM is an instance of the class named by CLASS-NAME,
-   |evaluate the FORMS as an implicit `begin'.  Otherwise go to the next
-   |clause, or return void if there are no more clauses.
-   |$(type fexpr)
-   |$(fn (keyform . clauses))
-   |$(syntax clause (className . forms))
-   |#
-  (lispx::makeTypecaseWithDefaultFunction (\ (#ignore) #inert)) )
-
-(def etypecase
-  #|Like `typecase' but signal a `TypeError' if no clause matches the KEYFORM.
-   |$(type fexpr)
-   |$(fn (keyform . clauses))
-   |$(syntax clause (className . forms))
-   |#
-   ;; Note: we use Object as :expectedType of the type error which is somewhat nonsensical.
-   ;; The proper/CL way would be to use an OR type spec, but they might get removed from the language.
-  (lispx::makeTypecaseWithDefaultFunction (\ (key) (error (makeTypeError key Object)))) )
-|#
 
 ; vedi signalsError in vm.lispx o test-util per codice simile
 (def\ (checkSlots obj slots)
@@ -787,22 +729,9 @@
    |change it.  Therefore, we usually use boxes (see below) instead of
    |mutating bindings directly.
    |#
-  (eval (list def definiendTree
-              (list (unwrap eval) value dynamicEnvironment))
+  (eval (list 'def definiendTree (list (unwrap eval) value dynamicEnvironment))
         (eval environment dynamicEnvironment)))
 
-(def\ box initialValue?
-  #|Create a new box with the optional INITIAL-VALUE?.  A box is a
-   |function that encapsulates a mutable value.  Calling the box without
-   |arguments returns the value.  Calling the box with an argument sets
-   |the value.
-   |#
-  (def value (opt? initialValue?))
-  (def env (theEnv))
-  (\ newValue?
-    (ifOpt? (newValue newValue?)
-      (set env value newValue)
-      value)))
 (def box
   #|Create a new box with the optional INITIAL-VALUE?.  A box is a
    |function that encapsulates a mutable value.  Calling the box without
@@ -816,7 +745,7 @@
 (def\ assert (boolean)
   #|Signal an error if the BOOLEAN is false.  Otherwise return void.
    |#
-  (unless boolean (error (makeInstance AssertionError :type 'assertion :datum boolean :expectedType 'Boolean))))
+  (unless boolean (error (makeInstance AssertionError :type 'assertion :datum boolean :expectedType #t))))
 
 (def\ compose (f g)
   #|Compose two functions, creating a new function equivalent to (G (F ...)).
@@ -831,10 +760,6 @@
 
 ;;; Lists
 
-(def\ null? (object)
-  #|Return true if the OBJECT is nil, false otherwise.|#
-  (== object #null))
-  
 (def null?
   #|Return true if the OBJECT is nil, false otherwise.
    |$(fn (object))
@@ -842,10 +767,6 @@
    |#
  %null?)
 
-(def\ cons? (object)
-  #|Return true if the OBJECT is a cons, false otherwise.|#
-  (type? object Cons))
-  
 (def cons?
   #|Return true if the OBJECT is a cons, false otherwise.
    |$(fn (object))
@@ -858,7 +779,7 @@
    |$(fn (object))
    |$(type function)
    |#
-  %cons?)
+  %list?)
 
 (def\ caar (cons)
   #|Return the `car' of the `car' of the CONS.|#
@@ -876,14 +797,6 @@
   #|Return the `cdr' of the `cdr' of the CONS.|#
   (cdr (cdr cons)))
 
-(def\ append (list1 list2)
-  #|Append two lists.  The first one must be proper and is copied.  The
-   |second one is not copied (and doesn't even have to be a list). It
-   |becomes the `cdr' of the final cons of the first list, or is returned
-   |directly if the first list is empty.
-   |#
-  (%append list1 list2))
-  
 (def append
   #|Append two lists.  The first one must be proper and is copied.  The
    |second one is not copied (and doesn't even have to be a list). It
@@ -894,20 +807,19 @@
    |#
   %append)
 
-(def\ nth (n list)
-  #|Return element number N of LIST, where the `car' is element zero.|#
-  (%nth n list))
+(def nth
+  #|Return element number N of LIST, where the `car' is element zero.
+   |$(fn (n list))
+   |$(type function)
+   |#
+  %nth)
 
-(def\ nthCdr (n list)
-  #|Returns the tail of LIST that would be obtained by calling `cdr' N times in succession.|#
-  (%nthCdr n list))
-
-(def\ forEach (function list)
-  #|Apply the FUNCTION to every element of the LIST for effect.  Return the list.|#
-  (unless (null? list)
-    (function (car list))
-    (forEach function (cdr list)))
-  list)
+(def nthCdr
+  #|Returns the tail of LIST that would be obtained by calling `cdr' N times in succession.
+   |$(fn (n list))
+   |$(type function)
+   |#
+  %nthCdr)
 
 (def\ (forEach f . lst*)
   #|Apply the FUNCTION to every element of the LIST for effect.  Return the #inert.|#
@@ -928,29 +840,27 @@
    |LIST, and append the results.  (Note: this currently uses `append',
    |but might be changed to use `nconc' in the future, like Common Lisp.)
    |#
-  (if (null? list)
-      #null
-      (append (function (car list)) (mapcan function (cdr list)))))
+  (if (null? list) #null
+      (append (function (car list)) (mapcan function (cdr list))) ))
 
 (defMacro dolist ((var listForm . resultForm?) . bodyForms)
   #|Cf. Common Lisp's DOLIST.|#
-  (labels ((_dolist_ (list body result)
+  (let1rec\ (_dolist_ (list body result)
              (if (null? list)
                  (result list)
                  (begin
                    (body (car list))
-                   (_dolist_ (cdr list) body result)))))
+                   (_dolist_ (cdr list) body result))))
     (list _dolist_
           listForm
-          (list* \ (list var) bodyForms)
-          (list* \ (list var) resultForm?))))
+          (list* '\ (list var) bodyForms)
+          (list* '\ (list var) resultForm?))))
 
 (def\ reduce (function list :initialValue initialValue)
   #|Use the binary FUNCTION to combine the elements of the LIST.  The
    |INITIAL-VALUE is logically placed before the list.
    |#
-  (if (null? list)
-      initialValue
+  (if (null? list) initialValue
       (reduce function (cdr list) :initialValue (function initialValue (car list)))))
 
 (def\ member (item list . keywords)
@@ -960,34 +870,30 @@
    |each list element before comparison (defaults to `identity').
    |$(fn (item list &key test key))
    |#
-  (let ((test (opt? (get? keywords :test) ==))
-        (key (opt? (get? keywords :key) identity)))
+  (let ( (test (opt? (get? keywords :test) ==))
+         (key  (opt? (get? keywords :key) identity)) )
     (letLoop -member- ((items list))
-      (if (null? items)
-          #null
-          (if (test item (key (car items)))
-              items
-              (-member- (cdr items)))))))
+      (if (null? items) #null
+        (if (test item (key (car items))) items
+          (-member- (cdr items)))))))
 
 (def\ removeIf (test list)
   #|Return a new list from which the elements that satisfy the TEST have been removed.|#
-  (if (null? list)
-      #null
-      (if (test (car list))
-          (removeIf test (cdr list))
-          (cons (car list) (removeIf test (cdr list))))))
+  (if (null? list) #null
+    (if (test (car list))
+      (removeIf test (cdr list))
+      (cons (car list) (removeIf test (cdr list))))))
 
 (def\ get? (plist indicator)
   #|Search for the INDICATOR keyword in the property list PLIST (a list
    |of alternating keywords and values) and return the found value as an
    |option.
    |#
-  (if (null? plist)
-      #null
-      (let (((i v . plist) plist))
-        (if (eq? i indicator) ; era eq
-            (some v)
-            (get? plist indicator)))))
+  (if (null? plist) #null
+    (let1 ((i v . plist) plist)
+      (if (eq? i indicator)
+        (some v)
+        (get? plist indicator) ))))
 
 
 ;;; Relational Operators
@@ -995,15 +901,13 @@
 ;; Note that unlike in Common Lisp, these operators currently require
 ;; at least two arguments.  This will be improved in the future.
 
-(def\ lispx::makeRelationalOperator (binaryOperator)
+(def\ (lispx::makeRelationalOperator binop)
   #|Utility to create an n-ary relational operator from a BINARY-OPERATOR.|#
-  (labels ((operator (arg1 arg2 . rest)
-             (if (binaryOperator arg1 arg2)
-                 (if (null? rest)
-                     #t
-                     (apply operator (list* arg2 rest)))
-                 #f)))
-    operator))
+  (rec\ (op arg1 arg2 . rest)
+    (if (binop arg1 arg2)
+      (if (null? rest) #t
+        (apply op (list* arg2 rest)))
+      #f )))
 
 (def eq?
   #|Return true if all ARGUMENTS are equal, false otherwise.
@@ -1048,11 +952,9 @@
   #|Return true if no two ARGUMENTS are the same, false otherwise.
    |$(fn arguments)
    |#
-  (if (null? args)
-      #t
-      (if (cons? (member arg args :test eq?))
-          #f
-          (apply /= args))))
+  (if (null? args) #t
+    (if (cons? (member arg args :test eq?)) #f
+      (apply /= args) )))
 
 
 ;;; Numbers
@@ -1089,8 +991,8 @@
    |#
   (\ (arg1 . rest)
     (if (null? rest)
-        (binaryOperator initialValue arg1)
-        (reduce binaryOperator rest :initialValue arg1))))
+      (binaryOperator initialValue arg1)
+      (reduce binaryOperator rest :initialValue arg1) )))
 
 (def -
   #|If only one number is supplied in the ARGUMENTS, return the
@@ -1136,7 +1038,7 @@
    |#
    ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
   (dolist (slotSpec slotSpecs) (the Symbol slotSpec))
-  (let ((superclass (findClass (opt? superclass? 'StandardObject) env)))
+  (let1 (superclass (findClass (opt? superclass? 'StandardObject) env))
     (eval (list def name (%makeStandardClass name superclass)) env)) )
 
 
@@ -1147,14 +1049,14 @@
    |PARAMETERS, and PROPERTIES are currently ignored.
    |$(syntax property (:documentation docstring))
    |#
-  (let\ ((generic args (apply (%getMethod (classOf (car args)) name) args)))
+  (let1\ (generic args (apply (%getMethod (classOf (car args)) name) args))
     (eval (list def name generic) env)))
 
 (defVau defMethod (name ((receiver className) . parameters) . forms) env
   #|Add a new method to the generic function named by NAME specialized
    |for the class named by CLASS-NAME.
    |#
-  (let ((method (eval (list* \ (list* receiver parameters) forms) env)))
+  (let1 (method (eval (list* \ (list* receiver parameters) forms) env))
     (%addMethod (findClass className env) name method)))
 
 
@@ -1188,16 +1090,14 @@
 
 (def\ assertType (object class)
   #|Signal a `type-error' if the OBJECT is not an instance of the CLASS.|#
-  (if (type? object class)
-      object
-      (error (makeTypeError object (className class)))))
+  (if (type? object class) object
+    (error (makeTypeError object (className class)))))
 
 (defVau the (className object) env
   #|Shorthand for `assertType'.  Signal a `type-error' if the OBJECT
    |is not an instance of the class named by CLASS-NAME.
    |#
   (assertType (eval object env) (eval (%the Symbol className) env)))
-
 
 ;;; Sequences
 
@@ -1254,13 +1154,13 @@
                     (car o?))
               env))))
 
-(def\ (\1||+ forms) 
+(def\ (\01+ forms) 
   (if (null? forms) #null (if (null? (cdr forms)) (car forms) (list* 'begin forms))) )
 
 (defVau ifOpt? ((pt opt?) then . else) env
   (let ((opt? (eval opt? env)))
     (if (null? opt?)
-        (if (null? else) #null (eval (\1||+ else) env))
+        (if (null? else) #null (eval (\01+ else) env))
         (eval (list (list 'vau (list pt) #ignore then) (car opt?)) env))))
 
 (defMacro whenOpt? ((name option?) . forms)
@@ -1270,7 +1170,7 @@
   (list ifOpt? (list name option?) (list* begin forms) #null))
 
 (defMacro whenOpt? ((pt opt?) . forms)
-  (list 'ifOpt? (list pt opt?) (\1||+ forms)))
+  (list 'ifOpt? (list pt opt?) (\01+ forms)))
 
 (defMacro unlessOpt? (option? . forms)
   #|Destructure the OPTION?.  If it's nil, evaluate the FORMS.  If it's
@@ -1279,7 +1179,7 @@
   (list ifOpt? (list #ignore option?) #null (list* begin forms)))
 
 (defMacro unlessOpt? (opt? . forms)
-  (list* 'ifOpt? (list #ignore opt?) #null (\1||+ forms)) )
+  (list* 'ifOpt? (list #ignore opt?) #null (\01+ forms)) )
 
 (defVau opt? (option? . default?) env
   #|Return the contents of the OPTION?, or the DEFAULT? if the option
@@ -1313,18 +1213,13 @@
 
 ;;; Dynamic Binding
 
-(defVau ddef (name . valueAndDocstring?) env
+(defMacro ddef (var . val?)
   #|Define a new or update an existing dynamic variable with the given
-   |NAME and opt? default VALUE. The opt? DOCSTRING is currently ignored.
-   |$(fn (name &opt? value docstring))
+   |NAME and opt? default VALUE.
+   |$(fn (name))
+   |$(fn (name value))
    |#
-  (def value (eval (opt? valueAndDocstring?) env)) ; treating 2-elt list as option
-  (if (bound? name env)
-      (dset (eval name env) value)
-      (eval (list def name (makeInstance Dynamic value)) env)))
-
-(defMacro ddef (var . val)
-  (list* (list '%d\ (list var)) val) )
+  (list* (list '%d\ (list var)) val?) )
 
 (def\ dget (dynamicVariable)
   #|Return the current value of the DYNAMIC-VARIABLE.|#
@@ -1334,19 +1229,20 @@
   #|Set the current value of the DYNAMIC-VARIABLE.|#
   (dynamicVariable value))
 
-(defVau dlet (bindings . forms) env
+(defMacro dlet (bindings exp . exps)
   #|Evaluate the FORMS with the dynamic variables specified by BINDINGS
    |temporarily bound to new values.  Bindings are established parallely
    |as per `let'.
    |$(syntax binding (dynamicVariable value))
    |#
-  (let ((dynamics (map (\ ((name #ignore)) (eval name env)) bindings))
-        (values (map (\ ((#ignore value)) (eval value env)) bindings))
-        (thunk (eval (list* \ () forms) env)))
-    (%progv dynamics values thunk)))
-
-(defMacro dlet (bindings exp . exps)
   (list* (list* '%d\ (map car bindings) exp exps) (map cadr bindings)) )  
+
+(defMacro progv (var* val* exp . exps)
+  #|Evaluate the FORMS with the list of DYNAMIC-VARIABLES temporarily
+   |bound to new VALUES.  The DYNAMIC-VARIABLES and VALUES lists must have
+   |the same length.
+   |#
+  (list* (list* '%d\ var* exp exps) val*) )
 
 (defMacro dlet* (bindings . forms)
   #|Evaluate the FORMS with the dynamic variables specified by BINDINGS
@@ -1354,19 +1250,9 @@
    |per `let*'.
    |#
   (if (null? bindings)
-      (list* begin forms)
-      (list dlet (list (car bindings))
-            (list* dlet* (cdr bindings) forms))))
-
-(defMacro progv (dynamicVariables values . forms)
-  #|Evaluate the FORMS with the list of DYNAMIC-VARIABLES temporarily
-   |bound to new VALUES.  The DYNAMIC-VARIABLES and VALUES lists must have
-   |the same length.
-   |#
-  (list %progv dynamicVariables values (list* \ () forms)))
-
-(defMacro progv (var* val* exp . exps)
-  (list* (list* '%d\ var* exp exps) val*) )
+    (list* 'begin forms)
+      (list 'dlet (list (car bindings))
+        (list* 'dlet* (cdr bindings) forms))))
 
 
 ;;; Delimited Control Operators
@@ -1378,36 +1264,39 @@
   #|Push the PROMPT and evaluate the FORMS inside the prompt.  This
    |delimits the continuation.
    |#
-  (list %pushPrompt prompt (list* \ () forms)))
+  (list '%pushPrompt prompt (list* '\ () forms)))
 
 (defMacro takeSubcont (prompt name . forms)
   #|Abort outwards to the PROMPT.  When the prompt is reached, evaluate
    |the FORMS with NAME bound to the captured continuation (which does not
    |include the prompt).
    |#
-  (list %takeSubcont prompt (list* \ (list name) forms)))
+  (list '%takeSubcont prompt (list* '\ (list name) forms)))
 
 (defMacro pushDelimSubcont (prompt continuation . forms)
   #|Push the PROMPT and compose the previously captured CONTINUATION
    |inside it.  The FORMS are then evaluated inside the new continuation.
    |#
-  (list %pushDelimSubcont prompt continuation (list* \ () forms)))
+  (list '%pushDelimSubcont prompt continuation (list* '\ () forms)))
 
 (defMacro pushSubcontBarrier forms
   #|Push a continuation barrier that prevents the FORMS from capturing
    |any continuations to the outside.
    |#
-  (list* %pushSubcontBarrier (%makeEnv) forms))
+  (list* '%pushSubcontBarrier (%makeEnv) forms))
 
 
 ;;; Coroutines
 
-(defConstant +defaultPrompt+ 'defaultPrompt
-  #|This prompt is used for general coroutine-like use of continuations.|#)
+(defConstant +defaultPrompt+
+  #|This prompt is used for general coroutine-like use of continuations.
+   |#
+  'defaultPrompt)
 
 (defMacro coroutine forms
-  #|Evaluate the FORMS in a context in which `yield' can be used to pause execution.|#
-  (list* pushPrompt '+defaultPrompt+ forms))
+  #|Evaluate the FORMS in a context in which `yield' can be used to pause execution.
+   |#
+  (list* 'pushPrompt '+defaultPrompt+ forms))
 
 (defMacro yield (name . forms)
   #|Pause the current coroutine.  In the place where the enclosing
@@ -1415,10 +1304,10 @@
    |bound to the paused coroutine.  `resume' can later be used to restart
    |execution inside the coroutine.
    |#
-  (list* takeSubcont '+defaultPrompt+ name forms))
+  (list* 'takeSubcont '+defaultPrompt+ name forms))
 
 (defMacro resume (k . forms)
   #|Resume the paused coroutine K and evaluate FORMS in the place where
    |`yield' was called in the coroutine.
    |#
-  (list* pushDelimSubcont '+defaultPrompt+ k forms))
+  (list* 'pushDelimSubcont '+defaultPrompt+ k forms))

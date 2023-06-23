@@ -139,22 +139,22 @@
 
 (def userBreak error)
 
-(defVau signalsError (form conditionClass . slotSpecs) env
-  (let ((class (findClass conditionClass env)))
+(defVau signalsError (form conditionClass . slots) env
+  (let1 (class (findClass conditionClass env))
     (block exit
       (handlerCase (
         (StandardObject
           (\ (obj)
             (if (type? obj class)
               (begin
-                (letLoop -check-slots- ((slotSpecs slotSpecs))
-                  (when (not (null? slotSpecs))
-                    (let (((name value . slotSpecs) slotSpecs))
+                (let1 check (slots slots)
+                  (unless (null? slots)
+                    (let1 ((name value . slots) slots)
                       (unless (eq? (getSlot obj name) (eval value env))
-                        (returnFrom exit #f))
-                      (-check-slots- slotSpecs) )))
-                (returnFrom exit #t) )
-              (returnFrom exit #f) ))) )
+                        (exit #f) )
+                      (check slots) )))
+                (exit #t) )
+              (exit #f) ))) )
         (eval form env) )
       #f )))
 

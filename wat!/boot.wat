@@ -140,10 +140,13 @@
     (vau (params . body) #ignore
       (list 'makeMacro (list* 'vau params #ignore body)) )))
 
-; defMacro defVau def\ def*\ rec\ e letrec\ let1\ let\ permettono la definizione delle funzioni con due sintassi
+
+; defMacro defVau def\ def*\ rec\ let1\ let1rec\ let\ letrec\ permettono la definizione con due sintassi
+;
 ;    (_ name parameters . body)
 ;    (_ (name . parameters) . body)
-; rec rec\ letrec e letrec\ inizializzano a #inert le definizioni prima della valutazione
+;
+; rec rec\ let1rec let1rec\ letrec letrec\ inizializzano a #inert le definizioni prima della valutazione
 
 (def defMacro
   (macro (lhs . rhs)
@@ -282,20 +285,21 @@
 (def\ (->begin binding) ((\ ((#_ cadr . exps)) (if (null? exps) cadr (list* 'begin cadr exps))) binding))
 (def\ (->name\ (lhs . rhs)) (if (symbol? lhs)  (list lhs (list* '\ (car rhs) (cdr rhs))) (list (car lhs) (list* '\ (cdr lhs) rhs))))
 
-(defMacro (letLoop . args)
-  (if (symbol? (car args))
-    (def (name bindings . body) args)
-    (def ((name . bindings) . body) args))
-  (list*
-    (list* 'rec\ name (map car bindings) body)
-    (map ->1expr bindings) ))
 
-(assert (letLoop sum ((a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
-(assert (letLoop (sum (a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
+(defMacro (let1Loop . args)
+  (if (symbol? (car args))
+    (def (name binding . body) args)
+    (def ((name . binding) . body) args))
+  (list
+    (list* 'rec\ name (list (car binding)) body)
+    (->1expr binding) ))
+
+(assert (let1Loop add1 (a '(1 2)) (if (null? a) () (cons (+ (car a) 1) (add1 (cdr a))))) '(2 3))
+(assert (let1Loop (add1 a '(1 2)) (if (null? a) () (cons (+ (car a) 1) (add1 (cdr a))))) '(2 3))
 
 (defMacro (let1 lhs . rhs)
   (if (symbol? lhs)
-    (list* 'letLoop lhs (list (car rhs)) (cdr rhs))
+    (list* 'let1Loop lhs (car rhs) (cdr rhs))
     (list (list* '\ (list (car lhs)) rhs)
       (->1expr lhs) )))
       
@@ -308,6 +312,30 @@
 
 (assert (let1\ (f (a) a) (f 5)) 5)
 (assert (let1\ ((f a) a) (f 5)) 5)
+
+(defMacro (let1rec binding . body)
+  (list* 'let ()
+    (list 'def (car binding) (->inert binding))
+    (list 'def (car binding) (->1expr binding))
+    body ))
+    
+(defMacro (let1rec\ binding . body)
+  (list* 'let ()
+    (list 'def (->name (car binding)) #inert)
+    (list* 'def\ (car binding) (cdr binding))
+    body ))
+
+
+(defMacro (letLoop . args)
+  (if (symbol? (car args))
+    (def (name bindings . body) args)
+    (def ((name . bindings) . body) args))
+  (list*
+    (list* 'rec\ name (map car bindings) body)
+    (map ->1expr bindings) ))
+
+(assert (letLoop sum ((a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
+(assert (letLoop (sum (a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
 
 (defMacro (let lhs . rhs)
   (if (symbol? lhs)

@@ -46,7 +46,7 @@
 
 (@new &Wat.Prova$Cls)
 (@new &Wat.Prova$Cls 1)
-(def cls (@new &Wat.Prova$Cls 1))
+(%def cls (@new &Wat.Prova$Cls 1))
 cls
 	
 (.i cls)
@@ -64,20 +64,20 @@ cls
 ((@getMethod &java.lang.Class "getConstructor" &java.lang.Class[]) &Wat.Prova$Cls)
 ((@getMethod &java.lang.Class "getConstructor" &java.lang.Class[]) &Wat.Prova$Cls &int)
 
-(def cls (@new &Wat.Prova$Cls 1))
+(%def cls (@new &Wat.Prova$Cls 1))
 ((@getMethod &Wat.Prova$Cls "get") cls)
 ((@getMethod &Wat.Prova$Cls "set" &int) cls 5)
 ((@getMethod &Wat.Prova$Cls "get") cls)
 
-(def cls (@new &Wat.Prova$Cls 1))
+(%def cls (@new &Wat.Prova$Cls 1))
 (@invoke (@getMethod &Wat.Prova$Cls "get") cls)
 (@invoke (@getMethod &Wat.Prova$Cls "set" &int) cls 4)
 (@invoke (@getMethod &Wat.Prova$Cls "get") cls)
 	
 ((@getMethod &java.lang.Class "newInstance") &Wat.Prova$Cls) ; Class.newInstance di Class permette di istanziare solo classi con un costruttore senza parametri
 
-(def getConstructor (@getMethod &java.lang.Class "getConstructor" &java.lang.Class[]))
-(def newInstance (@getMethod &java.lang.reflect.Constructor "newInstance" &java.lang.Object[]))
+(%def getConstructor (@getMethod &java.lang.Class "getConstructor" &java.lang.Class[]))
+(%def newInstance (@getMethod &java.lang.reflect.Constructor "newInstance" &java.lang.Object[]))
 (newInstance (getConstructor  &Wat.Prova$Cls))
 (newInstance (getConstructor &Wat.Prova$Cls &int) 1)
 ((@getMethod &java.lang.reflect.Constructor "newInstance" &java.lang.Object[]) (getConstructor &Wat.Prova$Cls &int) 1)
@@ -87,13 +87,13 @@ cls
 	
 (@forName &java.lang.Class "Wat.Prova$Cls")
 
-(def int &int)
-(def Array &java.lang.reflect.Array)
-(def Object &java.lang.Object)
-(def a (@newInstance Array int 4))	
-(def get (@getMethod Array "get" Object int))
-(def set (@getMethod Array "set" Object int Object))
-(def length (@getMethod Array "getLength" Object))
+(%def int &int)
+(%def Array &java.lang.reflect.Array)
+(%def Object &java.lang.Object)
+(%def a (@newInstance Array int 4))	
+(%def get (@getMethod Array "get" Object int))
+(%def set (@getMethod Array "set" Object int Object))
+(%def length (@getMethod Array "getLength" Object))
 (@invoke get #null a 2)	
 (@invoke set #null a 2 4)
 (@invoke get #null a 2)
@@ -111,18 +111,18 @@ cls
 (@getConstructors &Wat.Prova$Cls)
 ((@getConstructor &Wat.Prova$Cls))
 ((@getConstructor &Wat.Prova$Cls &int) 1)
-(def getConstructor (@getMethod &java.lang.Class "getConstructor" &java.lang.Class[]))
+(%def getConstructor (@getMethod &java.lang.Class "getConstructor" &java.lang.Class[]))
 ((getConstructor &Wat.Prova$Cls))
 ((getConstructor &Wat.Prova$Cls &int) 1)
 
 ((@getMethod &java.lang.Class "getField" &java.lang.String) &Wat.Prova$Cls "i")
-(def getField (@getMethod &java.lang.Class "getField" &java.lang.String))
+(%def getField (@getMethod &java.lang.Class "getField" &java.lang.String))
 (getField &Wat.Prova$Cls "i")
 ((getField &Wat.Prova$Cls "i") cls)
 
 ((@getMethod &java.lang.Class "getMethod" &java.lang.String &java.lang.Class[]) &Wat.Prova$Cls "get")
-(def getMethod (@getMethod &java.lang.Class "getMethod" &java.lang.String &java.lang.Class[]))
-(def get (getMethod &Wat.Prova$Cls "get"))
+(%def getMethod (@getMethod &java.lang.Class "getMethod" &java.lang.String &java.lang.Class[]))
+(%def get (getMethod &Wat.Prova$Cls "get"))
 (get cls)
 
 ;(prtrc 0)

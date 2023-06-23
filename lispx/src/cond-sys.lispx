@@ -267,11 +267,11 @@
    |that don't.
    |#
   (vau (condition . handlerSpecs) env
-    (let1 (c (eval condition env))
-      (let\ ((appendAssociatedCondition (handlerSpec)
-               (append handlerSpec (list :associatedConditions (list list c)))))
-        (eval (list restartCase (map appendAssociatedCondition handlerSpecs)
-                    (list signal-operator c))
+    (let1 (condition (eval condition env))
+      (let1\ (appendAssociatedCondition (handlerSpec)
+               (append handlerSpec (list :associatedConditions (list 'list condition))) )
+        (eval (list 'restartCase (map appendAssociatedCondition handlerSpecs)
+                    (list signal-operator condition))
               env )))))
 
 (def signal
