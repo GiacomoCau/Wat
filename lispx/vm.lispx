@@ -69,12 +69,6 @@
 (%def %zero? (%\ (v) (%== v 0)))
 (%def %inert? (%\ (v) (%== v #inert)))
 
-(%def %the (%\ (class value)
-  (%if (%instanceOf? class Class)
-    (%if (%instanceOf? value class) value
-      (%error (%$ "" "not a {:expectedType}: {:datum}") :type 'type :datum value :expectedType (%intern (@getSimpleName class))) )
-    (%error (%$ "" "not a {:expectedType}: {:datum}") :type 'type :datum class :expectedType (%intern (@getSimpleName Class))) )))
-
 (%def %className (%\ (class) (%intern (@getSimpleName (%the Class class)))))
 (%def %symbolName %internName)
 

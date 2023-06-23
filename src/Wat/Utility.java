@@ -106,13 +106,17 @@ public class Utility {
 		catch (Vm.Error|Vm.Value err) {
 			throw err;
 		}
-		catch (ParseException e) {
-			throw new RuntimeException("ParseException " + e.getMessage().replaceAll("\r\n", " ").replaceAll("\\.\\.\\.", "").replaceAll(" +", " "));
+		catch (ParseException pe) {
+			throw new RuntimeException(getMessage(pe));
 		}
 		catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 	}
+	
+	public static String getMessage(ParseException pe) {
+		return "ParseException " + pe.getMessage().replaceAll("\r\n", " ").replaceAll("\\.\\.\\.", "").replaceAll(" +", " ");
+	}	
 	
 	public static int stackDeep() {
 		return new Throwable().getStackTrace().length;

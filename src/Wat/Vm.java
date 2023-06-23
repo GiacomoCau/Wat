@@ -73,6 +73,8 @@ import javax.tools.DiagnosticCollector;
 import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
 
+import List.ParseException;
+
 // java.exe -cp bin --enable-preview Wat.Vm
 
 /* Abbreviations:
@@ -970,7 +972,7 @@ public class Vm {
 					catch (Throwable thw) {
 						switch (thw) {
 							case Value val: throw val;
-							case Error err: return err;
+							case Error err: throw err;
 							default: return error("error combining: " + this + " with: " + o, thw);
 						}
 					}
@@ -1426,6 +1428,7 @@ public class Vm {
 					$("%def", "%subClass?", wrap(new JFun("%SubClass?", (n,o)-> checkN(n, o, 2, Class.class, Class.class), (l,o)-> o.<Class>car(1).isAssignableFrom(o.car()) ))),
 					$("%def", "%type?",  wrap(new JFun("%Type?", (n,o)-> checkN(n, o, 2, null, or(null, Class.class)), (l,o)-> apply((o1, c)-> c == null ? o1 == null /*: o1 == null ? !c.isPrimitive()*/ : o1 != null && c.isAssignableFrom(o1.getClass()), o.car(), o.<Class>car(1)) ))),
 					$("%def", "%classOf", wrap(new JFun("%ClassOf", (n,o)-> checkN(n, o, 1), (l,o)-> apply(o1-> o1 == null ? null : o1.getClass(), o.car()) ))),
+					$("%def", "%the", wrap(new JFun("%The", (n,o)-> checkN(n, o, 2, Class.class), (l,o)-> o.<Class>car().isInstance(o.car(1)) ? o.car(1) : typeError("not a {expectedType}: {datum}", o.car(1), symbol(o.<Class>car().getSimpleName())) ))),
 					// Utilities
 					$("%def", "%list", wrap(new JFun("%List", (ArgsList) o-> o))),
 					$("%def", "%list*", wrap(new JFun("%List*", (ArgsList) this::listStar))),
@@ -1548,6 +1551,8 @@ public class Vm {
 				catch (Throwable thw) {
 					if (prstk)
 						thw.printStackTrace(out);
+					else if (thw instanceof ParseException pe)
+					    out.println("{&" + Utility.getMessage(pe) + "}"); 
 					else do 
 						out.println(/*thw instanceof Obj ? thw : */ "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
 					while ((thw = thw.getCause()) != null);
