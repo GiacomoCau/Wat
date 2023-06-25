@@ -8,7 +8,7 @@
 (ctapv #f)
 (prtrc 0)
 (bndres 0)
-(bdft #null)
+(boxdft #null)
 
 (load "testVm.lsp");
 (load "testJni.lsp");

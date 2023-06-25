@@ -15,7 +15,7 @@
 (ctapv #t)
 (prtrc 0)
 (bndres 1)
-(bdft #inert)
+(boxdft #inert)
 (aquote #f)
 
 (%def Null #null)
@@ -80,8 +80,6 @@
 (%def %functionSymbol %intern->symbol)
 (%def %variableSymbol %intern->symbol)
 (%def %keywordSymbol %intern->keyword)
-
-(%def %cddr (%\ (cons) (%cdr (%cdr cons))))
 
 (%def %nth (%\ (i l) (%the Integer i) (@car (%the Cons l) i)))
 (%def %nthCdr (%\ (i l) (%the Integer i) (%if (%zero? i) l (@cdr (%the Cons l) (%- i 1)))))
