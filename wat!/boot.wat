@@ -262,11 +262,10 @@
 (assert ((rec\ (f . l) (if (null? l) "" ($ (car l) (apply f (cdr l))))) 1 2 3) "123")
 (assert ((rec\  f l    (if (null? l) "" ($ (car l) (apply f (cdr l))))) 1 2 3) "123")
 
-(def\ (map f . lst*)
-  (if (null? lst*) (error "none lists"))
-  (if (null? (cdr lst*))
-    ((rec\ (map lst) (if (null? lst) #null (cons (f (car lst)) (map (cdr lst))) )) (car lst*))
-    ((rec\ (map* lst*) (if (null? (car lst*)) #null (cons (apply f (map car lst*)) (map* (map cdr lst*))) )) lst*) ))
+(def\ (map f lst . lst*)
+  (if (null? lst*)
+    ((rec\ (map lst) (if (null? lst) #null (cons (f (car lst)) (map (cdr lst))) )) lst)
+    ((rec\ (map* lst*) (if (null? (car lst*)) #null (cons (apply f (map car lst*)) (map* (map cdr lst*))) )) (cons lst lst*)) ))
 
 (assert (map car  '((a 1)(b 2))) '(a b))
 (assert (map cdr  '((a 1)(b 2))) '((1) (2)))
@@ -288,6 +287,7 @@
 (def\ (->1expr binding) ((\ ((#_ cadr)) cadr) binding))
 (def\ (->begin binding) ((\ ((#_ cadr . exps)) (if (null? exps) cadr (list* 'begin cadr exps))) binding))
 (def\ (->name\ (lhs . rhs)) (if (symbol? lhs)  (list lhs (list* '\ (car rhs) (cdr rhs))) (list (car lhs) (list* '\ (cdr lhs) rhs))))
+(def\ (->name binding) (if (symbol? binding) binding (car binding)))
 
 
 (defMacro (let1Loop . args)
@@ -317,11 +317,13 @@
 (assert (let1\ (f (a) a) (f 5)) 5)
 (assert (let1\ ((f a) a) (f 5)) 5)
 
+#| TODO non sembra utile
 (defMacro (let1rec binding . body)
   (list* 'let ()
     (list 'def (car binding) (->inert binding))
     (list 'def (car binding) (->1expr binding))
     body ))
+|#
     
 (defMacro (let1rec\ binding . body)
   (list* 'let ()
@@ -364,6 +366,7 @@
 (assert (let* ((a 1)) a) 1)
 (assert (let* ((a 1)(b a)) b) 1)
 
+#| TODO non sembra utile
 (defMacro (letrec bindings . body)
   (list* 'let ()
     (list* 'def* (map car bindings) (map ->inert bindings))
@@ -371,6 +374,7 @@
     body ))
 
 (assert (letrec ( (even? (\ (n) (if (zero? n) #t (odd? (- n 1))))) (odd? (\ (n) (if (zero? n) #f (even? (- n 1))))) ) (even? 88)) #t)
+|#
 
 (defMacro (letrec\ bindings . body)
   (list* 'let ()
@@ -411,28 +415,6 @@
             (eval (list* 'begin forms) env+)
             (loop clauses) ))))))
             
-#| TODO sostituiti dal seguente, eliminare
-(defVau (case\ . clauses) env
-  (wrap
-    (vau values #ignore
-      (let1 loop (clauses clauses)
-        (if (null? clauses) #inert
-          (let ( (env+ (makeEnv env))
-                 (((bindings . forms) . clauses) clauses) )
-            (if (if (== bindings 'else) #t (bind? env+ bindings values)) ; or!
-              (eval (list* 'begin forms) env+)
-              (loop clauses) )))))))
-
-(defVau (case\ . clauses) env
-  (\ values
-    (let1 loop (clauses clauses)
-      (if (null? clauses) #inert
-        (let ( (env+ (makeEnv env))
-               (((bindings . forms) . clauses) clauses) )
-          (if (if (== bindings 'else) #t (bind? env+ bindings values)) ; or!
-            (eval (list* 'begin forms) env+)
-            (loop clauses) ))))))
-|#
 (defMacro (case\ . clauses)
   (list 'wrap (list* 'caseVau clauses)) )
 
@@ -440,21 +422,6 @@
 (assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2) 3)
 (assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2 3) '(2 3 4))
 
-#| TODO sostituito dal seguente, eliminare
-(defVau (match exp . clauses) env
-  (let1 (exp (eval exp env))
-    (let1 loop (clauses clauses)
-      (if (null? clauses) #inert
-        (let ((env+ (makeEnv env))
-              (((bindings . forms) . clauses) clauses) )
-          (if (if (== bindings 'else) #t (bind? env+ bindings exp)) ; or!
-            (eval (list* 'begin forms) env+)
-            (loop clauses) ))))))
-(defMacro (match exp . clauses)
-  (list* (list* 'case\ clauses) (list exp)) )  
-(defVau (match exp . clauses) env
-  (eval (list* (list 'caseVau clauses) (eval exp env)) env) )
-|#
 (defMacro (match exp . clauses)
   (list (list* 'case\ (map (\ ((a . b)) (list* (if (== a 'else) a (list a)) b)) clauses)) exp) )  
 
@@ -467,91 +434,6 @@
 
 ;;;; Cond And Or
  
-#| TODO sostituito dal seguente, eliminare
-(defVau (cond . clauses) env
-  (if (null? clauses) #inert
-    (let1 (((test . body) . clauses) cla uses)
-      (if (== test 'else)
-        (apply (wrap begin) body env) 
-        (if (eval test env)
-          (apply (wrap begin) body env)
-          (apply (wrap cond) clauses env) )))))
-
-(defVau (cond . clauses) env
-  (if (null? clauses) #inert
-    (let1 (((test . body) . clauses) cla uses)
-      (if (if (== test 'else) #t (eval test env))
-        (apply (wrap begin) body env)
-        (apply (wrap cond) clauses env) ))))
-
-(defVau (cond . clauses) env
-  (if (null? clauses) #inert
-    (let1 (((test . body) . clauses) clauses)
-      (if (== test 'else)
-        (apply (wrap begin) body env)
-        (let1 (test (eval test env))
-          (if test
-            (if (null? body) test
-              (if (== (car body) '=>)
-                (let1 ((apd1) (cdr body))
-                  ((eval apd1 env) test) )
-                (apply (wrap begin) body env) ))
-            (apply (wrap cond) clauses env) ))))))
-
-(defVau (cond . clauses) env
-  (if (null? clauses) #inert
-    (let1 (((test . body) . clauses) clauses)
-      (if (== test 'else)
-        (apply (wrap begin) body env)
-        (let1 (test (eval test env))
-          (if (instanceOf? test Boolean)
-            (if test
-              (if (null? body) test
-                (if (== (car body) '=>)
-                  (let1 ((apd1) (cdr body)) ((eval apd1 env) test) )
-                  (apply (wrap begin) body env) ))
-              (apply (wrap cond) clauses env) )
-            (let1 ((guard '=> apd1) body)
-              (if ((eval guard env) test)
-                ((eval apd1 env) test)
-                (apply (wrap cond) clauses env) )) ))))))
-
-(defVau (cond . clauses) env
-  (if (null? clauses) #inert
-    (let1 (((test . body) . clauses) clauses)
-      (if (== test 'else)
-        (apply (wrap begin) body env)
-        (let1 (test (eval test env))
-          (if (instanceOf? test Boolean)
-            (if test
-              (if (null? body) test
-                (ifbind? (('=> apd1) body)
-                  ((eval apd1 env) test) 
-                  (apply (wrap begin) body env) ))
-              (apply (wrap cond) clauses env) )
-            (let1 ((guard '=> apd1) body)
-              (if ((eval guard env) test)
-                ((eval apd1 env) test)
-                (apply (wrap cond) clauses env) )) ))))))
-
-(defVau (cond . clauses) env
-  (if (null? clauses) #inert
-    (let1 (((test . body) . clauses) clauses)
-      (if (== test 'else)
-        (apply (wrap begin) body env)
-        (let1 (test (eval test env))
-          (if (instanceOf? test Boolean)
-            (if test
-              (match body
-                (() test)
-                (('=> apd1) ((eval apd1 env) test))
-                (else (apply (wrap begin) body env) ))
-              (apply (wrap cond) clauses env) )
-            (let1 ((guard '=> apd1) body)
-              (if ((eval guard env) test)
-                ((eval apd1 env) test)
-                (apply (wrap cond) clauses env) )) ))))))
-|#
 (defVau (cond . clauses) env
   (if (null? clauses) #inert
     (let1 (((test . body) . clauses) clauses)
@@ -777,17 +659,16 @@
 ;;;; Type parameters check type\
 
 (defMacro (type\ params . body)
-  (letrec ((typedParams->namesAndChecks
-            (\ (ps)
+  (let1rec\ ( (typedParams->namesAndChecks ps)
               (if (cons? ps)
-                  (let* (((p . restPs) ps)
-                         ((names . checks) (typedParams->namesAndChecks restPs)))
+                  (let* ( ((p . ps) ps)
+                          ((names . checks) (typedParams->namesAndChecks ps)) )
                     (if (cons? p)
-                        (let* (((name type) p)
-                               (check (list 'the type name)))
+                        (let* ( ((name type) p)
+                                (check (list 'the type name)))
                           (cons (cons name names) (cons check checks)) )
                         (cons (cons p names) checks) ))
-                  (cons ps ()) ))))
+                  (cons ps ()) ))
     (let1 ((names . checks) (typedParams->namesAndChecks params))
       (list* '\ names (if (null? checks) body (list* (list* 'begin checks) body))) )))
 
@@ -814,22 +695,20 @@
 
 ;;;; List utilities
 
-(def\ (forEach f . lst*)
-  (if (null? lst*) (error "none lists"))
-  (if (null? (cdr lst*))
-    ((rec\ (forEach lst) (unless (null? lst) (f (car lst)) (forEach (cdr lst)))) (car lst*))
-    ((rec\ (forEach* lst*) (unless (null? (car lst*)) (apply f (map car lst*)) (forEach* (map cdr lst*)) )) lst*) ))
-  
+(def\ (forEach f lst . lst*)
+  (if (null? lst*)
+    ((rec\ (forEach lst) (unless (null? lst) (f (car lst)) (forEach (cdr lst)))) lst)
+    ((rec\ (forEach* lst*) (unless (null? (car lst*)) (apply f (map car lst*)) (forEach* (map cdr lst*)) )) (cons lst lst*)) ))
+
 #|
 (forEach (\ (a) (log a)) '(1 2))
 (forEach (\ (a b) (log a b)) '(1 2) '(3 4))
 |#
 
-(def\ (filter f . lst*)
-  (if (null? lst*) (error "none lists"))
-  (if (null? (cdr lst*))
-    ((rec\ (filter lst) (if (null? lst) #null (if (f (car lst)) (cons (car lst) (filter (cdr lst))) (filter (cdr lst))))) (car lst*))
-    ((rec\ (filter* lst*) (if (null? (car lst*)) #null (let1 (cars (map car lst*)) (if (apply f cars) (cons cars (filter* (map cdr lst*))) (filter* (map cdr lst*)) )))) lst*) ))
+(def\ (filter f lst . lst*)
+  (if (null? lst*)
+    ((rec\ (filter lst) (if (null? lst) #null (if (f (car lst)) (cons (car lst) (filter (cdr lst))) (filter (cdr lst))))) lst)
+    ((rec\ (filter* lst*) (if (null? (car lst*)) #null (let1 (cars (map car lst*)) (if (apply f cars) (cons cars (filter* (map cdr lst*))) (filter* (map cdr lst*)) )))) (cons lst lst*)) ))
 
 (def\ (even n) (== (% n 2) 0))
 (def\ (odd n)  (== (% n 2) 1))
@@ -837,37 +716,33 @@
 (assert (filter even '(1 2 3 4 5 6 7 8 9)) '(2 4 6 8))
 (assert (filter != '(1 2 3) '(3 2 1)) '((1 3) (3 1)))
 
-(def\ (reduceL f init . lst*)
-  (if (null? lst*) (error "none lists"))
-  (if (null? (cdr lst*))
-    ((rec\ (reduce acc lst) (if (null? lst) acc (reduce (f acc (car lst)) (cdr lst)) )) init (car lst*))
-    ((rec\ (reduce* acc lst*) (if (null? (car lst*)) acc (reduce* (%apply* f acc (map car lst*)) (map cdr lst*)) )) init lst*) ))
+(def\ (reduceL f init lst . lst*)
+  (if (null? lst*)
+    ((rec\ (reduce acc lst) (if (null? lst) acc (reduce (f acc (car lst)) (cdr lst)) )) init lst)
+    ((rec\ (reduce* acc lst*) (if (null? (car lst*)) acc (reduce* (%apply* f acc (map car lst*)) (map cdr lst*)) )) init (cons lst lst*)) ))
 
 (assert (reduceL + 0 '(1 2 3 4)) 10)
 (assert (reduceL (\ (init lst) (+ init (reduceL * 1 lst))) 0 '(1 2 3 4) '(1 2 3 4)) 30)
 (assert (reduceL cons () '(1 2 3 4)) '((((() . 1) . 2) . 3) . 4))
 
-(def\ (reduceR f init . lst*)
-  (if (null? lst*) (error "none lists"))
-  (if (null? (cdr lst*))
-    ((rec\ (reduce acc lst) (if (null? lst) acc (f (reduce acc (cdr lst)) (car lst)) )) init (car lst*))
-    ((rec\ (reduce* acc lst*) (if (null? (car lst*)) acc (%apply* f (reduce* acc (map cdr lst*)) (map cadr lst*)) )) init lst*) ))
+(def\ (reduceR f init lst . lst*)
+  (if (null? lst*)
+    ((rec\ (reduce acc lst) (if (null? lst) acc (f (reduce acc (cdr lst)) (car lst)) )) init lst)
+    ((rec\ (reduce* acc lst*) (if (null? (car lst*)) acc (%apply* f (reduce* acc (map cdr lst*)) (map cadr lst*)) )) init (cons lst lst*)) ))
 
 (assert (reduceR cons () '(1 2 3 4)) '((((() . 4) . 3) . 2) . 1))
 
-(def\ (foldL f init . lst*)
-  (if (null? lst*) (error "none lists"))
-  (if (null? (cdr lst*))
-    ((rec\ (foldl acc lst) (if (null? lst) acc (foldl (f (car lst) acc) (cdr lst)) )) init (car lst*))
-    ((rec\ (foldl* acc lst*) (if (null? (car lst*)) acc (foldl* (%apply* f (map car lst*) acc) (map cdr lst*)) )) init lst*) ))
+(def\ (foldL f init lst . lst*)
+  (if (null? lst*)
+    ((rec\ (foldl acc lst) (if (null? lst) acc (foldl (f (car lst) acc) (cdr lst)) )) init lst)
+    ((rec\ (foldl* acc lst*) (if (null? (car lst*)) acc (foldl* (%apply* f (map car lst*) acc) (map cdr lst*)) )) init (cons lst lst*)) ))
 
 (assert (foldL cons () '(1 2 3 4)) '(4 3 2 1))
 
-(def\ (foldR f init . lst*)
-  (if (null? lst*) (error "none lists"))
-  (if (null? (cdr lst*))
-    ((rec\ (foldr acc lst) (if (null? lst) acc (f (car lst) (foldr acc (cdr lst)) ) )) init (car lst*))
-    ((rec\ (foldr* acc lst*) (if (null? (car lst*)) acc (%apply* f (map car lst*) (foldr* acc (map cdr lst*)) ) )) init lst*) ))
+(def\ (foldR f init lst . lst*)
+  (if (null? lst*)
+    ((rec\ (foldr acc lst) (if (null? lst) acc (f (car lst) (foldr acc (cdr lst)) ) )) init lst)
+    ((rec\ (foldr* acc lst*) (if (null? (car lst*)) acc (%apply* f (map car lst*) (foldr* acc (map cdr lst*)) ) )) init (cons lst lst*)) ))
 
 (assert (foldR cons () '(1 2 3 4)) '(1 2 3 4))
 
@@ -885,30 +760,8 @@
 
 ;;;; Dynamic Binding
 
-#| TODO sostituite dalle seguenti, eliminare
-(defVau (progv dyns vals . forms) env
-  (eval
-    (list* '%dLet 
-      (cons
-        (eval (list* 'list dyns) env)
-        (eval (list* 'list vals) env) )
-      forms )
-    env ))
-
-(assert (begin (ddef a 1) (progv (a) (2) (assert (dval a) 2)) (assert (dval a) 1)) #t)
-
-(defVau (dlet bindings . forms) env
-  (eval
-    (list* '%dLet
-      (cons
-        (map (\ ((name #ignore))  (eval name env)) bindings)
-        (map (\ ((#ignore value)) (eval value env)) bindings) )
-      forms )
-    env ))
-
-(assert (begin (ddef* (a b) 1 2) (dlet ((a 2)) (assert (dval a) 2)) (dval b)) 2)
-
-(def d\
+#| TODO non più necessaria, eliminare
+(def %d\
   (vau (var* . body) #ignore
     (wrau val* env
         (def\ (ckdvar var)
@@ -1011,7 +864,7 @@
     (assert (bar :b) 6) )
   #t )
   
-#|
+#| TODO da rivedere
 (defVau (object . pairs) env
   (let ((obj (%jsMakeObject)))
     (map (\ ((name value))
@@ -1144,7 +997,7 @@
 (assert (lcm 3 4 5 6) 60)
 
 
-#|
+#| TODO da rivedere
 ;;;; Cells
 
 (defPrototype Cell Object (value))

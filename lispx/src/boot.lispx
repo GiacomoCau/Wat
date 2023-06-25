@@ -380,13 +380,12 @@
     (list 'rec lhs (list* '\ (car rhs) (cdr rhs)))
     (list 'rec (car lhs) (list* '\ (cdr lhs) rhs)) )) 
 
-(def\ (map f . lst*)
+(def\ (map f lst . lst*)
   #|Create a new list by applying the FUNCTION to every element of the LIST.
    |#
-  (if (null? lst*) (sympleError "none lists"))
-  (if (null? (cdr lst*))
-    ((rec\ (map lst) (if (null? lst) #null (cons (f (car lst)) (map (cdr lst))) )) (car lst*))
-    ((rec\ (map* lst*) (if (null? (car lst*)) #null (cons (apply f (map car lst*)) (map* (map cdr lst*))) )) lst*) ))
+  (if (null? lst*)
+    ((rec\ (map lst) (if (null? lst) #null (cons (f (car lst)) (map (cdr lst))) )) lst)
+    ((rec\ (map* lst*) (if (null? (car lst*)) #null (cons (apply f (map car lst*)) (map* (map cdr lst*))) )) (cons lst lst*)) ))
 
 (defMacro (def*\ lhs* . rhs*)
   (list* 'def*
@@ -420,11 +419,13 @@
 (defMacro (let1\ binding . body)
   (list* 'let1 (->name\ binding) body))
 
+#| TODO non sembra utile
 (defMacro (let1rec binding . body)
   (list* 'let ()
     (list 'def (car binding) (->inert binding))
     (list 'def (car binding) (->1expr binding))
     body ))
+|#
 
 (defMacro (let1rec\ binding . body)
   (list* 'let ()
@@ -470,6 +471,7 @@
    |#
   (list* 'let (map ->name\ bindings) body))
 
+#| TODO non sembra utile
 (defMacro (letrec bindings . body)
   #|Utility to establish BINDINGS recursively during the evaluation of
    |FORMS.  Used by `labels'.
@@ -478,6 +480,7 @@
     (list* 'def* (map car bindings) (map ->inert bindings))
     (list* 'def* (map car bindings) (map ->1expr bindings))
     body ))
+|#
 
 (defMacro (letrec\ bindings . body)
   (list* 'let ()
@@ -821,19 +824,19 @@
    |#
   %nthCdr)
 
-(def\ (forEach f . lst*)
-  #|Apply the FUNCTION to every element of the LIST for effect.  Return the #inert.|#
-  (if (null? lst*) (%error "none lists"))
-  (if (null? (cdr lst*))
-    ((rec\ (forEach lst) (unless (null? lst) (f (car lst)) (forEach (cdr lst)))) (car lst*))
-    ((rec\ (forEach* lst*) (unless (null? (car lst*)) (apply f (map car lst*)) (forEach* (map cdr lst*)) )) lst*) ))
+(def\ (forEach f lst . lst*)
+  #|Apply the FUNCTION to every element of the LIST for effect.  Return the #inert.
+   |#
+  (if (null? lst*)
+    ((rec\ (forEach lst) (unless (null? lst) (f (car lst)) (forEach (cdr lst)))) lst)
+    ((rec\ (forEach* lst*) (unless (null? (car lst*)) (apply f (map car lst*)) (forEach* (map cdr lst*)) )) (cons lst lst*)) ))
 
-(def\ (forEach f . lst*)
-  #|Apply the FUNCTION to every element of the LIST for effect.  Return the list.|#
-  (if (null? lst*) (error (makeSimpleError "none lists")))
-  (if (null? (cdr lst*))
-    ((rec\ (forEach lst) (if (null? lst) (car lst*) (f (car lst)) (forEach (cdr lst)))) (car lst*))
-    ((rec\ (forEach* lst*) (if (null? (car lst*)) lst* (apply f (map car lst*)) (forEach* (map cdr lst*)) )) lst*) ))
+(def\ (forEach f lst . lst*)
+  #|Apply the FUNCTION to every element of the LIST for effect.  Return the list.
+   |#
+  (if (null? lst*)
+    (let1 (res lst) ((rec\ (forEach lst) (if (null? lst) res (f (car lst)) (forEach (cdr lst)))) lst))
+    (let1 (res (cons lst lst*)) ((rec\ (forEach* lst*) (if (null? (car lst*)) res (apply f (map car lst*)) (forEach* (map cdr lst*)) )) res) )) )
 
 (def\ mapcan (function list)
   #|Apply the FUNCTION, which must return a list, to every element of the
