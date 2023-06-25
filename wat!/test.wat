@@ -92,7 +92,7 @@
   (takeSubcont p sk
     (pushPrompt p
       (f (\ (c)
-           (pushPromptSubcont p sk (c)) )))))
+           (pushDelimSubcont p sk (c)) )))))
 
 (test test5
   (+ (pushPrompt 'p0

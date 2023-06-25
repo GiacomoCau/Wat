@@ -77,6 +77,8 @@
 
 ;;;; Basic type
 
+(def Null #null)
+(def Any &Wat.Vm$Any)
 (def Apv &Wat.Vm$Apv)
 (def Opv &Wat.Vm$Opv)
 (def Box &Wat.Vm$Box)
@@ -84,6 +86,8 @@
 (def DVar &Wat.Vm$DVar)
 (def JFun &Wat.Vm$JFun)
 (def Obj &Wat.Vm$Obj)
+(def Inert &Wat.Vm$Inert)
+(def Ignore &Wat.Vm$Ignore)
 (def Error &Wat.Vm$Error)
 (def Symbol &Wat.Vm$Symbol)
 (def Keyword &Wat.Vm$Keyword)
@@ -227,11 +231,11 @@
 (defVau (pushPrompt prompt . body) env
   (eval (list '%pushPrompt (eval prompt env) (list* 'begin body)) env) )
 
-(defMacro (pushPromptSubcont p k . body)
-  (list '%pushPromptSubcont p k (list* '\ () body)) )
+(defMacro (pushDelimSubcont p k . body)
+  (list '%pushDelimSubcont p k (list* '\ () body)) )
 
 (defMacro (pushSubcont k . body)
-  (list '%pushPromptSubcont #ignore k (list* '\ () body)) )
+  (list '%pushDelimSubcont #ignore k (list* '\ () body)) )
 
 
 ;;;; Basic macros and functions
@@ -798,12 +802,15 @@
     (list 'def lhs (car rhs))
     (list 'def (car lhs) (list* 'type\ (cdr lhs) rhs)) ))
 
-(def\ ck\| o (list->array o))
+(def\ ck|| o (list->array o))
 (def ck+ (.MAX_VALUE Integer))
 (def\ check (op o . ck) (@check vm op o ck))
-(assert (check 'pp '(1 (:a 1 :b 2) c 3) 1 ck+ Integer (list Keyword Integer) Symbol (ck\| 3 4)) 4)
+(assert (check 'pp '(1 (:a 1 :b 2) c 3) 1 ck+ Integer (list Keyword Integer) Symbol (ck|| 3 4)) 4)
 (assert (check 'pp '(a 1 2) 'a 1 2) 3)
-(assert (check 'pp '(a 1 2) (ck\| '(b 3) '(a 1 2))) 3) ; TODO da ripensare check!
+(assert (check 'pp '(a 1 2) (ck|| '(b 3) '(a 1 2))) 3)
+(assert (check 'pp '(a #null 1) 2 3 Symbol (ck|| Any (list 2 (ck|| Null Inert :prv :rhs)))) 3)
+(assert (check 'pp '(a :prv 1)  2 3 Symbol (ck|| Any (list 2 (ck|| Null Inert :prv :rhs)))) 3)
+(assert (check 'pp '(a 1)       2 3 Symbol (ck|| Any (list 2 (ck|| Null Inert :prv :rhs)))) 2)
 
 ;;;; List utilities
 

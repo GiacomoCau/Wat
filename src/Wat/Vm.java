@@ -693,7 +693,7 @@ public class Vm {
 	*/
 	class Eval implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkN(this, o, 2, null, Env.class); // o = (x eo)
+			var chk = checkN(this, o, 2, Any.class, Env.class); // o = (x eo)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 			return evaluate(o.car(1), o.car());
@@ -841,7 +841,7 @@ public class Vm {
 	// Delimited Control
 	class TakeSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkM(this, o, 2, null, or(Ignore.class, Symbol.class)); // o = (prp (or ignore symbol) . body)
+			var chk = checkM(this, o, 2, Any.class, or(Ignore.class, Symbol.class)); // o = (prp (or ignore symbol) . body)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 			return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, o.car())),
@@ -862,7 +862,7 @@ public class Vm {
 		}
 		public String toString() { return "%PushPrompt"; }
 	}
-	class PushPromptSubcont implements Combinable  {
+	class PushDelimSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
 			var chk = checkN(this, o, 3); // o = (prp k apv0)
 			if (chk instanceof Suspension s) return s;
@@ -872,7 +872,7 @@ public class Vm {
 			var o2 = o.car(2); if (!(o2 instanceof Apv apv0 && args(apv0) == 0)) return typeError("not a zero args applicative combiner: {datum}", o2, symbol("Apv"));
 			return pushPrompt(null, e, dbg(e, this, o), prp, ()-> k.apply(e, apv0));
 		}
-		public String toString() { return "%PushPromptSubcont"; }
+		public String toString() { return "%PushDelimSubcont"; }
 	}
 	Object pushPrompt(Resumption r, Env e, Dbg dbg, Object prp, Supplier action) {
 		var res = r != null ? r.resume() : getTco(action.get());
@@ -1121,6 +1121,7 @@ public class Vm {
 	
 	
 	// Check parameters type value
+	class Any {}
 	Object checkN(Object op, List o, int expt, Object ... cls) {
 		return checkR(op, o, expt, expt, cls);
 	}
@@ -1139,7 +1140,7 @@ public class Vm {
 		int len=chks.length, i=0;
 		for (var ol=o; ol != null; i+=1, ol=ol.cdr()) {
 			if (len == 0) continue;
-			var chk = checkTn(op, o, ol, i-min, i < len && i < min ? chks[i] : len <= min ?  null : chks[min + (i-min) % (len-min)]);
+			var chk = checkTn(op, o, ol, i-min, i < len && i < min ? chks[i] : len <= min ? Any.class : chks[min + (i-min) % (len-min)]);
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer i2)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 			if (i2 > 1) return i+i2;
@@ -1149,8 +1150,7 @@ public class Vm {
 	Object checkTn(Object op, Object o, List ol, int i, Object chk) {
 		var on = ol.car;
 		switch (chk) {
-			case null: return 1;
-			case Class cl when  cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2): return 1;
+			case Class cl when cl == Any.class || cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2): return 0;
 			case List l: {
 				if (!(on instanceof List onl)) break;
 				return switch (check(op, onl, l)) {
@@ -1161,8 +1161,8 @@ public class Vm {
 			}
 			case Object[] chks: {
 				for (Object chk2: chks) {
-					if (Utility.equals(on, chk2)) return 1;
-					if (chk2 instanceof Class cl && (cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2))) return 1;
+					if (Utility.equals(on, chk2)) return 0;
+					if (chk2 instanceof Class cl && (cl == Any.class || cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2))) return 0;
 					if (chk2 instanceof List l2) try {
 						switch (check(op, ol, l2)) {
 							case Suspension s: return s;
@@ -1171,13 +1171,27 @@ public class Vm {
 						}
 					}
 					catch (Throwable thw) {
-						continue;
 					}
+					/* TODO non sembra equivalente ... va in errore
+					switch (chk2) {
+						case Class cl when cl == Any.class || cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2): return 0;
+						case List l2: try {
+							switch (check(op, ol, l2)) {
+								case Suspension s: return s;
+								case Integer i2: return i2;
+								default: continue;
+							}
+						}
+						catch (Throwable thw) {
+							break;
+						}
+						default: if (Utility.equals(on, chk2)) return 0;
+					}
+					//*/
 				}
 				break;
 			}
-			default:
-				if (Utility.equals(on, chk)) return 1;
+			default: if (Utility.equals(on, chk)) return 0;
 		}
 		return typeError(
 			"not " + (chk instanceof Object[] objs ? "" : "a ") + "{expectedType}: {datum} check: " + toString(op) + " with: " + toString(o),
@@ -1405,7 +1419,7 @@ public class Vm {
 					// Delimited Control
 					$("%def", "%takeSubcont", new TakeSubcont()),
 					$("%def", "%pushPrompt", new PushPrompt()),
-					$("%def", "%pushPromptSubcont", wrap(new PushPromptSubcont())),
+					$("%def", "%pushDelimSubcont", wrap(new PushDelimSubcont())),
 					$("%def", "%pushSubcontBarrier", wrap(new JFun("%PushSubcontBarrier", (n,o)-> checkM(n, o, 2, Env.class), (l,o)-> pushSubcontBarrier(null, o.car(), cons(begin, o.cdr())) ))),
 					// Dynamically-scoped Variables
 					$("%def", "%box", wrap(new JFun("%Box", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new Box(l == 0 ? bdft : o.car)))),
@@ -1419,14 +1433,14 @@ public class Vm {
 					$("%def", "%jFun?", wrap(new JFun("%JFun?", (Function<Object,Boolean>) this::isjFun))),
 					$("%def", "%at", wrap(new JFun("%At", (Function<String,Object>) this::at))),
 					$("%def", "%dot", wrap(new JFun("%Dot", (Function<String,Object>) this::dot))),
-					$("%def", "%instanceOf?", wrap(new JFun("%InstanceOf?", (n,o)-> checkN(n, o, 2, null, Class.class), (l,o)-> o.<Class>car(1).isInstance(o.car()) ))),
+					$("%def", "%instanceOf?", wrap(new JFun("%InstanceOf?", (n,o)-> checkN(n, o, 2, Any.class, Class.class), (l,o)-> o.<Class>car(1).isInstance(o.car()) ))),
 					// Object System
 					$("%def", "%addMethod", wrap(new JFun("%AddMethod", (n,o)-> checkN(n, o, 3, or(null, Class.class), Symbol.class, Apv.class), (l,o)-> addMethod(o.car(), o.car(1), o.car(2)) ))),
 					$("%def", "%getMethod", wrap(new JFun("%GetMethod", (n,o)-> checkN(n, o, 2, or(null, Class.class), Symbol.class), (l,o)-> getMethod(o.car(), o.car(1)) ))),
-					$("%def", "%obj", wrap(new JFun("%Obj", (n,o)-> checkM(n, o, 1, or(Box.class, Obj.class), or(Symbol.class, Keyword.class), null), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr)) ))),
+					$("%def", "%obj", wrap(new JFun("%Obj", (n,o)-> checkM(n, o, 1, or(Box.class, Obj.class), or(Symbol.class, Keyword.class), Any.class), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr)) ))),
 					$("%def", "%class", wrap(new JFun("%Class", (n,o)-> checkR(n, o, 1, 2, Symbol.class, or(Box.class, Obj.class)), (l,o)-> extend(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr())) ))),
 					$("%def", "%subClass?", wrap(new JFun("%SubClass?", (n,o)-> checkN(n, o, 2, Class.class, Class.class), (l,o)-> o.<Class>car(1).isAssignableFrom(o.car()) ))),
-					$("%def", "%type?",  wrap(new JFun("%Type?", (n,o)-> checkN(n, o, 2, null, or(null, Class.class)), (l,o)-> apply((o1, c)-> c == null ? o1 == null /*: o1 == null ? !c.isPrimitive()*/ : o1 != null && c.isAssignableFrom(o1.getClass()), o.car(), o.<Class>car(1)) ))),
+					$("%def", "%type?",  wrap(new JFun("%Type?", (n,o)-> checkN(n, o, 2, Any.class, or(null, Class.class)), (l,o)-> apply((o1, c)-> c == null ? o1 == null /*: o1 == null ? !c.isPrimitive()*/ : o1 != null && c.isAssignableFrom(o1.getClass()), o.car(), o.<Class>car(1)) ))),
 					$("%def", "%classOf", wrap(new JFun("%ClassOf", (n,o)-> checkN(n, o, 1), (l,o)-> apply(o1-> o1 == null ? null : o1.getClass(), o.car()) ))),
 					$("%def", "%the", wrap(new JFun("%The", (n,o)-> checkN(n, o, 2, Class.class), (l,o)-> o.<Class>car().isInstance(o.car(1)) ? o.car(1) : typeError("not a {expectedType}: {datum}", o.car(1), symbol(o.<Class>car().getSimpleName())) ))),
 					// Utilities

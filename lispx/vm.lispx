@@ -18,6 +18,8 @@
 (bdft #inert)
 (aquote #f)
 
+(%def Null #null)
+(%def Any &Wat.Vm$Any)
 (%def Apv &Wat.Vm$Apv)
 (%def Box &Wat.Vm$Box)
 (%def Boolean &java.lang.Boolean)
@@ -32,7 +34,6 @@
 (%def Intern &Wat.Vm$Intern)
 (%def Integer &java.lang.Integer)
 (%def List &Wat.Vm$List)
-(%def Null #null)
 (%def Number &java.lang.Number)
 (%def Object &java.lang.Object)
 (%def Opvr &Wat.Vm$Opv)
@@ -89,7 +90,6 @@
 (%def %makeStandardClass (%\ (name superclass) (%class name superclass)))
 ;(%def %makeStandardClass (%\ (name superclass) (%class (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass)))
 
-(%def %pushDelimSubcont %pushPromptSubcont)
 (%def %pushPrompt ((%\ (%pushPrompt) (%wrap %pushPrompt)) %pushPrompt))
 
 (%def +rootPrompt+ %rootPrompt)
@@ -146,17 +146,16 @@
         (StandardObject
           (\ (obj)
             (if (type? obj class)
-              (begin
-                (let1 check (slots slots)
-                  (unless (null? slots)
-                    (let1 ((name value . slots) slots)
-                      (unless (eq? (getSlot obj name) (eval value env))
-                        (exit #f) )
-                      (check slots) )))
-                (exit #t) )
+              (let1 check (slots slots)
+                (if (null? slots) (exit #t)
+                  (let1 ((name value . slots) slots)
+                    (unless (eq? (getSlot obj name) (eval value env))
+                      (exit #f) )
+                    (check slots) )))
               (exit #f) ))) )
         (eval form env) )
       #f )))
+
 
 ;(load "lispx/test/test-util-test.lispx") ;; mai
 (load "lispx/test/boot-test.lispx")
