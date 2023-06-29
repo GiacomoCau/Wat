@@ -11,12 +11,6 @@
    |#
   (takeSubcont prompt #ignore value))
 
-(defMacro pushSubcont (k . forms)
-  #|We don't have `pushSubcont' but for these tests we can emulate it
-   |with a `pushDelimSubcont' that pushes an unused prompt.
-   |#
-  (list* pushDelimSubcont #ignore k forms))
-
 (def\ shift (p f)
   #|The `shift' operator, adapted from the file `delimcc.ml'.
    |#

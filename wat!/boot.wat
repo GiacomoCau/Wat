@@ -4,13 +4,14 @@
 
 ;; Rename %def
 
-(%def def %def)	
+(%def def
+  %def)
 
-;; Rename bindings that will be used as provided by VM
 
-(def \ %\)
+;;; Built-Ins - rename bindings that will be used as provided by VM
 
-(def == %==)
+(def ==
+  %==)
 (def != %!=)
 
 (def $ %$)
@@ -20,7 +21,8 @@
 (def / %/)
 (def % %%)
   
-(def ! %!)
+(def !
+  %!)
 (def !! %!!)
 (def < %<)
 (def > %>)
@@ -35,98 +37,128 @@
 (def >> %>>)
 (def >>> %>>>)
 
-(def append %append)
+(def append
+  %append)
+
 (def array->list %array->list)
 (def assert %assert)
-(def begin %begin)
+(def begin
+  %begin)
 (def bind? %bind?)
-(def cons %cons)
-(def cons? %cons?)
+(def cons
+  %cons)
+(def cons?
+  %cons?)
+(def classOf
+  %classOf)
+
 (def dval %dVal)
 (def dvar %dVar)
 (def eq? %eq?)
 (def error %error)
-(def eval %eval)
-(def finally %finally)
-(def if %if)
+(def eval
+  %eval)
+
+(def finally
+  %finally)
+
+(def if
+  %if)
 (def instanceOf? %instanceOf?)
+
+(def keyword %keyword)
+(def keyword? %keyword?)
+(def keywordName %internName)
 (def len %len)
-(def list? %list?)
-(def list* %list*)
+(def list*
+  %list*)
+(def list?
+  %list?)
+
 (def list->array %list->array)
-(def loop %loop)
-(def makeEnv %makeEnv)
-(def null? %null?)
-(def not %!)
-(def null? %null?)
+
+(def loop
+  %loop)
+(def makeEnv
+  %makeEnv)
+(def null?
+  %null?)
+(def not
+  !)
 (def obj %obj)
-(def reverse %reverse)
+(def reverse
+  %reverse)
 (def rootPrompt %rootPrompt)
 (def set! %set!)
 (def symbol %symbol)
-(def symbolName %internName)
 (def symbol? %symbol?)
-(def keywordName %internName)
-(def keyword? %keyword?)
+(def symbolName
+  %internName)
+
 (def test %test)
-(def type? %type?)
-(def unwrap %unwrap)
-(def vau %vau)
-(def wrap %wrap)
+(def type?
+  %type?)
+(def unwrap
+  %unwrap)
+(def wrap
+  %wrap)
 
 
-;;;; Basic type
+;;; Core Forms
 
-(def Null #null)
-(def Any &Wat.Vm$Any)
-(def Apv &Wat.Vm$Apv)
-(def Opv &Wat.Vm$Opv)
-(def Box &Wat.Vm$Box)
-(def Cons &Wat.Vm$Cons)
-(def DVar &Wat.Vm$DVar)
-(def JFun &Wat.Vm$JFun)
-(def Obj &Wat.Vm$Obj)
-(def Inert &Wat.Vm$Inert)
-(def Ignore &Wat.Vm$Ignore)
-(def Error &Wat.Vm$Error)
-(def Symbol &Wat.Vm$Symbol)
-(def Keyword &Wat.Vm$Keyword)
-(def Boolean &java.lang.Boolean)
-(def Date &java.util.Date)
-(def Number &java.lang.Number)
-(def Integer &java.lang.Integer)
-(def Double &java.lang.Double)
-(def Object &java.lang.Object)
-(def String &java.lang.String)
-(def Math &java.lang.Math)
-(def System &java.lang.System)
+(def vau (%vau (pt ep . forms) env (eval (list '%vau pt ep (list* 'begin forms)) env)))
+(def vau
+  %vau)
 
-
-;;;; Derivable utilities
+(def theEnv (vau () e e))
+(def theEnv
+  %theEnv)
 
 (def quote (vau (x) #ignore x))
-(def quote %quote)
-(def list (wrap (vau elts #ignore elts)))
-(def list %list)
+(def quote
+  %quote)
+
+(def list (wrap (vau x #ignore x)))
+(def list
+  %list)
+
 (def lambda (vau (formals . body) env (wrap (eval (list* vau formals #ignore body) env))))
 (def lambda %\)
-(def theEnv (vau () e e))
-(def theEnv %theEnv)
-(def car (\ ((x . #_)) x))
-(def car %car)
-(def cdr (\ ((#_ . x)) x))
-(def cdr %cdr)
+(def \
+  %\)
 
-(def caar (\ (arg) (car (car arg))))
-(def cadr (\ (arg) (car (cdr arg))))
-(def cdar (\ (arg) (cdr (car arg))))
-(def cddr (\ (arg) (cdr (cdr arg))))
+(def car (\ ((car . #_)) car))
+(def car
+  %car)
 
-(def identity (\ (i) i))
-(def compose (\ (f g) (\ (arg) (f (g arg)))))  
+(def cadr (\ ((#_ . (cadr . #_))) cadr))
+(def cadr (\ ((#_ cadr . #_)) cadr))
+(def cadr
+  %cadr)
+
+(def cdr (\ ((#_ . cdr)) cdr))
+(def cdr
+  %cdr)
+
+(def cddr (\ ((#_ . (#_ . cddr))) cddr))
+(def cddr (\ ((#_ #_ . cddr)) cddr))
+(def cddr
+  %cddr)
+
+(def caar
+  (\ (x) (car (car x))))
+
+(def cdar
+  (\ (x) (cdr (car x))))
+
+(def compose
+  (\ (f g) (\ (x) (f (g x)))))
+
+(def identity
+  (\ (x) x))
 
 
-;;;; Macro
+;;; Macro
 
 (def evalMacro (dvar #t))
 
@@ -141,8 +173,8 @@
 
 (def macro
   (makeMacro
-    (vau (params . body) #ignore
-      (list 'makeMacro (list* 'vau params #ignore body)) )))
+    (vau (pt . forms) #ignore
+      (list 'makeMacro (list* 'vau pt #ignore forms)) )))
 
 
 ; defMacro defVau def\ def*\ rec\ let1\ let1rec\ let\ letrec\ permettono la definizione con due sintassi
@@ -159,7 +191,7 @@
       (list 'def (car lhs) (list* 'macro (cdr lhs) rhs)) )))
 
 (defMacro (expand macro)
-  (list 'begin (list 'evalMacro #f) macro))
+  (list 'begin (list 'evalMacro #f) macro) )
 
 (assert (expand (defMacro (succ n) (list '+ n 1))) '(def succ (macro (n) (list (%quote +) n 1))))
 (assert (expand (defMacro succ (n) (list '+ n 1))) '(def succ (macro (n) (list (%quote +) n 1))))
@@ -172,8 +204,11 @@
 (assert (expand (defVau (succ n) env (eval (list '+ n 1) env))) '(def succ (vau (n) env (eval (list (%quote +) n 1) env))))
 (assert (expand (defVau succ (n) env (eval (list '+ n 1) env))) '(def succ (vau (n) env (eval (list (%quote +) n 1) env))))
 
-(defMacro (wrau pt env . body)
-  (list 'wrap (list* 'vau pt env body)))
+(defMacro defConstant (name value . docstring?)
+  (list 'def name value) )
+
+(defMacro (wrau pt ep . body)
+  (list 'wrap (list* 'vau pt ep body)))
 
 (assert (expand (wrau pt env a b c)) '(wrap (vau pt env a b c)))    
 
@@ -191,11 +226,15 @@
 
 ;;;; Basic value test
 
-(def\ (zero? n) (== n 0))
 (def\ (inert? o) (== o #inert))
+(def\ (zero? n) (== n 0))
+(def\ (even? n) (== (% n 2) 0))
+(def\ (odd? n)  (== (% n 2) 1))
+
+
  
 
-;;;; Wrap incomplete VM forms
+;;; Wrap incomplete VM forms
 
 (def* (then else) begin begin)
 
@@ -225,11 +264,16 @@
   )
 )
 
-(def finally %finally)
-(def takeSubcont %takeSubcont)
+
+;;; Delimited Control Operators
+
+;; These operators follow the API put forth in the delimcc library
+;; at URL `http://okmij.org/ftp/continuations/implementations.html'.
 
 (defVau (pushPrompt prompt . body) env
   (eval (list '%pushPrompt (eval prompt env) (list* 'begin body)) env) )
+
+(def takeSubcont %takeSubcont)
 
 (defMacro (pushDelimSubcont p k . body)
   (list '%pushDelimSubcont p k (list* '\ () body)) )
@@ -237,8 +281,11 @@
 (defMacro (pushSubcont k . body)
   (list '%pushDelimSubcont #ignore k (list* '\ () body)) )
 
+(defMacro pushSubcontBarrier forms
+  (list* '%pushSubcontBarrier (%makeEnv) forms))
 
-;;;; Basic macros and functions
+
+;;; Basic macros and functions
 
 (def\ (apply appv args . env)
   (def env (if (null? env) (makeEnv) ((\ ((env)) env) env))) 
@@ -281,13 +328,13 @@
 (assert (expand (def*\ (a b) ((n) (+ n 1)) ((n) (+ n 1)))) '(def* (a b) (\ (n) (+ n 1)) (\ (n) (+ n 1))) )
 
 
-;;;; Lexical bindings
+;;; Lexical Bindings
 
 (def\ (->inert binding) #inert)
 (def\ (->1expr binding) ((\ ((#_ cadr)) cadr) binding))
-(def\ (->begin binding) ((\ ((#_ cadr . exps)) (if (null? exps) cadr (list* 'begin cadr exps))) binding))
-(def\ (->name\ (lhs . rhs)) (if (symbol? lhs)  (list lhs (list* '\ (car rhs) (cdr rhs))) (list (car lhs) (list* '\ (cdr lhs) rhs))))
-(def\ (->name binding) (if (symbol? binding) binding (car binding)))
+(def\ (->begin binding) ((\ ((#_ cadr . cddr)) (if (null? cddr) cadr (list* 'begin cadr cddr))) binding))
+(def\ (->name  lhs) (if (symbol? lhs) lhs (car lhs)))
+(def\ (->name\ (lhs . rhs)) (if (symbol? lhs) (list lhs (list* '\ (car rhs) (cdr rhs))) (list (car lhs) (list* '\ (cdr lhs) rhs))))
 
 
 (defMacro (let1Loop . args)
@@ -356,16 +403,6 @@
   
 (assert (expand (let\ ((f1 (a) a) ((f2 b) b)) 1)) '(let ((f1 (\ (a) a)) (f2 (\ (b) b))) 1))
     
-(defMacro (let* bindings . body)
-  (if (null? bindings)
-      (list* 'let () body)
-      (list 'let
-        (list (car bindings))
-        (list* 'let* (cdr bindings) body) )))
-
-(assert (let* ((a 1)) a) 1)
-(assert (let* ((a 1)(b a)) b) 1)
-
 #| TODO non sembra utile
 (defMacro (letrec bindings . body)
   (list* 'let ()
@@ -378,13 +415,25 @@
 
 (defMacro (letrec\ bindings . body)
   (list* 'let ()
-    (list* 'def* (map (\ ((lhs . #_)) (if (symbol? lhs) lhs (car lhs))) bindings) (map ->inert bindings))
+    (list* 'def* (map (\ (binding) (->name (car binding))) bindings) (map ->inert bindings))
     (list* 'def*\ (map car bindings) (map cdr bindings))
     body ))
 
-(def labels letrec\)
+(def labels
+  letrec\)
 
 (assert (labels ( ((even? n) (if (zero? n) #t (odd? (- n 1)))) (odd? (n) (if (zero? n) #f (even? (- n 1)))) ) (even? 88) ) #t)
+
+
+(defMacro (let* bindings . body)
+  (if (null? bindings)
+      (list* 'let () body)
+      (list 'let
+        (list (car bindings))
+        (list* 'let* (cdr bindings) body) )))
+
+(assert (let* ((a 1)) a) 1)
+(assert (let* ((a 1)(b a)) b) 1)
 
 
 ;;;; Simple control
@@ -396,9 +445,9 @@
   (list* 'if test #inert body))
 
 
-;;;; Ifbind? CaseVau Case\ Match
+;;;; Bind? IfBind? CaseVau Case\ Match
 
-(defVau (ifbind? (pt exp) then . else) env
+(defVau (ifBind? (pt exp) then . else) env
   (let1 (env+ (makeEnv env))
     (if (bind? env+ pt (eval exp env))
       (eval then env+)
@@ -408,7 +457,7 @@
 (defVau (caseVau . clauses) env 
   (vau values #ignore
     (let1 loop (clauses clauses)
-      (if (null? clauses) #inert ;(error ($ "not a match form for: " values))
+      (if (null? clauses) #inert
         (let ( (env+ (makeEnv env))
                (((bindings . forms) . clauses) clauses) )
           (if (if (== bindings 'else) #t (bind? env+ bindings values)) ; or!
@@ -432,10 +481,10 @@
 (assert (match        4 ((a) 1) ((a b) 2)    (a a)) 4)
 
 
-;;;; Cond And Or
- 
+;;; Cond And Or
+
 (defVau (cond . clauses) env
-  (if (null? clauses) #inert
+  (unless (null? clauses)
     (let1 (((test . body) . clauses) clauses)
       (if (== test 'else)
         (apply (wrap begin) body env)
@@ -516,13 +565,7 @@
 
 (assert (case 3 ((2 4 6 8) 'pair) ((1 3 5 7 9) 'odd)) 'odd) 
 
-(def\ (checkSlots obj slots)
-  (let1 next (slots slots)
-    (if (null? slots) #t
-      (let1 ((name value . slots) slots)
-        (if (or (! (@isBound obj name)) (! (eq? (obj name) value))) #f
-          (next slots) )))))
-
+; vedi signalsError in vm.lispx (o test-util.lispx) per codice simile
 (defVau (caseType key . clauses) env
   (let1 (key (eval key env))
     (let1 next (clauses clauses)
@@ -537,52 +580,83 @@
               (eval (list* 'begin forms) env) )
             (next clauses) ))))))
 
+(def\ (checkSlots obj slots)
+  (let1 next (slots slots)
+    (if (null? slots) #t
+      (let1 ((name value . slots) slots)
+        (if (or (! (@isBound obj name)) (! (eq? (obj name) value))) #f
+          (next slots) )))))
+
 (assert (caseType 2.0 (else 3)) 3)
 (assert (caseType (+ 2 2) (else => (\(v) v))) 4)
 (assert (caseType 2.0 (String "string") (Double "double")) "double")
 (assert (caseType (obj Obj :a 1) (Double "double") ((Obj :a 1) "Obj :a 1")) "Obj :a 1")
 
 
-;;;; Options ~= if!#null or ifList
+;;; Options ~= if!#null or ifList
 
-(defVau (opt? exp dft) env
-  (let1 (exp (eval exp env))
-    (if (list? exp)
-      (let1 ((val) exp) val)
-      (eval dft env) ))) 
+;; An option is either nil ("none"), or a one-element list ("some").
+;; Variables holding options are conventionally suffixed with "?".
 
-(assert (opt? '(2) 10) 2)
-(assert (opt? #null 10) 10)
+(def\ some (value)
+  #|Create a one-element list from the VALUE.
+   |#
+  (list value))
 
-(defVau (ifOpt? (pt exp) then . else) env
-  (let1 (exp (eval exp env))
-    (if (list? exp)
-      (eval (list* (list 'vau (if (symbol? pt) (list pt) pt) #_ then) exp) env)
+(def\ (\01+ forms) 
+  (if (null? forms) #null (if (null? (cdr forms)) (car forms) (list* 'begin forms))) )
+
+(defVau (ifOpt? (pt opt?) then . else) env
+  #|Destructure the OPTION?.  If it's non-nil, evaluate the THEN form
+   |with the NAME bound to the contents of the option.  If it's nil,
+   |evaluate the ELSE form.
+   |#
+   ;; (Idea from Taylor R. Campbell's blag.)
+  (let1 (opt? (eval opt? env))
+    (if (null? opt?)
       (if (null? else) #null
-        (eval (let1 ((exp) else) exp) env) ))))
+        (eval (\01+ else) env))
+      (if (list? opt?)  
+        (eval (list* (list 'vau (list pt) #ignore then) opt?) env)
+        (error ($ "not (or Null List): " opt?)) ))))
 
-(assert (ifOpt? (a ()) (+ 1 a)) #null)
-(assert (ifOpt? (a '(2)) (+ 1 a)) 3)
-(assert (ifOpt? (a '(2 2)) (+ 1 a)))
+(assert (ifOpt? (a ()) (+ a 1)) #null)
+(assert (ifOpt? (a '(2)) (+ a 1)) 3)
+(assert (ifOpt? (a '(2 2)) (+ a 1)))
 
-(assert (ifOpt? ((a) ()) (+ 1 a)) #null)
-(assert (ifOpt? ((a) ()) (+ 1 a) 0) 0)
-(assert (ifOpt? ((a) ()) (+ 1 a) 0 1))
-(assert (ifOpt? ((a) '(2)) (+ 1 a)) 3)
-(assert (ifOpt? ((a) '(2 3)) (+ 1 a)))
-(assert (ifOpt? ((a b) '(2 3)) (+ 1 b)) 4)
+(defVau (ifOpt*? (pt opt?) then . else) env
+  (let1 (opt? (eval opt? env))
+    (if (null? opt?)
+      (if (null? else) #null
+        (eval (\01+ else) env))
+      (if (list? opt?)  
+        (eval (list* (list 'vau pt #ignore then) opt?) env)
+        (error ($ "not (or Null List): " opt?)) ))))
 
-(defMacro whenOpt? ((pt opt?) form . forms)
-  (list ifOpt? (list pt opt?) (list* progn form forms)))
+(assert (ifOpt*? ((a) ()) (+ 1 a)) #null)
+(assert (ifOpt*? ((a) ()) (+ 1 a) 0) 0)
+(assert (ifOpt*? ((a) ()) (+ 1 a) 0 1) 1)
+(assert (ifOpt*? ((a) '(2)) (+ a 1)) 3)
+(assert (ifOpt*? ((a) '(2 3)) (+ a 1)))
+(assert (ifOpt*? ((a b) '(2 3)) (+ a b)) 5)
 
-(defMacro unlessOpt? (opt? form . forms)
-  (list ifOpt? (list #ignore opt?) #null (list* progn form forms)))
+(defMacro whenOpt? ((pt opt?) . forms)
+  #|Destructure the OPTION?.  If it's non-nil, evaluate the FORMS with
+   |the NAME bound to the contents of the option.  If it's nil, return nil.
+   |#
+  (list 'ifOpt? (list pt opt?) (\01+ forms)) )
+
+(defMacro unlessOpt? (opt? . forms)
+  #|Destructure the OPTION?.  If it's nil, evaluate the FORMS.  If it's
+   |non-nil, return nil.
+   |#
+  (list* 'ifOpt? (list #ignore opt?) #null (\01+ forms)) )
 
 (defVau (caseOpt? exp . clauses) env
   (let1 (exp (eval exp env))
     (if (null? exp) #null
       (let1 loop (clauses clauses)
-        (if (null? clauses) #inert ;(error "not a valid opt? form! ")
+        (if (null? clauses) #null
           (let ((env+ (makeEnv env))
                 (((bindings . forms) . clauses) clauses) )
             (if (or (== bindings 'else) (bind? env+ bindings exp))
@@ -592,7 +666,41 @@
 (assert (caseOpt? () ((a) 1) ((a b) (+ a b))) ())
 (assert (caseOpt? '(2) ((a) 1) ((a b) (+ a b))) 1)
 (assert (caseOpt? '(1 2) ((a) 1) ((a b) (+ a b))) 3)
-(assert (caseOpt? '(1 2 3) ((a) 1) ((a b) (+ a b))) #inert)
+(assert (caseOpt? '(1 2 3) ((a) 1) ((a b) (+ a b))) #null)
+  
+(defMacro (opt? exp . dft)
+  #|Return the contents of the OPTION?, or the DEFAULT? if the option
+   |is nil.  The default itself defaults to void.  The DEFAULT? is
+   |evaluated lazily, only when the OPTION? is nil.
+   |#
+  (list* ifOpt? (list 'exp exp) 'exp dft))
+
+(assert (opt? () 10) 10)
+(assert (opt? '(2) 10) 2)
+(assert (opt? '(2 3) 10))
+
+(defVau opt*? (lst . dft) env
+  #|Similar to `opt', but provides DEFAULTS for any number of
+   |elements of LIST.  This is useful for implementing functions that take
+   |multiple opt? arguments.  Each default is evaluated lazily, only when needed.
+   |#
+  (let loop ((lst (eval lst env)) (dft dft))
+    (if (null? lst) 
+      (if (null? dft) #null
+         (cons (eval (car dft) env) (loop #null (cdr dft))) )
+      (if (null? (car lst))
+        (if (null? dft)
+          (cons #null (loop (cdr lst) #null))
+          (cons (eval (car dft) env) (loop (cdr lst) (cdr dft))) )
+        (cons (car lst)
+          (loop (cdr lst) (if (null? dft) #null (cdr dft)))) ))))
+
+(assert (opt*? '(1 () 3) 1 2 3 4) '(1 2 3 4))
+
+(def\ getOpt? (option?)
+  #|Returns the contents of the OPTION? or signals an error if it is nil.
+   |#
+  (opt? option? (error "Option is nil")))
 
 (defVau (defOpt? pt exp) env
   (def exp (eval exp env))
@@ -604,7 +712,7 @@
 
 (def\ (callWithEscape fun)
   (let1 (fresh (list #null))
-    (catch (fun (\ opt? (throw (list fresh (ifOpt? ((val) opt?) opt?) ))))
+    (catch (fun (\ opt? (throw (list fresh (ifOpt? (val opt?) opt?) ))))
       (\ (exc)
         (if (and (cons? exc) (== (car exc) fresh))
           (let1 ((#ignore opt?) exc) (if (cons? opt?) (car opt?)))
@@ -693,7 +801,7 @@
 (assert (check 'pp '(a :prv 1)  2 3 Symbol (ck|| Any (list 2 (ck|| Null Inert :prv :rhs)))) 3)
 (assert (check 'pp '(a 1)       2 3 Symbol (ck|| Any (list 2 (ck|| Null Inert :prv :rhs)))) 2)
 
-;;;; List utilities
+;;; Lists
 
 (def\ (forEach f lst . lst*)
   (if (null? lst*)
@@ -705,16 +813,31 @@
 (forEach (\ (a b) (log a b)) '(1 2) '(3 4))
 |#
 
+(def\ (forEach f lst . lst*)
+  (if (null? lst*)
+    (let1 (res lst) ((rec\ (forEach lst) (if (null? lst) res (f (car lst)) (forEach (cdr lst)))) lst))
+    (let1 (res (cons lst lst*)) ((rec\ (forEach* lst*) (if (null? (car lst*)) res (apply f (map car lst*)) (forEach* (map cdr lst*)) )) res) )) )
+
+(def\ maplist (f lst)
+  (if (null? lst) #null
+      (append (f (car lst)) (maplist f (cdr lst))) ))
+
 (def\ (filter f lst . lst*)
   (if (null? lst*)
     ((rec\ (filter lst) (if (null? lst) #null (if (f (car lst)) (cons (car lst) (filter (cdr lst))) (filter (cdr lst))))) lst)
     ((rec\ (filter* lst*) (if (null? (car lst*)) #null (let1 (cars (map car lst*)) (if (apply f cars) (cons cars (filter* (map cdr lst*))) (filter* (map cdr lst*)) )))) (cons lst lst*)) ))
 
-(def\ (even n) (== (% n 2) 0))
-(def\ (odd n)  (== (% n 2) 1))
-
-(assert (filter even '(1 2 3 4 5 6 7 8 9)) '(2 4 6 8))
+(assert (filter even? '(1 2 3 4 5 6 7 8 9)) '(2 4 6 8))
 (assert (filter != '(1 2 3) '(3 2 1)) '((1 3) (3 1)))
+
+;; TODO costruire in termini di filter
+(def\ (remove f lst . lst*)
+  (if (null? lst*)
+    ((rec\ (filter lst) (if (null? lst) #null (if (f (car lst)) (filter (cdr lst)) (cons (car lst) (filter (cdr lst))) ))) lst)
+    ((rec\ (filter* lst*) (if (null? (car lst*)) #null (let1 (cars (map car lst*)) (if (apply f cars) (filter* (map cdr lst*)) (cons cars (filter* (map cdr lst*))) )))) (cons lst lst*)) ))
+
+(assert (remove odd? '(1 2 3 4 5 6 7 8 9)) '(2 4 6 8))
+(assert (remove == '(1 2 3) '(3 2 1)) '((1 3) (3 1)))
 
 (def\ (reduceL f init lst . lst*)
   (if (null? lst*)

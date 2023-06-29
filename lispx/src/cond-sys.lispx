@@ -428,7 +428,7 @@
     (ifOpt? (handlerFrame handlerFrame?)
       (-computeRestarts-
         (append restarts
-          (removeIf
+          (remove
             (\ (restart) (not (lispx::restartHandlerApplicableToCondition? restart condition?)))
             (getSlot handlerFrame 'handlers) ))
         (getSlot handlerFrame 'parentFrame?) )
