@@ -174,9 +174,9 @@
         :handlerFunction
            (the Function (eval functionForm env))
         :interactiveFunction?
-           (whenOpt? (i-f-form (get? properties :interactiveFunction)) (some (the Function (eval i-f-form env))))
+           (whenOpt? (i-f-form (get? :interactiveFunction properties)) (some (the Function (eval i-f-form env))))
         :associatedConditions
-           (whenOpt? (a-cs-form (get? properties :associatedConditions)) (the List (eval a-cs-form env))) ))
+           (whenOpt? (a-cs-form (get? :associatedConditions properties)) (the List (eval a-cs-form env))) ))
     *restartHandlerFrame?* ))
 
 

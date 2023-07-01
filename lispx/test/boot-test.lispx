@@ -1751,11 +1751,11 @@
 (defsuite reduce
 
   (deftest reduce.1
-    (reduce %* (list 1 2 3) :initialValue 10)
+    (reduce %* 10 (list 1 2 3))
     60)
 
   (deftest reduce.2
-    (reduce %* (list) :initialValue 10)
+    (reduce %* 10 (list))
     10)
 
   (deftest reduce.3
@@ -1774,11 +1774,11 @@
      MatchError))
 
   (deftest reduce.ansi.3
-    (reduce cons '(a b c d e f) :initialValue 'z)
+    (reduce cons 'z '(a b c d e f) )
     '((((((z . a) . b) . c) . d) . e) . f))
 
   (deftest reduce.clhs.1
-    (reduce list '(1 2 3 4) :initialValue 'foo)
+    (reduce list 'foo '(1 2 3 4))
     '((((foo 1) 2) 3) 4)))
 
 (defsuite forEach
@@ -2350,15 +2350,15 @@
     '("b" "c"))
 
   (deftest member.9
-    (member 'b '((2 a) (1 b) (3 c)) :key cadr)
+    (member 'b '((2 a) (1 b) (3 c)) :fkey cadr)
     '((1 b) (3 c)))
 
   (deftest member.9a
-    (member "b" '((2 "a") (1 "b") (3 "c")) :key cadr)
+    (member "b" '((2 "a") (1 "b") (3 "c")) :fkey cadr)
     #null)
 
   (deftest member.9b
-    (member "b" '((2 "a") (1 "b") (3 "c")) :key cadr :test eq?)
+    (member "b" '((2 "a") (1 "b") (3 "c")) :fkey cadr :test eq?)
     '((1 "b") (3 "c"))))
 
 (defsuite remove
@@ -2394,19 +2394,19 @@
 (defsuite get?
 
   (deftest get?.1
-    (get? '(:foo 1 :bar 2) :foo)
+    (get? :foo '(:foo 1 :bar 2))
     (some 1))
 
   (deftest get?.2
-    (get? '(:foo 1 :bar 2) :bar)
+    (get? :bar '(:foo 1 :bar 2))
     (some 2))
 
   (deftest get?.3
-    (get? '() :bar)
+    (get? :bar '())
     #null)
 
   (deftest get?.4
-    (get? '(:foo 1 :bar 2) :quux)
+    (get? :quux '(:foo 1 :bar 2))
     #null)
 
   (deftest get?.5
@@ -2423,7 +2423,7 @@
 
   (deftest get?.7
     (signalsError
-     (get? 12 :quux)
+     (get? :quux 12)
      MatchError)
     #t))
 

@@ -63,6 +63,7 @@
    |#
   %append)
 
+(def array->list %array->list)
 (def begin
   #|Sequentially evaluate FORMS, returning the value of the last one, or void if there are no forms.
    |$(fn forms)
@@ -125,7 +126,7 @@
   %classSymbol)
 
 (def dvar %dVar)
-
+(def eq? %eq?)
 (def eval
   #|Evaluate the FORM in the ENVIRONMENT, returning its result.
    |$(fn (form environment))
@@ -166,13 +167,16 @@
 
 (def instanceOf? %instanceOf?)
 
+(def keyword %keyword)
+(def keyword? %keyword?)
+(def keywordName %internName)
 (def keywordSymbol
   #|Return the symbol with the same name as SYMBOL, but in the keyword namespace.
    |$(fn (symbol))
    |$(type function)
    |#
   %keywordSymbol)
-
+(def len %len)
 (def list*
   #|Create a list from the ARGUMENTS so that the last argument becomes
    |the `cdr' of the list.
@@ -188,6 +192,7 @@
    |#
   %list?)
 
+(def list->array %list->array)
 (def loop
   #|Evaluate the FORMS in an infinite loop.
    |$(fn forms)
@@ -259,7 +264,7 @@
   %reverse)
 
 (def set! %set!)
-
+(def symbol %symbol)
 (def symbol? %symbol?)
 
 (def symbolName
@@ -817,36 +822,37 @@
 
 ;;;; Member Assoc Get
 
-(def\ (member item list . keywords)
+(def\ (member key lst . keywords)
   #|Search for ITEM in the LIST according to the TEST predicate
    |(defaults to `==').  Return the tail of the list starting with
    |ITEM if found, nil otherwise.  The KEY function is applied to
    |each list element before comparison (defaults to `identity').
    |$(fn (item list &key test key))
    |#
-  (let ( (test (opt? (get? keywords :test) ==))
-         (key  (opt? (get? keywords :key) identity)) )
-    (let1 member (items list)
-      (if (null? items) #null
-        (if (test item (key (car items))) items
-          (member (cdr items)))))))
+  (let ( (test (opt? (get? :test keywords) ==))
+         (fkey (opt? (get? :fkey keywords) identity)) )
+    (let1 member (lst lst)
+      (if (null? lst) #null
+        (if (test (fkey (car lst)) key) lst
+          (member (cdr lst)))))))
 
-(def\ (assoc item lst)
-  (letLoop (loop (lst lst))
+(def\ (assoc key lst)
+  (let1 loop (lst lst)
      (if (null? lst) #null
-       (if (== item (caar lst)) (car lst)
-         (loop (cdr lst)) ))))
+       (let1 ((kv . lst) lst)
+         (if (== (car kv) key) kv
+           (loop lst) )))))
 
-(def\ get? (plist indicator)
-  #|Search for the INDICATOR keyword in the property list PLIST (a list
+(def\ (get? key lst)
+  #|Search for the KEYWORD in the property list LST (a list
    |of alternating keywords and values) and return the found value as an
    |option.
    |#
-  (if (null? plist) #null
-    (let1 ((i v . plist) plist)
-      (if (eq? i indicator)
-        (some v)
-        (get? plist indicator) ))))
+  (let1 loop (lst lst)
+    (if (null? lst) #null
+      (let1 ((k v . lst) lst)
+        (if (eq? k key) (some v)
+          (loop lst)) ))))
 
 
 ;;; Case CaseType
@@ -1077,6 +1083,16 @@
 
 ;;; Lists
 
+(def\ (any? f lst . lst*)
+  (if (null? lst*)
+    ((rec\ (any? lst) (if (null? lst) #f (if (f (car lst)) #t (any? (cdr lst)))) ) lst)
+    ((rec\ (any*? lst*) (if (null? (car lst*)) #f (if (apply f (map car lst*)) #t (any*? (map cdr lst*))))) (cons lst lst*)) ))
+
+(def\ (all? f lst . lst*)
+  (if (null? lst*)
+    ((rec\ (all? lst) (if (null? lst) #t (if (f (car lst)) (all? (cdr lst)) #f))) lst)
+    ((rec\ (all*? lst*) (if (null? (car lst*)) #t (if (apply f (map car lst*)) (all*? (map cdr lst*)) #f))) (cons lst lst*)) ))
+    
 (def\ (forEach f lst . lst*)
   #|Apply the FUNCTION to every element of the LIST for effect.  Return the #inert.
    |#
@@ -1088,38 +1104,39 @@
   #|Apply the FUNCTION to every element of the LIST for effect.  Return the list.
    |#
   (if (null? lst*)
-    (let1 (res lst) ((rec\ (forEach lst) (if (null? lst) res (f (car lst)) (forEach (cdr lst)))) lst))
-    (let1 (res (cons lst lst*)) ((rec\ (forEach* lst*) (if (null? (car lst*)) res (apply f (map car lst*)) (forEach* (map cdr lst*)) )) res) )) )
+    (let1 (res lst) ((rec\ (forEach lst) (if (null? lst) res (f (car lst)) (forEach (cdr lst)))) res))
+    (let1 (res* (cons lst lst*)) ((rec\ (forEach* lst*) (if (null? (car lst*)) res* (apply f (map car lst*)) (forEach* (map cdr lst*)) )) res*) )) )
 
-(def\ maplist (f lst)
+(def\ maplist (f lst . lst*)
   #|Apply the FUNCTION, which must return a list, to every element of the
    |LIST, and append the results.  (Note: this currently uses `append',
    |but might be changed to use `nconc' in the future, like Common Lisp.)
    |#
-  (if (null? lst) #null
-      (append (f (car lst)) (maplist f (cdr lst))) ))
+  (if (null? lst*)
+    ((rec\ (maplist lst) (if (null? lst) #null (append (f (car lst)) (maplist (cdr lst))))) lst)
+    ((rec\ (maplist* lst*) (if (null? (car lst*)) #null (append (apply f (map car lst*)) (maplist* (map cdr lst*))))) (cons lst lst*)) ))
 
 (def\ (filter f lst . lst*)
   (if (null? lst*)
     ((rec\ (filter lst) (if (null? lst) #null (if (f (car lst)) (cons (car lst) (filter (cdr lst))) (filter (cdr lst))))) lst)
     ((rec\ (filter* lst*) (if (null? (car lst*)) #null (let1 (cars (map car lst*)) (if (apply f cars) (cons cars (filter* (map cdr lst*))) (filter* (map cdr lst*)) )))) (cons lst lst*)) ))
 
-;; TODO costruire in termini di filter
-(def\ (remove f lst . lst*)
-  (if (null? lst*)
-    ((rec\ (filter lst) (if (null? lst) #null (if (f (car lst)) (filter (cdr lst)) (cons (car lst) (filter (cdr lst))) ))) lst)
-    ((rec\ (filter* lst*) (if (null? (car lst*)) #null (let1 (cars (map car lst*)) (if (apply f cars) (filter* (map cdr lst*)) (cons cars (filter* (map cdr lst*))) )))) (cons lst lst*)) ))
+(defMacro (remove f lst . lst*)
+  #|Return a new list from which the elements that satisfy the TEST have been removed.
+   |#
+  (list* 'filter (list 'compose '! f) lst lst*) )
+
 
 (def\ (reduceL f init lst . lst*)
   (if (null? lst*)
     ((rec\ (reduce acc lst) (if (null? lst) acc (reduce (f acc (car lst)) (cdr lst)) )) init lst)
     ((rec\ (reduce* acc lst*) (if (null? (car lst*)) acc (reduce* (%apply* f acc (map car lst*)) (map cdr lst*)) )) init (cons lst lst*)) ))
 
-(def\ reduce (function list :initialValue initialValue)
+(def reduce
   #|Use the binary FUNCTION to combine the elements of the LIST.  The
    |INITIAL-VALUE is logically placed before the list.
    |#
-  (reduceL function initialValue list))
+  reduceL)  
 
 (def\ (reduceR f init lst . lst*)
   (if (null? lst*)
@@ -1148,6 +1165,15 @@
           listForm
           (list* '\ (list var) bodyForms)
           (list* '\ (list var) resultForm?))))
+
+(def\ (make\* n f)
+  (def\ (resize n lst)
+    (let loop ((n n) (h ()) (t lst))
+      (if (null? t) (reverse h)
+        (if (<= n 1)
+          (reverse (cons (if (null? (cdr t)) (car t) t) h))
+          (loop (- n 1) (cons (car t) h) (cdr t)) ))))
+  (\ lst (apply f (resize n lst))))
 
 
 ;;; Dynamic Binding
@@ -1294,6 +1320,7 @@
    |#
   (let1 (method (eval (list* \ (list* receiver parameters) forms) env))
     (%addMethod (findClass className env) name method)))
+
 
 ;;; Modules
 
@@ -1550,6 +1577,21 @@
 (def $= (assignOp %$))
 (def += (assignOp %+))
 (def -= (assignOp %-))
+;;;; Utilities
+
+(def\ (array . args) (list->array args))
+
+(def Array &java.lang.Object[])
+
+(defVau (time exp) env
+  (let1 (currentTime (@getMethod System "currentTimeMillis"))
+    (def milli (currentTime #null))
+    (def result (eval exp env))
+    (def milli (- (currentTime #null) milli))
+    (log ($ "time " exp ": " milli "ms"))
+    result ))
+
+
 ;;;; Error break routine, called by VM to print stacktrace and throw
 
 (def\ invokeDebugger (condition)

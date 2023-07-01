@@ -76,7 +76,6 @@
   %list?)
 
 (def list->array %list->array)
-
 (def loop
   %loop)
 (def makeEnv
@@ -533,28 +532,40 @@
 
 ;;;; Member Assoc Get
 
-(def\ (member item lst)
-  (letLoop (loop (lst lst))
+(def\ (member key lst)
+  (let1 loop (lst lst)
      (if (null? lst) #null
-       (if (== item (car lst)) lst
+       (if (== key (car lst)) lst
          (loop (cdr lst)) ))))
 
 (assert (member 'b '(a b c d)) '(b c d))
 ;(assert (member "b" '("a" "b" "c" "d")) '("b" "c" "d")) ; solo se String interned!
 
-(def\ (assoc item lst)
-  (letLoop (loop (lst lst))
+#|
+(def\ (member key lst . keywords)
+  (let ( (test (opt? (get? :test keywords) ==))
+         (fkey (opt? (get? :fkey keywords) identity)) )
+    (let1 member (lst lst)
+      (if (null? lst) #null
+        (if (test (fkey (car lst)) key) lst
+          (member (cdr lst)))))))
+|#
+
+(def\ (assoc key lst)
+  (let1 loop (lst lst)
      (if (null? lst) #null
-       (if (== item (caar lst)) (car lst)
-         (loop (cdr lst)) ))))
+       (let1 ((kv . lst) lst)
+         (if (== (car kv) key) kv
+           (loop lst) )))))
 
 (assert (assoc 'b '((a 1) (b 2) (c 3) (d 4))) '(b 2))
 
 (def\ (get? key lst)
-  (letLoop (loop (lst lst)) 
-     (if (null? lst) #null
-       (let1 ((k v . lst) lst)
-         (if (== k key) (list v) (loop lst)) ))))
+  (let1 loop (lst lst)
+    (if (null? lst) #null
+      (let1 ((k v . lst) lst)
+        (if (== k key) (list v)
+          (loop lst)) ))))
 
 (assert (get? :b '(:a 1 :b 2 :c 3)) '(2)) 
 (assert (get? 'b '(a 1 b 2 c 3)) '(2)) 
@@ -817,6 +828,22 @@
 
 ;;; Lists
 
+(def\ (any? f lst . lst*)
+  (if (null? lst*)
+    ((rec\ (any? lst) (if (null? lst) #f (if (f (car lst)) #t (any? (cdr lst)))) ) lst)
+    ((rec\ (any*? lst*) (if (null? (car lst*)) #f (if (apply f (map car lst*)) #t (any*? (map cdr lst*))))) (cons lst lst*)) ))
+
+(assert (any? > '(1 2) '(3 4)) #f)   
+(assert (any? < '(1 2) '(3 4)) #t)   
+
+(def\ (all? f lst . lst*)
+  (if (null? lst*)
+    ((rec\ (all? lst) (if (null? lst) #t (if (f (car lst)) (all? (cdr lst)) #f))) lst)
+    ((rec\ (all*? lst*) (if (null? (car lst*)) #t (if (apply f (map car lst*)) (all*? (map cdr lst*)) #f))) (cons lst lst*)) ))
+    
+(assert (all? > '(1 2) '(3 4)) #f)   
+(assert (all? < '(1 2) '(3 4)) #t)   
+    
 (def\ (forEach f lst . lst*)
   (if (null? lst*)
     ((rec\ (forEach lst) (unless (null? lst) (f (car lst)) (forEach (cdr lst)))) lst)
@@ -829,12 +856,13 @@
 
 (def\ (forEach f lst . lst*)
   (if (null? lst*)
-    (let1 (res lst) ((rec\ (forEach lst) (if (null? lst) res (f (car lst)) (forEach (cdr lst)))) lst))
-    (let1 (res (cons lst lst*)) ((rec\ (forEach* lst*) (if (null? (car lst*)) res (apply f (map car lst*)) (forEach* (map cdr lst*)) )) res) )) )
+    (let1 (res lst) ((rec\ (forEach lst) (if (null? lst) res (f (car lst)) (forEach (cdr lst)))) res))
+    (let1 (res* (cons lst lst*)) ((rec\ (forEach* lst*) (if (null? (car lst*)) res* (apply f (map car lst*)) (forEach* (map cdr lst*)) )) res*) )) )
 
-(def\ maplist (f lst)
-  (if (null? lst) #null
-      (append (f (car lst)) (maplist f (cdr lst))) ))
+(def\ maplist (f lst . lst*)
+  (if (null? lst*)
+    ((rec\ (maplist lst) (if (null? lst) #null (append (f (car lst)) (maplist (cdr lst))))) lst)
+    ((rec\ (maplist* lst*) (if (null? (car lst*)) #null (append (apply f (map car lst*)) (maplist* (map cdr lst*))))) (cons lst lst*)) ))
 
 (def\ (filter f lst . lst*)
   (if (null? lst*)
@@ -844,11 +872,8 @@
 (assert (filter even? '(1 2 3 4 5 6 7 8 9)) '(2 4 6 8))
 (assert (filter != '(1 2 3) '(3 2 1)) '((1 3) (3 1)))
 
-;; TODO costruire in termini di filter
-(def\ (remove f lst . lst*)
-  (if (null? lst*)
-    ((rec\ (filter lst) (if (null? lst) #null (if (f (car lst)) (filter (cdr lst)) (cons (car lst) (filter (cdr lst))) ))) lst)
-    ((rec\ (filter* lst*) (if (null? (car lst*)) #null (let1 (cars (map car lst*)) (if (apply f cars) (filter* (map cdr lst*)) (cons cars (filter* (map cdr lst*))) )))) (cons lst lst*)) ))
+(defMacro (remove f lst . lst*)
+  (list* 'filter (list 'compose '! f) lst lst*) )
 
 (assert (remove odd? '(1 2 3 4 5 6 7 8 9)) '(2 4 6 8))
 (assert (remove == '(1 2 3) '(3 2 1)) '((1 3) (3 1)))
@@ -861,6 +886,9 @@
 (assert (reduceL + 0 '(1 2 3 4)) 10)
 (assert (reduceL (\ (init lst) (+ init (reduceL * 1 lst))) 0 '(1 2 3 4) '(1 2 3 4)) 30)
 (assert (reduceL cons () '(1 2 3 4)) '((((() . 1) . 2) . 3) . 4))
+
+(def reduce
+  reduceL)
 
 (def\ (reduceR f init lst . lst*)
   (if (null? lst*)
@@ -1007,15 +1035,15 @@
     (defClass Bar Foo)
     (defGeneric g1 (obj p))
     (defMethod g1 ((foo Foo) p) (+ p 100))
-
+    
     (defObj foo Foo)
     (defObj bar Bar :a 1 :b (+ 2 3))
-
+    
     (assert (g1 foo (+ 1 1)) 102)
     (assert (g1 bar (+ 2 3)) 105)
-
+    
     (defMethod (g1 (bar Bar) p) (+ p (bar :b)))
-
+    
     (assert (bar :b) 5)
     (assert (g1 bar 2) 7)
     (assert (g1 bar (* 2 (bar :b))) 15)
@@ -1245,7 +1273,6 @@
 |#
 
 
-
 ;;;; Auto Increment/Decrement and Assignement Operator
 
 (defVau ($set! exp1 formals exp2) env
@@ -1311,7 +1338,7 @@
     (def milli (currentTime #null))
     (def result (eval exp env))
     (def milli (- (currentTime #null) milli))
-    (log ($ "time " exp ": " milli  "ms"))
+    (log ($ "time " exp ": " milli "ms"))
     result ))
 
 
