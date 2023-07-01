@@ -53,7 +53,6 @@
 (def >> %>>)
 (def >>> %>>>)
 
-
 (def append
   #|Append two lists.  The first one must be proper and is copied.  The
    |second one is not copied (and doesn't even have to be a list). It
@@ -103,6 +102,13 @@
    |$(type function)
    |#
   %cons?)
+
+(def className
+  #|Return the name symbol of the CLASS.
+   |$(fn (class))
+   |$(type function)
+   |#
+  %className)
 
 (def classOf
   #|Return the class of the OBJECT.
@@ -226,6 +232,14 @@
    |#
   %nthCdr)
 
+(def obj
+  #|Create a new instance of CLASS (that must be a `standard-class').
+   |The SLOT-INITS must be of even length, and alternately contain slot
+   |names (symbols, typically keywords) and values.
+   |$(fn (class . slotInits))
+   |#
+  %obj)
+
 (def panic
   #|Mostly for internal use.  Signal the ERROR in such a way that it is
    |hard to handle and will usually escape the VM as a host language
@@ -254,6 +268,14 @@
    |$(type function)
    |#
   %internName)
+
+(def subClass?
+  #|Return true if the CLASS is a subclass of the SUPERCLASS, false otherwise.
+   |A class is considered a subclass of itself.
+   |$(fn (class superclass))
+   |$(type function)
+   |#
+  %subClass?)
 
 (def variableSymbol
   #|Return the symbol with the same name as SYMBOL, but in the variable namespace.
@@ -337,6 +359,8 @@
 (def cadr
   #|Return the `car' of the `cdr' of the CONS.
    |$(derivation (car (cdr cons)))
+   |$(derivation (\ ((#_ . (cadr . #_))) cadr))
+   |$(derivation (\ ((#_ cadr . #_)) cadr))
    |#
   %cadr)
   
@@ -350,6 +374,8 @@
 (def cddr
   #|Return the `cdr' of the `cdr' of the CONS.
    |$(derivation (cdr (cdr cons)))
+   |$(derivation (\ ((#_ . (#_ . cddr))) cddr))
+   |$(derivation (\ ((#_ #_ . cddr)) cddr))
    |#
   %cddr)
 
@@ -366,7 +392,7 @@
 (def compose
   #|Compose two functions, creating a new function equivalent to (G (F ...)).
    |#
-  (\  (f g) (\ args (g (apply f args)))))
+  (\ (f g) (\ args (f (apply g args)))) )
 
 (def identity
   #|Identity function.
@@ -457,6 +483,8 @@
   (if (symbol? lhs)
     (list 'def lhs (list* '\ (car rhs) (cdr rhs)))
     (list 'def (car lhs) (list* '\ (cdr lhs) rhs)) ))
+
+
 ;;;; Basic value test
 
 (def\ (inert? o) (== o #inert))
@@ -482,17 +510,6 @@
   (%throw tag (opt? result? #inert)))
 
 
-(def\ invokeDebugger (condition)
-  #|Invoke the debugger, which as a default just prints a stack trace
-   |and panics, thereby throwing an exception to JS.  When running in the
-   |REPL, this function gets replaced with a different one that runs a
-   |nested debug loop.
-   |#
-  (takeSubcont +rootPrompt+ k
-    (pushDelimSubcont +rootPrompt+ k
-      (%printStacktrace k)
-      (panic condition))))
-
 
 ;;; Delimited Control Operators
 
@@ -505,12 +522,13 @@
    |#
   (list '%pushPrompt prompt (list* '\ () forms)))
 
-(defMacro (takeSubcont prompt name . forms)
+(def takeSubcont
   #|Abort outwards to the PROMPT.  When the prompt is reached, evaluate
    |the FORMS with NAME bound to the captured continuation (which does not
    |include the prompt).
+   |$(fn (prompt name . forms))
    |#
-  (list '%takeSubcont prompt (list* '\ (list name) forms)))
+  %takeSubcont)
 
 (defMacro (pushDelimSubcont prompt continuation . forms)
   #|Push the PROMPT and compose the previously captured CONTINUATION
@@ -665,7 +683,6 @@
    |#
   letrec\)
 
-
 (defMacro (let* bindings . body)
   #|Establish BINDINGS serially during the evaluation of FORMS, so that
    |every binding can refer to previous ones.
@@ -679,6 +696,13 @@
 
 
 ;;;; Simple control
+
+(defVau prog1 (form . forms) env
+  #|Evaluate FORM and any additional FORMS, and return the result of FORM.
+   |#
+  (let1 (result (eval form env))
+    (eval (list* begin forms) env)
+    result))
 
 (defMacro (when test . body)
   #|If TEST yields true, evaluate the FORMS as an implicit `begin'. Otherwise, return inert.
@@ -774,7 +798,7 @@
   (cond ((null? operands)          #t)
         ((null? (cdr operands))    (the Boolean (eval (car operands) env)))
         ((eval (car operands) env) (eval (cons and (cdr operands)) env))
-        (#t                        #f)))
+        (else                      #f)))
 
 (def && and)
 
@@ -786,7 +810,7 @@
   (cond ((null? operands)          #f)
         ((null? (cdr operands))    (the Boolean (eval (car operands) env)))
         ((eval (car operands) env) #t)
-        (#t                        (eval (cons or (cdr operands)) env))))
+        (else                      (eval (cons or (cdr operands)) env))))
 
 (def || or)
 
@@ -870,6 +894,7 @@
       (let1 ((name value . slots) slots)
         (if (or (! (@isBound obj name)) (! (eq? (obj name) value))) #f
           (next slots) )))))
+
 
 
 ;;; Options ~= if!#null or ifList
@@ -959,36 +984,8 @@
    |#
   (opt? option? (error (simpleError "Option is nil"))))
 
+
 ;;; Loop
-
-(defVau while (testForm . forms) env
-  #|Evaluate FORMS while TEST-FORM evaluates to true.
-   |#
-  (let ((forms (list* 'begin forms)))
-    (block exit
-      (loop
-        (if (eval testForm env)
-            (eval forms env)
-            (returnFrom exit #inert))))))
-
-(defMacro until (testForm . forms)
-  #|Evaluate FORMS until TEST-FORM evaluates to true.
-   |#
-  (list* while (list 'not testForm) forms))
-
-(defMacro dotimes ((var countForm . resultForm?) . bodyForms)
-  #|Cf. Common Lisp's DOTIMES.
-   |#
-  (let\ ((_dotimes_ (n body result)
-           (let ((i (box 0)))
-             (while (< (i) n)
-               (body (i))
-               (i (+ (i) 1)))
-             (result (i)))))
-    (list _dotimes_
-          countForm
-          (list* '\ (list var) bodyForms)
-          (list* '\ (list var) resultForm?))))
 
 (defVau block (blockName . forms) env
   #|Establish a block named BLOCK-NAME and evaluate the FORMS as an
@@ -1000,8 +997,7 @@
   (let1 (tag (list #inert)) ; cons up a fresh object as tag
     (let1\ (escape (value) (throw tag value))
       (catch tag
-        (eval (list (list* '\ (list blockName) forms) escape)
-              env)))))
+        (eval (list (list* '\ (list blockName) forms) escape) env) ))))
 #|
 (defVau block (blockName . forms) env
   (def tag (list #inert)) ; cons up a fresh object as tag
@@ -1017,14 +1013,66 @@
    |a block whose dynamic extent has ended.
    |$(fn (blockName . value?))
    |#
-  (blockName (opt? value? #inert)))
+  (blockName (opt? value? #inert)) )
 
-(defVau prog1 (form . forms) env
-  #|Evaluate FORM and any additional FORMS, and return the result of FORM.
+(defVau while (testForm . forms) env
+  #|Evaluate FORMS while TEST-FORM evaluates to true.
    |#
-  (let1 (result (eval form env))
-    (eval (list* begin forms) env)
-    result))
+  (let ((forms (list* 'begin forms)))
+    (block exit
+      (loop
+        (if (eval testForm env)
+            (eval forms env)
+            (returnFrom exit #inert))))))
+
+(defMacro until (testForm . forms)
+  #|Evaluate FORMS until TEST-FORM evaluates to true.
+   |#
+  (list* while (list '! testForm) forms) )
+
+(defMacro dotimes ((var countForm . resultForm?) . bodyForms)
+  #|Cf. Common Lisp's DOTIMES.
+   |#
+  (let\ ((_dotimes_ (n body result)
+           (let ((i (box 0)))
+             (while (< (i) n)
+               (body (i))
+               (i (+ (i) 1)))
+             (result (i)))))
+    (list _dotimes_
+          countForm
+          (list* '\ (list var) bodyForms)
+          (list* '\ (list var) resultForm?))))
+
+
+;;; Type Checks
+
+#| TODO sostituiti dal seguente
+(defVau the (className object) env
+  #|Shorthand for `assertType'.  Signal a `type-error' if the OBJECT
+   |is not an instance of the class named by CLASS-NAME.
+   |#
+  (assertType (eval object env) (eval (%the Symbol className) env)))
+
+(def\ the (class object)
+  (assertType object class) )
+|#
+(def the
+  #|Signal a `type-error' if the OBJECT is not an instance of the CLASS, else return object.
+   |$(fn (class object)
+   |$(type function)
+   |#
+  %the)
+
+;; TODO non più necessario, eliminare
+(def\ assertType (object class)
+  #|Signal a `type-error' if the OBJECT is not an instance of the CLASS.|#
+  (if (type? object class) object
+    (error (makeTypeError object (className class)))))
+
+(def\ makeTypeError (datum expectedType)
+  #|Create a `type-error' with the given DATUM and EXPECTED-TYPE.|#
+  (makeInstance TypeError :datum datum :expectedType expectedType))
 
 
 ;;; Lists
@@ -1062,19 +1110,6 @@
     ((rec\ (filter lst) (if (null? lst) #null (if (f (car lst)) (filter (cdr lst)) (cons (car lst) (filter (cdr lst))) ))) lst)
     ((rec\ (filter* lst*) (if (null? (car lst*)) #null (let1 (cars (map car lst*)) (if (apply f cars) (filter* (map cdr lst*)) (cons cars (filter* (map cdr lst*))) )))) (cons lst lst*)) ))
 
-(defMacro dolist ((var listForm . resultForm?) . bodyForms)
-  #|Cf. Common Lisp's DOLIST.|#
-  (let1rec\ (_dolist_ (list body result)
-             (if (null? list)
-                 (result list)
-                 (begin
-                   (body (car list))
-                   (_dolist_ (cdr list) body result))))
-    (list _dolist_
-          listForm
-          (list* '\ (list var) bodyForms)
-          (list* '\ (list var) resultForm?))))
-
 (def\ (reduceL f init lst . lst*)
   (if (null? lst*)
     ((rec\ (reduce acc lst) (if (null? lst) acc (reduce (f acc (car lst)) (cdr lst)) )) init lst)
@@ -1100,6 +1135,188 @@
   (if (null? lst*)
     ((rec\ (foldr acc lst) (if (null? lst) acc (f (car lst) (foldr acc (cdr lst)) ) )) init lst)
     ((rec\ (foldr* acc lst*) (if (null? (car lst*)) acc (%apply* f (map car lst*) (foldr* acc (map cdr lst*)) ) )) init (cons lst lst*)) ))
+
+(defMacro dolist ((var listForm . resultForm?) . bodyForms)
+  #|Cf. Common Lisp's DOLIST.|#
+  (let1rec\ (_dolist_ (list body result)
+             (if (null? list)
+                 (result list)
+                 (begin
+                   (body (car list))
+                   (_dolist_ (cdr list) body result))))
+    (list _dolist_
+          listForm
+          (list* '\ (list var) bodyForms)
+          (list* '\ (list var) resultForm?))))
+
+
+;;; Dynamic Binding
+
+#| TODO primitiva non più necessaria, eliminare
+(def %d\
+  (vau (var* . body) #ignore
+    (wrau val* env
+        (def\ (ckdvar var)
+            (def lkp (@get env var))
+            (def ndv (.value lkp))
+            ;(if (or (and (null? body) (null? ndv)) (instanceOf? ndv DVar)) ndv
+            ;  (error ($ "not " (if (null? body) "null or " "") "a dynamic value: " var)) )
+            (if (or (and (null? body) (! (.isBound lkp))) (instanceOf? ndv DVar)) ndv
+              (error ($ "not " (if (null? body) "unbound or " "") "a dynamic value: " var)) ))
+        (def ndv* (map ckdvar var*))
+        (unless (null? body) (def old* (map (\ (ndv) (if (null? ndv) ndv (ndv))) ndv*)))
+        (forEach (\ (ndv var val) (if (instanceOf? ndv DVar) (ndv val) (@def env var (dvar val)) )) ndv* var* (if (null? val*) (map (\ (var) #null) var*) val*))
+        (unless (null? body)
+          (finally
+            (eval (list* 'begin body) env) 
+            (forEach (\ (ndv old) (ndv old)) ndv* old*) )))))
+
+;((d\ (d e) (print e)) 4 5)     
+;((d\ (d e)) 6 7)
+|#
+
+(defMacro (ddef var . val?)
+  #|Define a new or update an existing dynamic variable with the given
+   |NAME and opt? default VALUE.
+   |$(fn (name))
+   |$(fn (name value))
+   |#
+  (list* (list '%d\ (list var)) val?) )
+
+(defMacro (ddef* var* . val*)
+  (list* (list '%d\ var*) val*) )
+
+(def\ dget (dynamicVariable)
+  #|Return the current value of the DYNAMIC-VARIABLE.|#
+  (dynamicVariable))
+
+(def\ dset (dynamicVariable value)
+  #|Set the current value of the DYNAMIC-VARIABLE.|#
+  (dynamicVariable value))
+
+(defMacro (dlet bindings exp . exps)
+  #|Evaluate the FORMS with the dynamic variables specified by BINDINGS
+   |temporarily bound to new values.  Bindings are established parallely
+   |as per `let'.
+   |$(syntax binding (dynamicVariable value))
+   |#
+  (list* (list* '%d\ (map car bindings) exp exps) (map cadr bindings)) )  
+
+(defMacro (progv var* val* exp . exps)
+  #|Evaluate the FORMS with the list of DYNAMIC-VARIABLES temporarily
+   |bound to new VALUES.  The DYNAMIC-VARIABLES and VALUES lists must have
+   |the same length.
+   |#
+  (list* (list* '%d\ var* exp exps) val*) )
+
+(defMacro (dlet* bindings . forms)
+  #|Evaluate the FORMS with the dynamic variables specified by BINDINGS
+   |temporarily bound to new values.  Bindings are established serially as
+   |per `let*'.
+   |#
+  (if (null? bindings)
+    (list* 'begin forms)
+    (list 'dlet
+      (list (car bindings))
+      (list* 'dlet* (cdr bindings) forms) )))
+
+
+;;;; Box
+
+(def box %box)
+
+(defMacro (defBox name . value?)
+  (list 'def name (list* 'box value?)) )
+
+
+;;; Classes
+
+(def\ findClass (name environment)
+  #|Look up a class based on its NAME symbol (evaluated) in the given ENVIRONMENT.|#
+  (eval (the Symbol name) environment))
+
+(defVau defClass (name superclass? slotSpecs . properties) env
+  #|Define a new `StandardClass' with the given NAME, optional
+   |SUPERCLASS?, and SLOT-SPECS.  The superclass defaults to
+   |`standard-object'.  The SLOT-SPECS and PROPERTIES are currently
+   |ignored.
+   |$(syntax slotSpec symbol)
+   |$(syntax property (:documentation docstring))
+   |#
+   ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
+  (dolist (slotSpec slotSpecs) (the Symbol slotSpec))
+  (let1 (superclass (findClass (opt? superclass? 'StandardObject) env))
+    (eval (list def name (%makeStandardClass name superclass)) env)) )
+
+
+;;; Standard Objects
+
+(def makeInstance
+  #|Create a new instance of CLASS (that must be a `standard-class').
+   |The SLOT-INITS must be of even length, and alternately contain slot
+   |names (symbols, typically keywords) and values.
+   |$(fn (class . slotInits))
+   |#
+  obj)
+
+(def\ getSlot (object slotName)
+  #|Return the value of the slot named SLOT-NAME of the OBJECT.|#
+  (%getSlot object slotName))
+
+(def\ setSlot (object slotName value)
+  #|Set the value of the slot named SLOT-NAME of the OBJECT to VALUE.|#
+  (%setSlot object slotName value))
+
+(def\ slotBound? (object slotName)
+  #|Return true if the slot named SLOT-NAME of the OBJECT is set, false otherwise.|#
+  (%slotBound? object slotName))
+
+(defMacro (defObj name class . attr)
+  (list 'def name (list* obj class attr)) )
+
+
+;;; Generic Functions
+
+;; receiver e parameters dei defMethod dovrebbero corrispondere a quelli del corrispondente defGeneric con quel nome
+
+
+(defVau defGeneric (name (receiver . parameters) . properties) env
+  #|Define a new generic function with the given NAME.  The RECEIVER,
+   |PARAMETERS, and PROPERTIES are currently ignored.
+   |$(syntax property (:documentation docstring))
+   |#
+  (let1\ (generic args (apply (%getMethod (classOf (car args)) name) args))
+    (eval (list 'def name generic) env) ))
+
+(defVau defMethod (name ((receiver className) . parameters) . forms) env
+  #|Add a new method to the generic function named by NAME specialized
+   |for the class named by CLASS-NAME.
+   |#
+  (let1 (method (eval (list* \ (list* receiver parameters) forms) env))
+    (%addMethod (findClass className env) name method)))
+
+;;; Modules
+
+(defVau (provide symbols . body) env
+  (eval
+    (list 'def symbols
+      (list 'let ()
+        (list* 'begin body)
+        (list* 'list symbols) ))
+    env ))
+
+(defVau (module exports . body) env
+  (let ((env (makeEnv env)))
+    (eval (list* 'provide exports body) env)
+    (makeEnv env) ))
+
+(defMacro (defModule name exports . body)
+  (list 'def name (list* 'module exports body)) )
+
+(defVau (import module imports) env
+  (let* ((module (eval module env))
+         (values (map (\ (import) (eval import module)) imports)) )
+    (eval (list* 'def* imports values) env) ))
 
 
 ;;; Relational Operators
@@ -1220,91 +1437,22 @@
   (lispx::makeLyticOperator %/ 1) )
 
 
-;;; Classes
+;;;; Greatest Common Divisor e Lowest Common Multiple
 
-(def\ findClass (name environment)
-  #|Look up a class based on its NAME symbol (evaluated) in the given ENVIRONMENT.|#
-  (eval (the Symbol name) environment))
+(def\ (gcd a b . more)
+  (if (null? more) 
+    (if (zero? b) a (gcd b (% a b)))
+    (gcd a (apply gcd (cons b more))) ))
 
-(def\ className (class)
-  #|Return the name symbol of the CLASS.|#
-  (%className class))
+(def abs (let1 (abs (@getMethod Math "abs" &int)) (\ (n) (abs #null n))))  
 
-(def\ subClass? (class superclass)
-  #|Return true if the CLASS is a subclass of the SUPERCLASS, false otherwise.
-   |A class is considered a subclass of itself.|#
-  (%subClass? class superclass))
-
-(defVau defClass (name superclass? slotSpecs . properties) env
-  #|Define a new `StandardClass' with the given NAME, optional
-   |SUPERCLASS?, and SLOT-SPECS.  The superclass defaults to
-   |`standard-object'.  The SLOT-SPECS and PROPERTIES are currently
-   |ignored.
-   |$(syntax slotSpec symbol)
-   |$(syntax property (:documentation docstring))
-   |#
-   ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
-  (dolist (slotSpec slotSpecs) (the Symbol slotSpec))
-  (let1 (superclass (findClass (opt? superclass? 'StandardObject) env))
-    (eval (list def name (%makeStandardClass name superclass)) env)) )
+(def\ (lcm a b . more)
+  (if (null? more)
+    (if (or (zero? a) (zero? b)) 0
+      (abs (* b (/ a (gcd a b)))) )
+    (lcm a (apply lcm (cons b more))) ))
 
 
-;;; Generic Functions
-
-(defVau defGeneric (name (receiver . parameters) . properties) env
-  #|Define a new generic function with the given NAME.  The RECEIVER,
-   |PARAMETERS, and PROPERTIES are currently ignored.
-   |$(syntax property (:documentation docstring))
-   |#
-  (let1\ (generic args (apply (%getMethod (classOf (car args)) name) args))
-    (eval (list def name generic) env)))
-
-(defVau defMethod (name ((receiver className) . parameters) . forms) env
-  #|Add a new method to the generic function named by NAME specialized
-   |for the class named by CLASS-NAME.
-   |#
-  (let1 (method (eval (list* \ (list* receiver parameters) forms) env))
-    (%addMethod (findClass className env) name method)))
-
-
-;;; Standard Objects
-
-(def\ makeInstance (class . slotInits)
-  #|Create a new instance of CLASS (that must be a `standard-class').
-   |The SLOT-INITS must be of even length, and alternately contain slot
-   |names (symbols, typically keywords) and values.
-   |#
-  (apply %makeInstance (cons class slotInits)))
-
-(def\ getSlot (object slotName)
-  #|Return the value of the slot named SLOT-NAME of the OBJECT.|#
-  (%getSlot object slotName))
-
-(def\ setSlot (object slotName value)
-  #|Set the value of the slot named SLOT-NAME of the OBJECT to VALUE.|#
-  (%setSlot object slotName value))
-
-(def\ slotBound? (object slotName)
-  #|Return true if the slot named SLOT-NAME of the OBJECT is set, false otherwise.|#
-  (%slotBound? object slotName))
-
-
-;;; Type Checks
-
-(def\ makeTypeError (datum expectedType)
-  #|Create a `type-error' with the given DATUM and EXPECTED-TYPE.|#
-  (makeInstance TypeError :datum datum :expectedType expectedType))
-
-(def\ assertType (object class)
-  #|Signal a `type-error' if the OBJECT is not an instance of the CLASS.|#
-  (if (type? object class) object
-    (error (makeTypeError object (className class)))))
-
-(defVau the (className object) env
-  #|Shorthand for `assertType'.  Signal a `type-error' if the OBJECT
-   |is not an instance of the class named by CLASS-NAME.
-   |#
-  (assertType (eval object env) (eval (%the Symbol className) env)))
 
 ;;; Sequences
 
@@ -1339,53 +1487,6 @@
   (%stringSubseq seq start (opt? end? #inert)))
 
 
-
-
-;;; Dynamic Binding
-
-(defMacro ddef (var . val?)
-  #|Define a new or update an existing dynamic variable with the given
-   |NAME and opt? default VALUE.
-   |$(fn (name))
-   |$(fn (name value))
-   |#
-  (list* (list '%d\ (list var)) val?) )
-
-(def\ dget (dynamicVariable)
-  #|Return the current value of the DYNAMIC-VARIABLE.|#
-  (dynamicVariable))
-
-(def\ dset (dynamicVariable value)
-  #|Set the current value of the DYNAMIC-VARIABLE.|#
-  (dynamicVariable value))
-
-(defMacro dlet (bindings exp . exps)
-  #|Evaluate the FORMS with the dynamic variables specified by BINDINGS
-   |temporarily bound to new values.  Bindings are established parallely
-   |as per `let'.
-   |$(syntax binding (dynamicVariable value))
-   |#
-  (list* (list* '%d\ (map car bindings) exp exps) (map cadr bindings)) )  
-
-(defMacro progv (var* val* exp . exps)
-  #|Evaluate the FORMS with the list of DYNAMIC-VARIABLES temporarily
-   |bound to new VALUES.  The DYNAMIC-VARIABLES and VALUES lists must have
-   |the same length.
-   |#
-  (list* (list* '%d\ var* exp exps) val*) )
-
-(defMacro dlet* (bindings . forms)
-  #|Evaluate the FORMS with the dynamic variables specified by BINDINGS
-   |temporarily bound to new values.  Bindings are established serially as
-   |per `let*'.
-   |#
-  (if (null? bindings)
-    (list* 'begin forms)
-      (list 'dlet (list (car bindings))
-        (list* 'dlet* (cdr bindings) forms))))
-
-
-
 ;;; Coroutines
 
 (defConstant +defaultPrompt+
@@ -1411,3 +1512,54 @@
    |`yield' was called in the coroutine.
    |#
   (list* 'pushDelimSubcont '+defaultPrompt+ k forms))
+;;;; Auto Increment/Decrement and Assignement Operator
+
+(defVau ($set! exp1 formals exp2) env
+  (eval (list 'def formals (list '(unwrap eval) exp2 env)) (eval exp1 env)))
+
+(defVau (++ plc . args) env
+  (def val (eval plc env))
+  (caseType val
+    (Box    (let1 (() args) (val :rhs (+ (val) 1))))
+    (Obj (let1 ((fld) args) (val fld :rhs (+ (val fld) 1)))) 
+    (Number (let1 (() args) (eval (list '%set! plc :rhs (+ val 1)) env)))
+    (else   (error ($ "not valid type: " val))) )) 
+
+(defVau (-- plc . args) env
+  (def val (eval plc env))
+  (caseType val
+    (Box    (let1 (() args) (val :rhs (- (val) 1))))
+    (Obj (let1 ((fld) args) (val fld :rhs (- (val fld) 1)))) 
+    (Number (let1 (() args) (eval (list '%set! plc :rhs (- val 1)) env)))
+    (else   (error ($ "not valid type: " val))) ))
+
+(def\ (assignOp op)
+  (vau (plc . args) env
+    (def lval (eval plc env))
+    (caseType lval
+      (Box (match args 
+        ((rval) (lval (op (lval) (eval rval env)))) 
+        ((key rval) (lval key (op (lval) (eval rval env)))) ))
+      (Obj (match args
+        ((fld rval) (lval fld (op (lval fld) (eval rval env))))
+        ((fld key rval) (lval fld key (op (lval fld) (eval rval env)))) ))
+      (Object (match args
+        ((rval) (eval (list 'def plc (op lval (eval rval env))) env))
+        ((key rval) (eval (list '%set! plc key (op lval (eval rval env))) env)) ))))) 
+
+(def $= (assignOp %$))
+(def += (assignOp %+))
+(def -= (assignOp %-))
+;;;; Error break routine, called by VM to print stacktrace and throw
+
+(def\ invokeDebugger (condition)
+  #|Invoke the debugger, which as a default just prints a stack trace
+   |and panics, thereby throwing an exception to JS.  When running in the
+   |REPL, this function gets replaced with a different one that runs a
+   |nested debug loop.
+   |#
+  (takeSubcont +rootPrompt+ k
+    (pushDelimSubcont +rootPrompt+ k
+      (%printStacktrace k)
+      (panic condition))))
+

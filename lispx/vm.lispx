@@ -34,6 +34,7 @@
 (%def Intern &Wat.Vm$Intern)
 (%def Integer &java.lang.Integer)
 (%def List &Wat.Vm$List)
+(%def Math &java.lang.Math)
 (%def Number &java.lang.Number)
 (%def Object &java.lang.Object)
 (%def Opvr &Wat.Vm$Opv)
@@ -41,6 +42,7 @@
 (%def Keyword &Wat.Vm$Keyword)
 (%def Obj &Wat.Vm$Obj)
 (%def Opv &Wat.Vm$Opv)
+(%def System &java.lang.System)
 (%def String &java.lang.String)
 (%def Throwable &java.lang.Throwable)
 (%def Inert &Wat.Vm$Inert)
@@ -104,9 +106,6 @@
 (%def %stringSubseq (%\ (seq start end) (%if (%inert? end) (@substring (%the String seq) (%the Integer start)) (@substring (%the String seq) (%the Integer start) (%the Integer end)))))
 
 (load "lispx/src/boot.lispx")
-
-(def finally %finally)
-(def takeSubcont %takeSubcont)
 
 (def %getSlot (\ (obj slot)
   ((the StandardObject obj) (the Intern slot)) ))

@@ -85,7 +85,8 @@
   %null?)
 (def not
   !)
-(def obj %obj)
+(def obj
+  %obj)
 (def reverse
   %reverse)
 (def rootPrompt %rootPrompt)
@@ -94,8 +95,11 @@
 (def symbol? %symbol?)
 (def symbolName
   %internName)
+(def subClass?
+  %subClass?)
 
 (def test %test)
+(def the %the)
 (def type?
   %type?)
 (def unwrap
@@ -152,7 +156,7 @@
   (\ (x) (cdr (car x))))
 
 (def compose
-  (\ (f g) (\ (x) (f (g x)))))
+  (\ (f g) (\ args (f (apply g args)))) )
 
 (def identity
   (\ (x) x))
@@ -273,7 +277,8 @@
 (defVau (pushPrompt prompt . body) env
   (eval (list '%pushPrompt (eval prompt env) (list* 'begin body)) env) )
 
-(def takeSubcont %takeSubcont)
+(def takeSubcont
+  %takeSubcont)
 
 (defMacro (pushDelimSubcont p k . body)
   (list '%pushDelimSubcont p k (list* '\ () body)) )
@@ -371,7 +376,7 @@
     (list 'def (car binding) (->1expr binding))
     body ))
 |#
-    
+
 (defMacro (let1rec\ binding . body)
   (list* 'let ()
     (list 'def (->name (car binding)) #inert)
@@ -437,6 +442,11 @@
 
 
 ;;;; Simple control
+
+(defVau prog1 (form . forms) env
+  (let1 (result (eval form env))
+    (eval (list* begin forms) env)
+    result))
 
 (defMacro (when test . body)
   (list 'if test (list* 'begin body)))
@@ -504,19 +514,19 @@
 
 (assert (begin (def a 1) (cond (a (\ (a) (== a 1)) => (\ (a) (+ a 1))))) 2) 
 
-(defVau (and . x) e
-  (cond ((null? x)        #t)
-        ((null? (cdr x))  (eval (car x) e))
-        ((eval (car x) e) (apply (wrap and) (cdr x) e))
-        (else             #f)))
+(defVau and operands env
+  (cond ((null? operands)          #t)
+        ((null? (cdr operands))    (the Boolean (eval (car operands) env)))
+        ((eval (car operands) env) (apply (wrap and) (cdr operands) env))
+        (else                      #f)))
 
 (def && and)
 
-(defVau (or . x) e
-  (cond ((null? x)        #f)
-        ((null? (cdr x))  (eval (car x) e))
-        ((eval (car x) e) #t)
-        (else             (apply (wrap or) (cdr x) e))))
+(defVau or operands env
+  (cond ((null? operands)          #f)
+        ((null? (cdr operands))    (the Boolean (eval (car operands) env)))
+        ((eval (car operands) env) #t)
+        (else                      (apply (wrap or) (cdr operands) env))))
 
 (def || or)
 
@@ -710,20 +720,18 @@
 
 ;;; Loop
 
-(def\ (callWithEscape fun)
-  (let1 (fresh (list #null))
-    (catch (fun (\ opt? (throw (list fresh (ifOpt? (val opt?) opt?) ))))
-      (\ (exc)
-        (if (and (cons? exc) (== (car exc) fresh))
-          (let1 ((#ignore opt?) exc) (if (cons? opt?) (car opt?)))
-          (throw exc))))))
+(defVau block (blockName . forms) env
+  (let* ((tag (list #inert))
+         (escape (\ (value) (throwTag tag value))) )
+    (catchTag tag
+      (eval (list (list* '\ (list blockName) forms) escape) env) )))
 
-(defMacro (label name . body)
-  (list 'callWithEscape (list* '\ (list name) body)))
+(assert (block exit (def x 1) (loop (if (== x 4) (exit 7)) (def x (+ x 1)))) 7)
 
-(assert (label return (return)) #inert)
-(assert (label return (return 3)) 3)
-(assert (label return (return 3 4)))
+(def\ returnFrom (blockName . value?)
+  (blockName (opt? value? #inert)) )
+
+(assert (block ciclo (def x 1) (loop (if (== x 4) (returnFrom ciclo 7)) (def x (+ x 1)))) 7)
 
 (defVau (while test . body) env
   (let ((body (list* 'begin body))
@@ -747,24 +755,30 @@
 (assert (let1 (c 2) (while #t (if (zero? c) (break (+ 5 5)) (-- c)))) 10)
 (assert (let ((c 10) (r #null)) (while #t (if (zero? c) (break r)) (if (zero? (% (-- c) 2)) (continue)) (def r (cons c r)) )) '(1 3 5 7 9))
 
-(defMacro (until test-form . forms)
-  (list* while (list '! test-form) forms) )
+(defMacro until (testForm . forms)
+  (list* while (list '! testForm) forms) )
 
-(defVau (block blockName . forms) env
-  (let* ((tag (list #inert))
-         (escape (\ (value) (throwTag tag value))) )
-    (catchTag tag
-      (eval (list (list* '\ (list blockName) forms) escape) env) )))
+(def\ (callWithEscape fun)
+  (let1 (fresh (list #null))
+    (catch (fun (\ opt? (throw (list fresh (ifOpt? (val opt?) opt?) ))))
+      (\ (exc)
+        (if (and (cons? exc) (== (car exc) fresh))
+          (let1 ((#ignore opt?) exc) (if (cons? opt?) (car opt?)))
+          (throw exc))))))
 
-(assert (block exit (def x 1) (loop (if (== x 4) (exit 7)) (def x (+ x 1)))) 7)
+(defMacro (label name . body)
+  (list 'callWithEscape (list* '\ (list name) body)))
 
-(def\ (returnFrom blockName . value?)
-  (blockName (unless (null? value?) (car value?))) )
+(assert (label return (return)) #inert)
+(assert (label return (return 3)) 3)
+(assert (label return (return 3 4)))
 
-(assert (block ciclo (def x 1) (loop (if (== x 4) (returnFrom ciclo 7)) (def x (+ x 1)))) 7)
 
 
-;;;; Type parameters check type\
+;;; Type Checks
+
+(defMacro (the type obj)
+  (list 'if (list 'type? obj type) obj (list 'error (list '$ obj " is not a: " type))) )
 
 (defMacro (type\ params . body)
   (let1rec\ ( (typedParams->namesAndChecks ps)
@@ -780,8 +794,6 @@
     (let1 ((names . checks) (typedParams->namesAndChecks params))
       (list* '\ names (if (null? checks) body (list* (list* 'begin checks) body))) )))
 
-(defMacro (the type obj)
-  (list 'if (list 'type? obj type) obj (list 'error (list '$ obj " is not a: " type))) )
 
 (assert (expand (type\ (a) (+ a 1))) '(\ (a) (+ a 1)))
 (assert (expand (type\ ((a Integer)) (+ a 1))) '(\ (a) (begin (the Integer a)) (+ a 1)))
@@ -794,12 +806,14 @@
 (def\ ck|| o (list->array o))
 (def ck+ (.MAX_VALUE Integer))
 (def\ check (op o . ck) (@check vm op o ck))
+
 (assert (check 'pp '(1 (:a 1 :b 2) c 3) 1 ck+ Integer (list Keyword Integer) Symbol (ck|| 3 4)) 4)
 (assert (check 'pp '(a 1 2) 'a 1 2) 3)
 (assert (check 'pp '(a 1 2) (ck|| '(b 3) '(a 1 2))) 3)
 (assert (check 'pp '(a #null 1) 2 3 Symbol (ck|| Any (list 2 (ck|| Null Inert :prv :rhs)))) 3)
 (assert (check 'pp '(a :prv 1)  2 3 Symbol (ck|| Any (list 2 (ck|| Null Inert :prv :rhs)))) 3)
 (assert (check 'pp '(a 1)       2 3 Symbol (ck|| Any (list 2 (ck|| Null Inert :prv :rhs)))) 2)
+
 
 ;;; Lists
 
@@ -881,9 +895,9 @@
 (assert ((make\* 2 (\(a b) b)) 1 2 3 4 5) '(2 3 4 5))
 
 
-;;;; Dynamic Binding
+;;; Dynamic Binding
 
-#| TODO non più necessaria, eliminare
+#| TODO primitiva non più necessaria, eliminare
 (def %d\
   (vau (var* . body) #ignore
     (wrau val* env
@@ -906,24 +920,32 @@
 ;((d\ (d e)) 6 7)
 |#
 
-(defMacro (ddef var . val)
-  (list* (list '%d\ (list var)) val) )
+(defMacro (ddef var . val?)
+  (list* (list '%d\ (list var)) val?) )
 
 (defMacro (ddef* var* . val*)
   (list* (list '%d\ var*) val*) )
 
-(defMacro (progv var* val* exp . exps)
-  (list* (list* '%d\ var* exp exps) val*) )
+(def\ dget (dynamicVariable)
+  #|Return the current value of the DYNAMIC-VARIABLE.|#
+  (dynamicVariable))
+
+(def\ dset (dynamicVariable value)
+  #|Set the current value of the DYNAMIC-VARIABLE.|#
+  (dynamicVariable value))
 
 (defMacro (dlet bindings exp . exps)
   (list* (list* '%d\ (map car bindings) exp exps) (map cadr bindings)) )  
 
-(defMacro (dlet* bindings . body)
+(defMacro (progv var* val* exp . exps)
+  (list* (list* '%d\ var* exp exps) val*) )
+
+(defMacro (dlet* bindings . forms)
   (if (null? bindings)
-    (list* 'begin body)
+    (list* 'begin forms)
     (list 'dlet
-	  (list (car bindings))
-      (list* 'dlet* (cdr bindings) body) )))
+      (list (car bindings))
+      (list* 'dlet* (cdr bindings) forms) )))
       
 (def a (dvar 1))
 (assert (expand (ddef a 1)) '((%d\ (a)) 1) )
@@ -938,15 +960,29 @@
 (assert (begin (ddef* (a) 1) (dlet* ((a (+ 1 (dval a))) (a (+ 1 (dval a)))) (dval a))) 3)
 
 
-;;;; Class Object Method
+;;;; Box
 
-(defMacro (defClass className . superClass? #| slot-specs . properties |# )
+(def box %box)
+
+(defMacro (defBox name . value?)
+  (list 'def name (list* 'box value?)) )
+
+
+;;; Classes
+
+(defMacro (defClass className . superClass? #| slotSpecs . properties |# )
   (list 'def className (list* '%class (list 'quote className) superClass?)))
 
-(def obj %obj) 
+
+
+;;; Standard Objects
+
 
 (defMacro (defObj name class . attr)
   (list 'def name (list* obj class attr)) )
+
+
+;;; Generic Functions
 
 ;; receiver e parameters dei defMethod dovrebbero corrispondere a quelli del corrispondente defGeneric con quel nome
 
@@ -986,28 +1022,9 @@
     (assert (bar :b :prv 6) 5)
     (assert (bar :b) 6) )
   #t )
-  
-#| TODO da rivedere
-(defVau (object . pairs) env
-  (let ((obj (%jsMakeObject)))
-    (map (\ ((name value))
-                (set ((jsGetter (eval name env)) obj) (eval value env)))
-              pairs)
-    obj))
-
-(def\ (elt object key)
-  ((jsGetter key) object))
-
-(defMacro (set (getter . args) new-val)
-  (list* (list 'setter getter) new-val args))
-
-(set (setter elt)
-  (type\ (newVal object key)
-    (set ((jsGetter key) object) newVal) ))
-|#
 
 
-;;;; Modules
+;;; Modules
 
 (defVau (provide symbols . body) env
   (eval
@@ -1039,7 +1056,7 @@
 (assert (begin (defModule m (x) (define x 10)) (import m (x)) x) 10)
 
 
-;;;; Java
+;;; Relational Operators
 
 (def\ (relationalOp binop)
   (rec\ (op arg1 arg2 . rest)
@@ -1049,10 +1066,21 @@
       #f )))
 
 (def == (relationalOp ==))
-(def < (relationalOp <))
-(def > (relationalOp >))
-(def <= (relationalOp <=))
-(def >= (relationalOp >=))
+
+(def eq?
+  (relationalOp eq?) )
+
+(def <
+  (relationalOp <) )
+
+(def >
+  (relationalOp >) )
+
+(def <=
+  (relationalOp <=) )
+
+(def >=
+  (relationalOp >=) )
 
 (assert (== 1 1 1) #t)
 (assert (< 1 2 3) #t)
@@ -1062,16 +1090,27 @@
 
 (def\ (!= . args) (not (apply == args)))
 
+(def\ /= (arg . args)
+  (if (null? args) #t
+    (if (cons? (member arg args :test eq?)) #f
+      (apply /= args) )))
+
+
+;;; Numbers
+
 (def\ (positiveOp binop unit)
   (\ args (reduceL binop unit args)))
 
-(def $ (positiveOp $ ""))
-(def + (positiveOp + 0))
-(def * (positiveOp * 1))
+(def +
+  (positiveOp + 0))
+(def *
+  (positiveOp * 1))
+(def $
+  (positiveOp $ ""))
 
-(assert ($ 1 2 3) "123")
 (assert (+ 1 2 3) 6)
 (assert (* 1 2 3) 6)
+(assert ($ 1 2 3) "123")
 
 (def\ (negativeOp binop unit)
   (\ (arg1 . rest)
@@ -1079,21 +1118,11 @@
       (binop unit arg1)
       (reduceL binop arg1 rest) )))
 
-(def - (negativeOp - 0))
-(def / (negativeOp / 1))
+(def -
+  (negativeOp - 0))
 
-
-#| TODO da rivedere
-(def\ (jsCallback fun)
-  (%jsFunction (\ args (pushPrompt rootPrompt (apply fun args)))) )
-
-(defMacro (jsLambda params . body)
-  (list 'jsCallback (list* 'type\ params body)))
-
-(def\ (log x . xs)
-  (apply @log (list* &console x xs))
-  x)
-|#
+(def /
+  (negativeOp / 1))
 
 
 ;;;; Greatest Common Divisor e Lowest Common Multiple
@@ -1108,8 +1137,6 @@
 (assert (gcd 8 108) 4)
 (assert (gcd 108 216 432) 108)
 
-(def abs (let1 (abs (@getMethod Math "abs" &int)) (\ (n) (abs #null n))))  
-
 (def\ (lcm a b . more)
   (if (null? more)
     (if (or (zero? a) (zero? b)) 0
@@ -1120,22 +1147,103 @@
 (assert (lcm 3 4 5 6) 60)
 
 
+;;; Sequences
+
+(defGeneric length (sequence)
+  #|Return the number of elements in a sequence.|#)
+
+(defMethod length ((seq List))
+  (%len seq))
+
+(defMethod length ((seq Null))
+  (%len seq))
+
+(defGeneric elt (sequence index)
+  #|Return the sequence element at the specified index.|#)
+
+(defMethod elt ((seq List) index)
+  (nth index seq))
+
+(defGeneric subseq (sequence start . end?)
+  #|Create a sequence that is a copy of the subsequence
+   |of the SEQUENCE bounded by START and optional END?.  If END?  is not
+   |supplied or void, the subsequence stretches until the end of the list
+   |#)
+
+(defMethod subseq ((seq List) start . end?)
+  (%listSubseq seq start (opt? end? #inert)))
+
+(defMethod subseq ((seq Null) start . end?)
+  (%listSubseq seq start (opt? end? #inert)))
+
+(defMethod subseq ((seq String) start . end?)
+  (%stringSubseq seq start (opt? end? #inert)))
+
+
+;;; Coroutines
+
+(defConstant +defaultPrompt+
+  #|This prompt is used for general coroutine-like use of continuations.
+   |#
+  'defaultPrompt)
+
+(defMacro coroutine forms
+  #|Evaluate the FORMS in a context in which `yield' can be used to pause execution.
+   |#
+  (list* 'pushPrompt '+defaultPrompt+ forms))
+
+(defMacro yield (name . forms)
+  #|Pause the current coroutine.  In the place where the enclosing
+   |`coroutine' (or `resume') was called, evaluate the FORMS with NAME
+   |bound to the paused coroutine.  `resume' can later be used to restart
+   |execution inside the coroutine.
+   |#
+  (list* 'takeSubcont '+defaultPrompt+ name forms))
+
+(defMacro resume (k . forms)
+  #|Resume the paused coroutine K and evaluate FORMS in the place where
+   |`yield' was called in the coroutine.
+   |#
+  (list* 'pushDelimSubcont '+defaultPrompt+ k forms))
+
+
 #| TODO da rivedere
-;;;; Cells
+(defVau (object . pairs) env
+  (let ((obj (%jsMakeObject)))
+    (map (\ ((name value))
+                (set ((jsGetter (eval name env)) obj) (eval value env)))
+              pairs)
+    obj))
+
+(def\ (elt object key)
+  ((jsGetter key) object))
+
+(defMacro (set (getter . args) new-val)
+  (list* (list 'setter getter) new-val args))
+
+(set (setter elt)
+  (type\ (newVal object key)
+    (set ((jsGetter key) object) newVal) ))
+
+(def\ (jsCallback fun)
+  (%jsFunction (\ args (pushPrompt rootPrompt (apply fun args)))) )
+
+(defMacro (jsLambda params . body)
+  (list 'jsCallback (list* 'type\ params body)))
+
+(def\ (log x . xs)
+  (apply @log (list* &console x xs))
+  x)
 
 (defPrototype Cell Object (value))
+
 (define (cell value) (new Cell value))
+
 (define (ref (c Cell)) (.value c))
+
 (set (setter ref) (type\ (newVal (c Cell)) (set (.value c) newVal)))
 |#
 
-
-;;;; Box
-
-(def box %box)
-
-(defMacro (defBox name . value?)
-  (list 'def name (list* 'box value?)) )
 
 
 ;;;; Auto Increment/Decrement and Assignement Operator

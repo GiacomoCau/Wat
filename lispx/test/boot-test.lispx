@@ -156,7 +156,7 @@
   (deftest the.3
     (signalsError
      (the #t #f)
-     TypeError :datum #t :expectedType 'Symbol))
+     TypeError :datum #t :expectedType 'Class))
 
   (deftest the.4
     (signalsError
@@ -1711,11 +1711,11 @@
     12)
 
   (deftest compose.5
-    ((compose list length) 'a 'b 'c)
+    ((compose length list) 'a 'b 'c)
     3)
 
   (deftest compose.6
-    ((compose list car) 'a 'b 'c)
+    ((compose car list) 'a 'b 'c)
     'a))
 
 (defsuite map

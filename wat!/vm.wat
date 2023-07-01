@@ -21,6 +21,7 @@
 (%def Obj &Wat.Vm$Obj)
 (%def Inert &Wat.Vm$Inert)
 (%def Ignore &Wat.Vm$Ignore)
+(%def List &Wat.Vm$List)
 (%def Error &Wat.Vm$Error)
 (%def Symbol &Wat.Vm$Symbol)
 (%def Keyword &Wat.Vm$Keyword)
