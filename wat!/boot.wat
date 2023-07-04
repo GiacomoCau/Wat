@@ -1,4 +1,8 @@
-;; -*- mode: Scheme -*-
+;;;                                                     -*- mode: Scheme -*-
+;;; Wat Bootstrap
+;;;
+
+;; Copyright (c) 2021, 2022 Manuel J. Simoni
 
 ;; ``72. An adequate bootstrap is a contradiction in terms.''
 
@@ -45,6 +49,8 @@
 (def begin
   %begin)
 (def bind? %bind?)
+(def box
+  %box)
 (def cons
   %cons)
 (def cons?
@@ -84,6 +90,13 @@
   %null?)
 (def not
   !)
+
+(def nth
+  %nth)
+
+(def nthCdr
+  %nthCdr)
+
 (def obj
   %obj)
 (def reverse
@@ -225,7 +238,6 @@
 
 (assert (expand (def\ succ (n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
 (assert (expand (def\ (succ n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
-
 
 ;;;; Basic value test
 
@@ -453,6 +465,9 @@
 (defMacro (unless test . body)
   (list* 'if test #inert body))
 
+(defVau set (environment definiendTree value) dynamicEnvironment
+  (eval (list 'def definiendTree (list (unwrap eval) value dynamicEnvironment))
+        (eval environment dynamicEnvironment)))
 
 ;;;; Bind? IfBind? CaseVau Case\ Match
 
@@ -732,11 +747,19 @@
 ;;; Loop
 
 (defVau block (blockName . forms) env
-  (let* ((tag (list #inert))
-         (escape (\ (value) (throwTag tag value))) )
+  (let* ( (tag (list #inert)) ; cons up a fresh object as tag
+          (escape (\ (value) (throwTag tag value))) )
     (catchTag tag
       (eval (list (list* '\ (list blockName) forms) escape) env) )))
 
+#|
+(defVau block (blockName . forms) env
+  (def tag (list #inert)) ; cons up a fresh object as tag
+  (def\ (escape value) (throw tag value))
+  (catch tag
+    (eval (list (list* '\ (list blockName) forms) escape)
+          env )))
+|#
 (assert (block exit (def x 1) (loop (if (== x 4) (exit 7)) (def x (+ x 1)))) 7)
 
 (def\ returnFrom (blockName . value?)
@@ -744,8 +767,16 @@
 
 (assert (block ciclo (def x 1) (loop (if (== x 4) (returnFrom ciclo 7)) (def x (+ x 1)))) 7)
 
-(defVau (while test . body) env
-  (let ((body (list* 'begin body))
+(defVau while (testForm . forms) env
+  (let ((forms (list* 'begin forms)))
+    (block exit
+      (loop
+        (if (eval testForm env)
+            (eval forms env)
+            (returnFrom exit #inert))))))
+
+(defVau while (testForm . forms) env
+  (let ((forms (list* 'begin forms))
         (break (list #null))
         (continue (list #null)) )
     (eval (list 'def 'break (\ v (throwTag break (if (! (null? v)) (if (null? (cdr v)) (car v) v))))) env)
@@ -753,8 +784,8 @@
     (catchTag break
       (loop
         (catchTag continue
-          (if (eval test env) 
-            (eval body env)
+          (if (eval testForm env) 
+            (eval forms env)
             (throwTag break) ))))))
 
 (defMacro (-- n) 
@@ -769,7 +800,21 @@
 (defMacro until (testForm . forms)
   (list* while (list '! testForm) forms) )
 
-(def\ (callWithEscape fun)
+(defMacro dotimes ((var countForm . resultForm?) . bodyForms)
+  #|Cf. Common Lisp's DOTIMES.
+   |#
+  (let\ ((_dotimes_ (n body result)
+           (let ((i (box 0)))
+             (while (< (i) n)
+               (body (i))
+               (i (+ (i) 1)))
+             (result (i)))))
+    (list _dotimes_
+          countForm
+          (list* '\ (list var) bodyForms)
+          (list* '\ (list var) resultForm?))))
+
+(def\ (withEscape fun)
   (let1 (fresh (list #null))
     (catch (fun (\ opt? (throw (list fresh (ifOpt? (val opt?) opt?) ))))
       (\ (exc)
@@ -778,18 +823,20 @@
           (throw exc))))))
 
 (defMacro (label name . body)
-  (list 'callWithEscape (list* '\ (list name) body)))
+  (list 'withEscape (list* '\ (list name) body)))
 
 (assert (label return (return)) #inert)
 (assert (label return (return 3)) 3)
 (assert (label return (return 3 4)))
 
 
-
 ;;; Type Checks
 
 (defMacro (the type obj)
   (list 'if (list 'type? obj type) obj (list 'error (list '$ obj " is not a: " type))) )
+
+(def the
+  %the)
 
 (defMacro (type\ params . body)
   (let1rec\ ( (typedParams->namesAndChecks ps)
@@ -911,6 +958,19 @@
 
 (assert (foldR cons () '(1 2 3 4)) '(1 2 3 4))
 
+(defMacro dolist ((var listForm . resultForm?) . bodyForms)
+  #|Cf. Common Lisp's DOLIST.|#
+  (let1rec\ (_dolist_ (list body result)
+             (if (null? list)
+                 (result list)
+                 (begin
+                   (body (car list))
+                   (_dolist_ (cdr list) body result))))
+    (list _dolist_
+          listForm
+          (list* '\ (list var) bodyForms)
+          (list* '\ (list var) resultForm?))))
+
 (def\ (make\* n f)
   (def\ (resize n lst)
     (let loop ((n n) (h ()) (t lst))
@@ -1018,7 +1078,7 @@
   (if (symbol? (car args))
     (def (name (receiver . parameters) . properties) args)
     (def ((name receiver . parameters) . properties) args) )
-  (def\ (generic . args) (apply (%getMethod (%classOf (car args)) name) args))
+  (def\ (generic . args) (apply (%getMethod (classOf (car args)) name) args))
   (eval (list 'def name generic) env) )
 
 (defVau (defMethod . args) env
@@ -1086,6 +1146,9 @@
 
 ;;; Relational Operators
 
+;; Note that unlike in Common Lisp, these operators currently require
+;; at least two arguments.  This will be improved in the future.
+
 (def\ (relationalOp binop)
   (rec\ (op arg1 arg2 . rest)
     (if (binop arg1 arg2)
@@ -1126,31 +1189,33 @@
 
 ;;; Numbers
 
-(def\ (positiveOp binop unit)
-  (\ args (reduceL binop unit args)))
+;; The terms thetic (for + and *) and lytic (for - and /) are due to Hankel.
+
+(def\ (theticOp binOp unit)
+  (\ args (reduceL binOp unit args)) )
 
 (def +
-  (positiveOp + 0))
+  (theticOp + 0) )
 (def *
-  (positiveOp * 1))
+  (theticOp * 1) )
 (def $
-  (positiveOp $ ""))
+  (theticOp $ "") )
 
 (assert (+ 1 2 3) 6)
 (assert (* 1 2 3) 6)
 (assert ($ 1 2 3) "123")
 
-(def\ (negativeOp binop unit)
+(def\ (lyticOp binOp unit)
   (\ (arg1 . rest)
     (if (null? rest)
-      (binop unit arg1)
-      (reduceL binop arg1 rest) )))
+      (binOp unit arg1)
+      (reduceL binOp arg1 rest) )))
 
 (def -
-  (negativeOp - 0))
+  (lyticOp - 0) )
 
 (def /
-  (negativeOp / 1))
+  (lyticOp / 1) )
 
 
 ;;;; Greatest Common Divisor e Lowest Common Multiple

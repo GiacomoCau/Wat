@@ -1,8 +1,10 @@
-;;;                                                     -*- Scheme -*-
+;;;                                                     -*- mode: Scheme -*-
 ;;; LispX Bootstrap
 ;;;
 
 ;; Copyright (c) 2021, 2022 Manuel J. Simoni
+
+;; ``72. An adequate bootstrap is a contradiction in terms.''
 
 ;; Rename %def
 
@@ -118,13 +120,7 @@
    |#
   %classOf)
 
-(def classSymbol
-  #|Return the symbol with the same name as SYMBOL, but in the class namespace.
-   |$(fn (symbol))
-   |$(type function)
-   |#
-  %classSymbol)
-
+(def dval %dVal)
 (def dvar %dVar)
 (def eq? %eq?)
 (def eval
@@ -141,13 +137,6 @@
    |$(fn (protectedForm . cleanupForms))
    |#
   %finally)
-
-(def functionSymbol
-  #|Return the symbol with the same name as SYMBOL, but in the function namespace.
-   |$(fn (symbol))
-   |$(type function)
-   |#
-  %functionSymbol)
 
 (def if
   #|Evaluate the TEST which must yield a boolean.  Then evaluate either
@@ -170,12 +159,6 @@
 (def keyword %keyword)
 (def keyword? %keyword?)
 (def keywordName %internName)
-(def keywordSymbol
-  #|Return the symbol with the same name as SYMBOL, but in the keyword namespace.
-   |$(fn (symbol))
-   |$(type function)
-   |#
-  %keywordSymbol)
 (def len %len)
 (def list*
   #|Create a list from the ARGUMENTS so that the last argument becomes
@@ -282,12 +265,7 @@
    |#
   %subClass?)
 
-(def variableSymbol
-  #|Return the symbol with the same name as SYMBOL, but in the variable namespace.
-   |$(fn (symbol))
-   |$(type function)
-   |#
-  %variableSymbol)
+(def the %the)
 
 (def type?
   #|Return true if the OBJECT is an instance of the CLASS, false otherwise.
@@ -310,6 +288,37 @@
    |$(type function)
    |#
   %wrap)
+
+
+;;; unused in code but not in test
+
+(def classSymbol
+  #|Return the symbol with the same name as SYMBOL, but in the class namespace.
+   |$(fn (symbol))
+   |$(type function)
+   |#
+  %classSymbol)
+
+(def functionSymbol
+  #|Return the symbol with the same name as SYMBOL, but in the function namespace.
+   |$(fn (symbol))
+   |$(type function)
+   |#
+  %functionSymbol)
+
+(def keywordSymbol
+  #|Return the symbol with the same name as SYMBOL, but in the keyword namespace.
+   |$(fn (symbol))
+   |$(type function)
+   |#
+  %keywordSymbol)
+
+(def variableSymbol
+  #|Return the symbol with the same name as SYMBOL, but in the variable namespace.
+   |$(fn (symbol))
+   |$(type function)
+   |#
+  %variableSymbol)
 
 
 ;;; Core Forms
@@ -1000,10 +1009,11 @@
    |Note that unlike in Common Lisp, there is no separate namespace for
    |block names; a block is named in the normal variable namespace.
    |#
-  (let1 (tag (list #inert)) ; cons up a fresh object as tag
-    (let1\ (escape (value) (throw tag value))
-      (catch tag
-        (eval (list (list* '\ (list blockName) forms) escape) env) ))))
+  (let* ( (tag (list #inert)) ; cons up a fresh object as tag
+          (escape (\ (value) (throw tag value))) )
+    (catch tag
+      (eval (list (list* '\ (list blockName) forms) escape) env) )))
+
 #|
 (defVau block (blockName . forms) env
   (def tag (list #inert)) ; cons up a fresh object as tag
@@ -1050,8 +1060,29 @@
           (list* '\ (list var) bodyForms)
           (list* '\ (list var) resultForm?))))
 
+(def\ (withEscape fun)
+  (let1 (fresh (list #null))
+    (catch (fun (\ opt? (throw (list fresh (ifOpt? (val opt?) opt?) ))))
+      (\ (exc)
+        (if (and (cons? exc) (== (car exc) fresh))
+          (let1 ((#ignore opt?) exc) (if (cons? opt?) (car opt?)))
+          (throw exc))))))
+
+(defMacro (label name . body)
+  (list 'withEscape (list* '\ (list name) body)))
+
 
 ;;; Type Checks
+
+;; TODO non più necessario, eliminare
+(def\ assertType (object class)
+  #|Signal a `type-error' if the OBJECT is not an instance of the CLASS.|#
+  (if (type? object class) object
+    (error (makeTypeError object (className class)))))
+
+(def\ makeTypeError (datum expectedType)
+  #|Create a `type-error' with the given DATUM and EXPECTED-TYPE.|#
+  (makeInstance TypeError :datum datum :expectedType expectedType))
 
 #| TODO sostituiti dal seguente
 (defVau the (className object) env
@@ -1063,6 +1094,7 @@
 (def\ the (class object)
   (assertType object class) )
 |#
+
 (def the
   #|Signal a `type-error' if the OBJECT is not an instance of the CLASS, else return object.
    |$(fn (class object)
@@ -1070,15 +1102,28 @@
    |#
   %the)
 
-;; TODO non più necessario, eliminare
-(def\ assertType (object class)
-  #|Signal a `type-error' if the OBJECT is not an instance of the CLASS.|#
-  (if (type? object class) object
-    (error (makeTypeError object (className class)))))
+(defMacro (type\ params . body)
+  (let1rec\ ( (typedParams->namesAndChecks ps)
+              (if (cons? ps)
+                  (let* ( ((p . ps) ps)
+                          ((names . checks) (typedParams->namesAndChecks ps)) )
+                    (if (cons? p)
+                        (let* ( ((name type) p)
+                                (check (list 'the type name)))
+                          (cons (cons name names) (cons check checks)) )
+                        (cons (cons p names) checks) ))
+                  (cons ps ()) ))
+    (let1 ((names . checks) (typedParams->namesAndChecks params))
+      (list* '\ names (if (null? checks) body (list* (list* 'begin checks) body))) )))
 
-(def\ makeTypeError (datum expectedType)
-  #|Create a `type-error' with the given DATUM and EXPECTED-TYPE.|#
-  (makeInstance TypeError :datum datum :expectedType expectedType))
+(defMacro (define lhs . rhs)
+  (if (symbol? lhs)
+    (list 'def lhs (car rhs))
+    (list 'def (car lhs) (list* 'type\ (cdr lhs) rhs)) ))
+
+(def\ ck|| o (list->array o))
+(def ck+ (.MAX_VALUE Integer))
+(def\ check (op o . ck) (@check vm op o ck))
 
 
 ;;; Lists
@@ -1136,7 +1181,7 @@
   #|Use the binary FUNCTION to combine the elements of the LIST.  The
    |INITIAL-VALUE is logically placed before the list.
    |#
-  reduceL)  
+  reduceL)
 
 (def\ (reduceR f init lst . lst*)
   (if (null? lst*)
@@ -1305,21 +1350,28 @@
 
 ;; receiver e parameters dei defMethod dovrebbero corrispondere a quelli del corrispondente defGeneric con quel nome
 
-
-(defVau defGeneric (name (receiver . parameters) . properties) env
+(defVau (defGeneric . args) env
   #|Define a new generic function with the given NAME.  The RECEIVER,
    |PARAMETERS, and PROPERTIES are currently ignored.
    |$(syntax property (:documentation docstring))
    |#
+  (if (symbol? (car args))
+    (def (name (receiver . parameters) . properties) args)
+    (def ((name receiver . parameters) . properties) args) )
   (let1\ (generic args (apply (%getMethod (classOf (car args)) name) args))
     (eval (list 'def name generic) env) ))
 
-(defVau defMethod (name ((receiver className) . parameters) . forms) env
+(defVau (defMethod . args) env
   #|Add a new method to the generic function named by NAME specialized
    |for the class named by CLASS-NAME.
    |#
-  (let1 (method (eval (list* \ (list* receiver parameters) forms) env))
-    (%addMethod (findClass className env) name method)))
+  (if (symbol? (car args))
+    (def (name ((receiver class) . parameters) . forms) args)
+    (def ((name (receiver class) . parameters) . forms) args) )
+  (let1 (method (eval (list* '\ (list* receiver parameters) forms) env))
+    (%addMethod (findClass class env) name method)
+    method ))
+
 
 
 ;;; Modules
@@ -1351,7 +1403,7 @@
 ;; Note that unlike in Common Lisp, these operators currently require
 ;; at least two arguments.  This will be improved in the future.
 
-(def\ (lispx::makeRelationalOperator binop)
+(def\ (relationalOp binop)
   #|Utility to create an n-ary relational operator from a BINARY-OPERATOR.|#
   (rec\ (op arg1 arg2 . rest)
     (if (binop arg1 arg2)
@@ -1359,12 +1411,14 @@
         (apply op (list* arg2 rest)))
       #f )))
 
+(def == (relationalOp ==))
+
 (def eq?
   #|Return true if all ARGUMENTS are equal, false otherwise.
    |$(fn arguments)
    |$(type function)
    |#
-  (lispx::makeRelationalOperator %eq?) )
+  (relationalOp eq?) )
 
 (def <
   #|Return true if the ARGUMENTS are in monotonically increasing order,
@@ -1372,7 +1426,7 @@
    |$(fn arguments)
    |$(type function)
    |#
-  (lispx::makeRelationalOperator %<) )
+  (relationalOp <) )
 
 (def >
   #|Return true if the ARGUMENTS are in monotonically decreasing order,
@@ -1380,7 +1434,7 @@
    |$(fn arguments)
    |$(type function)
    |#
-  (lispx::makeRelationalOperator %>) )
+  (relationalOp >) )
 
 (def <=
   #|Return true if the ARGUMENTS are in monotonically nondecreasing
@@ -1388,7 +1442,7 @@
    |$(fn arguments)
    |$(type function)
    |#
-  (lispx::makeRelationalOperator %<=) )
+  (relationalOp <=) )
 
 (def >=
   #|Return true if the ARGUMENTS are in monotonically nonincreasing
@@ -1396,7 +1450,7 @@
    |$(fn arguments)
    |$(type function)
    |#
-  (lispx::makeRelationalOperator %>=) )
+  (relationalOp >=) )
 
 (def\ /= (arg . args)
   #|Return true if no two ARGUMENTS are the same, false otherwise.
@@ -1411,39 +1465,40 @@
 
 ;; The terms thetic (for + and *) and lytic (for - and /) are due to Hankel.
 
-(def\ lispx::makeTheticOperator (binaryOperator initialValue)
-  #|Utility to create an n-ary thetic operator from a BINARY-OPERATOR and INITIAL-VALUE.|#
-  (\ args (reduceL binaryOperator initialValue args)) )
+(def\ (theticOp binOp unit)
+  #|Utility to create an n-ary thetic operator from a BINARY-OPERATOR and INITIAL-VALUE.
+   |#
+  (\ args (reduceL binOp unit args)) )
 
 (def +
   #|Return the sum of the ARGUMENTS, or 0 if no arguments are supplied.
    |$(fn arguments)
    |$(type function)
    |#
-  (lispx::makeTheticOperator %+ 0) )
+  (theticOp + 0) )
 
 (def *
   #|Return the product of the ARGUMENTS, or 1 if no arguments are supplied.
    |$(fn arguments)
    |$(type function)
    |#
-  (lispx::makeTheticOperator %* 1) )
+  (theticOp * 1) )
 
 (def $
   #|Return the join of the ARGUMENTS, or "" if no arguments are supplied.
    |$(fn arguments)
    |$(type function)
    |#
-  (lispx::makeTheticOperator %$ "") )
+  (theticOp $ "") )
 
 
-(def\ lispx::makeLyticOperator (binaryOperator initialValue)
+(def\ (lyticOp binOp unit)
   #|Utility to create an n-ary lytic operator from a BINARY-OPERATOR and INITIAL-VALUE.
    |#
   (\ (arg1 . rest)
     (if (null? rest)
-      (binaryOperator initialValue arg1)
-      (reduceL binaryOperator arg1 rest) )))
+      (binOp unit arg1)
+      (reduceL binOp arg1 rest) )))
 
 (def -
   #|If only one number is supplied in the ARGUMENTS, return the
@@ -1452,7 +1507,7 @@
    |$(fn arguments)
    |$(type function)
    |#
-  (lispx::makeLyticOperator %- 0) )
+  (lyticOp - 0) )
 
 (def /
   #|If only one number is supplied in the ARGUMENTS, return the
@@ -1461,7 +1516,7 @@
    |$(fn arguments)
    |$(type function)
    |# 
-  (lispx::makeLyticOperator %/ 1) )
+  (lyticOp / 1) )
 
 
 ;;;; Greatest Common Divisor e Lowest Common Multiple
@@ -1577,11 +1632,20 @@
 (def $= (assignOp %$))
 (def += (assignOp %+))
 (def -= (assignOp %-))
+
+
+
 ;;;; Utilities
 
 (def\ (array . args) (list->array args))
 
 (def Array &java.lang.Object[])
+
+(define (arrayMap fun (arr Array))
+  (list->array (map fun (array->list arr))) )
+
+(define (arrayFilter pred (arr Array))
+  (list->array (filter pred (array->list arr))) )
 
 (defVau (time exp) env
   (let1 (currentTime (@getMethod System "currentTimeMillis"))

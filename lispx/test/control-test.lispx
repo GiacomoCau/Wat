@@ -11,47 +11,74 @@
 ;; We use it for testing that built-in operators properly suspend and
 ;; resume.
 
-(defConstant +fiber-prompt+ 'fiber-prompt
-  "The prompt used for delimiting fibers.")
+(defConstant +fiber-prompt+
+  #|The prompt used for delimiting fibers.
+   |#
+  'fiber-prompt)
 
 (defClass YieldRecord ()
-  (value continuation)
-  (:documentation "Instances of this class are yielded."))
+  #|Instances of this class are yielded.
+   |#
+  (value continuation) )
 
 (def\ makeYieldRecord (v k)
-  "Create a new yield record with the given yielded value and resume continuation."
+  #|Create a new yield record with the given yielded value and resume continuation.
+   |#
   (makeInstance YieldRecord :value v :continuation k))
 
 (def\ fiberYield v?
-  "Yield a value (which defaults to void)."
+  #|Yield a value (which defaults to void).
+   |#
   (takeSubcont +fiber-prompt+ k
     (makeYieldRecord (opt? v? #inert) k)))
 
 (def\ fiberResume (yield-record . v?)
-  "Resume a suspended fiber with a value (which defaults to void)."
+  #|Resume a suspended fiber with a value (which defaults to void).
+   |#
   (pushDelimSubcont +fiber-prompt+ (getSlot yield-record 'continuation)
     (opt? v? #inert)))
 
 (defMacro fiber body
-  "Evaluate the body expressions as a fiber."
+  #|Evaluate the body expressions as a fiber.
+   |#
   (list* pushPrompt '+fiber-prompt+ body))
 
 (def\ runFiber (thunk)
-  "Get all values yielded by a fiber, and its final result, and
-  |collect them in a list."
-  (letLoop -run- ((result (fiber (thunk))))
+  #|Get all values yielded by a fiber, and its final result, and
+   |collect them in a list.
+   |#
+  (letLoop run ((result (fiber (thunk))))
     (if (type? result YieldRecord)
-        (cons (getSlot result 'value) (-run- (fiberResume result)))
+        (cons (getSlot result 'value) (run (fiberResume result)))
         (list result))))
 
 (def\ runFiberWithValues (thunk values)
-  "Like `runFiber' but uses a list of values that are sent to the
-  |fiber with `fiberResume'."
-  (letLoop -run- ((result (fiber (thunk))) (values values))
+  #|Like `runFiber' but uses a list of values that are sent to the
+   |fiber with `fiberResume'.
+   |#
+  (letLoop run ((result (fiber (thunk))) (values values))
     (if (type? result YieldRecord)
         (cons (getSlot result 'value)
-              (-run- (fiberResume result (car values)) (cdr values)))
+              (run (fiberResume result (car values)) (cdr values)))
         (list result))))
+
+#|
+(def\ runFiber* (thunk . values)
+  (let run ((result (fiber (thunk))) (values values))
+    (if (type? result YieldRecord)
+      (cons (getSlot result 'value)
+        (if (null? values)
+          (run (fiberResume result) #null)
+          (run (fiberResume result (car values)) (cdr values)) ))
+      (list result))))
+
+(%assert (runFiber* (\ () (fiberYield 1) (fiberYield 2) 3)) '(1 2 3))
+
+(%assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #t) '(1 2 #inert))
+(%assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #t 4) '(1 2 4))
+(%assert (runFiber* (\ () ((\ (a b) (+ a b)) (fiberYield 1) (fiberYield 2)) ) 3 4) '(1 2 7))
+|#
+
 
 (defsuite fibers
 
