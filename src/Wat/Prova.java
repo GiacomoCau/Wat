@@ -40,7 +40,7 @@ import Wat.Vm.Symbol;
 
 public class Prova {
 	
-	public static void main(String[] args) {
+	public static void replaceAll() {
 		//out.println(Pattern.compile("\\|").matcher("\\|").quoteReplacement("|"));
 		//out.println("\\|".replaceAll("\\|", Matcher.quoteReplacement("__")));
 		//out.println("\\|".replaceAll("\\\\|", "!"));
@@ -51,7 +51,7 @@ public class Prova {
 	}
 
 	public static void check() {
-		Object[][] a = { $(1, 2, Integer.class, String.class),  $(1, 2, Integer.class, String.class) };
+		//Object[][] a = { $(1, 2, Integer.class, String.class),  $(1, 2, Integer.class, String.class) };
 		Object[] b = $(1, 2, Integer.class, String.class);
 		Arrays.copyOfRange(b, 1, b.length);
 	}

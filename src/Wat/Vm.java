@@ -380,7 +380,7 @@ public class Vm {
 			    }; 
 			};
 		}
-		public String toString() { return "{" + getClass().getSimpleName() + " " + Vm.this.toString(value) + "}"; }
+		public String toString() { return "{&" + getClass().getSimpleName() + " " + Vm.this.toString(value) + "}"; }
 	}
 	public class Obj extends RuntimeException implements ArgsList {
 		private static final long serialVersionUID = 1L;
@@ -722,12 +722,12 @@ public class Vm {
 	}
 	Object istrue(Object res) {
 		return switch (ttrue) {
-			case 0-> res instanceof Boolean b ? b : typeError("not a boolean: {datum}", res, symbol("Boolean")); // Kernel Wat Lispx
-			case 1-> !Utility.equals(res, false); // Scheme Racket Guile
+			case 0-> res instanceof Boolean b ? b : typeError("not a boolean: {datum}", res, symbol("Boolean")); // Kernel, Wat, Lispx
+			case 1-> !Utility.equals(res, false); // Scheme, Guile, Racket
 			case 2-> !Utility.equals(res, false, null);
 			case 3-> !Utility.equals(res, false, null, ignore);
 			case 4-> !Utility.equals(res, false, null, ignore, 0); // Javascript
-			default-> res instanceof Boolean b ? b : typeError("not a boolean: {datum}", res, symbol("Boolean")); // Kernel Wat Lispx
+			default-> res instanceof Boolean b ? b : typeError("not a boolean: {datum}", res, symbol("Boolean")); // Kernel, Wat, Lispx
 		};
 	}
 	class Loop implements Combinable  {
@@ -747,7 +747,7 @@ public class Vm {
 	}
 	class Catch implements Combinable {
 		public Object combine(Env e, List o) {
-			var chk = checkR(this, o, 2, 3); // o = (tag x) | (tag x hdl) -> (tag x apv1)
+			var chk = checkR(this, o, 2, 3, Any.class, ctapv ? Apv0.class : Any.class); // o = (tag x) | (tag x hdl) -> (tag x apv1)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 			var tag = o.car();
@@ -758,7 +758,6 @@ public class Vm {
 		private Object combine(Resumption r, Env e, Object tag, Object x, Object hdl) {
 			Object res = null;
 			try {
-				if (ctapv && !(x instanceof Apv apv && args(apv) == 0)) return typeError("not a zero args applicative combiner: {datum}", x, symbol("Apv0"));
 				res = r != null ? r.resume() : getTco(!ctapv ? evaluate(e, x) : Vm.this.combine(e, x, null));
 			}
 			catch (Throwable thw) {
@@ -842,13 +841,12 @@ public class Vm {
 	}
 	class PushDelimSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkN(this, o, 3, Any.class, Continuation.class, Apv.class); // o = (prp k apv0)
+			var chk = checkN(this, o, 3, Any.class, Continuation.class, Apv0.class); // o = (prp k apv0)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 			var prp = o.car();
 			var k = o.<Continuation>car(1); 
 			var apv = o.<Apv>car(2);
-			if (args(apv) != 0) return typeError("not a zero args applicative combiner: {datum}", apv, symbol("Apv0"));
 			return pushPrompt(null, e, dbg(e, this, o), prp, ()-> k.apply(e, apv));
 		}
 		public String toString() { return "%PushDelimSubcont"; }
@@ -952,7 +950,7 @@ public class Vm {
 						switch (thw) {
 							case Value val: throw val;
 							case Error err: throw err;
-							default: return error("error combining: " + this + " with: " + o, thw);
+							default: return error("error invoking: " + this + " with: " + o, thw);
 						}
 					}
 				}
@@ -1114,7 +1112,7 @@ public class Vm {
 		if (chk instanceof Suspension s) return s;
 		if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 		if (len >= min && len <= max) return len; 
-		return error((len < min ? "less then " + min : "more then " + max) + " operands check: " + toString(op) + " with: " + toString(o));
+		return error((len < min ? "less then " + min : "more then " + max) + " operands combining: " + toString(op) + " with: " + toString(o));
 	}
 	Object checkT(Object op, List o, int min, Object ... chks) {
 		int i=0, len=chks.length;
@@ -1127,63 +1125,47 @@ public class Vm {
 		}
 		return i;
 	}
-	//class Apv0 extends Apv { Apv0(Combinable cmb) { super(cmb); }}
-	//class Apv1 extends Apv { Apv1(Combinable cmb) { super(cmb); }}
+	class Apv0 extends Apv { Apv0(Combinable cmb) { super(cmb); }}
+	class Apv1 extends Apv { Apv1(Combinable cmb) { super(cmb); }}
 	Object checkTn(Object op, Object o, List ol, int i, Object chk) {
 		var on = ol.car;
-		switch (chk) {
-			//case Apv0 apv0: { if (on instanceof Apv apv && args(apv) == 0) return 1; break; }  
-			//case Apv1 apv1: { if (on instanceof Apv apv && args(apv) == 0) return 1; break; }  
-			case Class cl when cl == Any.class || cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2): return 1;
-			case List l: {
-				if (!(on instanceof List onl)) break;
-				return switch (check(op, onl, l)) {
-					case Suspension s-> s;
-					case Integer i2-> 1;
-					default-> typeError("not an integer: {datum}", chk, symbol("Integer"));
-				};
-			}
-			case Object[] chks: {
-				for (Object chk2: chks) {
-					if (Utility.equals(on, chk2)) return 1;
-					if (chk2 instanceof Class cl && (cl == Any.class || cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2))) return 1;
-					if (chk2 instanceof List l2) try {
-						switch (check(op, ol, l2)) {
-							case Suspension s: return s;
-							case Integer i2: return i2;
-							default: continue;
-						}
+		if (Utility.equals(on, chk) || chk instanceof Class cl && checkC(on, cl)) return 1;
+		else if (chk instanceof List chkl && on instanceof List onl) {
+			switch (check(op, onl, chkl)) {
+				case Suspension s: return s;
+				case Integer i2: return 1;
+				case Object obj: typeError("not an integer: {datum}", obj, symbol("Integer"));
+			};
+		}
+		else if (chk instanceof Object[] chks) {
+			for (Object chkn: chks) {
+				if (Utility.equals(on, chkn) || chkn instanceof Class cl && checkC(on, cl)) return 1;
+				else if (chkn instanceof List chkl) try {
+					switch (check(op, ol, chkl)) {
+						case Suspension s: return s;
+						case Integer i2: return i2;
+						case Object obj: typeError("not an integer: {datum}", obj, symbol("Integer"));
 					}
-					catch (Throwable thw) {
-					}
-					/* TODO non sembra equivalente ... va in errore
-					switch (chk2) {
-						case Class cl when cl == Any.class || cl.isInstance(on) || on instanceof Class cl2 && cl.isAssignableFrom(cl2): return 1;
-						case List l2: try {
-							switch (check(op, ol, l2)) {
-								case Suspension s: return s;
-								case Integer i2: return i2;
-								default: continue;
-							}
-						}
-						catch (Throwable thw) {
-							break;
-						}
-						default: if (Utility.equals(on, chk2)) return 1;
-					}
-					//*/
 				}
-				break;
+				catch (Throwable thw) {
+				}
 			}
-			default: if (Utility.equals(on, chk)) return 1;
 		}
 		return typeError(
-			"not " + (chk instanceof Object[] objs ? "" : "a ") + "{expectedType}: {datum} check: " + toString(op) + " with: " + toString(o),
-			on, chk == null ? symbol("Null")
+			"not " + (chk instanceof Object[] objs ? "" : "a ") + "{expectedType}: {datum} combining: " + toString(op) + " with: " + toString(o),
+			on,
+			chk == null ? symbol("Null")
 			: chk instanceof Class cl ? symbol(cl.getSimpleName())
 			: chk instanceof Object[] oa ? cons(symbol("or"), list(stream(oa).map(obj-> symbol(obj == null ? "Null" : obj instanceof Class cl ? cl.getSimpleName() : Vm.this.toString(obj))).toArray() ))
 			: chk
 		);
+	}
+	public boolean checkC(Object on, Class cl) {
+		return cl == Any.class
+		||  cl.isInstance(on)
+		||  on instanceof Class cl2 && cl.isAssignableFrom(cl2)
+		||  cl == Apv0.class && on instanceof Apv apv && args(apv) == 0
+		||  cl == Apv1.class && on instanceof Apv apv && args(apv) == 1;
 	}
 	public Object check(Object op, List o, List chk) {
 		int min=0, max=more;
