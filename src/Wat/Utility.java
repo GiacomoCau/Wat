@@ -322,16 +322,17 @@ public class Utility {
 		boolean constructors = name.equals("new");
 		Class <?> classe = constructors ? (Class) obj : obj.getClass();
 		if (trace) out.println(classe + " " + toString(name, argumentsClass));
-		// per costruttori obj è una classe e vanno cercati solo su quella
-		// obj è una classe e vanno cercati su obj e relative super classi
-		// per tutti gli altri metodi obj è una istanza object e vanno cercati sulla classe di objo0 relative super classi
+		// per i costruttori obj è una classe e solo su quella vanno cercati 
+		// i metodi invece vanno cercati sulla classe di obj e le relative super classi
+		// se obj è una classe vanno anche cercati su obj stesso e le relative super classi
+		// escludendo Class e Object perchè già controllate con la prima ricerca 
 		List<Executable> executables = new ArrayList<>();
 		do addExecutable(executables, classe, publicMember, constructors, name, argumentsClass);
 		while (!constructors && !publicMember && (classe = classe.getSuperclass()) != null);
 		if (!constructors && obj instanceof Class && !equals(obj, Class.class, Object.class)) {
 			classe = (Class) obj;
 			do addExecutable(executables, classe, publicMember, constructors, name, argumentsClass);
-			while (!publicMember && (classe = classe.getSuperclass()) != Object.class);
+			while (!publicMember && (classe = classe.getSuperclass()) != Object.class && classe != null);
 		}
 		
 		if (trace) out.println("found: " + executables.size());

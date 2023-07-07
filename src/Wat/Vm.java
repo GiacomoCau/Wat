@@ -232,8 +232,10 @@ public class Vm {
 	
 	
 	// Tail Call Optimization
+	//*
 	interface Tco extends Supplier {};
 	Object tco(Tco tco) { return dotco ? tco : tco.get(); }
+	//*/
 	/* utile per debug!
 	class Tco implements Supplier {
 		Supplier tco;
@@ -242,7 +244,7 @@ public class Vm {
 		@Override public String toString() { return "Tco"; }
 	};
 	Object tco(Supplier tco) { return dotco ? new Tco(tco) : tco.get(); }
-	*/
+	//*/
 	<T> T getTco(Object o) { while (o instanceof Tco tco) o = tco.get(); return (T) o; }
 	
 	
@@ -747,18 +749,19 @@ public class Vm {
 	}
 	class Catch implements Combinable {
 		public Object combine(Env e, List o) {
-			var chk = checkR(this, o, 2, 3, Any.class, ctapv ? Apv0.class : Any.class); // o = (tag x) | (tag x hdl) -> (tag x apv1)
+			// (catch . forms)               -> (%catch #_   () . forms)
+			// (catchTag tag . forms)        -> (%catch tag  () . forms)
+			// (catchWth hdl . forms)        -> (%catch #_  hdl . forms)
+			// (catchTagWth tag hdl . forms) -> (%catch tag hdl . forms)
+			var chk = !ctapv ? checkM(this, o, 2) : checkN(this, o, 3, Any.class, or(null, Apv1.class), Apv0.class);
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
-			var tag = o.car();
-			var x = o.car(1);
-			var hdl = len == 2 ? null : o.car(2);
-			return combine(null, e, tag, x, hdl);
+			return pipe(dbg(e, this, o), ()-> ctapv ? o.car() : getTco(evaluate(e, o.car())), tag-> combine(null, e, tag, o.car(1), o.cdr(1)) ); 
 		}
-		private Object combine(Resumption r, Env e, Object tag, Object x, Object hdl) {
+		private Object combine(Resumption r, Env e, Object tag, Object hdl, List xs) {
 			Object res = null;
 			try {
-				res = r != null ? r.resume() : getTco(!ctapv ? evaluate(e, x) : Vm.this.combine(e, x, null));
+				res = r != null ? r.resume() : getTco(!ctapv ? begin.combine(e, xs) : Vm.this.combine(e, xs.car(), null));
 			}
 			catch (Throwable thw) {
 				if (tag != ignore && thw instanceof Value val && val.tag != tag) throw thw; 
@@ -774,7 +777,7 @@ public class Vm {
 					}
 				);
 			}
-			return res instanceof Suspension s ? s.suspend(dbg(e, this, tag, x, hdl), rr-> combine(rr, e, tag, x, hdl)) : res;
+			return res instanceof Suspension s ? s.suspend(dbg(e, this, tag, xs, hdl), rr-> combine(rr, e, tag, hdl, xs)) : res;
 		}
 		public String toString() { return "%Catch"; }
 	}
@@ -783,9 +786,11 @@ public class Vm {
 			var chk = checkR(this, o, 1, 2); // o = (tag) | (tag value)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
-			var tag = o.car();
 			var value = len == 1 ? inert : o.car(1);
-			throw new Value(tag, ctapv ? value : pipe(dbg(e, this, tag, value), ()-> getTco(evaluate(e, value))));
+			var dbg = dbg(e, this, o);
+			return pipe(dbg, ()-> ctapv ? o.car() : getTco(evaluate(e, o.car())),
+				tag->{ throw new Value(tag, ctapv ? value : pipe(dbg, ()-> getTco(evaluate(e, value)))); }
+			);		
 		}
 		public String toString() { return "%Throw"; }
 	}
@@ -1535,6 +1540,8 @@ public class Vm {
 						thw.printStackTrace(out);
 					else if (thw instanceof ParseException pe)
 					    out.println("{&" + Utility.getMessage(pe) + "}"); 
+					else if (thw instanceof Value v)
+					    out.println("{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}"); 
 					else do 
 						out.println(/*thw instanceof Obj ? thw : */ "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
 					while ((thw = thw.getCause()) != null);
@@ -1551,6 +1558,9 @@ public class Vm {
 	}
 	public void main() throws Exception {
 		var milli = currentTimeMillis();
+		loadText("testVm.lsp");
+		loadText("testJni.lsp");
+		//loadText("testCmt.lsp");
 		loadText("wat!/vm.wat");
 		loadText("lispx/vm.lispx");
 		print("start time: " + (currentTimeMillis() - milli));

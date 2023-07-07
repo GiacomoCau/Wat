@@ -56,8 +56,6 @@
 (%def %listSubseq (%\ (l s e) (%the Integer s) (%if (%! (%inert? e)) (%the Integer e)) (%def tail (%nthCdr s l)) (%if (%inert? e) tail (%take (%- e s) tail))))
 (%def %stringSubseq (%\ (seq start end) (%if (%inert? end) (@substring (%the String seq) (%the Integer start)) (@substring (%the String seq) (%the Integer start) (%the Integer end)))))
 
-(load "testVm.lsp");
-(load "testJni.lsp");
 (load "wat!/boot.wat");
 
 

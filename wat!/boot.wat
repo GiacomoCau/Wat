@@ -49,6 +49,8 @@
 (def begin
   %begin)
 (def bind? %bind?)
+(def bound?
+  %bound?)
 (def box
   %box)
 (def cons
@@ -70,6 +72,8 @@
 
 (def if
   %if)
+(def intern
+  %intern)
 (def instanceOf? %instanceOf?)
 
 (def keyword %keyword)
@@ -247,37 +251,44 @@
 (def\ (odd? n)  (== (% n 2) 1))
 
 
- 
-
 ;;; Wrap incomplete VM forms
 
 (def* (then else) begin begin)
 
+(defMacro (throw . val) (list* '%throw #_ val) )
+(defMacro (throwTag tag . val) (list* '%throw tag val))
+(def throwTag
+  %throw)
+
 (if (ctapv)
   (then
-    (defMacro (catch exp . hdl) (list* '%catch #ignore (list '\ () exp) hdl) )
-    (defMacro (throw . val) (list* '%throw #ignore val) )
-
-    (assert (catch (throw)) #inert)
-    (assert (catch (throw (\ () 1))) 1)
-    (assert (catch (throw (\ () 1)) (\ (x) (+ x 1))) 2)
-    
-    (defMacro (catchTag tag exp . hdl) (list* '%catch tag (list '\ () exp) hdl) )
-    (defMacro (throwTag tag . val) (list* '%throw tag val) )
-    (def throwTag %throw)
+    (defMacro (catch . forms)
+      (list '%catch #_ () (list* '\ () forms)) )
+    (defMacro (catchWth hdl . forms)
+      (list '%catch #_ hdl (list* '\ () forms)) )
+    (defMacro (catchTag tag . forms)
+      (list '%catch tag () (list* '\ () forms)) )
+    (defMacro (catchTagWth tag hdl . forms)
+      (list '%catch tag hdl (list* '\ () forms)) )
   )
-  (else
-    (defMacro (catch exp . hdl) (list* '%catch #ignore exp hdl))
-    (defMacro (throw . val) (list* '%throw #ignore val))
-
-    (assert (catch (throw)) #inert)
-    (assert (catch (throw 1)) 1)
-    (assert (catch (throw 1) (\ (x) (+ x 1))) 2)
-
-    (defVau (catchTag tag exp . hdl) env (eval (list* '%catch (eval tag env) exp hdl) env) )
-    (defVau (throwTag tag . val) env (eval (list* '%throw (eval tag env) val) env) )
-  )
+  (defMacro (catch . forms)
+    (list* '%catch #_ () forms))
+  (defMacro (catchWth hdl . forms)
+    (list* '%catch #_ hdl forms))
+  (defMacro (catchTag tag . forms)
+    (list* '%catch tag () forms) )
+  (defMacro (catchTagWth tag hdl . forms)
+    (list* '%catch tag hdl forms) )
+  (def catchTagWth %catch)
 )
+
+(assert (catch (throw)) #inert)
+(assert (catch (throw 1)) 1)
+(assert (catchWth (\ (x) (+ x 1)) (throw 1) ) 2)
+(assert (catchTag 'a (throwTag 'a)) #inert)
+(assert (catchTag 'a (throwTag 'a 1)) 1)
+(assert (catchTagWth 'a (\ (x) (+ x 1)) (throwTag 'a 1) ) 2)
+
 
 
 ;;; Delimited Control Operators
@@ -760,6 +771,7 @@
     (eval (list (list* '\ (list blockName) forms) escape)
           env )))
 |#
+(assert (block exit (exit 7)) 7)
 (assert (block exit (def x 1) (loop (if (== x 4) (exit 7)) (def x (+ x 1)))) 7)
 
 (def\ returnFrom (blockName . value?)
@@ -816,11 +828,12 @@
 
 (def\ (withEscape fun)
   (let1 (fresh (list #null))
-    (catch (fun (\ opt? (throw (list fresh (ifOpt? (val opt?) opt?) ))))
+    (catchWth 
       (\ (exc)
         (if (and (cons? exc) (== (car exc) fresh))
           (let1 ((#ignore opt?) exc) (if (cons? opt?) (car opt?)))
-          (throw exc))))))
+          (throw exc)))
+      (fun (\ opt? (throw (list fresh (ifOpt? (val opt?) opt?) )))) )))
 
 (defMacro (label name . body)
   (list 'withEscape (list* '\ (list name) body)))

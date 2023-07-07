@@ -509,20 +509,45 @@
 
 ;;; Wrap incomplete VM forms
 
+(def* (then else) begin begin)
 
-(defMacro catch (tag . forms)
-  #|Establish a catch tag and evaluate FORMS as an implicit `begin'
-   |inside it.  The forms may use `throw' to nonlocally exit from the
-   |tag.  Usually, `block' should be preferred.
-   |#
-  (list '%catch tag (list* '\ () forms)))
-
-(def\ throw (tag . result?)
+(defMacro (throw . val) (list* '%throw #_ val) )
+(defMacro (throwTag tag . val) (list* '%throw tag val))
+(def throwTag
   #|Abort to a nesting catch tag established by `catch' and pass the
    |optional RESULT? (defaults to void) to it.
    |#
-  (%throw tag (opt? result? #inert)))
+  %throw)
 
+(if (ctapv)
+  (then
+    (defMacro (catch . forms)
+      (list '%catch #_ () (list* '\ () forms)) )
+    (defMacro (catchWth hdl . forms)
+      (list '%catch #_ hdl (list* '\ () forms)) )
+    (defMacro (catchTag tag . forms)
+      #|Establish a catch tag and evaluate FORMS as an implicit `begin'
+       |inside it.  The forms may use `throw' to nonlocally exit from the
+       |tag.  Usually, `block' should be preferred.
+       |#
+      (list '%catch tag () (list* '\ () forms)) )
+    (defMacro (catchTagWth tag hdl . forms)
+      (list '%catch tag hdl (list* '\ () forms)) )
+  )
+  (defMacro (catch . forms)
+    (list* '%catch #_ () forms))
+  (defMacro (catchWth hdl . forms)
+    (list* '%catch #_ hdl forms))
+  (defMacro (catchTag tag . forms)
+    #|Establish a catch tag and evaluate FORMS as an implicit `begin'
+     |inside it.  The forms may use `throw' to nonlocally exit from thepù
+     |tag.  Usually, `block' should be preferred.
+     |#
+    (list* '%catch tag () forms) )
+  (defMacro (catchTagWth tag hdl . forms)
+    (list* '%catch tag hdl forms) )
+  (def catchTagWth %catch)
+)
 
 
 ;;; Delimited Control Operators
@@ -551,7 +576,7 @@
   (list '%pushDelimSubcont prompt continuation (list* '\ () forms)))
 
 (defMacro pushSubcont (k . forms)
-  #|We don't have `pushSubcont' but for these tests we can emulate it
+  #|We don't have `pushSubcont' but for these tests we can emulate itz
    |with a `pushDelimSubcont' that pushes an unused prompt.
    |#
   (list* pushDelimSubcont #ignore k forms))
@@ -1010,15 +1035,15 @@
    |block names; a block is named in the normal variable namespace.
    |#
   (let* ( (tag (list #inert)) ; cons up a fresh object as tag
-          (escape (\ (value) (throw tag value))) )
-    (catch tag
+          (escape (\ (value) (throwTag tag value))) )
+    (catchTag tag
       (eval (list (list* '\ (list blockName) forms) escape) env) )))
 
 #|
 (defVau block (blockName . forms) env
   (def tag (list #inert)) ; cons up a fresh object as tag
-  (def\ (escape value) (throw tag value))
-  (catch tag
+  (def\ (escape value) (throwTag tag value))
+  (catchTag tag
     (eval (list (list* '\ (list blockName) forms) escape)
           env )))
 |#
@@ -1062,11 +1087,12 @@
 
 (def\ (withEscape fun)
   (let1 (fresh (list #null))
-    (catch (fun (\ opt? (throw (list fresh (ifOpt? (val opt?) opt?) ))))
+    (%catch #_
       (\ (exc)
         (if (and (cons? exc) (== (car exc) fresh))
           (let1 ((#ignore opt?) exc) (if (cons? opt?) (car opt?)))
-          (throw exc))))))
+          (%throw #_ exc)))
+    (fun (\ opt? (%throw #_ (list fresh (ifOpt? (val opt?) opt?))))) )))
 
 (defMacro (label name . body)
   (list 'withEscape (list* '\ (list name) body)))

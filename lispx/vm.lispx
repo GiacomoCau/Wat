@@ -12,7 +12,7 @@
 (%def milli (@currentTimeMillis &java.lang.System))
 
 (@clear (.methods vm))
-(ctapv #t)
+(ctapv #f)
 (prtrc 0)
 (bndres 1)
 (boxdft #inert)
