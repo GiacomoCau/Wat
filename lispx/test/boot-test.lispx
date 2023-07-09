@@ -73,7 +73,7 @@
 
   (deftest error.1
     (signalsError
-     (error (makeInstance StandardObject :x 1 :y 2))
+     (error (newObj StandardObject :x 1 :y 2))
      StandardObject :x 1 :y 2))
 
   (deftest error.2
@@ -253,21 +253,7 @@
 (defsuite quote
 
   (deftest |Quoted symbols are pointer identical.|
-    (and
-     (== 'foo 'foo)
-     (== 'foo 'foo)
-     (== 'foo (functionSymbol 'foo))
-     (== 'Foo 'Foo)
-     (== 'Foo (classSymbol 'Foo))))
-
-  (deftest |Ordinary symbols can be quoted.|
-    (== 'foo (variableSymbol 'foo)))
-
-  (deftest |Function symbols can be quoted.|
-    (== 'foo (functionSymbol 'foo)))
-
-  (deftest |Class symbols can be quoted.|
-    (== 'Foo (classSymbol 'Foo)))
+     (== 'foo 'foo))
 
   (deftest |Lists can be quoted.|
     (eq? '(1 2 3) (list 1 2 3)))
@@ -736,9 +722,6 @@
   (deftest symbolName.2
     (eq? "foo" (symbolName 'foo)))
 
-  (deftest symbolName.3
-    (eq? "foo" (symbolName (classSymbol 'foo))))
-
   (deftest symbolName.4
     (eq? "foo" (symbolName :foo)))
 
@@ -751,102 +734,6 @@
     (signalsError
      (symbolName 12)
      TypeError :datum 12 :expectedType 'Intern)))
-
-(defsuite variableSymbol
-
-  (deftest variableSymbol.1
-    (variableSymbol 'foo)
-    'foo)
-
-  (deftest variableSymbol.2
-    (variableSymbol :foo)
-    'foo)
-
-  (deftest variableSymbol.4
-    (variableSymbol (classSymbol 'foo))
-    'foo)
-
-  (deftest variableSymbol.5
-    (signalsError
-     (variableSymbol)
-     MatchError))
-
-  (deftest variableSymbol.6
-    (signalsError
-     (variableSymbol 5)
-     TypeError :datum 5 :expectedType 'Intern)))
-
-(defsuite functionSymbol
-
-  (deftest functionSymbol.1
-    (functionSymbol 'foo)
-    'foo)
-
-  (deftest functionSymbol.2
-    (functionSymbol :foo)
-    'foo)
-
-  (deftest functionSymbol.4
-    (functionSymbol (classSymbol 'foo))
-    'foo)
-
-  (deftest functionSymbol.5
-    (signalsError
-     (functionSymbol)
-     MatchError))
-
-  (deftest functionSymbol.6
-    (signalsError
-     (functionSymbol 5)
-     TypeError :datum 5 :expectedType 'Intern)))
-
-(defsuite classSymbol
-
-  (deftest classSymbol.1
-    (classSymbol 'foo)
-    (classSymbol 'foo))
-
-  (deftest classSymbol.2
-    (classSymbol :foo)
-    (classSymbol 'foo))
-
-  (deftest classSymbol.3
-    (classSymbol 'Foo)
-    (classSymbol 'Foo))
-
-  (deftest classSymbol.5
-    (signalsError
-     (classSymbol)
-     MatchError))
-
-  (deftest classSymbol.6
-    (signalsError
-     (classSymbol 5)
-     TypeError :datum 5 :expectedType 'Intern)))
-
-(defsuite keywordSymbol
-
-  (deftest keywordSymbol.1
-    (keywordSymbol 'foo)
-    :foo)
-
-  (deftest keywordSymbol.2
-    (keywordSymbol 'foo)
-    :foo)
-
-  (deftest keywordSymbol.3
-    (keywordSymbol (classSymbol 'foo))
-    :foo)
-
-  (deftest keywordSymbol.5
-    (signalsError
-     (keywordSymbol)
-     MatchError))
-
-  (deftest keywordSymbol.6
-    (signalsError
-     (keywordSymbol 5)
-     TypeError :datum 5 :expectedType 'Intern)))
 
 (defsuite wrap
 
@@ -1494,18 +1381,18 @@
   (deftest findClass.4
     (signalsError
      (findClass 'does-not-exist (theEnv))
-     UnboundSymbolError :symbol (classSymbol 'does-not-exist))))
+     UnboundSymbolError :symbol 'does-not-exist)))
 
-(defsuite makeEnv
+(defsuite newEnv
 
-  (deftest makeEnv.1
-    (let ((env (makeEnv)))
+  (deftest newEnv.1
+    (let ((env (newEnv)))
       (bound? 'def env))
     #f)
 
-  (deftest makeEnv.2
-    (let* ((env (makeEnv (theEnv)))
-           (child (makeEnv env)))
+  (deftest newEnv.2
+    (let* ((env (newEnv (theEnv)))
+           (child (newEnv env)))
       (assert (not (bound? 'x env)))
       (assert (not (bound? 'x child)))
       (eval '(def x 1) env)
@@ -1515,9 +1402,9 @@
       (assert (eq? 1 (eval 'x child))))
     #inert)
 
-  (deftest makeEnv.3
+  (deftest newEnv.3
     (signalsError
-     (makeEnv 12)
+     (newEnv 12)
      TypeError :datum 12 :expectedType '(or Null Env))))
 
 (defsuite cxxr
@@ -2485,42 +2372,42 @@
       x)
     1))
 
-(defsuite makeInstance
+(defsuite obj
 
-  (deftest makeInstance.1
+  (deftest obj.1
     (begin
-      (def obj (makeInstance TypeError :datum 1 :expectedType 'String))
+      (def obj (newObj TypeError :datum 1 :expectedType 'String))
       (assert (eq? (getSlot obj 'datum) 1))
       (assert (eq? (getSlot obj :datum) 1))
       (assert (eq? (getSlot obj 'expectedType) 'String))
       (assert (eq? (getSlot obj :expectedType) 'String)))
     #inert)
 
-  (deftest makeInstance.2
+  (deftest obj.2
     (signalsError
-     (makeInstance)
+     (newObj)
      MatchError))
 
-  (deftest makeInstance.3
+  (deftest obj.3
     (signalsError
-     (makeInstance 3)
+     (newObj 3)
      TypeError :datum 3 :expectedType '(or Box Obj)))
 
-  (deftest makeInstance.4
+  (deftest obj.4
     (signalsError
-     (makeInstance Object)
+     (newObj Object)
      TypeError :datum Object :expectedType '(or Box Obj)))
 
-  (deftest makeInstance.5
+  (deftest obj.5
     (signalsError
-     (makeInstance StandardObject :x)
+     (newObj StandardObject :x)
      AssertionError)))
 
 (defsuite slots
 
   (deftest slots.1
     (begin
-      (def obj (makeInstance StandardObject))
+      (def obj (newObj StandardObject))
       (assert (not (slotBound? obj 'x)))
       (assert (not (slotBound? obj :x)))
       (assert (signalsError (getSlot obj 'x)
@@ -2544,12 +2431,12 @@
 
   (deftest getSlot.1a
     (signalsError
-     (getSlot (makeInstance StandardObject) "x")
+     (getSlot (newObj StandardObject) "x")
      TypeError :datum "x" :expectedType 'Intern))
 
   (deftest getSlot.2
     (signalsError
-     (getSlot (makeInstance StandardObject))
+     (getSlot (newObj StandardObject))
      MatchError))
 
   (deftest getSlot.3
@@ -2564,17 +2451,17 @@
 
   (deftest setSlot.1a
     (signalsError
-     (setSlot (makeInstance StandardObject) "x" 1)
+     (setSlot (newObj StandardObject) "x" 1)
      TypeError :datum "x" :expectedType 'Intern))
 
   (deftest setSlot.2
     (signalsError
-     (setSlot (makeInstance StandardObject))
+     (setSlot (newObj StandardObject))
      MatchError))
 
   (deftest setSlot.3
     (signalsError
-     (setSlot (makeInstance StandardObject) 'x)
+     (setSlot (newObj StandardObject) 'x)
      MatchError))
 
   (deftest slotBound?.1
@@ -2584,7 +2471,7 @@
 
   (deftest slotBound?.1a
     (signalsError
-     (slotBound? (makeInstance StandardObject) "x")
+     (slotBound? (newObj StandardObject) "x")
      TypeError :datum "x" :expectedType 'Intern))
 
   (deftest slotBound?.2
@@ -2594,7 +2481,7 @@
 
   (deftest slotBound?.3
     (signalsError
-     (slotBound? (makeInstance StandardObject))
+     (slotBound? (newObj StandardObject))
      MatchError)))
 
 (defsuite let
@@ -3153,7 +3040,7 @@
          (subClass? StandardClass Object))
     #t))
 
-;; Utility used by `%makeStandardClass' and `defClass' tests.
+;; Utility used by `%newClass' and `defClass' tests.
 
 (def\ classes-test (c d p q)
   (assert (type? c StandardClass))
@@ -3185,44 +3072,44 @@
   (assert (eq? (getSlot q 'y) 2))
   (assert (eq? (getSlot q 'z) 3)))
 
-(defsuite %makeStandardClass
+(defsuite %newClass
 
-  (deftest %makeStandardClass.1
-    (let* ((c (%makeStandardClass 'Point2d StandardObject))
-           (d (%makeStandardClass 'Point3d c))
-           (p (makeInstance c :x 1 :y 2))
-           (q (makeInstance d :x 1 :y 2 :z 3)))
+  (deftest %newClass.1
+    (let* ((c (%newClass 'Point2d StandardObject))
+           (d (%newClass 'Point3d c))
+           (p (newObj c :x 1 :y 2))
+           (q (newObj d :x 1 :y 2 :z 3)))
       (classes-test c d p q))
     #inert)
 
-  (deftest %makeStandardClass.2
+  (deftest %newClass.2
     (signalsError
-     (%makeStandardClass 'Foo Object)
+     (%newClass 'Foo Object)
      TypeError :datum Object :expectedType '(or Box Obj)))
 
-  (deftest %makeStandardClass.3
+  (deftest %newClass.3
     (signalsError
-     (%makeStandardClass 'Foo)
+     (%newClass 'Foo)
      MatchError))
 
-  (deftest %makeStandardClass.4
+  (deftest %newClass.4
     (signalsError
-     (%makeStandardClass)
+     (%newClass)
      MatchError))
 
-  (deftest %makeStandardClass.5
+  (deftest %newClass.5
     (signalsError
-     (%makeStandardClass "foo" StandardObject)
+     (%newClass "foo" StandardObject)
      TypeError :datum "foo" :expectedType 'Symbol)))
 
 (defsuite %reinitialize-standard-class
 
   (deftest* %reinitialize-standard-class.1
-    (let* ((a (%makeStandardClass 'A StandardObject))
-           (b (%makeStandardClass 'B a))
-           (c (%makeStandardClass 'C b))
-           (d (%makeStandardClass 'D StandardObject))
-           (e (%makeStandardClass 'E d)))
+    (let* ((a (%newClass 'A StandardObject))
+           (b (%newClass 'B a))
+           (c (%newClass 'C b))
+           (d (%newClass 'D StandardObject))
+           (e (%newClass 'E d)))
       (assert (subClass? b a))
       (assert (subClass? c a))
       (assert (subClass? c b))
@@ -3262,8 +3149,8 @@
     (begin
       (defClass Point2d () (x y))
       (defClass Point3d (Point2d) (z))
-      (def p (makeInstance Point2d :x 1 :y 2))
-      (def q (makeInstance Point3d :x 1 :y 2 :z 3))
+      (def p (newObj Point2d :x 1 :y 2))
+      (def q (newObj Point3d :x 1 :y 2 :z 3))
       (classes-test Point2d Point3d p q))
     #inert)
 
@@ -3272,7 +3159,7 @@
     (defClass B (A) ())
     (defGeneric foo (x))
     (defMethod foo ((a A)) "foo")
-    (def b (makeInstance B))
+    (def b (newObj B))
     (assert (subClass? B A))
     (assert (type? b B))
     (assert (type? b A))
@@ -3292,10 +3179,10 @@
     (begin
       (defClass Foo () ())
       (defClass Bar (Foo) ())
-      (def foo (makeInstance Foo))
-      (def bar (makeInstance Bar))
+      (def foo (newObj Foo))
+      (def bar (newObj Bar))
 
-      (defGeneric g1 (obj param))
+      (defGeneric g1 (newObj param))
       (assert (type? g1 Function))
 
       (assert (signalsError
@@ -3308,7 +3195,7 @@
                (g1 bar (+ 1 1))
                UnboundMethodError :class Bar :methodName 'g1))
 
-      (defMethod g1 ((obj Foo) param)
+      (defMethod g1 ((newObj Foo) param)
         (+ param 100))
 
       (assert (signalsError
@@ -3317,7 +3204,7 @@
       (assert (eq? 102 (g1 foo (+ 1 1))))
       (assert (eq? 102 (g1 bar (+ 1 1))))
 
-      (defMethod g1 ((obj Bar) param)
+      (defMethod g1 ((newObj Bar) param)
         (+ param 1000))
 
       (assert (signalsError
@@ -3326,21 +3213,21 @@
       (assert (eq? 102 (g1 foo (+ 1 1))))
       (assert (eq? 1002 (g1 bar (+ 1 1))))
 
-      (defMethod g1 ((obj Integer) param)
+      (defMethod g1 ((newObj Integer) param)
         (+ param 10000))
 
       (assert (eq? 10002 (g1 12 (+ 1 1))))
       (assert (eq? 102 (g1 foo (+ 1 1))))
       (assert (eq? 1002 (g1 bar (+ 1 1))))
 
-      (defMethod g1 ((obj Integer) param)
+      (defMethod g1 ((newObj Integer) param)
         (+ param 100000))
 
       (assert (eq? 100002 (g1 12 (+ 1 1))))
       (assert (eq? 102 (g1 foo (+ 1 1))))
       (assert (eq? 1002 (g1 bar (+ 1 1))))
 
-      (defMethod g1 ((obj Object) param)
+      (defMethod g1 ((newObj Object) param)
         (- param))
 
       (assert (eq? 100002 (g1 12 (+ 1 1))))
@@ -3351,20 +3238,20 @@
       (assert (eq? -2 (g1 "hello" (+ 1 1)))))
     #inert))
 
-(defsuite box
+(defsuite newBox
 
-  (deftest box.1
-    (let ((c (box)))
+  (deftest newBox.1
+    (let ((c (newBox)))
       (c))
     #inert)
 
-  (deftest box.2
-    (let ((c (box (+ 1 1))))
+  (deftest newBox.2
+    (let ((c (newBox (+ 1 1))))
       (c))
     2)
 
-  (deftest box.3
-    (let ((c (box (+ 1 1))))
+  (deftest newBox.3
+    (let ((c (newBox (+ 1 1))))
       (c (+ 2 2))
       (assert (eq? (c) 4))
       (c (+ 4 4))

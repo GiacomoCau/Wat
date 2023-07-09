@@ -135,7 +135,7 @@
   (vau (handlerSpecs . forms) env
     (let1
       (handlerFrame
-        (makeInstance HandlerFrame
+        (newObj HandlerFrame
           :handlers
              (map (\ (spec) (handlerSpecParser spec env)) handlerSpecs)
           :parentFrame?
@@ -151,7 +151,7 @@
    |#
   (lispx::makeHandlerBindOperator
     (\ ((className functionForm) env)
-      (makeInstance ConditionHandler
+      (newObj ConditionHandler
         :conditionClass
            (the Class (findClass className env))
         :handlerFunction
@@ -168,7 +168,7 @@
    |#
   (lispx::makeHandlerBindOperator
     (\ ((restartName functionForm . properties) env)
-      (makeInstance RestartHandler
+      (newObj RestartHandler
         :restartName
            (the Symbol restartName)
         :handlerFunction
@@ -442,7 +442,7 @@
 (def\ makeRestartError (restartName)
   #|Create a new `restart-error' for the given RESTART-NAME.
    |#
-  (makeInstance RestartError :restartName restartName) )
+  (newObj RestartError :restartName restartName) )
 
 (defClass SimpleError (Error)
   #|Class for simple errors with a MESSAGE.
@@ -452,7 +452,7 @@
 (def\ makeSimpleError (message)
   #|Create a new simple error with a MESSAGE.
    |#
-  (makeInstance SimpleError :message message) )
+  (newObj SimpleError :message message) )
 
 (def\ simpleError (message)
   #|Signal a simple error with a MESSAGE.

@@ -25,8 +25,8 @@
        ;; Test and expected expressions are evaluated in fresh child
        ;; environments of the current environment, so that bindings
        ;; they create don't affect other tests.
-       (assert (eq? (eval expression (makeEnv env))
-                  (eval (opt? expected? #t) (makeEnv env))))))))
+       (assert (eq? (eval expression (newEnv env))
+                  (eval (opt? expected? #t) (newEnv env))))))))
 
 (defMacro deftest* (name . forms)
   "Run the FORMS as a test identified by NAME, but unlike `deftest',

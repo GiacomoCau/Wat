@@ -82,7 +82,7 @@
    |#
   %bound?)
 
-(def box
+(def newBox
   #|Create a new box with the optional INITIAL-VALUE?.  A box is a
    |function that encapsulates a mutable value.  Calling the box without
    |arguments returns the value.  Calling the box with an argument sets
@@ -90,7 +90,7 @@
    |$(fn initialValue?)
    |$(type function)
    |#
-  %box)
+  %newBox)
 
 (def cons
   #|Create a cons with the given CAR and CDR.
@@ -183,13 +183,13 @@
    |#
   %loop)
 
-(def makeEnv
+(def newEnv
   #|Create a new environment with an optional PARENT-ENVIRONMENT? in
    |which bindings are looked up if they are not found.
    |$(fn parentEnvironment?)
    |$(type function)
    |#
-  %makeEnv)
+  %newEnv)
 
 (def null?
   #|Return true if the OBJECT is nil, false otherwise.
@@ -220,13 +220,13 @@
    |#
   %nthCdr)
 
-(def obj
+(def newObj
   #|Create a new instance of CLASS (that must be a `standard-class').
    |The SLOT-INITS must be of even length, and alternately contain slot
    |names (symbols, typically keywords) and values.
    |$(fn (class . slotInits))
    |#
-  %obj)
+  %newObj)
 
 (def panic
   #|Mostly for internal use.  Signal the ERROR in such a way that it is
@@ -288,37 +288,6 @@
    |$(type function)
    |#
   %wrap)
-
-
-;;; unused in code but not in test
-
-(def classSymbol
-  #|Return the symbol with the same name as SYMBOL, but in the class namespace.
-   |$(fn (symbol))
-   |$(type function)
-   |#
-  %classSymbol)
-
-(def functionSymbol
-  #|Return the symbol with the same name as SYMBOL, but in the function namespace.
-   |$(fn (symbol))
-   |$(type function)
-   |#
-  %functionSymbol)
-
-(def keywordSymbol
-  #|Return the symbol with the same name as SYMBOL, but in the keyword namespace.
-   |$(fn (symbol))
-   |$(type function)
-   |#
-  %keywordSymbol)
-
-(def variableSymbol
-  #|Return the symbol with the same name as SYMBOL, but in the variable namespace.
-   |$(fn (symbol))
-   |$(type function)
-   |#
-  %variableSymbol)
 
 
 ;;; Core Forms
@@ -431,7 +400,7 @@
       (vau operands env
         (def !evalMacro (! (evalMacro)))
         (if !evalMacro (evalMacro #t))
-        (def exp (eval (cons expander operands) (makeEnv)))
+        (def exp (eval (cons expander operands) (newEnv)))
         (if !evalMacro exp (eval exp env)) ))))
 
 (def macro
@@ -585,7 +554,7 @@
   #|Push a continuation barrier that prevents the FORMS from capturing
    |any continuations to the outside.
    |#
-  (list* '%pushSubcontBarrier (%makeEnv) forms))
+  (list* '%pushSubcontBarrier (%newEnv) forms))
 
 
 ;;; Basic macros and functions
@@ -594,7 +563,7 @@
   #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
    |$(type function)
    |#
-  (def env (if (null? env) (makeEnv) ((\ ((env)) env) env))) 
+  (def env (if (null? env) (newEnv) ((\ ((env)) env) env))) 
   (if (%jFun? appv)
     (@combine (@new JFun vm appv) env args)
     (eval (cons (unwrap appv) args) env) ))
@@ -767,13 +736,13 @@
 (def\ assert (boolean)
   #|Signal an error if the BOOLEAN is false.  Otherwise return void.
    |#
-  (unless boolean (error (makeInstance AssertionError :type 'assertion :datum boolean :expectedType #t))))
+  (unless boolean (error (newObj AssertionError :type 'assertion :datum boolean :expectedType #t))))
 
 
 ;;;; Bind? IfBind? CaseVau Case\ Match
 
 (defVau (ifBind? (pt exp) then . else) env
-  (let1 (env+ (makeEnv env))
+  (let1 (env+ (newEnv env))
     (if (bind? env+ pt (eval exp env))
       (eval then env+)
       (unless (null? else)
@@ -783,7 +752,7 @@
   (vau values #ignore
     (let1 loop (clauses clauses)
       (if (null? clauses) #inert
-        (let ( (env+ (makeEnv env))
+        (let ( (env+ (newEnv env))
                (((bindings . forms) . clauses) clauses) )
           (if (if (== bindings 'else) #t (bind? env+ bindings values)) ; or!
             (eval (list* 'begin forms) env+)
@@ -990,7 +959,7 @@
     (if (null? exp) #null
       (let1 loop (clauses clauses)
         (if (null? clauses) #null
-          (let ((env+ (makeEnv env))
+          (let ((env+ (newEnv env))
                 (((bindings . forms) . clauses) clauses) )
             (if (or (== bindings 'else) (bind? env+ bindings exp))
               (eval (list* 'begin forms) env+)
@@ -1075,7 +1044,7 @@
   #|Cf. Common Lisp's DOTIMES.
    |#
   (let\ ((_dotimes_ (n body result)
-           (let ((i (box 0)))
+           (let ((i (newBox 0)))
              (while (< (i) n)
                (body (i))
                (i (+ (i) 1)))
@@ -1108,7 +1077,7 @@
 
 (def\ makeTypeError (datum expectedType)
   #|Create a `type-error' with the given DATUM and EXPECTED-TYPE.|#
-  (makeInstance TypeError :datum datum :expectedType expectedType))
+  (newObj TypeError :datum datum :expectedType expectedType))
 
 #| TODO sostituiti dal seguente
 (defVau the (className object) env
@@ -1320,10 +1289,10 @@
 
 ;;;; Box
 
-(def box %box)
+(def newBox %newBox)
 
 (defMacro (defBox name . value?)
-  (list 'def name (list* 'box value?)) )
+  (list 'def name (list* 'newBox value?)) )
 
 
 ;;; Classes
@@ -1343,18 +1312,18 @@
    ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
   (dolist (slotSpec slotSpecs) (the Symbol slotSpec))
   (let1 (superclass (findClass (opt? superclass? 'StandardObject) env))
-    (eval (list def name (%makeStandardClass name superclass)) env)) )
+    (eval (list def name (%newClass name superclass)) env)) )
 
 
 ;;; Standard Objects
 
-(def makeInstance
+(def newObj
   #|Create a new instance of CLASS (that must be a `standard-class').
    |The SLOT-INITS must be of even length, and alternately contain slot
    |names (symbols, typically keywords) and values.
    |$(fn (class . slotInits))
    |#
-  obj)
+  %newObj)
 
 (def\ getSlot (object slotName)
   #|Return the value of the slot named SLOT-NAME of the OBJECT.|#
@@ -1411,9 +1380,9 @@
     env ))
 
 (defVau (module exports . body) env
-  (let ((env (makeEnv env)))
+  (let ((env (newEnv env)))
     (eval (list* 'provide exports body) env)
-    (makeEnv env) ))
+    (newEnv env) ))
 
 (defMacro (defModule name exports . body)
   (list 'def name (list* 'module exports body)) )

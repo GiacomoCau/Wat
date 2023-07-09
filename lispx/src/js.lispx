@@ -89,7 +89,7 @@
   "`elt' for JS arrays.  We must put the method on `object' because we
   |don't have a more precise type for them."
   (if (or (< index 0) (>= index (length seq)))
-      (error (makeInstance OutOfBoundsError))
+      (error (newObj OutOfBoundsError))
       (%js-elt seq index)))
 
 (defMethod length ((seq object))
@@ -116,7 +116,7 @@
   |JS method named METHOD-NAME (a string).  The function takes one or
   |more arguments.  The first argument is the receiver of the method
   |call (\"this\"), the rest are the normal method arguments."
-  (list def (functionSymbol name) (js-method methodName)))
+  (list def name (js-method methodName)))
 
 (def\ js-undefined-option (value)
   "Turn a value that may be undefined into an option."
@@ -156,7 +156,7 @@
 
 (defMacro define-js-method/sync (name methodName)
   "Like `define-js-method', but awaits the method result."
-  (list def (functionSymbol name) (sync (js-method methodName))))
+  (list def name (sync (js-method methodName))))
 
 (def\ sleep (ms)
   "Sleep for some milliseconds."

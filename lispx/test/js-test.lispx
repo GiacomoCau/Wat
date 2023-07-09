@@ -606,8 +606,8 @@
 
   (deftest can-define-lisp-methods-on-js-objects
     (begin
-      (defGeneric foo (obj))
-      (defMethod foo ((obj object)) 12)
+      (defGeneric foo (newObj))
+      (defMethod foo ((newObj object)) 12)
       (assert (eq? 12 (foo +js-null+)))
       (assert (eq? 12 (foo (to-js-string "foo")))))
     #inert)

@@ -70,7 +70,7 @@
     (block b
       (handlerBind ((TestError (\ (e) (returnFrom b 'outer))))
         (handlerBind ((SimpleError (\ (e)
-                                       (signal (makeInstance TestError)))))
+                                       (signal (newObj TestError)))))
           (handlerBind ((TestError (\ (e) (returnFrom b 'inner))))
             (signal (makeSimpleError "foo"))))))
     'outer)
@@ -86,7 +86,7 @@
     (block b
       (handlerBind ((TestError (\ (e) (returnFrom b 'test)))
                      (SimpleError (\ (e) (returnFrom b 'simple))))
-        (signal (makeInstance TestError))))
+        (signal (newObj TestError))))
     'test)
 
   (deftest handlerBind.anything
@@ -157,7 +157,7 @@
   (deftest handlerCase.multiple.2
     (handlerCase ((TestError (\ (e) 'test))
                    (SimpleError (\ (e) 'simple)))
-      (signal (makeInstance TestError)))
+      (signal (newObj TestError)))
     'test)
 
   (deftest handlerCase.anything
@@ -561,7 +561,7 @@
 
   (deftest signal.2
     (signalsError
-     (signal (makeInstance StandardObject :x 1 :y 2))
+     (signal (newObj StandardObject :x 1 :y 2))
      StandardObject :x 1 :y 2))
 
   (deftest signal.3
@@ -674,7 +674,7 @@
     (let ((result
            (handlerCase ((UnboundVariable (\ (c) (list 'outer c))))
              (handlerBind ((Error (\ (#ignore)
-                                     (error (makeInstance UnboundVariable :name 'fred)))))
+                                     (error (newObj UnboundVariable :name 'fred)))))
                (handlerCase ((UnboundVariable (\ (c) (list 'inner c))))
                  ;; Signal an arbitrary error:
                  (simpleError "Not an UNBOUND-VARIABLE error."))))))
@@ -686,9 +686,9 @@
     (let ((result
            (handlerCase ((UnboundVariable (\ (c) (list 'outer c))))
              (handlerBind ((Error (\ (#ignore)
-                                     (error (makeInstance UnboundVariable :name 'fred)))))
+                                     (error (newObj UnboundVariable :name 'fred)))))
                (handlerCase ((UnboundVariable (\ (c) (list 'inner c))))
-                 (error (makeInstance UnboundVariable :name 'marvin)))))))
+                 (error (newObj UnboundVariable :name 'marvin)))))))
       (assert (and (== (car result) 'inner)
                    (type? (cadr result) UnboundVariable)
                    (== (getSlot (cadr result) 'name) 'marvin))))))

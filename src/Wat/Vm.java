@@ -1356,7 +1356,7 @@ public class Vm {
 					$("%def", "%set!", new Def(false)),
 					//$("%def", "%def*", new DefStar()), // TODO non più necessario
 					$("%def", "%eval", wrap(new Eval())),
-					$("%def", "%makeEnv", wrap(new JFun("%MakeEnv", (n,o)-> checkR(n, o, 0, 1, or(null, Env.class)), (l,o)-> env(l == 0 ? null : o.car()) ))) ,
+					$("%def", "%newEnv", wrap(new JFun("%NewEnv", (n,o)-> checkR(n, o, 0, 1, or(null, Env.class)), (l,o)-> env(l == 0 ? null : o.car()) ))) ,
 					$("%def", "%wrap", wrap(new JFun("%Wrap", (Function) this::wrap))),
 					$("%def", "%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap))),
 					$("%def", "%value", wrap(new JFun("%Value", (n,o)-> checkN(n, o, 2, Symbol.class, Env.class), (l,o)-> o.<Env>car(1).get(o.car()).value) )),
@@ -1395,7 +1395,7 @@ public class Vm {
 					$("%def", "%pushDelimSubcont", wrap(new PushDelimSubcont())),
 					$("%def", "%pushSubcontBarrier", wrap(new JFun("%PushSubcontBarrier", (n,o)-> checkM(n, o, 2, Env.class), (l,o)-> pushSubcontBarrier(null, o.car(), cons(begin, o.cdr())) ))),
 					// Dynamically-Scoped Variables
-					$("%def", "%box", wrap(new JFun("%Box", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new Box(l == 0 ? boxdft : o.car)))),
+					$("%def", "%newBox", wrap(new JFun("%NewBox", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new Box(l == 0 ? boxdft : o.car)))),
 					$("%def", "%dVar", wrap(new JFun("%DVar", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new DVar(l == 0 ? boxdft : o.car)))),
 					$("%def", "%dVal", wrap(new JFun("%DVal", (n,o)-> checkR(n, o, 1, 2, DVar.class), (l,o)-> apply(dv-> l == 1 ? dv.value : (dv.value=o.car(1)), o.<DVar>car()) ))),
 					$("%def", "%d\\", new DLambda()),
@@ -1410,8 +1410,8 @@ public class Vm {
 					// Object System
 					$("%def", "%addMethod", wrap(new JFun("%AddMethod", (n,o)-> checkN(n, o, 3, or(null, Class.class), Symbol.class, Apv.class), (l,o)-> addMethod(o.car(), o.car(1), o.car(2)) ))),
 					$("%def", "%getMethod", wrap(new JFun("%GetMethod", (n,o)-> checkN(n, o, 2, or(null, Class.class), Symbol.class), (l,o)-> getMethod(o.car(), o.car(1)) ))),
-					$("%def", "%obj", wrap(new JFun("%Obj", (n,o)-> checkM(n, o, 1, or(Box.class, Obj.class), or(Symbol.class, Keyword.class), Any.class), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr)) ))),
-					$("%def", "%class", wrap(new JFun("%Class", (n,o)-> checkR(n, o, 1, 2, Symbol.class, or(Box.class, Obj.class)), (l,o)-> extend(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr())) ))),
+					$("%def", "%newObj", wrap(new JFun("%NewObj", (n,o)-> checkM(n, o, 1, or(Box.class, Obj.class), or(Symbol.class, Keyword.class), Any.class), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr)) ))),
+					$("%def", "%newClass", wrap(new JFun("%NewClass", (n,o)-> checkR(n, o, 1, 2, Symbol.class, or(Box.class, Obj.class)), (l,o)-> extend(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr())) ))),
 					$("%def", "%subClass?", wrap(new JFun("%SubClass?", (n,o)-> checkN(n, o, 2, Class.class, Class.class), (l,o)-> o.<Class>car(1).isAssignableFrom(o.car()) ))),
 					$("%def", "%type?",  wrap(new JFun("%Type?", (n,o)-> checkN(n, o, 2, Any.class, or(null, Class.class)), (l,o)-> apply((o1, c)-> c == null ? o1 == null /*: o1 == null ? !c.isPrimitive()*/ : o1 != null && c.isAssignableFrom(o1.getClass()), o.car(), o.<Class>car(1)) ))),
 					$("%def", "%classOf", wrap(new JFun("%ClassOf", (n,o)-> checkN(n, o, 1), (l,o)-> apply(o1-> o1 == null ? null : o1.getClass(), o.car()) ))),

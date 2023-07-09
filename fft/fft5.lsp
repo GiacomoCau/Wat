@@ -43,7 +43,7 @@
     (let*
       ( (even (fft (evens x)))
         (odd (fft (odds x)))
-        (k -1) ;(k (box -1))
+        (k -1) ;(k (newBox -1))
         (aux (map (\ (j) (c* j (cexp (c/ (c* (cx 0d -2) (cx (* pi (++ k)))) (cx (len x)))))) odd)) )
       (append (map c+ even aux) (map c- even aux)) )))
 

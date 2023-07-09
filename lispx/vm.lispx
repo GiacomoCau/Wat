@@ -21,6 +21,7 @@
 (%def Null #null)
 (%def Any &Wat.Vm$Any)
 (%def Apv &Wat.Vm$Apv)
+(%def At &Wat.Vm$At)
 (%def Box &Wat.Vm$Box)
 (%def Boolean &java.lang.Boolean)
 (%def Class &java.lang.Class)
@@ -28,6 +29,7 @@
 (%def Condition &Wat.Vm$Condition)
 (%def Cons &Wat.Vm$Cons)
 (%def Date &java.util.Date)
+(%def Dot &Wat.Vm$Dot)
 (%def Double &java.lang.Double)
 (%def DVar &Wat.Vm$DVar)
 (%def Env &Wat.Vm$Env)
@@ -78,34 +80,21 @@
 (%def %zero? (%\ (v) (%== v 0)))
 (%def %inert? (%\ (v) (%== v #inert)))
 
-(%def %className (%\ (class) (%intern (@getSimpleName (%the Class class)))))
-(%def %symbolName %internName)
-
-(%def %intern->symbol  (%\ (i) (if (%symbol? i) i (%symbol (%internName i)))))
-(%def %intern->keyword (%\ (i) (if (%keyword? i) i (%keyword (%internName i)))))
-
-(%def %classSymbol %intern->symbol)
-(%def %functionSymbol %intern->symbol)
-(%def %variableSymbol %intern->symbol)
-(%def %keywordSymbol %intern->keyword)
-
 (%def %nth (%\ (i l) (%the Integer i) (@car (%the Cons l) i)))
 (%def %nthCdr (%\ (i l) (%the Integer i) (%if (%zero? i) l (@cdr (%the Cons l) (%- i 1)))))
 
-(%def %makeInstance %obj)
-(%def %makeStandardClass (%\ (name superclass) (%class name superclass)))
-;(%def %makeStandardClass (%\ (name superclass) (%class (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass)))
+(%def %className (%\ (class) (%intern (@getSimpleName (%the Class class)))))
+;(%def %newClass (%\ (name superclass) (%newClass (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass)))
 
 (%def %pushPrompt ((%\ (%pushPrompt) (%wrap %pushPrompt)) %pushPrompt))
 
 (%def +rootPrompt+ %rootPrompt)
 (%def %printStacktrace
   (%\ (k)
-    (%if (%!= (.nxt k) #null)
-      (%printStacktrace (.nxt k)) )
+    (%if (%!= (.nxt k) #null) (%printStacktrace (.nxt k)))
     (%if (prstk) (log "--" k)) ))
-(%def %panic (%\ (e)
-  (%throw #ignore e) ))
+(%def %panic
+  (%\ (e) (%throw #ignore e)) )
 
 (%def %take (%\ (i l) (%if (%zero? i) #null (%cons (%car l) (%take (%- i 1) (%cdr l))))))
 (%def %listSubseq (%\ (l s e) (%the Integer s) (%if (%! (%inert? e)) (%the Integer e)) (%def tail (%nthCdr s l)) (%if (%inert? e) tail (%take (%- e s) tail))))

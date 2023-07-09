@@ -240,19 +240,16 @@
     (assert (dval *y*) 2) )
   #t )
     
-#|
-  (deftest dynamic.1
-    (progn
-      (defdynamic *foo*)
-      (assert (= (dynamic *foo*) #void))
-      (assert (= (slot-value *foo* 'value) #void))
-      (assert (typep *foo* #^dynamic))
-      (assert (typep *foo* #^standard-object))
-      (assert (typep *foo* #^object))
-      (assert (subclassp #^dynamic #^standard-object))
-      (assert (subclassp #^dynamic #^object)))
-    #void)
-|#
+(test dynamic.1
+  (begin
+    (ddef foo)
+    (assert (== (.value foo) #null) #t)
+    (assert (== (dval foo) #null) #t)
+    (assert (== (foo) #null) #t)
+    (assert (type? foo DVar) #t)
+    (assert (type? foo Object) #t)
+    (assert (subClass? DVar Object) #t) )
+  #t )
 
 (test set-dynamic.1
   (begin

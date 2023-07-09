@@ -51,7 +51,7 @@
         ;(++k (\ () (@set (%theEnv) 'k (+ k 1)) k))
         ;(++ ($vau (k) e (eval (list 'begin (list 'def k (list '+ k 1)) k) (.parent e))))
         ;(++ (macro (k) (list '%set! k :rhs (list '+ k 1))))
-        (k (box -1))
+        (k (newBox -1))
         (aux (map (\ (j) (c* (cexp (c/ (c* (cx 0 -2) (cx (* pi (++ k)))) (cx (len x)))) j)) odd)) )
       (append (map c+ even aux) (map c- even aux)) )))
 

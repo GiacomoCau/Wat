@@ -24,7 +24,7 @@
 (def\ makeYieldRecord (v k)
   #|Create a new yield record with the given yielded value and resume continuation.
    |#
-  (makeInstance YieldRecord :value v :continuation k))
+  (newObj YieldRecord :value v :continuation k))
 
 (def\ fiberYield v?
   #|Yield a value (which defaults to void).

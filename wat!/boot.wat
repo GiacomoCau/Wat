@@ -51,8 +51,8 @@
 (def bind? %bind?)
 (def bound?
   %bound?)
-(def box
-  %box)
+(def newBox
+  %newBox)
 (def cons
   %cons)
 (def cons?
@@ -88,8 +88,8 @@
 (def list->array %list->array)
 (def loop
   %loop)
-(def makeEnv
-  %makeEnv)
+(def newEnv
+  %newEnv)
 (def null?
   %null?)
 (def not
@@ -101,8 +101,8 @@
 (def nthCdr
   %nthCdr)
 
-(def obj
-  %obj)
+(def newObj
+  %newObj)
 (def reverse
   %reverse)
 (def rootPrompt %rootPrompt)
@@ -188,7 +188,7 @@
       (vau operands env
         (def !evalMacro (! (evalMacro)))
         (if !evalMacro (evalMacro #t))
-        (def exp (eval (cons expander operands) (makeEnv)))
+        (def exp (eval (cons expander operands) (newEnv)))
         (if !evalMacro exp (eval exp env)) ))))
 
 (def macro
@@ -290,32 +290,31 @@
 (assert (catchTagWth 'a (\ (x) (+ x 1)) (throwTag 'a 1) ) 2)
 
 
-
 ;;; Delimited Control Operators
 
 ;; These operators follow the API put forth in the delimcc library
 ;; at URL `http://okmij.org/ftp/continuations/implementations.html'.
 
-(defVau (pushPrompt prompt . body) env
-  (eval (list '%pushPrompt (eval prompt env) (list* 'begin body)) env) )
+(defVau (pushPrompt prompt . forms) env
+  (eval (list '%pushPrompt (eval prompt env) (list* 'begin forms)) env) )
 
 (def takeSubcont
   %takeSubcont)
 
-(defMacro (pushDelimSubcont p k . body)
-  (list '%pushDelimSubcont p k (list* '\ () body)) )
+(defMacro (pushDelimSubcont prompt continuation . forms)
+  (list '%pushDelimSubcont prompt continuation (list* '\ () forms)) )
 
-(defMacro (pushSubcont k . body)
-  (list '%pushDelimSubcont #ignore k (list* '\ () body)) )
+(defMacro (pushSubcont continuation . forms)
+  (list '%pushDelimSubcont #ignore continuation (list* '\ () forms)) )
 
 (defMacro pushSubcontBarrier forms
-  (list* '%pushSubcontBarrier (%makeEnv) forms))
+  (list* '%pushSubcontBarrier (%newEnv) forms))
 
 
 ;;; Basic macros and functions
 
 (def\ (apply appv args . env)
-  (def env (if (null? env) (makeEnv) ((\ ((env)) env) env))) 
+  (def env (if (null? env) (newEnv) ((\ ((env)) env) env))) 
   (if (%jFun? appv)
     (@combine (@new JFun vm appv) env args)
     (eval (cons (unwrap appv) args) env) ))
@@ -470,20 +469,21 @@
     (eval (list* begin forms) env)
     result))
 
-(defMacro (when test . body)
-  (list 'if test (list* 'begin body)))
+(defMacro (when test . forms)
+  (list 'if test (list* 'begin forms)))
 
-(defMacro (unless test . body)
-  (list* 'if test #inert body))
+(defMacro (unless test . forms)
+  (list* 'if test #inert forms))
 
-(defVau set (environment definiendTree value) dynamicEnvironment
-  (eval (list 'def definiendTree (list (unwrap eval) value dynamicEnvironment))
-        (eval environment dynamicEnvironment)))
+(defVau set (ep dt value) env
+  (eval (list 'def dt (list (unwrap eval) value env))
+        (eval ep env)))
+
 
 ;;;; Bind? IfBind? CaseVau Case\ Match
 
 (defVau (ifBind? (pt exp) then . else) env
-  (let1 (env+ (makeEnv env))
+  (let1 (env+ (newEnv env))
     (if (bind? env+ pt (eval exp env))
       (eval then env+)
       (unless (null? else)
@@ -493,7 +493,7 @@
   (vau values #ignore
     (let1 loop (clauses clauses)
       (if (null? clauses) #inert
-        (let ( (env+ (makeEnv env))
+        (let ( (env+ (newEnv env))
                (((bindings . forms) . clauses) clauses) )
           (if (if (== bindings 'else) #t (bind? env+ bindings values)) ; or!
             (eval (list* 'begin forms) env+)
@@ -571,10 +571,10 @@
 (def\ (member key lst . keywords)
   (let ( (test (opt? (get? :test keywords) ==))
          (fkey (opt? (get? :fkey keywords) identity)) )
-    (let1 member (lst lst)
+    (let1 loop (lst lst)
       (if (null? lst) #null
         (if (test (fkey (car lst)) key) lst
-          (member (cdr lst)))))))
+          (loop (cdr lst)))))))
 |#
 
 (def\ (assoc key lst)
@@ -637,7 +637,7 @@
 (assert (caseType 2.0 (else 3)) 3)
 (assert (caseType (+ 2 2) (else => (\(v) v))) 4)
 (assert (caseType 2.0 (String "string") (Double "double")) "double")
-(assert (caseType (obj Obj :a 1) (Double "double") ((Obj :a 1) "Obj :a 1")) "Obj :a 1")
+(assert (caseType (newObj Obj :a 1) (Double "double") ((Obj :a 1) "Obj :a 1")) "Obj :a 1")
 
 
 ;;; Options ~= if!#null or ifList
@@ -704,7 +704,7 @@
     (if (null? exp) #null
       (let1 loop (clauses clauses)
         (if (null? clauses) #null
-          (let ((env+ (makeEnv env))
+          (let ((env+ (newEnv env))
                 (((bindings . forms) . clauses) clauses) )
             (if (or (== bindings 'else) (bind? env+ bindings exp))
               (eval (list* 'begin forms) env+)
@@ -766,8 +766,8 @@
 #|
 (defVau block (blockName . forms) env
   (def tag (list #inert)) ; cons up a fresh object as tag
-  (def\ (escape value) (throw tag value))
-  (catch tag
+  (def\ (escape value) (throwTag tag value))
+  (catchTag tag
     (eval (list (list* '\ (list blockName) forms) escape)
           env )))
 |#
@@ -816,7 +816,7 @@
   #|Cf. Common Lisp's DOTIMES.
    |#
   (let\ ((_dotimes_ (n body result)
-           (let ((i (box 0)))
+           (let ((i (newBox 0)))
              (while (< (i) n)
                (body (i))
                (i (+ (i) 1)))
@@ -828,7 +828,7 @@
 
 (def\ (withEscape fun)
   (let1 (fresh (list #null))
-    (catchWth 
+    (catchWth
       (\ (exc)
         (if (and (cons? exc) (== (car exc) fresh))
           (let1 ((#ignore opt?) exc) (if (cons? opt?) (car opt?)))
@@ -1063,24 +1063,31 @@
 
 ;;;; Box
 
-(def box %box)
+(def newBox %newBox)
 
 (defMacro (defBox name . value?)
-  (list 'def name (list* 'box value?)) )
+  (list 'def name (list* 'newBox value?)) )
 
 
 ;;; Classes
 
-(defMacro (defClass className . superClass? #| slotSpecs . properties |# )
-  (list 'def className (list* '%class (list 'quote className) superClass?)))
+(def\ findClass (name environment)
+  (eval (the Symbol name) environment))
 
+(defMacro defClass (name . superClass #|slotSpecs . properties|#)
+  (list 'def name (list* '%newClass (list 'quote name) superClass?)))
+
+(defVau defClass (name superclass? slotSpecs . properties) env
+  (dolist (slotSpec slotSpecs) (the Symbol slotSpec))
+  (let1 (superclass (findClass (opt? superclass? 'Obj) env))
+    (eval (list def name (%newClass name superclass)) env)) )
 
 
 ;;; Standard Objects
 
 
 (defMacro (defObj name class . attr)
-  (list 'def name (list* obj class attr)) )
+  (list 'def name (list* 'newObj class attr)) )
 
 
 ;;; Generic Functions
@@ -1091,7 +1098,7 @@
   (if (symbol? (car args))
     (def (name (receiver . parameters) . properties) args)
     (def ((name receiver . parameters) . properties) args) )
-  (def\ (generic . args) (apply (%getMethod (classOf (car args)) name) args))
+  (def\ generic args (apply (%getMethod (classOf (car args)) name) args))
   (eval (list 'def name generic) env) )
 
 (defVau (defMethod . args) env
@@ -1099,13 +1106,13 @@
     (def (name ((receiver class) . parameters) . forms) args)
     (def ((name (receiver class) . parameters) . forms) args) )
   (def method (eval (list* '\ (list* receiver parameters) forms) env))
-  (%addMethod (eval class env) name method)
-  #inert )
+  (def prv (%addMethod (eval class env) name method))
+  (case (bndres) ((#inert) #inert) ((:rhs) method) ((:prv) prv)) )
 
 (assert 
   (begin
-    (defClass Foo)
-    (defClass Bar Foo)
+    (defClass Foo () ())
+    (defClass Bar (Foo) (a b))
     (defGeneric g1 (obj p))
     (defMethod g1 ((foo Foo) p) (+ p 100))
     
@@ -1138,9 +1145,9 @@
 (assert (begin (provide (x) (define x 10)) x) 10)
 
 (defVau (module exports . body) env
-  (let ((env (makeEnv env)))
+  (let ((env (newEnv env)))
     (eval (list* 'provide exports body) env)
-    (makeEnv env) ))
+    (newEnv env) ))
 
 (assert (begin (define m (module (x) (define x 10))) (eval 'x m)) 10)
 
@@ -1372,8 +1379,8 @@
     (Number (let1 (() args) (eval (list '%set! plc :rhs (- val 1)) env)))
     (else   (error ($ "not valid type: " val))) ))
 
-(assert (begin (def obj (obj Obj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
-(assert (begin (def box (box 1)) (++ box) (++ box) (-- box)) 2)
+(assert (begin (def obj (newObj Obj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
+(assert (begin (def box (newBox 1)) (++ box) (++ box) (-- box)) 2)
 (assert (begin (def n 1) (++ n) (++ n) (-- n)) 2)
 
 (def\ (assignOp op)
@@ -1395,8 +1402,8 @@
 (def -= (assignOp %-))
 
 (assert (begin (def a 1) (+= a :rhs 3)) 4)
-(assert (begin (def a (box 1)) (+= a :rhs 3)) 4)
-(assert (begin (def a (obj Obj :fld 1)) (+= a :fld :rhs 3)) 4)
+(assert (begin (def a (newBox 1)) (+= a :rhs 3)) 4)
+(assert (begin (def a (newObj Obj :fld 1)) (+= a :fld :rhs 3)) 4)
 
 
 ;;;; Utilities
