@@ -8,7 +8,7 @@
   (deftest |SIGNALS-ERROR returns true if the expression signals.|
     (signalsError
      x
-     UnboundSymbolError))
+     Error :type 'unboundSymbol))
 
   (deftest |SIGNALS-ERROR returns true if the expression signals a subclass.|
     (signalsError
@@ -18,7 +18,7 @@
   (deftest |SIGNALS-ERROR returns true if the expression signals and slots match.|
     (signalsError
      x
-     UnboundSymbolError :symbol 'x))
+     Error :type 'unboundSymbol :symbol 'x))
 
   (deftest |SIGNALS-ERROR returns true if the expression signals a subclass and slots match.|
     (signalsError
@@ -28,7 +28,7 @@
   (deftest |SIGNALS-ERROR returns false if the expression signals but slots don't match.|
     (signalsError
      x
-     UnboundSymbolError :symbol 'y)
+     Error :type 'unboundSymbol :symbol 'y)
     #f)
 
   (deftest |SIGNALS-ERROR returns false if the expression doesn't signal.|
@@ -639,8 +639,7 @@
   (deftest eval.5
     (signalsError
      (eval 'x (theEnv))
-     UnboundSymbolError
-     :symbol 'x))
+     Error :type 'unboundSymbol :symbol 'x))
 
   (deftest eval.6
     (signalsError
@@ -1381,7 +1380,7 @@
   (deftest findClass.4
     (signalsError
      (findClass 'does-not-exist (theEnv))
-     UnboundSymbolError :symbol 'does-not-exist)))
+     Error :type 'unboundSymbol :symbol 'does-not-exist)))
 
 (defsuite newEnv
 
@@ -1999,7 +1998,7 @@
   (deftest subseq.3
     (signalsError
      (subseq 12 1 2)
-     UnboundMethodError :class Integer :methodName 'subseq)))
+     Error :type 'unboundExecutable :class Integer :executable 'subseq)))
 
 (defsuite listSubseq
 
@@ -2169,7 +2168,7 @@
   (deftest list-elt.3a
     (signalsError
      (elt '() 1)
-     UnboundMethodError :class Null :methodName 'elt))
+     Error :type 'unboundExecutable :class Null :executable 'elt))
 
   (deftest list-elt.5
     (elt '(1 2) 0)
@@ -2411,9 +2410,9 @@
       (assert (not (slotBound? obj 'x)))
       (assert (not (slotBound? obj :x)))
       (assert (signalsError (getSlot obj 'x)
-                             UnboundSlotError :object obj :slotName 'x))
+                             Error :type 'unboundField :object obj :name 'x))
       (assert (signalsError (getSlot obj :x)
-                             UnboundSlotError :object obj :slotName :x))
+                             Error :type 'unboundField :object obj :name :x))
       (setSlot obj 'x 1)
       (assert (slotBound? obj 'x))
       (assert (slotBound? obj :x))
@@ -3187,20 +3186,20 @@
 
       (assert (signalsError
                (g1 12 (+ 1 1))
-               UnboundMethodError :class Integer :methodName 'g1))
+               Error :type 'unboundExecutable :class Integer :executable 'g1))
       (assert (signalsError
                (g1 foo (+ 1 1))
-               UnboundMethodError :class Foo :methodName 'g1))
+               Error :type 'unboundExecutable :class Foo :executable 'g1))
       (assert (signalsError
                (g1 bar (+ 1 1))
-               UnboundMethodError :class Bar :methodName 'g1))
+               Error :type 'unboundExecutable :class Bar :executable 'g1))
 
       (defMethod g1 ((newObj Foo) param)
         (+ param 100))
 
       (assert (signalsError
                (g1 12 (+ 1 1))
-               UnboundMethodError :class Integer :methodName 'g1))
+               Error :type 'unboundExecutable :class Integer :executable 'g1))
       (assert (eq? 102 (g1 foo (+ 1 1))))
       (assert (eq? 102 (g1 bar (+ 1 1))))
 
@@ -3209,7 +3208,7 @@
 
       (assert (signalsError
                (g1 12 (+ 1 1))
-               UnboundMethodError :class Integer :methodName 'g1))
+               Error :type 'unboundExecutable :class Integer :executable 'g1))
       (assert (eq? 102 (g1 foo (+ 1 1))))
       (assert (eq? 1002 (g1 bar (+ 1 1))))
 

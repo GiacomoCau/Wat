@@ -100,6 +100,7 @@ public class Parser {
 
 	public boolean isNil(Object o) {
 		return o instanceof Object[] && ((Object[]) o).length == 0;
+		//return o instanceof Object[] arr && arr.length == 0; // ko!
 	}
 	
 	public static String toStringTokenImage(String s) {

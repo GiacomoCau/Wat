@@ -121,7 +121,7 @@
   %classOf)
 
 (def dval %dVal)
-(def dvar %dVar)
+(def newDVar %newDVar)
 (def eq? %eq?)
 (def eval
   #|Evaluate the FORM in the ENVIRONMENT, returning its result.
@@ -385,7 +385,7 @@
 
 ;;; Macro
 
-(def evalMacro (dvar #t))
+(def evalMacro (newDVar #t))
 
 (def makeMacro
   #|Create a macro from an EXPANDER operator.  A macro is an operator
@@ -1231,7 +1231,7 @@
               (error ($ "not " (if (null? body) "unbound or " "") "a dynamic value: " var)) ))
         (def ndv* (map ckdvar var*))
         (unless (null? body) (def old* (map (\ (ndv) (if (null? ndv) ndv (ndv))) ndv*)))
-        (forEach (\ (ndv var val) (if (instanceOf? ndv DVar) (ndv val) (@def env var (dvar val)) )) ndv* var* (if (null? val*) (map (\ (var) #null) var*) val*))
+        (forEach (\ (ndv var val) (if (instanceOf? ndv DVar) (ndv val) (@def env var (newDVar val)) )) ndv* var* (if (null? val*) (map (\ (var) #null) var*) val*))
         (unless (null? body)
           (finally
             (eval (list* 'begin body) env) 

@@ -61,7 +61,7 @@
   %classOf)
 
 (def dval %dVal)
-(def dvar %dVar)
+(def newDVar %newDVar)
 (def eq? %eq?)
 (def error %error)
 (def eval
@@ -180,7 +180,7 @@
 
 ;;; Macro
 
-(def evalMacro (dvar #t))
+(def evalMacro (newDVar #t))
 
 (def makeMacro
   (wrap
@@ -876,7 +876,8 @@
 
 (def\ ck|| o (list->array o))
 (def ck+ (.MAX_VALUE Integer))
-(def\ check (op o . ck) (@check vm op o ck))
+(def\ check (op o . ck) (@check vm op (if (cons? o) o (list o)) ck))
+
 
 (assert (check 'pp '(1 (:a 1 :b 2) c 3) 1 ck+ Integer (list Keyword Integer) Symbol (ck|| 3 4)) 4)
 (assert (check 'pp '(a 1 2) 'a 1 2) 3)
@@ -885,6 +886,7 @@
 (assert (check 'pp '(a :prv 1)  2 3 Symbol (ck|| Any (list 2 (ck|| Null Inert :prv :rhs)))) 3)
 (assert (check 'pp '(a 1)       2 3 Symbol (ck|| Any (list 2 (ck|| Null Inert :prv :rhs)))) 2)
 
+;(def\ (the type obj) (check () obj type)) 
 
 ;;; Lists
 
@@ -1011,7 +1013,7 @@
               (error ($ "not " (if (null? body) "unbound or " "") "a dynamic value: " var)) ))
         (def ndv* (map ckdvar var*))
         (unless (null? body) (def old* (map (\ (ndv) (if (null? ndv) ndv (ndv))) ndv*)))
-        (forEach (\ (ndv var val) (if (instanceOf? ndv DVar) (ndv val) (@def env var (dvar val)) )) ndv* var* (if (null? val*) (map (\ (var) #null) var*) val*))
+        (forEach (\ (ndv var val) (if (instanceOf? ndv DVar) (ndv val) (@def env var (newDVar val)) )) ndv* var* (if (null? val*) (map (\ (var) #null) var*) val*))
         (unless (null? body)
           (finally
             (eval (list* 'begin body) env) 
@@ -1027,13 +1029,11 @@
 (defMacro (ddef* var* . val*)
   (list* (list '%d\ var*) val*) )
 
-(def\ dget (dynamicVariable)
-  #|Return the current value of the DYNAMIC-VARIABLE.|#
-  (dynamicVariable))
+(def\ (dget var)
+  (var))
 
-(def\ dset (dynamicVariable value)
-  #|Set the current value of the DYNAMIC-VARIABLE.|#
-  (dynamicVariable value))
+(def\ (dset var value)
+  (var value))
 
 (defMacro (dlet bindings exp . exps)
   (list* (list* '%d\ (map car bindings) exp exps) (map cadr bindings)) )  
@@ -1048,7 +1048,7 @@
       (list (car bindings))
       (list* 'dlet* (cdr bindings) forms) )))
       
-(def a (dvar 1))
+(def a (newDVar 1))
 (assert (expand (ddef a 1)) '((%d\ (a)) 1) )
 (assert (expand (ddef* (a b) 1 2)) '((%d\ (a b)) 1 2) )  
 (assert (expand (progv (a b) (3 4)  (+ (a) (b)))) '((%d\ (a b) (+ (a) (b))) 3 4) )
@@ -1085,6 +1085,8 @@
 
 ;;; Standard Objects
 
+(def newObj
+  %newObj)
 
 (defMacro (defObj name class . attr)
   (list 'def name (list* 'newObj class attr)) )

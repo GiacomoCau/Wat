@@ -70,10 +70,7 @@
 (%def MatchError Error)
 (%def OutOfBoundsError Error)
 (%def PromptNotFoundError Error)
-(%def UnboundSymbolError Error)
-(%def UnboundSlotError Error)
 (%def TypeError Error)
-(%def UnboundMethodError Error)
 (%def SimpleError Error)
 (%def RestartError Error)
 

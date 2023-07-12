@@ -118,7 +118,6 @@ import List.ParseException;
 	res: result
 	thw: throwable
 	prp: prompt
-	hdl: handler
  */
 
 public class Vm {
@@ -318,49 +317,52 @@ public class Vm {
 	
 	
 	// Environment
-	class Env<K> {
-		Env parent; Map<K,Object> map = new LinkedHashMap(); 
+	class Env {
+		Env parent; Map<String,Object> map = new LinkedHashMap(); 
 		Env(Env parent) { this.parent = parent; }
 		record Lookup(boolean isBound, Object value) {}
-		Lookup get(K name) {
+		Lookup get(Object obj) {
+			var key = toKey(obj);
 			for (var env=this; env != null; env=env.parent) {
-				Object res = env.map.get(name);
-				if (res != null || env.map.containsKey(name)) return new Lookup(true, res);
+				Object res = env.map.get(key);
+				if (res != null || env.map.containsKey(key)) return new Lookup(true, res);
 			}
 			return new Lookup(false, null);
 		};
-		Object set(K key, Object value) {
+		Object lookup(Object obj) {
+			var lookup = get(obj);
+			if (!lookup.isBound) return unboundSymbolError("unbound symbol: {symbol}", obj, this);
+			if (prtrc >= 6) print("  lookup: ", lookup.value); return lookup.value;
+		}
+		Object def(Object obj, Object value) {
+			var key = toKey(obj);
+			if (prtrc >= 6) print("    bind: ", key, "=", value, " in: ", this);
+			return map.put(key, value);
+		}
+		Object set(Object obj, Object value) {
+			var key = toKey(obj);
 			for (var env=this; env != null; env=env.parent) {
 				if (!env.map.containsKey(key)) continue;
 				if (prtrc >= 6) print("     set: ", key, "=", value, " in: ", env);
 				return env.def(key, value);
 			}
-			return error("unbound symbol: {symbol}", "type", symbol("unboundSymbol"), "symbol", key, "environment", this);
+			return unboundSymbolError("unbound symbol: {symbol}", obj, this);
 		};
-		Object def(K key, Object value) {
-			if (prtrc >= 6) print("    bind: ", key, "=", value, " in: ", this);
-			return map.put(key, value);
-		}
-		public String toString() {
-			var deep = deep();
-			var prefix = switch(deep) { case 1-> "Vm"; case 2-> "The"; default-> ""; };
-			return "{" + prefix + "Env[" + map.size() + "]" + eIf(deep < prenv, ()-> reverseMap(map)) + eIfnull(parent, ()-> " " + parent) + "}";
-		}
-		Object lookup(K key) {
-			var lookup = get(key);
-			if (!lookup.isBound) return error("unbound symbol: {symbol}", "type", symbol("unboundSymbol"), "symbol", key, "environment", this);
-			if (prtrc >= 6) print("  lookup: ", lookup.value); return lookup.value;
-		}
 		boolean isParent(Env other) {
 			for (var env=this; env != null; env=env.parent) if (other == env) return true; 
 			return false;
 		};
 		int deep() { int i=0; for (var env=this; env != null; env=env.parent) i+=1; return i; }
+		public String toString() {
+			var deep = deep();
+			var prefix = switch(deep) { case 1-> "Vm"; case 2-> "The"; default-> ""; };
+			return "{" + prefix + "Env[" + map.size() + "]" + eIf(deep < prenv, ()-> reverseMap(map)) + eIfnull(parent, ()-> " " + parent) + "}";
+		}
 	}
-	Env env(Env parent) { return new Env<Symbol>(parent); }
+	Env env(Env parent) { return new Env(parent); }
 	
 	
-	// Classes and Objects
+	// Box, Obj and Condition
 	public class Box implements ArgsList {
 		Object value;
 		public Box (Object val) { this.value = val; }
@@ -403,12 +405,6 @@ public class Vm {
 	        }
 			return last;
 		}
-		public String toKey(Object key) {
-			return switch (key) {
-				case Intern i-> i.name;
-				case Object o-> Utility.apply(s-> s.startsWith(":") ? s.substring(1) : s, o instanceof String s ? s : Vm.this.toString(o));
-			};
-		}
 		@Override public String toString() {
 			var s = "";
 			for (Throwable thw = this; thw != null; thw = thw.getCause()) {
@@ -430,7 +426,7 @@ public class Vm {
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 			var key = toKey(o.car());
 			return switch (len) { 
-				case 1-> Utility.apply(v-> v != null || map.containsKey(key) ? v : error("slot non found: {slotName} in: {object}", "type", symbol("unboundSlot"), "slotName", o.car(), "object", this), map.get(key));
+				case 1-> Utility.apply(v-> v != null || map.containsKey(key) ? v : unboundFieldError("slot: {name} non found in: {object}", o.car(), this), map.get(key));
 				default-> switch (bndres(len != 3 ? null : o.car(1))) {
 					case Suspension s-> s;
 					case Integer i-> switch(i) {
@@ -462,6 +458,16 @@ public class Vm {
 		public Condition(String message, Object ... objs) { super(message, objs); }
 		public Condition(String message, Throwable cause, Object ... objs) { super(message, cause, objs); }
 	}
+	public class Error extends Condition {
+		private static final long serialVersionUID = 1L;
+		public Error(Object ... objs) { super(objs); }
+		public Error(Throwable cause, Object ... objs) { super(cause, objs); }
+		public Error(String message, Object ... objs) { super(message, objs); }
+		public Error(String message, Throwable cause, Object ... objs) { super(message, cause, objs); }
+	}
+	
+	
+	// Class
 	Class extend(Symbol className, Class superClass) {
 		try {
 			if (!className.name.matches("[A-Z][a-zA-Z_0-9]*")) return typeError("invalid class name: {datum}", className, parseBytecode("regex", "[A-Z][a-zA-Z_0-9]*"));
@@ -531,12 +537,12 @@ public class Vm {
 	Object addMethod(Class cls, Symbol name, Object method) {
 		return methods.computeIfAbsent(cls, k-> new LinkedHashMap<>()).put(name, method);
 	}
-	Object getMethod(Class cls, Symbol name) {
+	Object getMethod(Class cls, Symbol symbol) {
 		var c = cls; do {
 			var ms = methods.get(c); if (ms == null) continue;
-			var m = ms.get(name); if (m != null) return m;
+			var m = ms.get(symbol); if (m != null) return m;
 		} while (c != null && (c = c.getSuperclass()) != null);
-		return error("method: {methodName} not found for: {class}!", "type", symbol("unboundMethod"), "methodName", name, "class", cls);
+		return unboundExecutableError("method {executable} not found in: {class}", symbol, cls);
 	}	
 	
 	
@@ -552,7 +558,7 @@ public class Vm {
 		catch (RuntimeException rte) {
 			return error(
 				rte.getMessage() + " " + (def ? "bind" : "sett") + "ing: " + toString(lhs)
-				+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv ? dbg.op : cons(dbg.op, dbg.os[0])))
+				+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, dbg.os[0])))
 				+ " with: " + rhs,
 				"type", symbol("match")
 			);
@@ -820,6 +826,7 @@ public class Vm {
 		public String toString() { return "%Finally"; }
 	}
 	
+	
 	// Delimited Control
 	class TakeSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
@@ -955,7 +962,7 @@ public class Vm {
 						switch (thw) {
 							case Value val: throw val;
 							case Error err: throw err;
-							default: return error("error invoking: " + this + " with: " + o, thw);
+							default: return error("error executingd: " + this + " with: " + o, thw);
 						}
 					}
 				}
@@ -991,7 +998,7 @@ public class Vm {
 				}
 				var classes = getClasses(args);
 				Executable executable = getExecutable(o0, name, classes);
-				if (executable == null) return error("not found {executable} of: {object}", "type", symbol("unboundExecutable"), "executable", Vm.this.toString(name, classes), "object", Vm.this.toString(o0));
+				if (executable == null) return unboundExecutableError("{executable} not found in: {class}", Vm.this.toString(name, classes), o0 instanceof Class cl ? cl : o0.getClass());
 				try {
 					//executable.setAccessible(true);
 					args = reorg(executable, args);
@@ -1026,7 +1033,7 @@ public class Vm {
 				// (.<name> object)       -> object.getclass().getField(name).get(object) -> field.get(object) 
 				// (.<name> object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
 				Field field = getField(o0 instanceof Class ? (Class) o0 : o0.getClass(), name);
-				if (field == null) return error("not found slot: {slotName} of: {object}", "type", symbol("unboundSlot"), "slotName", name, "object", Vm.this.toString(o0));
+				if (field == null) return unboundFieldError("field: {name} not found in: {object}", name, o0 instanceof Class cl ? cl : o0.getClass());
 				try {
 					if (len == 1) return field.get(o0);
 					field.set(o0, o.car(1)); return inert;
@@ -1052,16 +1059,9 @@ public class Vm {
 		return (T) pipe(dbg(theEnv, "userBreak", err), ()-> getTco(evaluate(theEnv, list(userBreak, err)))); 
 	}
 	<T> T typeError(String msg, Object datum, Object expectedType) { return error(new Error(msg, "type", symbol("type"), "datum", datum, "expectedType", expectedType)); }
-	<T> T unboundSymbolError(String msg, String name, Env env) { return error(new Error(msg, "type", symbol("unboundSymbol"), "symbol", name, "env", env)); }
-	<T> T unboundSlotError(String msg, String name, Object object) { return error(new Error(msg, "type", symbol("unboundSlot"), "name", name, "object", object)); }
-	<T> T unboundMethodError(String msg, String name, Object object) { return error(new Error(msg, "type", symbol("unboundMethod"), "name", name, "object", object)); }
-	public class Error extends Condition {
-		private static final long serialVersionUID = 1L;
-		public Error(Object ... objs) { super(objs); }
-		public Error(Throwable cause, Object ... objs) { super(cause, objs); }
-		public Error(String message, Object ... objs) { super(message, objs); }
-		public Error(String message, Throwable cause, Object ... objs) { super(message, cause, objs); }
-	}
+	<T> T unboundSymbolError(String msg, Object name, Env env) { return error(new Error(msg, "type", symbol("unboundSymbol"), "symbol", name, "environment", env)); }
+	<T> T unboundFieldError(String msg, Object name, Object object) { return error(new Error(msg, "type", symbol("unboundField"), "name", name, "object", object)); }
+	<T> T unboundExecutableError(String msg, Object executable, Object object) { return error(new Error(msg, "type", symbol("unboundExecutable"), "executable", executable, "class", object)); }
 	class Value extends RuntimeException {
 		private static final long serialVersionUID = 1L;
 		Object tag, value;
@@ -1136,6 +1136,7 @@ public class Vm {
 		var on = ol.car;
 		if (Utility.equals(on, chk) || chk instanceof Class cl && checkC(on, cl)) return 1;
 		else if (chk instanceof List chkl && on instanceof List onl) {
+			// if (chkl.car() == symbol("||")) chk = array(chkl);
 			switch (check(op, onl, chkl)) {
 				case Suspension s: return s;
 				case Integer i2: return 1;
@@ -1343,6 +1344,12 @@ public class Vm {
 	private String toString(String name, Object[] args) {
 		return (name.equals("new") ? "constructor: " : "method: " + name) + ifnull(args, "()", a-> toString(list(a)));
 	}
+	public String toKey(Object key) {
+		return switch (key) {
+			case Intern i-> i.name;
+			case Object o-> Utility.apply(s-> s.startsWith(":") ? s.substring(1) : s, o instanceof String s ? s : Vm.this.toString(o));
+		};
+	}
 	
 	
 	// Bootstrap
@@ -1396,7 +1403,7 @@ public class Vm {
 					$("%def", "%pushSubcontBarrier", wrap(new JFun("%PushSubcontBarrier", (n,o)-> checkM(n, o, 2, Env.class), (l,o)-> pushSubcontBarrier(null, o.car(), cons(begin, o.cdr())) ))),
 					// Dynamically-Scoped Variables
 					$("%def", "%newBox", wrap(new JFun("%NewBox", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new Box(l == 0 ? boxdft : o.car)))),
-					$("%def", "%dVar", wrap(new JFun("%DVar", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new DVar(l == 0 ? boxdft : o.car)))),
+					$("%def", "%newDVar", wrap(new JFun("%NewDVar", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new DVar(l == 0 ? boxdft : o.car)))),
 					$("%def", "%dVal", wrap(new JFun("%DVal", (n,o)-> checkR(n, o, 1, 2, DVar.class), (l,o)-> apply(dv-> l == 1 ? dv.value : (dv.value=o.car(1)), o.<DVar>car()) ))),
 					$("%def", "%d\\", new DLambda()),
 					// Errors
