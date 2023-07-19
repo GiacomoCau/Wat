@@ -19,7 +19,7 @@
   (deftest make-string-input-stream.3
     (signalsError
      (make-string-input-stream 12)
-     type-error :datum 12 :expectedType 'String))
+     type-error :datum 12 :expected 'String))
 
   (deftest with-standard-input-from-string.1
     (with-standard-input-from-string "foo")
@@ -59,7 +59,7 @@
   (deftest get-output-stream-string.3
     (signalsError
      (get-output-stream-string 1)
-     type-error :datum 1 :expectedType 'StringOutputStream)))
+     type-error :datum 1 :expected 'StringOutputStream)))
 
 (defsuite fresh-line
 

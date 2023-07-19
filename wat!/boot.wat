@@ -44,6 +44,8 @@
 (def append
   %append)
 
+(def apply %apply)
+(def apply* %apply*)
 (def array->list %array->list)
 (def assert %assert)
 (def begin
@@ -204,6 +206,32 @@
 ;
 ; rec rec\ let1rec let1rec\ letrec letrec\ inizializzano a #inert le definizioni prima della valutazione
 
+
+(def or
+  (vau cls env
+    (if (null? cls) #f
+      (if (eval (car cls) env) #t
+        (apply or (cdr cls) env) ))))
+
+(def and
+  (vau cls env
+    (if (null? cls) #t
+      (if (eval (car cls) env)
+        (apply and (cdr cls) env)
+        #f ))))
+
+(def symdef?
+  (\ (lhs rhs)
+    (if (and (symbol? lhs) (> (len rhs) 1)) #t
+      (if (and (cons? lhs) (symbol? (car lhs))) #f
+        (error "not (or (Symbol pt . forms) ((Symbol . pt) . forms))") ))))
+
+(def symdef?
+  (\ (lhs rhs)
+    (if (and (symbol? lhs) (cons? rhs)) #t
+      (if (and (cons? lhs) (symbol? (car lhs))) #f
+        (error "not (or (Symbol pt . forms) ((Symbol . pt) . forms))") ))))
+	
 (def defMacro
   (macro (lhs . rhs)
     (if (symbol? lhs)
@@ -305,6 +333,9 @@
   (list '%pushDelimSubcont prompt continuation (list* '\ () forms)) )
 
 (defMacro (pushSubcont continuation . forms)
+  (list* 'pushDelimSubcont #ignore continuation forms) )
+
+(defMacro (pushSubcont continuation . forms)
   (list '%pushDelimSubcont #ignore continuation (list* '\ () forms)) )
 
 (defMacro pushSubcontBarrier forms
@@ -313,11 +344,13 @@
 
 ;;; Basic macros and functions
 
+#| TODO forse non serve, la primitiva dovrebbe essere sufficiente
 (def\ (apply appv args . env)
   (def env (if (null? env) (newEnv) ((\ ((env)) env) env))) 
   (if (%jFun? appv)
     (@combine (@new JFun vm appv) env args)
     (eval (cons (unwrap appv) args) env) ))
+|#
 
 (defMacro (rec lhs . rhs)
   (list (list '\ () (list 'def lhs #inert) (list* 'def lhs :rhs rhs))) )
@@ -539,20 +572,21 @@
 
 (assert (begin (def a 1) (cond (a (\ (a) (== a 1)) => (\ (a) (+ a 1))))) 2) 
 
+#|
 (defVau and operands env
   (cond ((null? operands)          #t)
         ((null? (cdr operands))    (the Boolean (eval (car operands) env)))
-        ((eval (car operands) env) (apply (wrap and) (cdr operands) env))
+        ((eval (car operands) env) (apply and (cdr operands) env))
         (else                      #f)))
-
+|#
 (def && and)
-
+#|
 (defVau or operands env
   (cond ((null? operands)          #f)
         ((null? (cdr operands))    (the Boolean (eval (car operands) env)))
         ((eval (car operands) env) #t)
-        (else                      (apply (wrap or) (cdr operands) env))))
-
+        (else                      (apply or (cdr operands) env))))
+|#
 (def || or)
 
 
@@ -619,7 +653,7 @@
       (if (null? clauses) #inert
         (let1 (((test . forms) . clauses) clauses)
           (if (|| (== test 'else)
-                  (let* ( (symbol? (%symbol? test))
+                  (let* ( (symbol? (symbol? test))
                           (class (eval (if symbol? test (car test)) env)) )
                     (&& (type? key class) (|| symbol? (&& (type? key Obj) (checkSlots key (map (\ (x) (eval x env)) (cdr test))) ))) ))
             (if (== (car forms) '=>)
@@ -813,15 +847,13 @@
   (list* while (list '! testForm) forms) )
 
 (defMacro dotimes ((var countForm . resultForm?) . bodyForms)
-  #|Cf. Common Lisp's DOTIMES.
-   |#
-  (let\ ((_dotimes_ (n body result)
+  (let\ ((dotimes (n body result)
            (let ((i (newBox 0)))
              (while (< (i) n)
                (body (i))
                (i (+ (i) 1)))
              (result (i)))))
-    (list _dotimes_
+    (list dotimes
           countForm
           (list* '\ (list var) bodyForms)
           (list* '\ (list var) resultForm?))))
@@ -865,7 +897,6 @@
     (let1 ((names . checks) (typedParams->namesAndChecks params))
       (list* '\ names (if (null? checks) body (list* (list* 'begin checks) body))) )))
 
-
 (assert (expand (type\ (a) (+ a 1))) '(\ (a) (+ a 1)))
 (assert (expand (type\ ((a Integer)) (+ a 1))) '(\ (a) (begin (the Integer a)) (+ a 1)))
 
@@ -874,19 +905,31 @@
     (list 'def lhs (car rhs))
     (list 'def (car lhs) (list* 'type\ (cdr lhs) rhs)) ))
 
-(def\ ck|| o (list->array o))
-(def ck+ (.MAX_VALUE Integer))
-(def\ check (op o . ck) (@check vm op (if (cons? o) o (list o)) ck))
 
+(defMacro letEnv bindings
+  (list 'let bindings '(theEnv)) ) 
 
-(assert (check 'pp '(1 (:a 1 :b 2) c 3) 1 ck+ Integer (list Keyword Integer) Symbol (ck|| 3 4)) 4)
-(assert (check 'pp '(a 1 2) 'a 1 2) 3)
-(assert (check 'pp '(a 1 2) (ck|| '(b 3) '(a 1 2))) 3)
-(assert (check 'pp '(a #null 1) 2 3 Symbol (ck|| Any (list 2 (ck|| Null Inert :prv :rhs)))) 3)
-(assert (check 'pp '(a :prv 1)  2 3 Symbol (ck|| Any (list 2 (ck|| Null Inert :prv :rhs)))) 3)
-(assert (check 'pp '(a 1)       2 3 Symbol (ck|| Any (list 2 (ck|| Null Inert :prv :rhs)))) 2)
+(defVau check (o . ck) env
+  (let ( (o (let1 (o (eval o env)) (if (cons? o) o (list o))))
+         (env (letEnv (+ (.MAX_VALUE Integer)) (|| (\ o (list->array o))))) )
+    (apply* @check vm o o (map (\ (a) (eval a env)) ck)) ))
 
-;(def\ (the type obj) (check () obj type)) 
+(assert (check '(1 (:a 1 :b 2) c 3) 1 + Integer (list Keyword Integer) Symbol (|| 3 4)) 4)
+(assert (check '(a 1 2) 'a 1 2) 3)
+(assert (check '(a 1 2) (|| '(b 3) '(a 1 2))) 3)
+(assert (check '(a #null 1) 2 3 Symbol (|| Any (list 2 (|| Null Inert :prv :rhs)))) 3)
+(assert (check '(a :prv 1)  2 3 Symbol (|| (list 1 Any) (list 2 (|| Null Inert :prv :rhs)))) 3)
+(assert (check '(a 1)       2 3 Symbol (|| (list 1 Any) (list 2 (|| Null Inert :prv :rhs)))) 2)
+
+(defVau check? args env (catchWth (\ (e) #f) (apply check args env)) #t)
+(defVau (the! type obj) env (apply check (list obj type) env) obj) 
+(defMacro (the! type obj) (apply* check obj type) obj) 
+
+(assert (the! Integer 1) 1)
+(assert (the! Integer "1"))
+(assert (the! (|| 1 2) 1) 1)
+(assert (the! (|| 1 2) 2) 2)
+(assert (the! (|| 1 2) 3))
 
 ;;; Lists
 
@@ -943,7 +986,7 @@
 (def\ (reduceL f init lst . lst*)
   (if (null? lst*)
     ((rec\ (reduce acc lst) (if (null? lst) acc (reduce (f acc (car lst)) (cdr lst)) )) init lst)
-    ((rec\ (reduce* acc lst*) (if (null? (car lst*)) acc (reduce* (%apply* f acc (map car lst*)) (map cdr lst*)) )) init (cons lst lst*)) ))
+    ((rec\ (reduce* acc lst*) (if (null? (car lst*)) acc (reduce* (apply* f acc (map car lst*)) (map cdr lst*)) )) init (cons lst lst*)) ))
 
 (assert (reduceL + 0 '(1 2 3 4)) 10)
 (assert (reduceL (\ (init lst) (+ init (reduceL * 1 lst))) 0 '(1 2 3 4) '(1 2 3 4)) 30)
@@ -955,33 +998,31 @@
 (def\ (reduceR f init lst . lst*)
   (if (null? lst*)
     ((rec\ (reduce acc lst) (if (null? lst) acc (f (reduce acc (cdr lst)) (car lst)) )) init lst)
-    ((rec\ (reduce* acc lst*) (if (null? (car lst*)) acc (%apply* f (reduce* acc (map cdr lst*)) (map cadr lst*)) )) init (cons lst lst*)) ))
+    ((rec\ (reduce* acc lst*) (if (null? (car lst*)) acc (apply* f (reduce* acc (map cdr lst*)) (map cadr lst*)) )) init (cons lst lst*)) ))
 
 (assert (reduceR cons () '(1 2 3 4)) '((((() . 4) . 3) . 2) . 1))
 
 (def\ (foldL f init lst . lst*)
   (if (null? lst*)
     ((rec\ (foldl acc lst) (if (null? lst) acc (foldl (f (car lst) acc) (cdr lst)) )) init lst)
-    ((rec\ (foldl* acc lst*) (if (null? (car lst*)) acc (foldl* (%apply* f (map car lst*) acc) (map cdr lst*)) )) init (cons lst lst*)) ))
+    ((rec\ (foldl* acc lst*) (if (null? (car lst*)) acc (foldl* (apply* f (map car lst*) acc) (map cdr lst*)) )) init (cons lst lst*)) ))
 
 (assert (foldL cons () '(1 2 3 4)) '(4 3 2 1))
 
 (def\ (foldR f init lst . lst*)
   (if (null? lst*)
     ((rec\ (foldr acc lst) (if (null? lst) acc (f (car lst) (foldr acc (cdr lst)) ) )) init lst)
-    ((rec\ (foldr* acc lst*) (if (null? (car lst*)) acc (%apply* f (map car lst*) (foldr* acc (map cdr lst*)) ) )) init (cons lst lst*)) ))
+    ((rec\ (foldr* acc lst*) (if (null? (car lst*)) acc (apply* f (map car lst*) (foldr* acc (map cdr lst*)) ) )) init (cons lst lst*)) ))
 
 (assert (foldR cons () '(1 2 3 4)) '(1 2 3 4))
 
 (defMacro dolist ((var listForm . resultForm?) . bodyForms)
-  #|Cf. Common Lisp's DOLIST.|#
-  (let1rec\ (_dolist_ (list body result)
-             (if (null? list)
-                 (result list)
-                 (begin
-                   (body (car list))
-                   (_dolist_ (cdr list) body result))))
-    (list _dolist_
+  (let1rec\
+    (dolist (list body result)
+      (if (null? list) (result list)
+        (body (car list))
+        (dolist (cdr list) body result)))
+    (list dolist
           listForm
           (list* '\ (list var) bodyForms)
           (list* '\ (list var) resultForm?))))
@@ -1029,11 +1070,11 @@
 (defMacro (ddef* var* . val*)
   (list* (list '%d\ var*) val*) )
 
-(def\ (dget var)
-  (var))
+(def\ (dget dvar)
+  (dvar))
 
-(def\ (dset var value)
-  (var value))
+(def\ (dset dvar value)
+  (dvar value))
 
 (defMacro (dlet bindings exp . exps)
   (list* (list* '%d\ (map car bindings) exp exps) (map cadr bindings)) )  
@@ -1144,26 +1185,26 @@
         (list* 'list symbols) ))
     env ))
 
-(assert (begin (provide (x) (define x 10)) x) 10)
+(assert (begin (provide (x) (def x 10)) x) 10)
 
 (defVau (module exports . body) env
-  (let ((env (newEnv env)))
+  (let1 (env (newEnv env))
     (eval (list* 'provide exports body) env)
     (newEnv env) ))
 
-(assert (begin (define m (module (x) (define x 10))) (eval 'x m)) 10)
+(assert (begin (def m (module (x) (def x 10))) (eval 'x m)) 10)
 
 (defMacro (defModule name exports . body)
   (list 'def name (list* 'module exports body)) )
 
-(assert (begin (defModule m (x) (define x 10)) (eval 'x m)) 10)
+(assert (begin (defModule m (x) (def x 10)) (eval 'x m)) 10)
 
 (defVau (import module imports) env
   (let* ((module (eval module env))
          (values (map (\ (import) (eval import module)) imports)) )
     (eval (list* 'def* imports values) env) ))
 
-(assert (begin (defModule m (x) (define x 10)) (import m (x)) x) 10)
+(assert (begin (defModule m (x) (def x 10)) (import m (x)) x) 10)
 
 
 ;;; Relational Operators
@@ -1370,7 +1411,7 @@
   (caseType val
     (Box    (let1 (() args) (val :rhs (+ (val) 1))))
     (Obj (let1 ((fld) args) (val fld :rhs (+ (val fld) 1)))) 
-    (Number (let1 (() args) (eval (list '%set! plc :rhs (+ val 1)) env)))
+    (Number (let1 (() args) (eval (list 'set! plc :rhs (+ val 1)) env)))
     (else   (error ($ "not valid type: " val))) )) 
 
 (defVau (-- plc . args) env
@@ -1378,7 +1419,7 @@
   (caseType val
     (Box    (let1 (() args) (val :rhs (- (val) 1))))
     (Obj (let1 ((fld) args) (val fld :rhs (- (val fld) 1)))) 
-    (Number (let1 (() args) (eval (list '%set! plc :rhs (- val 1)) env)))
+    (Number (let1 (() args) (eval (list 'set! plc :rhs (- val 1)) env)))
     (else   (error ($ "not valid type: " val))) ))
 
 (assert (begin (def obj (newObj Obj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
@@ -1397,7 +1438,7 @@
         ((fld key rval) (lval fld key (op (lval fld) (eval rval env)))) ))
       (Object (match args
         ((rval) (eval (list 'def plc (op lval (eval rval env))) env))
-        ((key rval) (eval (list '%set! plc key (op lval (eval rval env))) env)) ))))) 
+        ((key rval) (eval (list 'set! plc key (op lval (eval rval env))) env)) ))))) 
 
 (def $= (assignOp %$))
 (def += (assignOp %+))

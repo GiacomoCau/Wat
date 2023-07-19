@@ -52,7 +52,7 @@
   (deftest read.3b
     (signalsError
      (with-standard-input-from-string "" (read (dget *standard-input*) 12))
-     type-error :datum 12 :expectedType 'Boolean))
+     type-error :datum 12 :expected 'Boolean))
 
   (deftest read.4
     (with-standard-input-from-string "1 2 3"

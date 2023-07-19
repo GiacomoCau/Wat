@@ -480,7 +480,7 @@
   (deftest pushDelimSubcont.3
     (signalsError
      (pushDelimSubcont 'p 12)
-     TypeError :datum 12))
+     Error :type 'type :datum 12))
 
   (deftest pushDelimSubcont.4
     (let ((k (pushPrompt 'p (+ 100 (takeSubcont 'p k k)))))

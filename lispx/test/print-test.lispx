@@ -73,7 +73,7 @@
   (deftest write.4b
     (signalsError
      (write "foo" :stream 12)
-     type-error :datum 12 :expectedType 'OutputStream)))
+     type-error :datum 12 :expected 'OutputStream)))
 
 (defsuite write-to-string
 

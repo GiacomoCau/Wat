@@ -231,11 +231,11 @@ public class Vm {
 	
 	
 	// Tail Call Optimization
-	//*
+	/*
 	interface Tco extends Supplier {};
 	Object tco(Tco tco) { return dotco ? tco : tco.get(); }
 	//*/
-	/* utile per debug!
+	//* utile per debug!
 	class Tco implements Supplier {
 		Supplier tco;
 		Tco(Supplier tco) { this.tco = tco; }
@@ -619,7 +619,7 @@ public class Vm {
 			);
 			//*/
 		}
-		public String toString() { return "{%Opv " + ifnull(pt, "()", Vm.this::toString) + " " + Vm.this.toString(ep) + " " + apply(s-> s.substring(1, s.length()-1), Vm.this.toString(x)) + /*" " + e +*/ "}"; }
+		public String toString() { return "{%Opv " + ifnull(pt, "()", Vm.this::toString) + " " + Vm.this.toString(ep) + eIfnull(x, ()-> " " + apply(s-> !(x instanceof Cons) ? s : s.substring(1, s.length()-1), Vm.this.toString(x))) + /*" " + e +*/ "}"; }
 	}
 	class Apv implements Combinable  {
 		Combinable cmb;
@@ -639,6 +639,7 @@ public class Vm {
 	}
 	Object unwrap(Object arg) {
 		return arg instanceof Apv apv ? apv.cmb
+		: arg instanceof Opv opv ? opv
 		: isjFun(arg) ? new JFun(arg)
 		: typeError("cannot unwrap: {datum}", arg, symbol("Apv"));
 	}
@@ -1011,7 +1012,7 @@ public class Vm {
 					if (thw instanceof InvocationTargetException ite) {
 						switch (thw = ite.getTargetException()) {
 							case Value v: throw v;
-							case Error e: return e;
+							case Error e: throw e;
 							default: // in errore senza!
 						}
 					}
@@ -1058,7 +1059,7 @@ public class Vm {
 		if (userBreak == null) throw err;
 		return (T) pipe(dbg(theEnv, "userBreak", err), ()-> getTco(evaluate(theEnv, list(userBreak, err)))); 
 	}
-	<T> T typeError(String msg, Object datum, Object expectedType) { return error(new Error(msg, "type", symbol("type"), "datum", datum, "expectedType", expectedType)); }
+	<T> T typeError(String msg, Object datum, Object expected) { return error(new Error(msg, "type", symbol("type"), "datum", datum, "expected", expected)); }
 	<T> T unboundSymbolError(String msg, Object name, Env env) { return error(new Error(msg, "type", symbol("unboundSymbol"), "symbol", name, "environment", env)); }
 	<T> T unboundFieldError(String msg, Object name, Object object) { return error(new Error(msg, "type", symbol("unboundField"), "name", name, "object", object)); }
 	<T> T unboundExecutableError(String msg, Object executable, Object object) { return error(new Error(msg, "type", symbol("unboundExecutable"), "executable", executable, "class", object)); }
@@ -1117,7 +1118,8 @@ public class Vm {
 		if (chk instanceof Suspension s) return s;
 		if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 		if (len >= min && len <= max) return len; 
-		return error((len < min ? "less then " + min : "more then " + max) + " operands combining: " + toString(op) + " with: " + toString(o));
+		return error((len < min ? "less then " + min : "more then " + max) + " operands combining: " + toString(op) + " with: " + toString(o),
+			"type", symbol("length"), "expected", 1 + (len<min ? min : max));
 	}
 	Object checkT(Object op, List o, int min, Object ... chks) {
 		int i=0, len=chks.length;
@@ -1143,6 +1145,13 @@ public class Vm {
 				case Object obj: typeError("not an integer: {datum}", obj, symbol("Integer"));
 			};
 		}
+		/*
+		else if (chk instanceof Cons chkc && on instanceof Cons onc) {
+			if ((Utility.equals(onc.car, chkc.car) || chkc.car instanceof Class cl && checkC(onc.car, cl))
+			&&	(Utility.equals(onc.cdr, chkc.cdr) || chkc.cdr instanceof Class cl && checkC(onc.cdr, cl)) )
+				return 1;
+		}
+		*/
 		else if (chk instanceof Object[] chks) {
 			for (Object chkn: chks) {
 				if (Utility.equals(on, chkn) || chkn instanceof Class cl && checkC(on, cl)) return 1;
@@ -1158,7 +1167,7 @@ public class Vm {
 			}
 		}
 		return typeError(
-			"not " + (chk instanceof Object[] objs ? "" : "a ") + "{expectedType}: {datum} combining: " + toString(op) + " with: " + toString(o),
+			"not " + (chk instanceof Object[] objs ? "" : "a ") + "{expected}: {datum} combining: " + toString(op) + " with: " + toString(o),
 			on,
 			chk == null ? symbol("Null")
 			: chk instanceof Class cl ? symbol(cl.getSimpleName())
@@ -1361,7 +1370,6 @@ public class Vm {
 					// Basics
 					$("%def", "%vau", new Vau()),
 					$("%def", "%set!", new Def(false)),
-					//$("%def", "%def*", new DefStar()), // TODO non più necessario
 					$("%def", "%eval", wrap(new Eval())),
 					$("%def", "%newEnv", wrap(new JFun("%NewEnv", (n,o)-> checkR(n, o, 0, 1, or(null, Env.class)), (l,o)-> env(l == 0 ? null : o.car()) ))) ,
 					$("%def", "%wrap", wrap(new JFun("%Wrap", (Function) this::wrap))),
@@ -1380,16 +1388,17 @@ public class Vm {
 					$("%def", "%cadr", wrap(new JFun("%Cadr", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().car(1) ))),
 					$("%def", "%cddr", wrap(new JFun("%Cddr", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().cdr(1) ))),
 					$("%def", "%cons", wrap(new JFun("%Cons", (BiFunction) (car,cdr)-> cons(car,cdr) ))),
+					$("%def", "%null?", wrap(new JFun("%Null?", (Function<Object, Boolean>) obj-> obj == null))),
 					$("%def", "%cons?", wrap(new JFun("%Cons?", (Function<Object, Boolean>) obj-> obj instanceof Cons))),
 					$("%def", "%list?", wrap(new JFun("%List?", (Function<Object, Boolean>) obj-> obj instanceof List))),
-					$("%def", "%null?", wrap(new JFun("%Null?", (Function<Object, Boolean>) obj-> obj == null))),
 					$("%def", "%symbol", wrap(new JFun("%Symbol", (n,o)-> checkN(n, o, 1, String.class), (l,o)-> symbol(o.car()) ))),
-					$("%def", "%keyword", wrap(new JFun("%Keyword", (n,o)-> checkN(n, o, 1, String.class), (l,o)-> keyword(o.car()) ))),
 					$("%def", "%symbol?", wrap(new JFun("%Symbol?", (Function<Object, Boolean>) obj-> obj instanceof Symbol ))),
+					$("%def", "%keyword", wrap(new JFun("%Keyword", (n,o)-> checkN(n, o, 1, String.class), (l,o)-> keyword(o.car()) ))),
 					$("%def", "%keyword?", wrap(new JFun("%Keyword?", (Function<Object, Boolean>) obj-> obj instanceof Keyword ))),
 					$("%def", "%intern", wrap(new JFun("%Intern", (n,o)-> checkN(n, o, 1, String.class), (l,o)-> intern(o.car()) ))),
 					$("%def", "%intern?", wrap(new JFun("%Intern?", (Function<Object, Boolean>) obj-> obj instanceof Intern ))),
 					$("%def", "%internName", wrap(new JFun("%InternName", (n,o)-> checkN(n, o, 1, Intern.class), (l,o)-> o.<Intern>car().name ))),
+					$("%def", "%nptf?", wrap(new JFun("%Nptf?", (ArgsList) o-> check(o, o,  list(or(list(2, more, Symbol.class), list(list(1, more, Symbol.class)))) )))),
 					// First-order Control
 					$("%def", "%if", new If()),
 					$("%def", "%loop", new Loop()),
@@ -1422,7 +1431,7 @@ public class Vm {
 					$("%def", "%subClass?", wrap(new JFun("%SubClass?", (n,o)-> checkN(n, o, 2, Class.class, Class.class), (l,o)-> o.<Class>car(1).isAssignableFrom(o.car()) ))),
 					$("%def", "%type?",  wrap(new JFun("%Type?", (n,o)-> checkN(n, o, 2, Any.class, or(null, Class.class)), (l,o)-> apply((o1, c)-> c == null ? o1 == null /*: o1 == null ? !c.isPrimitive()*/ : o1 != null && c.isAssignableFrom(o1.getClass()), o.car(), o.<Class>car(1)) ))),
 					$("%def", "%classOf", wrap(new JFun("%ClassOf", (n,o)-> checkN(n, o, 1), (l,o)-> apply(o1-> o1 == null ? null : o1.getClass(), o.car()) ))),
-					$("%def", "%the", wrap(new JFun("%The", (n,o)-> checkN(n, o, 2, Class.class), (l,o)-> o.<Class>car().isInstance(o.car(1)) ? o.car(1) : typeError("not a {expectedType}: {datum}", o.car(1), symbol(o.<Class>car().getSimpleName())) ))),
+					$("%def", "%the", wrap(new JFun("%The", (n,o)-> checkN(n, o, 2, Class.class), (l,o)-> o.<Class>car().isInstance(o.car(1)) ? o.car(1) : typeError("not a {expected}: {datum}", o.car(1), symbol(o.<Class>car().getSimpleName())) ))),
 					// Utilities
 					$("%def", "%list", wrap(new JFun("%List", (ArgsList) o-> o))),
 					$("%def", "%list*", wrap(new JFun("%List*", (ArgsList) this::listStar))),

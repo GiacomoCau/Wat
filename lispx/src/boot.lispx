@@ -65,6 +65,8 @@
    |#
   %append)
 
+(def apply %apply)
+(def apply* %apply*)
 (def array->list %array->list)
 (def begin
   #|Sequentially evaluate FORMS, returning the value of the last one, or void if there are no forms.
@@ -420,6 +422,32 @@
 ;
 ; rec rec\ let1rec let1rec\ letrec letrec\ inizializzano a #inert le definizioni prima della valutazione
 
+
+(def or
+  (vau cls env
+    (if (null? cls) #f
+      (if (eval (car cls) env) #t
+        (apply or (cdr cls) env) ))))
+
+(def and
+  (vau cls env
+    (if (null? cls) #t
+      (if (eval (car cls) env)
+        (apply and (cdr cls) env)
+        #f ))))
+
+(def symdef?
+  (\ (lhs rhs)
+    (if (and (symbol? lhs) (> (len rhs) 1)) #t
+      (if (and (cons? lhs) (symbol? (car lhs))) #f
+        (error (makeTypeError (cons lhs rhs) '(or (Symbol pt . forms) ((Symbol pt) . forms)))) ))))
+
+(def symdef?
+  (\ (lhs rhs)
+    (if (and (symbol? lhs) (cons? rhs)) #t
+      (if (and (cons? lhs) (symbol? (car lhs))) #f
+        (error (makeTypeError (cons lhs rhs) '(or (Symbol pt . forms) ((Symbol pt) . forms)))) ))))
+	
 (def defMacro
   #|Define a macro with the given NAME, PARAMETER-TREE, and FORMS.
    |$(fn (name parameterTree . forms))
@@ -542,13 +570,16 @@
   #|Push the PROMPT and compose the previously captured CONTINUATION
    |inside it.  The FORMS are then evaluated inside the new continuation.
    |#
-  (list '%pushDelimSubcont prompt continuation (list* '\ () forms)))
+  (list '%pushDelimSubcont prompt continuation (list* '\ () forms)) )
 
-(defMacro pushSubcont (k . forms)
+(defMacro (pushSubcont continuation . forms)
+  (list* 'pushDelimSubcont #ignore continuation forms) )
+
+(defMacro (pushSubcont continuation . forms)
   #|We don't have `pushSubcont' but for these tests we can emulate itz
    |with a `pushDelimSubcont' that pushes an unused prompt.
    |#
-  (list* pushDelimSubcont #ignore k forms))
+  (list '%pushDelimSubcont #ignore continuation (list* '\ () forms)) )
 
 (defMacro pushSubcontBarrier forms
   #|Push a continuation barrier that prevents the FORMS from capturing
@@ -559,6 +590,7 @@
 
 ;;; Basic macros and functions
 
+#| TODO forse non serve, la primitiva dovrebbe essere sufficiente
 (def\ (apply appv args . env)
   #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
    |$(type function)
@@ -567,6 +599,7 @@
   (if (%jFun? appv)
     (@combine (@new JFun vm appv) env args)
     (eval (cons (unwrap appv) args) env) ))
+|#
 
 (defMacro (rec lhs . rhs)
   (list (list '\ () (list 'def lhs #inert) (list* 'def lhs :rhs rhs))) )
@@ -712,17 +745,17 @@
     (eval (list* begin forms) env)
     result))
 
-(defMacro (when test . body)
+(defMacro (when test . forms)
   #|If TEST yields true, evaluate the FORMS as an implicit `begin'. Otherwise, return inert.
    |#
-  (list 'if test (list* 'begin body)))
+  (list 'if test (list* 'begin forms)))
 
-(defMacro (unless test . body)
+(defMacro (unless test . forms)
   #|If TEST yields false, evaluate the FORMS as an implicit `begin'. Otherwise, return inert.
    |#
-  (list* 'if test #inert body))
+  (list* 'if test #inert forms))
 
-(defVau set (environment definiendTree value) dynamicEnvironment
+(defVau set (ep dt value) env
   #|Match the DEFINIEND-TREE against the VALUE in the ENVIRONMENT,
    |creating or updating existing bindings.  Unlike Common Lisp (or
    |Scheme), we have no `setq' (or `set!') that allows updating arbitrary
@@ -730,13 +763,13 @@
    |change it.  Therefore, we usually use boxes (see below) instead of
    |mutating bindings directly.
    |#
-  (eval (list 'def definiendTree (list (unwrap eval) value dynamicEnvironment))
-        (eval environment dynamicEnvironment)))
+  (eval (list 'def dt (list (unwrap eval) value env))
+        (eval ep env)))
 
 (def\ assert (boolean)
   #|Signal an error if the BOOLEAN is false.  Otherwise return void.
    |#
-  (unless boolean (error (newObj AssertionError :type 'assertion :datum boolean :expectedType #t))))
+  (unless boolean (error (newObj AssertionError :type 'assertion :datum boolean :expected #t))))
 
 
 ;;;; Bind? IfBind? CaseVau Case\ Match
@@ -798,6 +831,7 @@
                    (apply (wrap cond) clauses env) ))
               (else (apply (wrap cond) clauses env)) )))))))
 
+#|
 (defVau and operands env
   #|Return true if all OPERANDS evaluate to true, false otherwise.  If
    |an operand evaluates to false, later operands are not evaluated.  If
@@ -807,9 +841,9 @@
         ((null? (cdr operands))    (the Boolean (eval (car operands) env)))
         ((eval (car operands) env) (eval (cons and (cdr operands)) env))
         (else                      #f)))
-
+|#
 (def && and)
-
+#|
 (defVau or operands env
   #|Return true if one of the OPERANDS evaluates to true, false
    |otherwise.  If an operand evaluates to true, later operands are not
@@ -819,7 +853,7 @@
         ((null? (cdr operands))    (the Boolean (eval (car operands) env)))
         ((eval (car operands) env) #t)
         (else                      (eval (cons or (cdr operands)) env))))
-
+|#
 (def || or)
 
 
@@ -834,10 +868,10 @@
    |#
   (let ( (test (opt? (get? :test keywords) ==))
          (fkey (opt? (get? :fkey keywords) identity)) )
-    (let1 member (lst lst)
+    (let1 loop (lst lst)
       (if (null? lst) #null
         (if (test (fkey (car lst)) key) lst
-          (member (cdr lst)))))))
+          (loop (cdr lst)))))))
 
 (def\ (assoc key lst)
   (let1 loop (lst lst)
@@ -889,7 +923,7 @@
       (if (null? clauses) #inert
         (let1 (((test . forms) . clauses) clauses)
           (if (|| (== test 'else)
-                  (let* ( (symbol? (%symbol? test))
+                  (let* ( (symbol? (symbol? test))
                           (class (eval (if symbol? test (car test)) env)) )
                     (&& (type? key class) (|| symbol? (&& (type? key Obj) (checkSlots key (map (\ (x) (eval x env)) (cdr test))) ))) ))
             (if (== (car forms) '=>)
@@ -1043,25 +1077,25 @@
 (defMacro dotimes ((var countForm . resultForm?) . bodyForms)
   #|Cf. Common Lisp's DOTIMES.
    |#
-  (let\ ((_dotimes_ (n body result)
+  (let\ ((dotimes (n body result)
            (let ((i (newBox 0)))
              (while (< (i) n)
                (body (i))
                (i (+ (i) 1)))
              (result (i)))))
-    (list _dotimes_
+    (list dotimes
           countForm
           (list* '\ (list var) bodyForms)
           (list* '\ (list var) resultForm?))))
 
 (def\ (withEscape fun)
   (let1 (fresh (list #null))
-    (%catch #_
+    (catchWth
       (\ (exc)
         (if (and (cons? exc) (== (car exc) fresh))
           (let1 ((#ignore opt?) exc) (if (cons? opt?) (car opt?)))
-          (%throw #_ exc)))
-    (fun (\ opt? (%throw #_ (list fresh (ifOpt? (val opt?) opt?))))) )))
+          (throw exc)))
+      (fun (\ opt? (throw (list fresh (ifOpt? (val opt?) opt?) )))) )))
 
 (defMacro (label name . body)
   (list 'withEscape (list* '\ (list name) body)))
@@ -1075,9 +1109,9 @@
   (if (type? object class) object
     (error (makeTypeError object (className class)))))
 
-(def\ makeTypeError (datum expectedType)
+(def\ makeTypeError (datum expected)
   #|Create a `type-error' with the given DATUM and EXPECTED-TYPE.|#
-  (newObj TypeError :datum datum :expectedType expectedType))
+  (newObj Error :type 'type :datum datum :expected expected))
 
 #| TODO sostituiti dal seguente
 (defVau the (className object) env
@@ -1116,9 +1150,18 @@
     (list 'def lhs (car rhs))
     (list 'def (car lhs) (list* 'type\ (cdr lhs) rhs)) ))
 
-(def\ ck|| o (list->array o))
-(def ck+ (.MAX_VALUE Integer))
-(def\ check (op o . ck) (@check vm op o ck))
+
+(defMacro letEnv bindings
+  (list 'let bindings '(theEnv)) ) 
+
+(defVau check (o . ck) env
+  (let ( (o (let1 (o (eval o env)) (if (cons? o) o (list o))))
+         (env (letEnv (+ (.MAX_VALUE Integer)) (|| (\ o (list->array o))))) )
+    (apply* @check vm o o (map (\ (a) (eval a env)) ck)) ))
+
+(defVau check? args env (catchWth (\ (e) #f) (apply check args env)) #t)
+(defVau (the! type obj) env (apply check (list obj type) env) obj) 
+(defMacro (the! type obj) (apply* check obj type) obj) 
 
 
 ;;; Lists
@@ -1170,7 +1213,7 @@
 (def\ (reduceL f init lst . lst*)
   (if (null? lst*)
     ((rec\ (reduce acc lst) (if (null? lst) acc (reduce (f acc (car lst)) (cdr lst)) )) init lst)
-    ((rec\ (reduce* acc lst*) (if (null? (car lst*)) acc (reduce* (%apply* f acc (map car lst*)) (map cdr lst*)) )) init (cons lst lst*)) ))
+    ((rec\ (reduce* acc lst*) (if (null? (car lst*)) acc (reduce* (apply* f acc (map car lst*)) (map cdr lst*)) )) init (cons lst lst*)) ))
 
 (def reduce
   #|Use the binary FUNCTION to combine the elements of the LIST.  The
@@ -1181,27 +1224,26 @@
 (def\ (reduceR f init lst . lst*)
   (if (null? lst*)
     ((rec\ (reduce acc lst) (if (null? lst) acc (f (reduce acc (cdr lst)) (car lst)) )) init lst)
-    ((rec\ (reduce* acc lst*) (if (null? (car lst*)) acc (%apply* f (reduce* acc (map cdr lst*)) (map cadr lst*)) )) init (cons lst lst*)) ))
+    ((rec\ (reduce* acc lst*) (if (null? (car lst*)) acc (apply* f (reduce* acc (map cdr lst*)) (map cadr lst*)) )) init (cons lst lst*)) ))
 
 (def\ (foldL f init lst . lst*)
   (if (null? lst*)
     ((rec\ (foldl acc lst) (if (null? lst) acc (foldl (f (car lst) acc) (cdr lst)) )) init lst)
-    ((rec\ (foldl* acc lst*) (if (null? (car lst*)) acc (foldl* (%apply* f (map car lst*) acc) (map cdr lst*)) )) init (cons lst lst*)) ))
+    ((rec\ (foldl* acc lst*) (if (null? (car lst*)) acc (foldl* (apply* f (map car lst*) acc) (map cdr lst*)) )) init (cons lst lst*)) ))
 
 (def\ (foldR f init lst . lst*)
   (if (null? lst*)
     ((rec\ (foldr acc lst) (if (null? lst) acc (f (car lst) (foldr acc (cdr lst)) ) )) init lst)
-    ((rec\ (foldr* acc lst*) (if (null? (car lst*)) acc (%apply* f (map car lst*) (foldr* acc (map cdr lst*)) ) )) init (cons lst lst*)) ))
+    ((rec\ (foldr* acc lst*) (if (null? (car lst*)) acc (apply* f (map car lst*) (foldr* acc (map cdr lst*)) ) )) init (cons lst lst*)) ))
 
 (defMacro dolist ((var listForm . resultForm?) . bodyForms)
   #|Cf. Common Lisp's DOLIST.|#
-  (let1rec\ (_dolist_ (list body result)
-             (if (null? list)
-                 (result list)
-                 (begin
-                   (body (car list))
-                   (_dolist_ (cdr list) body result))))
-    (list _dolist_
+  (let1rec\
+    (dolist (list body result)
+      (if (null? list) (result list)
+        (body (car list))
+        (dolist (cdr list) body result)))
+    (list dolist
           listForm
           (list* '\ (list var) bodyForms)
           (list* '\ (list var) resultForm?))))
@@ -1252,13 +1294,13 @@
 (defMacro (ddef* var* . val*)
   (list* (list '%d\ var*) val*) )
 
-(def\ dget (dynamicVariable)
+(def\ (dget dvar)
   #|Return the current value of the DYNAMIC-VARIABLE.|#
-  (dynamicVariable))
+  (dvar))
 
-(def\ dset (dynamicVariable value)
+(def\ (dset dvar value)
   #|Set the current value of the DYNAMIC-VARIABLE.|#
-  (dynamicVariable value))
+  (dvar value))
 
 (defMacro (dlet bindings exp . exps)
   #|Evaluate the FORMS with the dynamic variables specified by BINDINGS
@@ -1338,7 +1380,7 @@
   (%slotBound? object slotName))
 
 (defMacro (defObj name class . attr)
-  (list 'def name (list* obj class attr)) )
+  (list 'def name (list* 'newObj class attr)) )
 
 
 ;;; Generic Functions
@@ -1365,7 +1407,7 @@
     (def ((name (receiver class) . parameters) . forms) args) )
   (let1 (method (eval (list* '\ (list* receiver parameters) forms) env))
     (%addMethod (findClass class env) name method)
-    method ))
+    (case (bndres) ((#inert) #inert) ((:rhs) method) ((:prv) prv)) ))
 
 
 
@@ -1380,7 +1422,7 @@
     env ))
 
 (defVau (module exports . body) env
-  (let ((env (newEnv env)))
+  (let1 (env (newEnv env))
     (eval (list* 'provide exports body) env)
     (newEnv env) ))
 
@@ -1599,7 +1641,7 @@
   (caseType val
     (Box    (let1 (() args) (val :rhs (+ (val) 1))))
     (Obj (let1 ((fld) args) (val fld :rhs (+ (val fld) 1)))) 
-    (Number (let1 (() args) (eval (list '%set! plc :rhs (+ val 1)) env)))
+    (Number (let1 (() args) (eval (list 'set! plc :rhs (+ val 1)) env)))
     (else   (error ($ "not valid type: " val))) )) 
 
 (defVau (-- plc . args) env
@@ -1607,7 +1649,7 @@
   (caseType val
     (Box    (let1 (() args) (val :rhs (- (val) 1))))
     (Obj (let1 ((fld) args) (val fld :rhs (- (val fld) 1)))) 
-    (Number (let1 (() args) (eval (list '%set! plc :rhs (- val 1)) env)))
+    (Number (let1 (() args) (eval (list 'set! plc :rhs (- val 1)) env)))
     (else   (error ($ "not valid type: " val))) ))
 
 (def\ (assignOp op)
@@ -1622,7 +1664,7 @@
         ((fld key rval) (lval fld key (op (lval fld) (eval rval env)))) ))
       (Object (match args
         ((rval) (eval (list 'def plc (op lval (eval rval env))) env))
-        ((key rval) (eval (list '%set! plc key (op lval (eval rval env))) env)) ))))) 
+        ((key rval) (eval (list 'set! plc key (op lval (eval rval env))) env)) ))))) 
 
 (def $= (assignOp %$))
 (def += (assignOp %+))

@@ -625,7 +625,7 @@
   (deftest invokeRestart.1
     (signalsError
      (invokeRestart "foo")
-     TypeError :datum "foo" :expectedType '(or Symbol RestartHandler)) ) )
+     Error :type 'type :datum "foo" :expected '(or Symbol RestartHandler)) ) )
 
 (defsuite invokeRestartInteractively
 
@@ -648,7 +648,7 @@
 
   (deftest invokeRestartInteractively.1c
     (restartBind ((r1 (\ () (+ 1 2))))
-      (invokeRestartInteractively (opt? (findRestart?'r1))))
+      (invokeRestartInteractively (opt? (findRestart? 'r1))))
     3)
 
   (deftest invokeRestartInteractively.2
