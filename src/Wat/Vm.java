@@ -133,7 +133,7 @@ public class Vm {
 	boolean prstk = false; // print stack
 	boolean prwrn = false; // print warning
 	boolean aquote = false; // auto quote list
-	boolean elsex = false; // else multiple expressions
+	boolean else1 = false; // else multiple expressions
 	
 	Object boxdft = null; // box/dinamic default: null, inert, ...
 	
@@ -714,7 +714,7 @@ public class Vm {
 	Begin begin = new Begin();
 	class If implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkR(this, o, 2, elsex ? 3 : more); // o = (test then) | (test then else) | (test then else ...)
+			var chk = checkR(this, o, 2, else1 ? 3 : more); // o = (test then) | (test then else) | (test then else ...)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 			var test = o.car();
@@ -722,7 +722,7 @@ public class Vm {
 				switch (istrue(res)) {
 					case Suspension s-> s;
 					case Boolean b-> b ? evaluate(e, o.car(1))
-						: o.cdr(1) == null ? inert : elsex ? evaluate(e, o.car(2)) : begin.combine(e, o.cdr(1));
+						: o.cdr(1) == null ? inert : else1 ? evaluate(e, o.car(2)) : begin.combine(e, o.cdr(1));
 					case Object obj-> typeError("not a boolean: {datum}", obj, symbol("Boolean"));
 				}
 			));
@@ -1494,7 +1494,7 @@ public class Vm {
 					$("%def", "ttrue", wrap(new JFun("Ttrue", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4)), (l,o)-> l == 0 ? ttrue : inert(ttrue=o.car()) ))),
 					$("%def", "bndres", wrap(new JFun("Bndres", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2)), (l,o)-> l == 0 ? bndres : inert(bndres=o.car()) ))),
 					$("%def", "prenv", wrap(new JFun("Prenv", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? prenv : inert(prenv=o.car()) ))),
-					$("%def", "elsex", wrap(new JFun("Elsex", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? elsex : inert(elsex=o.car()) ))),
+					$("%def", "else1", wrap(new JFun("Else1", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? else1 : inert(else1=o.car()) ))),
 					$("%def", "boxdft", wrap(new JFun("Boxdft", (n,o)-> checkR(n, o, 0, 1), (l,o)-> l == 0 ? boxdft : inert(boxdft=o.car()) ))),
 					$("%def", "aquote", wrap(new JFun("Aquote", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? aquote : inert(aquote=o.car()) ))),
 					$("%def", "prstk", wrap(new JFun("Prstk", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prstk : inert(prstk=o.car()) ))),

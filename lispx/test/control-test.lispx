@@ -32,10 +32,10 @@
   (takeSubcont +fiber-prompt+ k
     (makeYieldRecord (opt? v? #inert) k)))
 
-(def\ fiberResume (yield-record . v?)
+(def\ fiberResume (yieldRecord . v?)
   #|Resume a suspended fiber with a value (which defaults to void).
    |#
-  (pushDelimSubcont +fiber-prompt+ (getSlot yield-record 'continuation)
+  (pushDelimSubcont +fiber-prompt+ (getSlot yieldRecord 'continuation)
     (opt? v? #inert)))
 
 (defMacro fiber body
@@ -61,23 +61,6 @@
         (cons (getSlot result 'value)
               (run (fiberResume result (car values)) (cdr values)))
         (list result))))
-
-#|
-(def\ runFiber* (thunk . values)
-  (let run ((result (fiber (thunk))) (values values))
-    (if (type? result YieldRecord)
-      (cons (getSlot result 'value)
-        (if (null? values)
-          (run (fiberResume result) #null)
-          (run (fiberResume result (car values)) (cdr values)) ))
-      (list result))))
-
-(%assert (runFiber* (\ () (fiberYield 1) (fiberYield 2) 3)) '(1 2 3))
-
-(%assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #t) '(1 2 #inert))
-(%assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #t 4) '(1 2 4))
-(%assert (runFiber* (\ () ((\ (a b) (+ a b)) (fiberYield 1) (fiberYield 2)) ) 3 4) '(1 2 7))
-|#
 
 
 (defsuite fibers

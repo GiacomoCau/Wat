@@ -14,9 +14,10 @@
 (@clear (.methods vm))
 (ctapv #f)
 (prtrc 0)
-(bndres 1)
+(bndres 0)
 (boxdft #inert)
 (aquote #f)
+(ttrue 0)
 
 (%def Null #null)
 (%def Any &Wat.Vm$Any)
@@ -70,7 +71,6 @@
 (%def MatchError Error)
 (%def OutOfBoundsError Error)
 (%def PromptNotFoundError Error)
-(%def TypeError Error)
 (%def SimpleError Error)
 (%def RestartError Error)
 
@@ -81,41 +81,41 @@
 (%def %nthCdr (%\ (i l) (%the Integer i) (%if (%zero? i) l (@cdr (%the Cons l) (%- i 1)))))
 
 (%def %className (%\ (class) (%intern (@getSimpleName (%the Class class)))))
-;(%def %newClass (%\ (name superclass) (%newClass (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass)))
+;(%def %newClass ((%\ (%newClass) (%\ (name superclass) (%newClass (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass))) %newClass))
 
 (%def %pushPrompt ((%\ (%pushPrompt) (%wrap %pushPrompt)) %pushPrompt))
 
 (%def +rootPrompt+ %rootPrompt)
-(%def %printStacktrace
-  (%\ (k)
-    (%if (%!= (.nxt k) #null) (%printStacktrace (.nxt k)))
-    (%if (prstk) (log "--" k)) ))
-(%def %panic
-  (%\ (e) (%throw #ignore e)) )
 
 (%def %take (%\ (i l) (%if (%zero? i) #null (%cons (%car l) (%take (%- i 1) (%cdr l))))))
 (%def %listSubseq (%\ (l s e) (%the Integer s) (%if (%! (%inert? e)) (%the Integer e)) (%def tail (%nthCdr s l)) (%if (%inert? e) tail (%take (%- e s) tail))))
 (%def %stringSubseq (%\ (seq start end) (%if (%inert? end) (@substring (%the String seq) (%the Integer start)) (@substring (%the String seq) (%the Integer start) (%the Integer end)))))
 
+(%def %getSlot (%\ (obj slot)
+  ((%the StandardObject obj) (%the Intern slot)) ))
+
+(%def %setSlot (%\ (obj slot value)
+  ((%the StandardObject obj) (%the Intern slot) value) ))
+
+(%def %slotBound? (%\ (obj slot)
+  (@isBound (%the StandardObject obj) (%the Intern slot)) ))
+
 (load "lispx/src/boot.lispx")
-
-(def %getSlot (\ (obj slot)
-  ((the StandardObject obj) (the Intern slot)) ))
-
-(def %setSlot (\ (obj slot value)
-  ((the StandardObject obj) (the Intern slot) value) ))
-
-(def %slotBound? (\ (obj slot)
-  (@isBound (the StandardObject obj) (the Intern slot)) ))
-
 (load "lispx/src/cond-sys.lispx")
+
+(def userBreak error)
+
 ;(load "lispx/src/stream.lispx")
 ;(load "lispx/src/read.lispx")
 ;(load "lispx/src/print.lispx")
 ;(load "lispx/src/js.lispx")
 
-; lasciare commentato, bastano le successive definizioni
+
+;;;; Test
+
+; lasciare commentati, bastano le successive definizioni
 ;(load "lispx/test/test-util.lispx")
+;(load "lispx/test/test-util-test.lispx")
 
 (defMacro deftest (name expression . expected?)
   (list %test name expression (opt? expected? #t)))
@@ -126,57 +126,52 @@
 (defVau defsuite (name . forms) env
   (eval (list* begin forms) env) )
 
-(def userBreak error)
-
 (defVau signalsError (form conditionClass . slots) env
   (let1 (class (findClass conditionClass env))
     (block exit
-      (handlerCase (
-        (StandardObject
-          (\ (obj)
-            (if (type? obj class)
-              (let1 check (slots slots)
-                (if (null? slots) (exit #t)
-                  (let1 ((name value . slots) slots)
-                    (unless (eq? (getSlot obj name) (eval value env))
-                      (exit #f) )
-                    (check slots) )))
-              (exit #f) ))) )
+      (handlerCase
+        ( (StandardObject
+            (\ (obj)
+              (if (type? obj class)
+                (let1 check (slots slots)
+                  (if (null? slots) (exit #t)
+                    (let1 ((name value . slots) slots)
+                      (unless (eq? (getSlot obj name) (eval value env)) (exit #f))
+                      (check slots) )))
+                (exit #f) ))) )
         (eval form env) )
       #f )))
 
-
-;(load "lispx/test/test-util-test.lispx") ;; mai
 (load "lispx/test/boot-test.lispx")
 (load "lispx/test/cond-sys-test.lispx")
 (load "lispx/test/delimcc-test.lispx")
 (load "lispx/test/control-test.lispx")
 
-#|
 (def\ runFiber* (thunk . values)
-  (letLoop -run- ((result (fiber (thunk))) (values values))
+  (let run ((result (fiber (thunk))) (values values))
     (if (type? result YieldRecord)
-        (cons (getSlot result 'value)
-              (if (null? values)
-                (-run- (fiberResume result) #null)
-                (-run- (fiberResume result (car values)) (cdr values)) ))
-        (list result))))
+      (cons (getSlot result 'value)
+        (if (null? values)
+          (run (fiberResume result) #null)
+          (run (fiberResume result (car values)) (cdr values)) ))
+      (list result) )))
 
-(runFiber* (\() (fiberYield 1) (fiberYield 2) 3)) -> (1 2 3)
+(%assert (runFiber* (\ () (fiberYield 1) (fiberYield 2) 3)) '(1 2 3))
 
-(runFiber* (\() (if (fiberYield 1) (fiberYield 2) 3)) #t) -> (1 2 #inert)
-(runFiber* (\() (if (fiberYield 1) (fiberYield 2) 3)) #t 4) -> (1 2 4)
-(runFiber* (\() ((\ (a b) (+ a b)) (fiberYield 1) (fiberYield 2)) ) 3 4) -> (1 2 7)
-|#
+(%assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #t) '(1 2 #inert))
+(%assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #t #_) '(1 2 #ignore))
+(%assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #t 4) '(1 2 4))
+(%assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #f) '(1 3))
 
+(%assert (runFiber* (\ () ((\ (a b) (+ a b)) (fiberYield 1) (fiberYield 2)) ) 3 4) '(1 2 7))
 
-;;;; Test
 
 ;(load "lispx/test/stream-test.lispx")
 ;(load "lispx/test/read-test.lispx")
 ;(load "lispx/test/print-test.lispx")
 ;(load "lispx/test/js-test.lispx")
 ;(load "lispx/test/hierarchy-test.lispx")
+
 
 #|
 (load "lispx/tool/repl/repl.lispx")

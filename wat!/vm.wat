@@ -10,6 +10,7 @@
 (bndres 0)
 (boxdft #null)
 (aquote #t)
+(ttrue 1)
 
 (%def Null #null)
 (%def Any &Wat.Vm$Any)

@@ -33,7 +33,7 @@
 (def - %-)
 (def / %/)
 (def % %%)
-  
+
 (def !
   #|Invert the BOOLEAN.
    |$(fn (boolean))
@@ -46,7 +46,7 @@
 (def > %>)
 (def <= %<=)
 (def >= %>=)
-  
+
 (def ~ %~)
 (def & %&)
 (def \| %\|)
@@ -230,17 +230,6 @@
    |#
   %newObj)
 
-(def panic
-  #|Mostly for internal use.  Signal the ERROR in such a way that it is
-   |hard to handle and will usually escape the VM as a host language
-   |exception.  In particular, signal handlers will not be invoked.
-   |However, intervening `finally' cleanup expressions and `progv'
-   |expressions are still triggered, so Lisp invariants are maintained.
-   |$(fn (error))
-   |$(type function)
-   |#
-  %panic)
-
 (def reverse
   #|Reverse the LIST.
    |$(fn (list))
@@ -348,7 +337,7 @@
    |$(derivation (\ ((#_ cadr . #_)) cadr))
    |#
   %cadr)
-  
+
 (def cdr
   #|Return the contents of the decrement part of the register.
    |$(fn (cons))
@@ -373,7 +362,7 @@
   #|Return the `cdr' of the `car' of the CONS.
    |#
   (\ (x) (cdr (car x))))
- 
+
 (def compose
   #|Compose two functions, creating a new function equivalent to (G (F ...)).
    |#
@@ -423,19 +412,7 @@
 ; rec rec\ let1rec let1rec\ letrec letrec\ inizializzano a #inert le definizioni prima della valutazione
 
 
-(def or
-  (vau cls env
-    (if (null? cls) #f
-      (if (eval (car cls) env) #t
-        (apply or (cdr cls) env) ))))
-
-(def and
-  (vau cls env
-    (if (null? cls) #t
-      (if (eval (car cls) env)
-        (apply and (cdr cls) env)
-        #f ))))
-
+#|
 (def symdef?
   (\ (lhs rhs)
     (if (and (symbol? lhs) (> (len rhs) 1)) #t
@@ -447,6 +424,17 @@
     (if (and (symbol? lhs) (cons? rhs)) #t
       (if (and (cons? lhs) (symbol? (car lhs))) #f
         (error (makeTypeError (cons lhs rhs) '(or (Symbol pt . forms) ((Symbol pt) . forms)))) ))))
+
+(def symdef?
+  (\ (lhs rhs)
+    (if (cons? lhs)
+       (if (symbol? (car lhs)) #f
+         (error (makeTypeError (cons lhs rhs) '((Symbol . pt) . forms))) )
+       (if (and (symbol? lhs) (cons? rhs)) #t
+         (error (makeTypeError (cons lhs rhs) '(Symbol pt . forms))) ))))
+
+(def dec ((\ (f) (def\ (f n) (if (zero? n) 0 (f (- n 1)))) f) #inert))
+|#
 	
 (def defMacro
   #|Define a macro with the given NAME, PARAMETER-TREE, and FORMS.
@@ -455,9 +443,9 @@
    |$(type macro)
    |#
   (macro (lhs . rhs)
-    (if (symbol? lhs)
-      (list 'def lhs (list* 'macro (car rhs) (cdr rhs)))
-      (list 'def (car lhs) (list* 'macro (cdr lhs) rhs)) )))
+    (if (cons? lhs)
+      (list 'def (car lhs) (list* 'macro (cdr lhs) rhs))
+      (list 'def lhs (list* 'macro rhs)) )))
 
 (defMacro (expand macro)
   (list 'begin (list 'evalMacro #f) macro) )
@@ -469,15 +457,15 @@
    |$(fn ((name parameterTree) . forms))
    |$(type macro)
    |#
-  (if (symbol? lhs)
-    (list 'def lhs (list* 'vau (car rhs) (cadr rhs) (cddr rhs)))
-    (list 'def (car lhs) (list* 'vau (cdr lhs) (car rhs) (cdr rhs))) ))
+  (if (cons? lhs)
+    (list 'def (car lhs) (list* 'vau (cdr lhs) rhs))
+    (list 'def lhs (list* 'vau rhs)) ))
 
-(defMacro defConstant (name value . docstring?)
+(def defConstant
   #|Define a constant with the given NAME and VALUE.  This is mostly
    |for documentation purposes, as constants are still mutable.
    |#
-  (list 'def name value) )
+  def)
 
 (defMacro (wrau pt ep . body)
   (list 'wrap (list* 'vau pt ep body)))
@@ -491,9 +479,9 @@
    |$(fn ((name parameterTree) . forms))
    |$(type macro)
    |#
-  (if (symbol? lhs)
-    (list 'def lhs (list* '\ (car rhs) (cdr rhs)))
-    (list 'def (car lhs) (list* '\ (cdr lhs) rhs)) ))
+  (if (cons? lhs)
+    (list 'def (car lhs) (list* '\ (cdr lhs) rhs))
+    (list 'def lhs (list* '\ rhs)) ))
 
 
 ;;;; Basic value test
@@ -595,19 +583,19 @@
   #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
    |$(type function)
    |#
-  (def env (if (null? env) (newEnv) ((\ ((env)) env) env))) 
+  (def env (if (null? env) (newEnv) ((\ ((env)) env) env)))
   (if (%jFun? appv)
     (@combine (@new JFun vm appv) env args)
     (eval (cons (unwrap appv) args) env) ))
 |#
 
 (defMacro (rec lhs . rhs)
-  (list (list '\ () (list 'def lhs #inert) (list* 'def lhs :rhs rhs))) )
+  (list (list '\ (list lhs) (list* 'def lhs :rhs rhs)) #inert) )
 
 (defMacro (rec\ lhs . rhs)
-  (if (symbol? lhs)
-    (list 'rec lhs (list* '\ (car rhs) (cdr rhs)))
-    (list 'rec (car lhs) (list* '\ (cdr lhs) rhs)) )) 
+  (if (cons? lhs)
+    (list 'rec (car lhs) (list* '\ (cdr lhs) rhs))
+    (list 'rec lhs (list* '\ rhs)) ))
 
 (def\ (map f lst . lst*)
   #|Create a new list by applying the FUNCTION to every element of the LIST.
@@ -618,48 +606,49 @@
 
 (defMacro (def*\ lhs* . rhs*)
   (list* 'def*
-    (map (\ (lhs) (if (symbol? lhs) lhs (car lhs))) lhs*)
-    (map (\ (lhs rhs) (if (symbol? lhs) (list* '\ (car rhs) (cdr rhs)) (list* '\ (cdr lhs) rhs))) lhs* rhs*) )) 
+    (map (\ (lhs) (if (cons? lhs) (car lhs) lhs)) lhs*)
+    (map (\ (lhs rhs) (cons '\ (if (cons? lhs) (cons (cdr lhs) rhs) rhs))) lhs* rhs*) ))
 
 
 ;;; Lexical Bindings
 
-(def\ (->inert binding) #inert)
 (def\ (->1expr binding) ((\ ((#_ cadr)) cadr) binding))
 (def\ (->begin binding) ((\ ((#_ cadr . cddr)) (if (null? cddr) cadr (list* 'begin cadr cddr))) binding))
-(def\ (->name  lhs) (if (symbol? lhs) lhs (car lhs)))
-(def\ (->name\ (lhs . rhs)) (if (symbol? lhs) (list lhs (list* '\ (car rhs) (cdr rhs))) (list (car lhs) (list* '\ (cdr lhs) rhs))))
+(def\ (->name+#inert (lhs . #_)) (list (if (cons? lhs) (car lhs) lhs) #inert))
+(def\ (->name+lambda (lhs . rhs)) (if (cons? lhs) (list (car lhs) (list* '\ (cdr lhs) rhs)) (list lhs (list* '\ rhs)) ))
+(def\ (->name+lambda (lhs . rhs)) (list (if (cons? lhs) (car lhs) lhs) (list* '\ (if (cons? lhs) (cons (cdr lhs) rhs) rhs))))
+(def\ (->name+lambda (lhs . rhs)) (def t (cons? lhs)) (list (if t (car lhs) lhs) (list* '\ (if t (cons (cdr lhs) rhs) rhs))))
+(def\ (->name+lambda (lhs . rhs)) (list (if (def t :rhs (cons? lhs)) (car lhs) lhs) (list* '\ (if t (cons (cdr lhs) rhs) rhs))))
 
 
 (defMacro (let1Loop . args)
-  (if (symbol? (car args))
-    (def (name binding . body) args)
-    (def ((name . binding) . body) args))
+  (if (cons? (car args))
+    (def ((name . binding) . body) args)
+    (def (name binding . body) args) )
   (list
     (list* 'rec\ name (list (car binding)) body)
     (->1expr binding) ))
 
 (defMacro (let1 lhs . rhs)
   (if (symbol? lhs)
-    (list* 'let1Loop lhs (car rhs) (cdr rhs))
+    (list* 'let1Loop lhs rhs)
     (list (list* '\ (list (car lhs)) rhs)
       (->1expr lhs) )))
 
 (defMacro (let1\ binding . body)
-  (list* 'let1 (->name\ binding) body))
+  (list* 'let1 (->name+lambda binding) body))
 
 #| TODO non sembra utile
 (defMacro (let1rec binding . body)
-  (list* 'let ()
-    (list 'def (car binding) (->inert binding))
-    (list 'def (car binding) (->1expr binding))
+  (def name (car binding))
+  (list* 'let1 (list name #inert)
+    (list 'def (car name (->1expr binding))
     body ))
 |#
 
 (defMacro (let1rec\ binding . body)
-  (list* 'let ()
-    (list 'def (->name (car binding)) #inert)
-    (list* 'def\ (car binding) (cdr binding))
+  (list* 'let1 (->name+#inert binding)
+    (list* 'def\ binding)
     body ))
 
 
@@ -674,9 +663,9 @@
    |$(fn (name initializers . body))
    |$(syntax initializers ((parameter value) . initializers)
    |#
-  (if (symbol? (car args))
-    (def (name bindings . body) args)
-    (def ((name . bindings) . body) args))
+  (if (cons? (car args))
+    (def ((name . bindings) . body) args)
+    (def (name bindings . body) args) )
   (list*
     (list* 'rec\ name (map car bindings) body)
     (map ->1expr bindings) ))
@@ -698,22 +687,21 @@
    |so that no function can refer to the other ones.
    |$(syntax functionBinding (name parameterTree . forms))
    |#
-  (list* 'let (map ->name\ bindings) body))
+  (list* 'let (map ->name+lambda bindings) body))
 
 #| TODO non sembra utile
 (defMacro (letrec bindings . body)
   #|Utility to establish BINDINGS recursively during the evaluation of
    |FORMS.  Used by `labels'.
    |#
-  (list* 'let ()
-    (list* 'def* (map car bindings) (map ->inert bindings))
-    (list* 'def* (map car bindings) (map ->1expr bindings))
+  (def names (map car bindings))
+  (list* 'let (map (\ (name) (list name #inert)) names)
+    (list* 'def* names (map ->1expr bindings))
     body ))
 |#
 
 (defMacro (letrec\ bindings . body)
-  (list* 'let ()
-    (list* 'def* (map (\ (binding) (->name (car binding))) bindings) (map ->inert bindings))
+  (list* 'let (map ->name+#inert bindings)
     (list* 'def*\ (map car bindings) (map cdr bindings))
     body ))
 
@@ -736,7 +724,7 @@
         (list* 'let* (cdr bindings) body) )))
 
 
-;;;; Simple control
+;;;; Simple Control
 
 (defVau prog1 (form . forms) env
   #|Evaluate FORM and any additional FORMS, and return the result of FORM.
@@ -763,13 +751,40 @@
    |change it.  Therefore, we usually use boxes (see below) instead of
    |mutating bindings directly.
    |#
-  (eval (list 'def dt (list (unwrap eval) value env))
-        (eval ep env)))
+  (eval
+    (list 'def dt (list (unwrap eval) value env))
+    (eval ep env)))
 
 (def\ assert (boolean)
   #|Signal an error if the BOOLEAN is false.  Otherwise return void.
    |#
   (unless boolean (error (newObj AssertionError :type 'assertion :datum boolean :expected #t))))
+
+
+;;; And Or
+
+(defVau and ops env
+  #|Return true if all OPERANDS evaluate to true, false otherwise.
+   |If an operand evaluates to false, later operands are not evaluated.
+   |If there are no operands, return false.
+   |#
+  (if (null? ops) #t
+    (if (eval (car ops) env)
+      (apply and (cdr ops) env)
+      #f )))
+
+(def && and)
+
+(defVau or ops env
+  #|Return true if one of the OPERANDS evaluates to true, false otherwise.
+   |If an operand evaluates to true, later operands are not evaluated.
+   |If there are no operands, return true.
+   |#
+  (if (null? ops) #f
+    (if (eval (car ops) env) #t
+      (apply or (cdr ops) env) )))
+
+(def || or)
 
 
 ;;;; Bind? IfBind? CaseVau Case\ Match
@@ -781,7 +796,7 @@
       (unless (null? else)
         (eval (let1 ((exp) else) exp) env) ))))
 
-(defVau (caseVau . clauses) env 
+(defVau (caseVau . clauses) env
   (vau values #ignore
     (let1 loop (clauses clauses)
       (if (null? clauses) #inert
@@ -790,16 +805,16 @@
           (if (if (== bindings 'else) #t (bind? env+ bindings values)) ; or!
             (eval (list* 'begin forms) env+)
             (loop clauses) ))))))
-            
+
 (defMacro (case\ . clauses)
   (list 'wrap (list* 'caseVau clauses)) )
 
 (defMacro (match exp . clauses)
-  (list (list* 'case\ (map (\ ((a . b)) (list* (if (== a 'else) a (list a)) b)) clauses)) exp) )  
+  (list (list* 'case\ (map (\ ((a . b)) (list* (if (== a 'else) a (list a)) b)) clauses)) exp) )
 
 
 
-;;; Cond And Or
+;;; Cond
 
 (defVau (cond . clauses) env
   #|Multi-armed conditional.
@@ -830,31 +845,6 @@
                    ((eval apv1 env) test)
                    (apply (wrap cond) clauses env) ))
               (else (apply (wrap cond) clauses env)) )))))))
-
-#|
-(defVau and operands env
-  #|Return true if all OPERANDS evaluate to true, false otherwise.  If
-   |an operand evaluates to false, later operands are not evaluated.  If
-   |there are no operands, return false.
-   |#
-  (cond ((null? operands)          #t)
-        ((null? (cdr operands))    (the Boolean (eval (car operands) env)))
-        ((eval (car operands) env) (eval (cons and (cdr operands)) env))
-        (else                      #f)))
-|#
-(def && and)
-#|
-(defVau or operands env
-  #|Return true if one of the OPERANDS evaluates to true, false
-   |otherwise.  If an operand evaluates to true, later operands are not
-   |evaluated.  If there are no operands, return true.
-   |#
-  (cond ((null? operands)          #f)
-        ((null? (cdr operands))    (the Boolean (eval (car operands) env)))
-        ((eval (car operands) env) #t)
-        (else                      (eval (cons or (cdr operands)) env))))
-|#
-(def || or)
 
 
 ;;;; Member Assoc Get
@@ -901,7 +891,7 @@
         (let1 (((values . forms) . clauses) clauses)
           (if (or (== values 'else) (cons? (member value values)))
             (if (== (car forms) '=>)
-              (let1 ((apv) (cdr forms)) ((eval apv env) value))  
+              (let1 ((apv) (cdr forms)) ((eval apv env) value))
               (eval (list* 'begin forms) env) )
             (loop clauses) ))))))
 
@@ -927,7 +917,7 @@
                           (class (eval (if symbol? test (car test)) env)) )
                     (&& (type? key class) (|| symbol? (&& (type? key Obj) (checkSlots key (map (\ (x) (eval x env)) (cdr test))) ))) ))
             (if (== (car forms) '=>)
-              (let1 ((apv) (cdr forms)) ((eval apv env) key))  
+              (let1 ((apv) (cdr forms)) ((eval apv env) key))
               (eval (list* 'begin forms) env) )
             (next clauses) ))))))
 
@@ -950,7 +940,7 @@
    |#
   (list value))
 
-(def\ (\01+ forms) 
+(def\ (\01+ forms)
   (if (null? forms) #null (if (null? (cdr forms)) (car forms) (list* 'begin forms))) )
 
 (defVau (ifOpt? (pt opt?) then . else) env
@@ -963,7 +953,7 @@
     (if (null? opt?)
       (if (null? else) #null
         (eval (\01+ else) env))
-      (if (list? opt?)  
+      (if (list? opt?)
         (eval (list* (list 'vau (list pt) #ignore then) opt?) env)
         (error (makeTypeError opt? '(or Null List))) ))))
 
@@ -972,7 +962,7 @@
     (if (null? opt?)
       (if (null? else) #null
         (eval (\01+ else) env))
-      (if (list? opt?)  
+      (if (list? opt?)
         (eval (list* (list 'vau pt #ignore then) opt?) env)
         (error (makeTypeError opt? '(or Null List))) ))))
 
@@ -1012,7 +1002,7 @@
    |multiple opt? arguments.  Each default is evaluated lazily, only when needed.
    |#
   (let loop ((lst (eval lst env)) (dft dft))
-    (if (null? lst) 
+    (if (null? lst)
       (if (null? dft) #null
          (cons (eval (car dft) env) (loop #null (cdr dft))) )
       (if (null? (car lst))
@@ -1103,17 +1093,17 @@
 
 ;;; Type Checks
 
+(def\ makeTypeError (datum expected)
+  #|Create a `type-error' with the given DATUM and EXPECTED-TYPE.|#
+  (newObj Error :type 'type :datum datum :expected expected))
+
 ;; TODO non più necessario, eliminare
 (def\ assertType (object class)
   #|Signal a `type-error' if the OBJECT is not an instance of the CLASS.|#
   (if (type? object class) object
     (error (makeTypeError object (className class)))))
 
-(def\ makeTypeError (datum expected)
-  #|Create a `type-error' with the given DATUM and EXPECTED-TYPE.|#
-  (newObj Error :type 'type :datum datum :expected expected))
-
-#| TODO sostituiti dal seguente
+#| TODO sostituito dal seguente
 (defVau the (className object) env
   #|Shorthand for `assertType'.  Signal a `type-error' if the OBJECT
    |is not an instance of the class named by CLASS-NAME.
@@ -1146,13 +1136,13 @@
       (list* '\ names (if (null? checks) body (list* (list* 'begin checks) body))) )))
 
 (defMacro (define lhs . rhs)
-  (if (symbol? lhs)
-    (list 'def lhs (car rhs))
-    (list 'def (car lhs) (list* 'type\ (cdr lhs) rhs)) ))
+  (if (cons? lhs)
+    (list 'def (car lhs) (list* 'type\ (cdr lhs) rhs))
+    (list 'def lhs (car rhs)) ))
 
 
 (defMacro letEnv bindings
-  (list 'let bindings '(theEnv)) ) 
+  (list 'let bindings '(theEnv)) )
 
 (defVau check (o . ck) env
   (let ( (o (let1 (o (eval o env)) (if (cons? o) o (list o))))
@@ -1160,8 +1150,8 @@
     (apply* @check vm o o (map (\ (a) (eval a env)) ck)) ))
 
 (defVau check? args env (catchWth (\ (e) #f) (apply check args env)) #t)
-(defVau (the! type obj) env (apply check (list obj type) env) obj) 
-(defMacro (the! type obj) (apply* check obj type) obj) 
+(defVau (the! type obj) env (apply check (list obj type) env) obj)
+(defMacro (the! type obj) (apply* check obj type) obj)
 
 
 ;;; Lists
@@ -1175,7 +1165,7 @@
   (if (null? lst*)
     ((rec\ (all? lst) (if (null? lst) #t (if (f (car lst)) (all? (cdr lst)) #f))) lst)
     ((rec\ (all*? lst*) (if (null? (car lst*)) #t (if (apply f (map car lst*)) (all*? (map cdr lst*)) #f))) (cons lst lst*)) ))
-    
+
 (def\ (forEach f lst . lst*)
   #|Apply the FUNCTION to every element of the LIST for effect.  Return the #inert.
    |#
@@ -1276,10 +1266,10 @@
         (forEach (\ (ndv var val) (if (instanceOf? ndv DVar) (ndv val) (@def env var (newDVar val)) )) ndv* var* (if (null? val*) (map (\ (var) #null) var*) val*))
         (unless (null? body)
           (finally
-            (eval (list* 'begin body) env) 
+            (eval (list* 'begin body) env)
             (forEach (\ (ndv old) (ndv old)) ndv* old*) )))))
 
-;((d\ (d e) (print e)) 4 5)     
+;((d\ (d e) (print e)) 4 5)
 ;((d\ (d e)) 6 7)
 |#
 
@@ -1295,11 +1285,13 @@
   (list* (list '%d\ var*) val*) )
 
 (def\ (dget dvar)
-  #|Return the current value of the DYNAMIC-VARIABLE.|#
+  #|Return the current value of the DYNAMIC-VARIABLE.
+   |#
   (dvar))
 
 (def\ (dset dvar value)
-  #|Set the current value of the DYNAMIC-VARIABLE.|#
+  #|Set the current value of the DYNAMIC-VARIABLE.
+   |#
   (dvar value))
 
 (defMacro (dlet bindings exp . exps)
@@ -1308,7 +1300,7 @@
    |as per `let'.
    |$(syntax binding (dynamicVariable value))
    |#
-  (list* (list* '%d\ (map car bindings) exp exps) (map cadr bindings)) )  
+  (list* (list* '%d\ (map car bindings) exp exps) (map cadr bindings)) )
 
 (defMacro (progv var* val* exp . exps)
   #|Evaluate the FORMS with the list of DYNAMIC-VARIABLES temporarily
@@ -1340,7 +1332,8 @@
 ;;; Classes
 
 (def\ findClass (name environment)
-  #|Look up a class based on its NAME symbol (evaluated) in the given ENVIRONMENT.|#
+  #|Look up a class based on its NAME symbol (evaluated) in the given ENVIRONMENT.
+   |#
   (eval (the Symbol name) environment))
 
 (defVau defClass (name superclass? slotSpecs . properties) env
@@ -1368,15 +1361,18 @@
   %newObj)
 
 (def\ getSlot (object slotName)
-  #|Return the value of the slot named SLOT-NAME of the OBJECT.|#
+  #|Return the value of the slot named SLOT-NAME of the OBJECT.
+   |#
   (%getSlot object slotName))
 
 (def\ setSlot (object slotName value)
-  #|Set the value of the slot named SLOT-NAME of the OBJECT to VALUE.|#
+  #|Set the value of the slot named SLOT-NAME of the OBJECT to VALUE.
+   |#
   (%setSlot object slotName value))
 
 (def\ slotBound? (object slotName)
-  #|Return true if the slot named SLOT-NAME of the OBJECT is set, false otherwise.|#
+  #|Return true if the slot named SLOT-NAME of the OBJECT is set, false otherwise.
+   |#
   (%slotBound? object slotName))
 
 (defMacro (defObj name class . attr)
@@ -1388,25 +1384,25 @@
 ;; receiver e parameters dei defMethod dovrebbero corrispondere a quelli del corrispondente defGeneric con quel nome
 
 (defVau (defGeneric . args) env
-  #|Define a new generic function with the given NAME.  The RECEIVER,
-   |PARAMETERS, and PROPERTIES are currently ignored.
+  #|Define a new generic function with the given NAME.
+   |The RECEIVER, PARAMETERS, and PROPERTIES are currently ignored.
    |$(syntax property (:documentation docstring))
    |#
-  (if (symbol? (car args))
-    (def (name (receiver . parameters) . properties) args)
-    (def ((name receiver . parameters) . properties) args) )
+  (if (cons? (car args))
+    (def ((name receiver . parameters) . properties) args)
+    (def (name (receiver . parameters) . properties) args) )
   (let1\ (generic args (apply (%getMethod (classOf (car args)) name) args))
     (eval (list 'def name generic) env) ))
 
 (defVau (defMethod . args) env
-  #|Add a new method to the generic function named by NAME specialized
-   |for the class named by CLASS-NAME.
+  #|Add a new method to the generic function named by NAME
+   |specialized for the class named by CLASS-NAME.
    |#
-  (if (symbol? (car args))
-    (def (name ((receiver class) . parameters) . forms) args)
-    (def ((name (receiver class) . parameters) . forms) args) )
+  (if (cons? (car args))
+    (def ((name (receiver class) . parameters) . forms) args)
+    (def (name ((receiver class) . parameters) . forms) args) )
   (let1 (method (eval (list* '\ (list* receiver parameters) forms) env))
-    (%addMethod (findClass class env) name method)
+    (def prv (%addMethod (findClass class env) name method))
     (case (bndres) ((#inert) #inert) ((:rhs) method) ((:prv) prv)) ))
 
 
@@ -1552,18 +1548,18 @@
    |divide the first one by all of the later ones and return the result.
    |$(fn arguments)
    |$(type function)
-   |# 
+   |#
   (lyticOp / 1) )
 
 
 ;;;; Greatest Common Divisor e Lowest Common Multiple
 
 (def\ (gcd a b . more)
-  (if (null? more) 
+  (if (null? more)
     (if (zero? b) a (gcd b (% a b)))
     (gcd a (apply gcd (cons b more))) ))
 
-(def abs (let1 (abs (@getMethod Math "abs" &int)) (\ (n) (abs #null n))))  
+(def abs (let1 (abs (@getMethod Math "abs" &int)) (\ (n) (abs #null n))))
 
 (def\ (lcm a b . more)
   (if (null? more)
@@ -1640,15 +1636,15 @@
   (def val (eval plc env))
   (caseType val
     (Box    (let1 (() args) (val :rhs (+ (val) 1))))
-    (Obj (let1 ((fld) args) (val fld :rhs (+ (val fld) 1)))) 
+    (Obj (let1 ((fld) args) (val fld :rhs (+ (val fld) 1))))
     (Number (let1 (() args) (eval (list 'set! plc :rhs (+ val 1)) env)))
-    (else   (error ($ "not valid type: " val))) )) 
+    (else   (error ($ "not valid type: " val))) ))
 
 (defVau (-- plc . args) env
   (def val (eval plc env))
   (caseType val
     (Box    (let1 (() args) (val :rhs (- (val) 1))))
-    (Obj (let1 ((fld) args) (val fld :rhs (- (val fld) 1)))) 
+    (Obj (let1 ((fld) args) (val fld :rhs (- (val fld) 1))))
     (Number (let1 (() args) (eval (list 'set! plc :rhs (- val 1)) env)))
     (else   (error ($ "not valid type: " val))) ))
 
@@ -1656,15 +1652,15 @@
   (vau (plc . args) env
     (def lval (eval plc env))
     (caseType lval
-      (Box (match args 
-        ((rval) (lval (op (lval) (eval rval env)))) 
+      (Box (match args
+        ((rval) (lval (op (lval) (eval rval env))))
         ((key rval) (lval key (op (lval) (eval rval env)))) ))
       (Obj (match args
         ((fld rval) (lval fld (op (lval fld) (eval rval env))))
         ((fld key rval) (lval fld key (op (lval fld) (eval rval env)))) ))
       (Object (match args
         ((rval) (eval (list 'def plc (op lval (eval rval env))) env))
-        ((key rval) (eval (list 'set! plc key (op lval (eval rval env))) env)) ))))) 
+        ((key rval) (eval (list 'set! plc key (op lval (eval rval env))) env)) )))))
 
 (def $= (assignOp %$))
 (def += (assignOp %+))
@@ -1695,6 +1691,11 @@
 
 ;;;; Error break routine, called by VM to print stacktrace and throw
 
+(def\ (printStacktrace k)
+  (let1 (k (.nxt k))
+    (unless (null? k) (printStacktrace k))
+    (log "v" k) ))
+
 (def\ invokeDebugger (condition)
   #|Invoke the debugger, which as a default just prints a stack trace
    |and panics, thereby throwing an exception to JS.  When running in the
@@ -1703,6 +1704,16 @@
    |#
   (takeSubcont +rootPrompt+ k
     (pushDelimSubcont +rootPrompt+ k
-      (%printStacktrace k)
+      (if (prstk) (printStacktrace k))
       (panic condition))))
 
+(def panic
+  #|Mostly for internal use.  Signal the ERROR in such a way that it is
+   |hard to handle and will usually escape the VM as a host language
+   |exception.  In particular, signal handlers will not be invoked.
+   |However, intervening `finally' cleanup expressions and `progv'
+   |expressions are still triggered, so Lisp invariants are maintained.
+   |$(fn (error))
+   |$(type function)
+   |#
+  (\ (e) (throw e)) )
