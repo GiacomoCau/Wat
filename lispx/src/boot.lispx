@@ -236,7 +236,7 @@
    |$(type function)
    |#
   %reverse)
-
+(def rootPrompt %rootPrompt)
 (def set! %set!)
 (def symbol %symbol)
 (def symbol? %symbol?)
@@ -546,6 +546,9 @@
    |#
   (list '%pushPrompt prompt (list* '\ () forms)))
 
+(defVau (pushPrompt prompt . forms) env
+  (eval (list '%pushPrompt (eval prompt env) (list* 'begin forms)) env) )
+
 (def takeSubcont
   #|Abort outwards to the PROMPT.  When the prompt is reached, evaluate
    |the FORMS with NAME bound to the captured continuation (which does not
@@ -616,9 +619,9 @@
 (def\ (->begin binding) ((\ ((#_ cadr . cddr)) (if (null? cddr) cadr (list* 'begin cadr cddr))) binding))
 (def\ (->name+#inert (lhs . #_)) (list (if (cons? lhs) (car lhs) lhs) #inert))
 (def\ (->name+lambda (lhs . rhs)) (if (cons? lhs) (list (car lhs) (list* '\ (cdr lhs) rhs)) (list lhs (list* '\ rhs)) ))
-(def\ (->name+lambda (lhs . rhs)) (list (if (cons? lhs) (car lhs) lhs) (list* '\ (if (cons? lhs) (cons (cdr lhs) rhs) rhs))))
-(def\ (->name+lambda (lhs . rhs)) (def t (cons? lhs)) (list (if t (car lhs) lhs) (list* '\ (if t (cons (cdr lhs) rhs) rhs))))
-(def\ (->name+lambda (lhs . rhs)) (list (if (def t :rhs (cons? lhs)) (car lhs) lhs) (list* '\ (if t (cons (cdr lhs) rhs) rhs))))
+;(def\ (->name+lambda (lhs . rhs)) (list (if (cons? lhs) (car lhs) lhs) (list* '\ (if (cons? lhs) (cons (cdr lhs) rhs) rhs))))
+;(def\ (->name+lambda (lhs . rhs)) (def t (cons? lhs)) (list (if t (car lhs) lhs) (list* '\ (if t (cons (cdr lhs) rhs) rhs))))
+;(def\ (->name+lambda (lhs . rhs)) (list (if (def t :rhs (cons? lhs)) (car lhs) lhs) (list* '\ (if t (cons (cdr lhs) rhs) rhs))))
 
 
 (defMacro (let1Loop . args)
@@ -1227,7 +1230,8 @@
     ((rec\ (foldr* acc lst*) (if (null? (car lst*)) acc (apply* f (map car lst*) (foldr* acc (map cdr lst*)) ) )) init (cons lst lst*)) ))
 
 (defMacro dolist ((var listForm . resultForm?) . bodyForms)
-  #|Cf. Common Lisp's DOLIST.|#
+  #|Cf. Common Lisp's DOLIST.
+   |#
   (let1rec\
     (dolist (list body result)
       (if (null? list) (result list)
@@ -1346,7 +1350,7 @@
    |#
    ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
   (dolist (slotSpec slotSpecs) (the Symbol slotSpec))
-  (let1 (superclass (findClass (opt? superclass? 'StandardObject) env))
+  (let1 (superclass (findClass (opt? superclass? 'Obj) env))
     (eval (list def name (%newClass name superclass)) env)) )
 
 
@@ -1437,7 +1441,8 @@
 ;; at least two arguments.  This will be improved in the future.
 
 (def\ (relationalOp binop)
-  #|Utility to create an n-ary relational operator from a BINARY-OPERATOR.|#
+  #|Utility to create an n-ary relational operator from a BINARY-OPERATOR.
+   |#
   (rec\ (op arg1 arg2 . rest)
     (if (binop arg1 arg2)
       (if (null? rest) #t
@@ -1604,7 +1609,7 @@
 
 ;;; Coroutines
 
-(defConstant +defaultPrompt+
+(defConstant coroutinePrompt
   #|This prompt is used for general coroutine-like use of continuations.
    |#
   'defaultPrompt)
@@ -1612,7 +1617,7 @@
 (defMacro coroutine forms
   #|Evaluate the FORMS in a context in which `yield' can be used to pause execution.
    |#
-  (list* 'pushPrompt '+defaultPrompt+ forms))
+  (list* 'pushPrompt 'coroutinePrompt forms))
 
 (defMacro yield (name . forms)
   #|Pause the current coroutine.  In the place where the enclosing
@@ -1620,13 +1625,13 @@
    |bound to the paused coroutine.  `resume' can later be used to restart
    |execution inside the coroutine.
    |#
-  (list* 'takeSubcont '+defaultPrompt+ name forms))
+  (list* 'takeSubcont 'coroutinePrompt name forms))
 
 (defMacro resume (k . forms)
   #|Resume the paused coroutine K and evaluate FORMS in the place where
    |`yield' was called in the coroutine.
    |#
-  (list* 'pushDelimSubcont '+defaultPrompt+ k forms))
+  (list* 'pushDelimSubcont 'coroutinePrompt k forms))
 ;;;; Auto Increment/Decrement and Assignement Operator
 
 (defVau ($set! exp1 formals exp2) env
@@ -1702,8 +1707,8 @@
    |REPL, this function gets replaced with a different one that runs a
    |nested debug loop.
    |#
-  (takeSubcont +rootPrompt+ k
-    (pushDelimSubcont +rootPrompt+ k
+  (takeSubcont rootPrompt k
+    (pushDelimSubcont rootPrompt k
       (if (prstk) (printStacktrace k))
       (panic condition))))
 

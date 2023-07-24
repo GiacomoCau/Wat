@@ -58,14 +58,10 @@
 (%def Ignore &Wat.Vm$Ignore)
 (%def Utility &Wat.Utility)
 
-(%def BuiltInClass Class)
-(%def Dynamic DVar)
-(%def Environment Env)
 (%def Fexpr Opv)
 (%def Function Apv)
 (%def Operator Combinable)
 (%def StandardClass Class)
-(%def StandardObject Obj)
 
 (%def AssertionError Error)
 (%def MatchError Error)
@@ -80,25 +76,21 @@
 (%def %nth (%\ (i l) (%the Integer i) (@car (%the Cons l) i)))
 (%def %nthCdr (%\ (i l) (%the Integer i) (%if (%zero? i) l (@cdr (%the Cons l) (%- i 1)))))
 
-(%def %className (%\ (class) (%intern (@getSimpleName (%the Class class)))))
-;(%def %newClass ((%\ (%newClass) (%\ (name superclass) (%newClass (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass))) %newClass))
-
-(%def %pushPrompt ((%\ (%pushPrompt) (%wrap %pushPrompt)) %pushPrompt))
-
-(%def +rootPrompt+ %rootPrompt)
-
 (%def %take (%\ (i l) (%if (%zero? i) #null (%cons (%car l) (%take (%- i 1) (%cdr l))))))
 (%def %listSubseq (%\ (l s e) (%the Integer s) (%if (%! (%inert? e)) (%the Integer e)) (%def tail (%nthCdr s l)) (%if (%inert? e) tail (%take (%- e s) tail))))
 (%def %stringSubseq (%\ (seq start end) (%if (%inert? end) (@substring (%the String seq) (%the Integer start)) (@substring (%the String seq) (%the Integer start) (%the Integer end)))))
 
-(%def %getSlot (%\ (obj slot)
-  ((%the StandardObject obj) (%the Intern slot)) ))
+;(%def %pushPrompt ((%\ (%pushPrompt) (%wrap %pushPrompt)) %pushPrompt))
 
-(%def %setSlot (%\ (obj slot value)
-  ((%the StandardObject obj) (%the Intern slot) value) ))
+(%def %className (%\ (class) (%intern (@getSimpleName (%the Class class)))))
+;(%def %newClass ((%\ (%newClass) (%\ (name superclass) (%newClass (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass))) %newClass))
 
-(%def %slotBound? (%\ (obj slot)
-  (@isBound (%the StandardObject obj) (%the Intern slot)) ))
+(%def %getSlot (%\ (obj slot) ((%the Obj obj) (%the Intern slot)) ))
+(%def %setSlot (%\ (obj slot value) ((%the Obj obj) (%the Intern slot) value) ))
+(%def %slotBound? (%\ (obj slot) (@isBound (%the Obj obj) (%the Intern slot)) ))
+
+
+;;; Boot
 
 (load "lispx/src/boot.lispx")
 (load "lispx/src/cond-sys.lispx")
@@ -130,7 +122,7 @@
   (let1 (class (findClass conditionClass env))
     (block exit
       (handlerCase
-        ( (StandardObject
+        ( (Obj
             (\ (obj)
               (if (type? obj class)
                 (let1 check (slots slots)

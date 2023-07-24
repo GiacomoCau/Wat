@@ -236,7 +236,7 @@
     #inert)
 
   (deftest js-\.rootPrompt-is-set
-    (call-js-function (js-\ () (takeSubcont +rootPrompt+ #ignore)))
+    (call-js-function (js-\ () (takeSubcont rootPrompt #ignore)))
     #inert)
 
   (deftest js-\.barrier

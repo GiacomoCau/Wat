@@ -73,8 +73,8 @@
 
   (deftest error.1
     (signalsError
-     (error (newObj StandardObject :x 1 :y 2))
-     StandardObject :x 1 :y 2))
+     (error (newObj Obj :x 1 :y 2))
+     Obj :x 1 :y 2))
 
   (deftest error.2
     (signalsError
@@ -341,7 +341,7 @@
     (bound? 'def\ (theEnv)))
 
   (deftest bound?.3
-    (bound? 'StandardObject (theEnv)))
+    (bound? 'Obj (theEnv)))
 
   (deftest bound?.4
     (signalsError
@@ -2402,14 +2402,14 @@
 
   (deftest obj.5
     (signalsError
-     (newObj StandardObject :x)
+     (newObj Obj :x)
      AssertionError)))
 
 (defsuite slots
 
   (deftest slots.1
     (begin
-      (def obj (newObj StandardObject))
+      (def obj (newObj Obj))
       (assert (not (slotBound? obj 'x)))
       (assert (not (slotBound? obj :x)))
       (assert (signalsError (getSlot obj 'x)
@@ -2433,12 +2433,12 @@
 
   (deftest getSlot.1a
     (signalsError
-     (getSlot (newObj StandardObject) "x")
+     (getSlot (newObj Obj) "x")
      Error :type 'type :datum "x" :expected 'Intern))
 
   (deftest getSlot.2
     (signalsError
-     (getSlot (newObj StandardObject))
+     (getSlot (newObj Obj))
      MatchError))
 
   (deftest getSlot.3
@@ -2453,17 +2453,17 @@
 
   (deftest setSlot.1a
     (signalsError
-     (setSlot (newObj StandardObject) "x" 1)
+     (setSlot (newObj Obj) "x" 1)
      Error :type 'type :datum "x" :expected 'Intern))
 
   (deftest setSlot.2
     (signalsError
-     (setSlot (newObj StandardObject))
+     (setSlot (newObj Obj))
      MatchError))
 
   (deftest setSlot.3
     (signalsError
-     (setSlot (newObj StandardObject) 'x)
+     (setSlot (newObj Obj) 'x)
      MatchError))
 
   (deftest slotBound?.1
@@ -2473,7 +2473,7 @@
 
   (deftest slotBound?.1a
     (signalsError
-     (slotBound? (newObj StandardObject) "x")
+     (slotBound? (newObj Obj) "x")
      Error :type 'type :datum "x" :expected 'Intern))
 
   (deftest slotBound?.2
@@ -2483,7 +2483,7 @@
 
   (deftest slotBound?.3
     (signalsError
-     (slotBound? (newObj StandardObject))
+     (slotBound? (newObj Obj))
      MatchError)))
 
 (defsuite let
@@ -2950,7 +2950,7 @@
     (begin
       (assert (== (classOf "foo") String))
       (assert (== (classOf 12) Integer))
-      (assert (== (classOf String) BuiltInClass)))
+      (assert (== (classOf String) Class)))
     #inert)
 
   (deftest classOf.2
@@ -3051,11 +3051,11 @@
   (assert (type? c Class))
   (assert (type? c Object))
   (assert (eq? (className c) 'Point2d))
-  (assert (subClass? c StandardObject))
+  (assert (subClass? c Obj))
   (assert (subClass? c Object))
 
   (assert (type? p c))
-  (assert (type? p StandardObject))
+  (assert (type? p Obj))
   (assert (type? p Object))
   (assert (eq? (getSlot p 'x) 1))
   (assert (eq? (getSlot p 'y) 2))
@@ -3065,12 +3065,12 @@
   (assert (type? d Object))
   (assert (eq? (className d) 'Point3d))
   (assert (subClass? d c))
-  (assert (subClass? d StandardObject))
+  (assert (subClass? d Obj))
   (assert (subClass? d Object))
 
   (assert (type? q d))
   (assert (type? q c))
-  (assert (type? q StandardObject))
+  (assert (type? q Obj))
   (assert (type? q Object))
   (assert (eq? (getSlot q 'x) 1))
   (assert (eq? (getSlot q 'y) 2))
@@ -3079,7 +3079,7 @@
 (defsuite %newClass
 
   (deftest %newClass.1
-    (let* ((c (%newClass 'Point2d StandardObject))
+    (let* ((c (%newClass 'Point2d Obj))
            (d (%newClass 'Point3d c))
            (p (newObj c :x 1 :y 2))
            (q (newObj d :x 1 :y 2 :z 3)))
@@ -3103,16 +3103,16 @@
 
   (deftest %newClass.5
     (signalsError
-     (%newClass "foo" StandardObject)
+     (%newClass "foo" Obj)
      Error :type 'type :datum "foo" :expected 'Symbol)))
 
 (defsuite %reinitialize-standard-class
 
   (deftest* %reinitialize-standard-class.1
-    (let* ((a (%newClass 'A StandardObject))
+    (let* ((a (%newClass 'A Obj))
            (b (%newClass 'B a))
            (c (%newClass 'C b))
-           (d (%newClass 'D StandardObject))
+           (d (%newClass 'D Obj))
            (e (%newClass 'E d)))
       (assert (subClass? b a))
       (assert (subClass? c a))

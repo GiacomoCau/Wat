@@ -33,11 +33,11 @@ when the input stream is a `repl:input-buffer'."
                              ;; and save continuation in wake-up function.
                              (returnFrom trampoline
                                (\ ()
-                                 (takeSubcont +rootPrompt+ k
+                                 (takeSubcont rootPrompt k
                                    (repl:%set-input-buffer-wake-up-function
                                     input-buffer
                                     (\ ()
-                                      (pushDelimSubcont +rootPrompt+ k))))))))
+                                      (pushDelimSubcont rootPrompt k))))))))
                           (reader-error
                            (\ (e)
                              ;; We got a `reader-error' -- assume the

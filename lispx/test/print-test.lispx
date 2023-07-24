@@ -3,13 +3,13 @@
 (defsuite *print-escape*
 
   (deftest *print-escape*.defined
-    (and (type? *print-escape* Dynamic)
+    (and (type? *print-escape* DVar)
          (type? (dget *print-escape*) Boolean))))
 
 (defsuite *print-level?*
 
   (deftest *print-level?*.defined
-    (and (type? *print-level?* Dynamic)
+    (and (type? *print-level?* DVar)
          (type? (dget *print-level?*) List)))
 
   (def\ write-with-level (object level)

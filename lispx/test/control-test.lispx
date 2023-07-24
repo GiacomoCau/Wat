@@ -11,7 +11,7 @@
 ;; We use it for testing that built-in operators properly suspend and
 ;; resume.
 
-(defConstant +fiber-prompt+
+(defConstant fiberPrompt
   #|The prompt used for delimiting fibers.
    |#
   'fiber-prompt)
@@ -29,25 +29,25 @@
 (def\ fiberYield v?
   #|Yield a value (which defaults to void).
    |#
-  (takeSubcont +fiber-prompt+ k
+  (takeSubcont fiberPrompt k
     (makeYieldRecord (opt? v? #inert) k)))
 
 (def\ fiberResume (yieldRecord . v?)
   #|Resume a suspended fiber with a value (which defaults to void).
    |#
-  (pushDelimSubcont +fiber-prompt+ (getSlot yieldRecord 'continuation)
+  (pushDelimSubcont fiberPrompt (getSlot yieldRecord 'continuation)
     (opt? v? #inert)))
 
 (defMacro fiber body
   #|Evaluate the body expressions as a fiber.
    |#
-  (list* pushPrompt '+fiber-prompt+ body))
+  (list* pushPrompt 'fiberPrompt body))
 
 (def\ runFiber (thunk)
   #|Get all values yielded by a fiber, and its final result, and
    |collect them in a list.
    |#
-  (letLoop run ((result (fiber (thunk))))
+  (let1 run (result (fiber (thunk)))
     (if (type? result YieldRecord)
         (cons (getSlot result 'value) (run (fiberResume result)))
         (list result))))
@@ -56,7 +56,7 @@
   #|Like `runFiber' but uses a list of values that are sent to the
    |fiber with `fiberResume'.
    |#
-  (letLoop run ((result (fiber (thunk))) (values values))
+  (let run ((result (fiber (thunk))) (values values))
     (if (type? result YieldRecord)
         (cons (getSlot result 'value)
               (run (fiberResume result (car values)) (cdr values)))
@@ -565,11 +565,11 @@
     (begin
       (ddef *foo*)
       (assert (eq? (dget *foo*) #inert))
-      (assert (type? *foo* Dynamic))
+      (assert (type? *foo* DVar))
       (assert (type? *foo* Box))
       (assert (type? *foo* Object))
-      (assert (subClass? Dynamic Box))
-      (assert (subClass? Dynamic Object)))
+      (assert (subClass? DVar Box))
+      (assert (subClass? DVar Object)))
     #inert)
 
   (deftest dset.1
@@ -615,16 +615,16 @@
 (defsuite built-in-prompts
 
   (deftest |Default prompt exists|
-    (bound? '+defaultPrompt+ (theEnv)))
+    (bound? 'coroutinePrompt (theEnv)))
 
   (deftest |Root prompt exists|
-    (bound? '+rootPrompt+ (theEnv)))
+    (bound? 'rootPrompt (theEnv)))
 
   (deftest |Root prompt is set|
     ;; I have no idea why this works.  I mean it's the right thing,
     ;; but it's unclear how it interacts with test-util.lispx's
     ;; Mocha stuff that runs this test.
-    (takeSubcont +rootPrompt+ #ignore)
+    (takeSubcont rootPrompt #ignore)
     #inert))
 
 ;;; Simple Control Operators

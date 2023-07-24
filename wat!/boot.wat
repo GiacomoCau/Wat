@@ -1161,13 +1161,13 @@
     (defClass Bar (Foo) (a b))
     (defGeneric g1 (obj p))
     (defMethod g1 ((foo Foo) p) (+ p 100))
-
+    
     (defObj foo Foo)
     (defObj bar Bar :a 1 :b (+ 2 3))
-
+    
     (assert (g1 foo (+ 1 1)) 102)
     (assert (g1 bar (+ 2 3)) 105)
-
+    
     (defMethod (g1 (bar Bar) p) (+ p (bar :b)))
 
     (assert (bar :b) 5)
@@ -1341,7 +1341,7 @@
 
 ;;; Coroutines
 
-(defConstant +defaultPrompt+
+(defConstant coroutinePrompt
   #|This prompt is used for general coroutine-like use of continuations.
    |#
   'defaultPrompt)
@@ -1349,7 +1349,7 @@
 (defMacro coroutine forms
   #|Evaluate the FORMS in a context in which `yield' can be used to pause execution.
    |#
-  (list* 'pushPrompt '+defaultPrompt+ forms))
+  (list* 'pushPrompt 'coroutinePrompt forms))
 
 (defMacro yield (name . forms)
   #|Pause the current coroutine.  In the place where the enclosing
@@ -1357,13 +1357,13 @@
    |bound to the paused coroutine.  `resume' can later be used to restart
    |execution inside the coroutine.
    |#
-  (list* 'takeSubcont '+defaultPrompt+ name forms))
+  (list* 'takeSubcont 'coroutinePrompt name forms))
 
 (defMacro resume (k . forms)
   #|Resume the paused coroutine K and evaluate FORMS in the place where
    |`yield' was called in the coroutine.
    |#
-  (list* 'pushDelimSubcont '+defaultPrompt+ k forms))
+  (list* 'pushDelimSubcont 'coroutinePrompt k forms))
 
 
 #| TODO da rivedere

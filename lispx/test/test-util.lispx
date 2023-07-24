@@ -21,7 +21,7 @@
      ;; captures to this prompt, it returns a promise here.  This
      ;; promise is returned to Mocha, which does the right thing (wait
      ;; for it to resolve).
-     (pushPrompt +defaultPrompt+
+     (pushPrompt coroutinePrompt
        ;; Test and expected expressions are evaluated in fresh child
        ;; environments of the current environment, so that bindings
        ;; they create don't affect other tests.
@@ -68,7 +68,7 @@
   |slots of the signalled condition."
   (let ((class (findClass conditionClass env)))
     (block exit
-      (handlerCase ((StandardObject (\ (c)
+      (handlerCase ((Obj (\ (c)
                                (if (type? c class)
                                    (begin
                                      (letLoop -check-slots- ((slotSpecs slotSpecs))

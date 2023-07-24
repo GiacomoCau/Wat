@@ -53,11 +53,25 @@
 
 (%def %zero? (%\ (v) (%== v 0)))
 (%def %inert? (%\ (v) (%== v #inert)))
+
 (%def %nth (%\ (i l) (%the Integer i) (@car (%the Cons l) i)))
 (%def %nthCdr (%\ (i l) (%the Integer i) (%if (%zero? i) l (@cdr (%the Cons l) (%- i 1)))))
+
 (%def %take (%\ (i l) (%if (%zero? i) #null (%cons (%car l) (%take (%- i 1) (%cdr l))))))
 (%def %listSubseq (%\ (l s e) (%the Integer s) (%if (%! (%inert? e)) (%the Integer e)) (%def tail (%nthCdr s l)) (%if (%inert? e) tail (%take (%- e s) tail))))
 (%def %stringSubseq (%\ (seq start end) (%if (%inert? end) (@substring (%the String seq) (%the Integer start)) (@substring (%the String seq) (%the Integer start) (%the Integer end)))))
+
+;(%def %pushPrompt ((%\ (%pushPrompt) (%wrap %pushPrompt)) %pushPrompt))
+
+(%def %className (%\ (class) (%intern (@getSimpleName (%the Class class)))))
+;(%def %newClass ((%\ (%newClass) (%\ (name superclass) (%newClass (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass))) %newClass))
+
+(%def %getSlot (%\ (obj slot) ((%the Obj obj) (%the Intern slot)) ))
+(%def %setSlot (%\ (obj slot value) ((%the Obj obj) (%the Intern slot) value) ))
+(%def %slotBound? (%\ (obj slot) (@isBound (%the Obj obj) (%the Intern slot)) ))
+
+
+;;; Boot
 
 (load "wat!/boot.wat");
 
