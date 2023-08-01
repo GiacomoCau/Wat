@@ -131,8 +131,10 @@ public class Utility {
 		//out.println(toString("a\\nb"));
 		//out.println(toSource(toString("a\\nb")));
 		//out.println(toString(toSource("a\nb")));
-		
-		out.println(read());
+		for(;;) {
+			var v = read();
+			out.print(v);
+		}
 	}
 	
 	private static Set<Entry<String,String>> control = of("\"", "\\\\\"", "\n", "\\\\n", "\t", "\\\\t", "\r", "\\\\r", "\b", "\\\\b", "\f", "\\\\f").entrySet();

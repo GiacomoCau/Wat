@@ -65,8 +65,30 @@
    |#
   %append)
 
-(def apply %apply)
-(def apply* %apply*)
+(def apply
+  #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
+   |$(fn (fun args . env))
+   |$(type function)
+   |$(derivation (eval (cons (unwrap fun) args) (if (null? env) (newEnv) ((\ ((env)) env) env))))
+   |#
+  %apply)
+
+(def apply*
+  #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
+   |$(fn (fun . args)) 
+   |$(type function)
+   |$(derivation (apply fun args))
+   |#
+  %apply*)
+
+(def apply**
+  #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
+   |$(fn (fun . args)) 
+   |$(type function)
+   |$(derivation (apply fun (apply list* args)))
+   |#
+  %apply**)
+
 (def array->list %array->list)
 (def begin
   #|Sequentially evaluate FORMS, returning the value of the last one, or void if there are no forms.
@@ -803,18 +825,44 @@
   (vau values #ignore
     (let1 loop (clauses clauses)
       (if (null? clauses) #inert
-        (let ( (env+ (newEnv env))
-               (((bindings . forms) . clauses) clauses) )
-          (if (if (== bindings 'else) #t (bind? env+ bindings values)) ; or!
-            (eval (list* 'begin forms) env+)
-            (loop clauses) ))))))
+        (let1 (((bindings . forms) . clauses) clauses)
+          (if (== bindings 'else)
+            (if (== (car forms) '=>)
+              (let1 ((apv) (cdr forms)) ((eval apv env) value))
+              (eval (list* 'begin forms) env) )
+            (let1 (env+ (newEnv env)) 
+              (if (bind? env+ bindings values)
+                (eval (list* 'begin forms) env+)
+                (loop clauses) ))))))))
+
+(defMacro (defCaseVau sym . clauses)
+  (list 'def sym (list* 'caseVau clauses)) )
 
 (defMacro (case\ . clauses)
   (list 'wrap (list* 'caseVau clauses)) )
 
+(defMacro (defCase\ sym . clauses)
+  (list 'def sym (list* 'case\ clauses)) )
+
 (defMacro (match exp . clauses)
   (list (list* 'case\ (map (\ ((a . b)) (list* (if (== a 'else) a (list a)) b)) clauses)) exp) )
 
+
+;;; Quasiquote
+
+;; (Idea from Alf Petrofsky http://scheme-reports.org/mail/scheme-reports/msg00800.html)
+(defVau %backTick (x) env
+  (defCase\ qq
+    ( ((('%commaAt x) . y) #f . d) (append (map (\ (x) (list '%commaAt x)) (apply** qq (list x) d)) (apply** qq y #f d)) )
+    ( ((('%commaAt x) . y) . d)    (append (eval x env) (apply** qq y d)) )
+    ( ((('%comma x) . y) #f . d)   (append (map (\ (x) (list '%comma x))   (apply** qq (list x) d)) (apply** qq y #f d)) )
+    ( (('%comma x) #f . d)         (list '%comma (apply** qq x d)) )
+    ;( (('%commaAt x) . d)          (error (simpleError "illegal ,@")) )  
+    ( (('%comma x) . d)            (eval x env) )
+    ( (('%backTick x) . d)         (list '%backTick (apply** qq x #f d)) )
+    ( ((x . y) . d)                (cons (apply** qq x d) (apply** qq y d)) )
+    ( (x . d)                      x) )
+  (qq x))
 
 
 ;;; Cond
@@ -889,14 +937,14 @@
 
 (defVau (case exp . clauses) env
   (let1 (value (eval exp env))
-    (let1 loop (clauses clauses)
+    (let1 next (clauses clauses)
       (if (null? clauses) #inert
         (let1 (((values . forms) . clauses) clauses)
-          (if (or (== values 'else) (cons? (member value values)))
+          (if (or (== values 'else) (== value values) (and (cons? values) (cons? (member value values))))
             (if (== (car forms) '=>)
               (let1 ((apv) (cdr forms)) ((eval apv env) value))
               (eval (list* 'begin forms) env) )
-            (loop clauses) ))))))
+            (next clauses) ))))))
 
 ; vedi signalsError in vm.lispx (o test-util.lispx) per codice simile
 (defVau (caseType key . clauses) env
@@ -933,7 +981,7 @@
 
 
 
-;;; Options ~= if!#null or ifList
+;;; Options
 
 ;; An option is either nil ("none"), or a one-element list ("some").
 ;; Variables holding options are conventionally suffixed with "?".
@@ -946,12 +994,12 @@
 (def\ (\01+ forms)
   (if (null? forms) #null (if (null? (cdr forms)) (car forms) (list* 'begin forms))) )
 
+;; (Idea from Taylor R. Campbell's blag. https://mumble.net/~campbell/blag.txt)
 (defVau (ifOpt? (pt opt?) then . else) env
   #|Destructure the OPTION?.  If it's non-nil, evaluate the THEN form
    |with the NAME bound to the contents of the option.  If it's nil,
    |evaluate the ELSE form.
    |#
-   ;; (Idea from Taylor R. Campbell's blag.)
   (let1 (opt? (eval opt? env))
     (if (null? opt?)
       (if (null? else) #null
@@ -1124,18 +1172,18 @@
    |#
   %the)
 
-(defMacro (type\ params . body)
-  (let1rec\ ( (typedParams->namesAndChecks ps)
+(defMacro (type\ parms . body)
+  (let1rec\ ( (parms->names.checks ps)
               (if (cons? ps)
                   (let* ( ((p . ps) ps)
-                          ((names . checks) (typedParams->namesAndChecks ps)) )
+                          ((names . checks) (parms->names.checks ps)) )
                     (if (cons? p)
                         (let* ( ((name type) p)
                                 (check (list 'the type name)))
                           (cons (cons name names) (cons check checks)) )
                         (cons (cons p names) checks) ))
                   (cons ps ()) ))
-    (let1 ((names . checks) (typedParams->namesAndChecks params))
+    (let1 ((names . checks) (parms->names.checks parms))
       (list* '\ names (if (null? checks) body (list* (list* 'begin checks) body))) )))
 
 (defMacro (define lhs . rhs)
@@ -1147,14 +1195,36 @@
 (defMacro letEnv bindings
   (list 'let bindings '(theEnv)) )
 
-(defVau check (o . ck) env
-  (let ( (o (let1 (o (eval o env)) (if (cons? o) o (list o))))
-         (env (letEnv (+ (.MAX_VALUE Integer)) (|| (\ o (list->array o))))) )
-    (apply* @check vm o o (map (\ (a) (eval a env)) ck)) ))
+(defVau extEnv (env . bindings) denv
+  (eval (list* 'letEnv bindings) (eval env denv)) )
+
+(defVau (check o . cks) env
+  (let1 (env+ (extEnv env (+ (.MAX_VALUE Integer)) (|| (\ o (list->array o)))))
+    (apply* @check vm "check" (eval o env) (map (\ (ck) (eval ck env+)) cks)) ))
 
 (defVau check? args env (catchWth (\ (e) #f) (apply check args env)) #t)
-(defVau (the! type obj) env (apply check (list obj type) env) obj)
-(defMacro (the! type obj) (apply* check obj type) obj)
+
+;(defVau the (ck o) env (apply* @checkO vm (eval o env) (eval ck (extEnv env (+ (.MAX_VALUE Integer)) (|| (\ o (list->array o)))))) )
+(defMacro (the type obj) (list 'let1 (list 'obj obj) (list 'check '(list obj) type) 'obj))
+
+(defMacro (check\ parms . body)
+  (let1rec\
+    ( (parms->names.checks parms)
+      (if (cons? parms)
+        (let* ( ((lhs . rhs) parms)
+                ((namesRhs . checksRhs) (parms->names.checks rhs)) )
+          (if (cons? lhs)
+            (if (== (car lhs) '!)  
+              (let* ( ((#_ type name) lhs)
+                      (check (list 'check (list name) type)) )
+                (cons (cons name namesRhs) (cons check checksRhs)) )
+              (let1 ((namesLhs . checksLhs) (parms->names.checks lhs))
+                (cons (cons namesLhs namesRhs) (append checksLhs checksRhs)) ) )
+            (let1 ((namesRhs . checksRhs) (parms->names.checks rhs))
+              (cons (cons lhs namesRhs) checksRhs)) ))
+        (cons parms ()) ) )
+    (let1 ((names . checks) (parms->names.checks parms))
+      (list* '\ names (if (null? checks) body (list* (list* 'begin checks) body))) )))
 
 
 ;;; Lists
@@ -1335,10 +1405,10 @@
 
 ;;; Classes
 
-(def\ findClass (name environment)
+(def\ findClass (name env)
   #|Look up a class based on its NAME symbol (evaluated) in the given ENVIRONMENT.
    |#
-  (eval (the Symbol name) environment))
+  (eval (the Symbol name) env))
 
 (defVau defClass (name superclass? slotSpecs . properties) env
   #|Define a new `StandardClass' with the given NAME, optional
@@ -1354,7 +1424,7 @@
     (eval (list def name (%newClass name superclass)) env)) )
 
 
-;;; Standard Objects
+;;; Objects
 
 (def newObj
   #|Create a new instance of CLASS (that must be a `standard-class').

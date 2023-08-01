@@ -358,6 +358,15 @@ public class Vm {
 			var prefix = switch(deep) { case 1-> "Vm"; case 2-> "The"; default-> ""; };
 			return "{" + prefix + "Env[" + map.size() + "]" + eIf(deep < prenv, ()-> reverseMap(map)) + eIfnull(parent, ()-> " " + parent) + "}";
 		}
+		boolean	remove(Object obj) {
+			var key = toKey(obj);
+			for (var env=this; env != null; env=env.parent) {
+				if (!env.map.containsKey(key)) continue;
+				env.map.remove(key);
+				return true;
+			}
+			return false;
+		};
 	}
 	Env env(Env parent) { return new Env(parent); }
 	
@@ -681,10 +690,10 @@ public class Vm {
 	};
 	class Eval implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkN(this, o, 2, Any.class, Env.class); // o = (x eo)
+			var chk = checkR(this, o, 1, 2, Any.class, Env.class); // o = (x . eo)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
-			return evaluate(o.car(1), o.car());
+			return evaluate(len == 1 ? e : o.car(1), o.car());
 		}
 		public String toString() { return "%Eval"; }
 	}
@@ -1132,31 +1141,24 @@ public class Vm {
 		}
 		return i;
 	}
-	class Apv0 extends Apv { Apv0(Combinable cmb) { super(cmb); }}
-	class Apv1 extends Apv { Apv1(Combinable cmb) { super(cmb); }}
-	Object checkTn(Object op, Object o, List ol, int i, Object chk) {
+	Object checkTn(Object op, List o, List ol, int i, Object chk) {
 		var on = ol.car;
-		if (Utility.equals(on, chk) || chk instanceof Class cl && checkC(on, cl)) return 1;
+		if (Utility.equals(on, chk)) return 1;
+		else if (chk instanceof Class cl && checkC(on, cl)) return 1;
 		else if (chk instanceof List chkl && on instanceof List onl) {
 			// if (chkl.car() == symbol("||")) chk = array(chkl);
-			switch (check(op, onl, chkl)) {
+			switch (check("check", onl, chkl)) {
 				case Suspension s: return s;
 				case Integer i2: return 1;
 				case Object obj: typeError("not an integer: {datum}", obj, symbol("Integer"));
 			};
 		}
-		/*
-		else if (chk instanceof Cons chkc && on instanceof Cons onc) {
-			if ((Utility.equals(onc.car, chkc.car) || chkc.car instanceof Class cl && checkC(onc.car, cl))
-			&&	(Utility.equals(onc.cdr, chkc.cdr) || chkc.cdr instanceof Class cl && checkC(onc.cdr, cl)) )
-				return 1;
-		}
-		*/
-		else if (chk instanceof Object[] chks) {
+		else if (chk instanceof Object[] chks) { // or
 			for (Object chkn: chks) {
-				if (Utility.equals(on, chkn) || chkn instanceof Class cl && checkC(on, cl)) return 1;
+				if (Utility.equals(on, chkn)) return 1;
+				else if (chkn instanceof Class cl && checkC(on, cl)) return 1;
 				else if (chkn instanceof List chkl) try {
-					switch (check(op, ol, chkl)) {
+					switch (check("check", ol, chkl)) {
 						case Suspension s: return s;
 						case Integer i2: return i2;
 						case Object obj: typeError("not an integer: {datum}", obj, symbol("Integer"));
@@ -1175,12 +1177,14 @@ public class Vm {
 			: chk
 		);
 	}
-	public boolean checkC(Object on, Class cl) {
+	class Apv0 extends Apv { Apv0(Combinable cmb) { super(cmb); }}
+	class Apv1 extends Apv { Apv1(Combinable cmb) { super(cmb); }}
+	public boolean checkC(Object obj, Class cl) {
 		return cl == Any.class
-		||  cl.isInstance(on)
-		||  on instanceof Class cl2 && cl.isAssignableFrom(cl2)
-		||  cl == Apv0.class && on instanceof Apv apv && args(apv) == 0
-		||  cl == Apv1.class && on instanceof Apv apv && args(apv) == 1;
+		||  cl.isInstance(obj)
+		||  obj instanceof Class cl2 && cl.isAssignableFrom(cl2)
+		||  cl == Apv0.class && obj instanceof Apv apv && args(apv) == 0
+		||  cl == Apv1.class && obj instanceof Apv apv && args(apv) == 1;
 	}
 	public Object check(Object op, List o, List chk) {
 		int min=0, max=more;
@@ -1192,6 +1196,34 @@ public class Vm {
 			case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
 		};
 	}
+	/* TODO valutare l'idea
+	public Object checkO(Object obj, Object chk) {
+		if (Utility.equals(obj, chk)) return obj;
+		else if (chk instanceof Class cl && checkC(obj, cl)) return obj;
+		else if (chk instanceof List chkl && obj instanceof List objl) {
+			switch (check("check", objl, chkl)) {
+				case Suspension s: return s;
+				case Integer i2: return obj;
+				case Object obj2: typeError("not an integer: {datum}", obj2, symbol("Integer"));
+			};
+		}
+		else if (chk instanceof Object[] chks) { // or
+			for (Object chkn: chks) try {
+				return checkO(obj, chkn); 
+			}
+			catch (Throwable thw) {
+			}
+		}
+		return typeError(
+			"not " + (chk instanceof Object[] objs ? "" : "a ") + "{expected}: {datum}",
+			obj,
+			chk == null ? symbol("Null")
+			: chk instanceof Class cl ? symbol(cl.getSimpleName())
+			: chk instanceof Object[] oa ? cons(symbol("or"), list(stream(oa).map(o-> symbol(o == null ? "Null" : o instanceof Class cl ? cl.getSimpleName() : Vm.this.toString(o))).toArray() ))
+			: chk
+		);
+	}
+	//*/
 	
 	
 	// Utilities
@@ -1335,7 +1367,7 @@ public class Vm {
 	String toString(Object o) { return toString(false, o); }
 	String toString(boolean t, Object o) {
 		return switch (o) {
-			case null-> "#null"; // () in cons  altrove #null
+			case null-> "#null"; // () in cons altrove #null
 			case Boolean b-> b ? "#t" : "#f";
 			case Class cl-> "&" + Utility.toSource(cl);
 			case String s-> !t ? s : '"' + Utility.toSource(s) + '"';
@@ -1379,6 +1411,7 @@ public class Vm {
 					$("%def", "%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (RuntimeException rte) { return false; }} ))),
 					$("%def", "%apply", wrap(new JFun("%Apply", (ArgsList) o-> combine(o.cdr(1) == null ? env(null) : o.car(2), unwrap(o.car()), o.car(1)) ))),
 					$("%def", "%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(null), unwrap(o.car()), o.cdr()) ))),
+					$("%def", "%apply**", wrap(new JFun("%Apply**", (ArgsList) o-> combine(env(null), unwrap(o.car()), (List) listStar(o.cdr())) ))),
 					$("%def", "%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } ))),
 					$("%def", "%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnv = env(theEnv)))),
 					$("%def", "%popEnv", wrap(new JFun("%PopEnv", (Supplier) ()-> theEnv = theEnv.parent))),
@@ -1398,7 +1431,6 @@ public class Vm {
 					$("%def", "%intern", wrap(new JFun("%Intern", (n,o)-> checkN(n, o, 1, String.class), (l,o)-> intern(o.car()) ))),
 					$("%def", "%intern?", wrap(new JFun("%Intern?", (Function<Object, Boolean>) obj-> obj instanceof Intern ))),
 					$("%def", "%internName", wrap(new JFun("%InternName", (n,o)-> checkN(n, o, 1, Intern.class), (l,o)-> o.<Intern>car().name ))),
-					$("%def", "%nptf?", wrap(new JFun("%Nptf?", (ArgsList) o-> check(o, o,  list(or(list(2, more, Symbol.class), list(list(1, more, Symbol.class)))) )))),
 					// First-order Control
 					$("%def", "%if", new If()),
 					$("%def", "%loop", new Loop()),

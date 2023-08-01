@@ -44,8 +44,15 @@
 (def append
   %append)
 
-(def apply %apply)
-(def apply* %apply*)
+(def apply
+  %apply)
+
+(def apply*
+  %apply*)
+
+(def apply**
+  %apply**)
+
 (def array->list %array->list)
 (def assert %assert)
 (def begin
@@ -269,6 +276,7 @@
 
 (assert (expand (def\ succ (n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
 (assert (expand (def\ (succ n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
+
 
 ;;;; Basic value test
 
@@ -544,14 +552,24 @@
   (vau values #ignore
     (let1 loop (clauses clauses)
       (if (null? clauses) #inert
-        (let ( (env+ (newEnv env))
-               (((bindings . forms) . clauses) clauses) )
-          (if (if (== bindings 'else) #t (bind? env+ bindings values)) ; or!
-            (eval (list* 'begin forms) env+)
-            (loop clauses) ))))))
+        (let1 (((bindings . forms) . clauses) clauses)
+          (if (== bindings 'else)
+            (if (== (car forms) '=>)
+              (let1 ((apv) (cdr forms)) ((eval apv env) value))
+              (eval (list* 'begin forms) env) )
+            (let1 (env+ (newEnv env)) 
+              (if (bind? env+ bindings values)
+                (eval (list* 'begin forms) env+)
+                (loop clauses) ))))))))
+
+(defMacro (defCaseVau sym . clauses)
+  (list 'def sym (list* 'caseVau clauses)) )
 
 (defMacro (case\ . clauses)
   (list 'wrap (list* 'caseVau clauses)) )
+
+(defMacro (defCase\ sym . clauses)
+  (list 'def sym (list* 'case\ clauses)) )
 
 (assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1) 2)
 (assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2) 3)
@@ -565,6 +583,28 @@
 (assert (match     '(1) ((a) 1) ((a b) 2) (else 3)) 1)
 (assert (match        1 ((a) 1) ((a b) 2) (else 3)) 3)
 (assert (match        4 ((a) 1) ((a b) 2)    (a a)) 4)
+
+
+;;; Quasiquote
+
+;; (Idea from Alf Petrofsky http://scheme-reports.org/mail/scheme-reports/msg00800.html)
+(defVau %backTick (x) env
+  (defCase\ qq
+    ( ((('%commaAt x) . y) #f . d) (append (map (\ (x) (list '%commaAt x)) (apply** qq (list x) d)) (apply** qq y #f d)) )
+    ( ((('%commaAt x) . y) . d)    (append (eval x env) (apply** qq y d)) )
+    ( ((('%comma x) . y) #f . d)   (append (map (\ (x) (list '%comma x))   (apply** qq (list x) d)) (apply** qq y #f d)) )
+    ( (('%comma x) #f . d)         (list '%comma (apply** qq x d)) )
+    ;( (('%commaAt x) . d)          (error "illegal ,@") )  
+    ( (('%comma x) . d)            (eval x env) )
+    ( (('%backTick x) . d)         (list '%backTick (apply** qq x #f d)) )
+    ( ((x . y) . d)                (cons (apply** qq x d) (apply** qq y d)) )
+    ( (x . d)                      x) )
+  (qq x))
+
+(assert (let ((a 1) (b 2) (c '(3 4))) `(,@c ,a (,a) (,@c) b ,@c)) '(3 4 1 (1) (3 4) b 3 4))
+(assert (let1 (x '(a b c)) ``(,,x ,@,x ,,@x ,@,@x)) '`(,(a b c) ,@(a b c) ,a ,b ,c ,@a ,@b ,@c))
+(assert ``(,,@'() ,@,@(list)) '`())
+(assert `````(a ,(b c ,@,,@,@'(a b c))) '````(a ,(b c ,@,,@a ,@,,@b ,@,,@c)))
 
 
 ;;; Cond
@@ -636,14 +676,14 @@
 
 (defVau (case exp . clauses) env
   (let1 (value (eval exp env))
-    (let1 loop (clauses clauses)
+    (let1 next (clauses clauses)
       (if (null? clauses) #inert
         (let1 (((values . forms) . clauses) clauses)
-          (if (or (== values 'else) (cons? (member value values)))
+          (if (or (== values 'else) (== value values) (and (cons? values) (cons? (member value values))))
             (if (== (car forms) '=>)
               (let1 ((apv) (cdr forms)) ((eval apv env) value))
               (eval (list* 'begin forms) env) )
-            (loop clauses) ))))))
+            (next clauses) ))))))
 
 (assert (case 3 ((2 4 6 8) 'pair) ((1 3 5 7 9) 'odd)) 'odd)
 
@@ -675,7 +715,7 @@
 (assert (caseType (newObj Obj :a 1) (Double "double") ((Obj :a 1) "Obj :a 1")) "Obj :a 1")
 
 
-;;; Options ~= if!#null or ifList
+;;; Options
 
 ;; An option is either nil ("none"), or a one-element list ("some").
 ;; Variables holding options are conventionally suffixed with "?".
@@ -688,12 +728,12 @@
 (def\ (\01+ forms)
   (if (null? forms) #null (if (null? (cdr forms)) (car forms) (list* 'begin forms))) )
 
+;; (Idea from Taylor R. Campbell's blag. https://mumble.net/~campbell/blag.txt)
 (defVau (ifOpt? (pt opt?) then . else) env
   #|Destructure the OPTION?.  If it's non-nil, evaluate the THEN form
    |with the NAME bound to the contents of the option.  If it's nil,
    |evaluate the ELSE form.
    |#
-   ;; (Idea from Taylor R. Campbell's blag.)
   (let1 (opt? (eval opt? env))
     (if (null? opt?)
       (if (null? else) #null
@@ -886,18 +926,18 @@
 (def the
   %the)
 
-(defMacro (type\ params . body)
-  (let1rec\ ( (typedParams->namesAndChecks ps)
+(defMacro (type\ parms . body)
+  (let1rec\ ( (parms->names.checks ps)
               (if (cons? ps)
                   (let* ( ((p . ps) ps)
-                          ((names . checks) (typedParams->namesAndChecks ps)) )
+                          ((names . checks) (parms->names.checks ps)) )
                     (if (cons? p)
                         (let* ( ((name type) p)
                                 (check (list 'the type name)))
                           (cons (cons name names) (cons check checks)) )
                         (cons (cons p names) checks) ))
                   (cons ps ()) ))
-    (let1 ((names . checks) (typedParams->namesAndChecks params))
+    (let1 ((names . checks) (parms->names.checks parms))
       (list* '\ names (if (null? checks) body (list* (list* 'begin checks) body))) )))
 
 (assert (expand (type\ (a) (+ a 1))) '(\ (a) (+ a 1)))
@@ -912,10 +952,12 @@
 (defMacro letEnv bindings
   (list 'let bindings '(theEnv)) )
 
-(defVau check (o . ck) env
-  (let ( (o (let1 (o (eval o env)) (if (cons? o) o (list o))))
-         (env (letEnv (+ (.MAX_VALUE Integer)) (|| (\ o (list->array o))))) )
-    (apply* @check vm o o (map (\ (a) (eval a env)) ck)) ))
+(defVau extEnv (env . bindings) denv
+  (eval (list* 'letEnv bindings) (eval env denv)) )
+
+(defVau (check o . cks) env
+  (let1 (env+ (extEnv env (+ (.MAX_VALUE Integer)) (|| (\ o (list->array o)))))
+    (apply* @check vm "check" (eval o env) (map (\ (ck) (eval ck env+)) cks)) ))
 
 (assert (check '(1 (:a 1 :b 2) c 3) 1 + Integer (list Keyword Integer) Symbol (|| 3 4)) 4)
 (assert (check '(a 1 2) 'a 1 2) 3)
@@ -925,14 +967,38 @@
 (assert (check '(a 1)       2 3 Symbol (|| (list 1 Any) (list 2 (|| Null Inert :prv :rhs)))) 2)
 
 (defVau check? args env (catchWth (\ (e) #f) (apply check args env)) #t)
-(defVau (the! type obj) env (apply check (list obj type) env) obj)
-(defMacro (the! type obj) (apply* check obj type) obj)
 
-(assert (the! Integer 1) 1)
-(assert (the! Integer "1"))
-(assert (the! (|| 1 2) 1) 1)
-(assert (the! (|| 1 2) 2) 2)
-(assert (the! (|| 1 2) 3))
+;(defVau the (ck o) env (apply* @checkO vm (eval o env) (eval ck (extEnv env (+ (.MAX_VALUE Integer)) (|| (\ o (list->array o)))))) )
+(defMacro (the type obj) (list 'let1 (list 'obj obj) (list 'check '(list obj) type) 'obj))
+
+(assert (the Integer 1) 1)
+(assert (the Integer "1"))
+(assert (the (|| 1 2) 1) 1)
+(assert (the (|| 1 2) 2) 2)
+(assert (the (|| 1 2) 3))
+
+(defMacro (check\ parms . body)
+  (let1rec\
+    ( (parms->names.checks parms)
+      (if (cons? parms)
+        (let* ( ((lhs . rhs) parms)
+                ((namesRhs . checksRhs) (parms->names.checks rhs)) )
+          (if (cons? lhs)
+            (if (== (car lhs) '!)  
+              (let* ( ((#_ type name) lhs)
+                      (check (list 'check (list name) type)) )
+                (cons (cons name namesRhs) (cons check checksRhs)) )
+              (let1 ((namesLhs . checksLhs) (parms->names.checks lhs))
+                (cons (cons namesLhs namesRhs) (append checksLhs checksRhs)) ) )
+            (let1 ((namesRhs . checksRhs) (parms->names.checks rhs))
+              (cons (cons lhs namesRhs) checksRhs)) ))
+        (cons parms ()) ) )
+    (let1 ((names . checks) (parms->names.checks parms))
+      (list* '\ names (if (null? checks) body (list* (list* 'begin checks) body))) )))
+
+(assert (expand (check\ (((! Integer b) . #_)(! Integer a)) (+ a b))) '(\ ((b . #ignore) a) (begin (check (b) Integer) (check (a) Integer)) (+ a b)))
+(assert ((check\ (((! Integer b) . #_)(! (|| 3 4) a)) (+ a b)) '(1 2) 3) 4)
+
 
 ;;; Lists
 
@@ -1115,8 +1181,8 @@
 
 ;;; Classes
 
-(def\ findClass (name environment)
-  (eval (the Symbol name) environment))
+(def\ findClass (name env)
+  (eval (the Symbol name) env))
 
 (defMacro defClass (name . superClass #|slotSpecs . properties|#)
   (list 'def name (list* '%newClass (list 'quote name) superClass?)))
@@ -1127,7 +1193,7 @@
     (eval (list def name (%newClass name superclass)) env)) )
 
 
-;;; Standard Objects
+;;; Objects
 
 (def newObj
   %newObj)
@@ -1169,7 +1235,7 @@
     (assert (g1 bar (+ 2 3)) 105)
     
     (defMethod (g1 (bar Bar) p) (+ p (bar :b)))
-
+    
     (assert (bar :b) 5)
     (assert (g1 bar 2) 7)
     (assert (g1 bar (* 2 (bar :b))) 15)
@@ -1279,7 +1345,6 @@
 
 (def -
   (lyticOp - 0) )
-
 (def /
   (lyticOp / 1) )
 
@@ -1387,8 +1452,8 @@
 (def\ (jsCallback fun)
   (%jsFunction (\ args (pushPrompt rootPrompt (apply fun args)))) )
 
-(defMacro (jsLambda params . body)
-  (list 'jsCallback (list* 'type\ params body)))
+(defMacro (jsLambda parms . body)
+  (list 'jsCallback (list* 'type\ parms body)))
 
 (def\ (log x . xs)
   (apply @log (list* &console x xs))
