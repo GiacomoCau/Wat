@@ -949,22 +949,23 @@
     (list 'def lhs (car rhs)) ))
 
 
-(defMacro letEnv bindings
-  (list 'let bindings '(theEnv)) )
+;(defMacro letEnv bindings
+;  (list 'let bindings '(theEnv)) )
 
-(defVau extEnv (env . bindings) denv
-  (eval (list* 'letEnv bindings) (eval env denv)) )
+;(defVau extEnv (env . bindings) denv
+;  (eval (list* 'letEnv bindings) (eval env denv)) )
 
 (defVau (check o . cks) env
-  (let1 (env+ (extEnv env (+ (.MAX_VALUE Integer)) (|| (\ o (list->array o)))))
+  (let1 (env+ (newEnv env '+ (.MAX_VALUE Integer) '|| (\ o (list->array o))))
     (apply* @check vm "check" (eval o env) (map (\ (ck) (eval ck env+)) cks)) ))
 
-(assert (check '(1 (:a 1 :b 2) c 3) 1 + Integer (list Keyword Integer) Symbol (|| 3 4)) 4)
-(assert (check '(a 1 2) 'a 1 2) 3)
-(assert (check '(a 1 2) (|| '(b 3) '(a 1 2))) 3)
-(assert (check '(a #null 1) 2 3 Symbol (|| Any (list 2 (|| Null Inert :prv :rhs)))) 3)
-(assert (check '(a :prv 1)  2 3 Symbol (|| (list 1 Any) (list 2 (|| Null Inert :prv :rhs)))) 3)
-(assert (check '(a 1)       2 3 Symbol (|| (list 1 Any) (list 2 (|| Null Inert :prv :rhs)))) 2)
+(%assert (check '(1 (:a 1 :b 2) c 3) 1 + Integer (list Keyword Integer) Symbol (|| 3 4)) 4)
+(%assert (check '(a 1 2) 'a 1 2) 3)
+(%assert (check '(a) (|| '(b) '(a))) 1)
+(%assert (check '(a 1 2) (|| '(b 3) '(a 1 2))) 3)
+(%assert (check '(a #null 1) 2 3 Symbol (|| Any (list 2 (|| Null Inert :prv :rhs)))) 3)
+(%assert (check '(a :prv 1)  2 3 Symbol (|| (list 1 Any) (list 2 (|| Null Inert :prv :rhs)))) 3)
+(%assert (check '(a 1)       2 3 Symbol (|| (list 1 Any) (list 2 (|| Null Inert :prv :rhs)))) 2)
 
 (defVau check? args env (catchWth (\ (e) #f) (apply check args env)) #t)
 

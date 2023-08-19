@@ -439,21 +439,21 @@
   (\ (lhs rhs)
     (if (and (symbol? lhs) (> (len rhs) 1)) #t
       (if (and (cons? lhs) (symbol? (car lhs))) #f
-        (error (makeTypeError (cons lhs rhs) '(or (Symbol pt . forms) ((Symbol pt) . forms)))) ))))
+        (typeError (cons lhs rhs) '(or (Symbol pt . forms) ((Symbol pt) . forms))) ))))
 
 (def symdef?
   (\ (lhs rhs)
     (if (and (symbol? lhs) (cons? rhs)) #t
       (if (and (cons? lhs) (symbol? (car lhs))) #f
-        (error (makeTypeError (cons lhs rhs) '(or (Symbol pt . forms) ((Symbol pt) . forms)))) ))))
+        (typeError (cons lhs rhs) '(or (Symbol pt . forms) ((Symbol pt) . forms))) ))))
 
 (def symdef?
   (\ (lhs rhs)
     (if (cons? lhs)
        (if (symbol? (car lhs)) #f
-         (error (makeTypeError (cons lhs rhs) '((Symbol . pt) . forms))) )
+         (typeError (cons lhs rhs) '((Symbol . pt) . forms)) )
        (if (and (symbol? lhs) (cons? rhs)) #t
-         (error (makeTypeError (cons lhs rhs) '(Symbol pt . forms))) ))))
+         (typeError (cons lhs rhs) '(Symbol pt . forms)) ))))
 
 (def dec ((\ (f) (def\ (f n) (if (zero? n) 0 (f (- n 1)))) f) #inert))
 |#
@@ -857,7 +857,7 @@
     ( ((('%commaAt x) . y) . d)    (append (eval x env) (apply** qq y d)) )
     ( ((('%comma x) . y) #f . d)   (append (map (\ (x) (list '%comma x))   (apply** qq (list x) d)) (apply** qq y #f d)) )
     ( (('%comma x) #f . d)         (list '%comma (apply** qq x d)) )
-    ;( (('%commaAt x) . d)          (error (simpleError "illegal ,@")) )  
+    ;( (('%commaAt x) . d)          (simpleError "illegal ,@") )  
     ( (('%comma x) . d)            (eval x env) )
     ( (('%backTick x) . d)         (list '%backTick (apply** qq x #f d)) )
     ( ((x . y) . d)                (cons (apply** qq x d) (apply** qq y d)) )
@@ -1006,7 +1006,7 @@
         (eval (\01+ else) env))
       (if (list? opt?)
         (eval (list* (list 'vau (list pt) #ignore then) opt?) env)
-        (error (makeTypeError opt? '(or Null List))) ))))
+        (typeError opt? '(or Null List)) ))))
 
 (defVau (ifOpt*? (pt opt?) then . else) env
   (let1 (opt? (eval opt? env))
@@ -1015,7 +1015,7 @@
         (eval (\01+ else) env))
       (if (list? opt?)
         (eval (list* (list 'vau pt #ignore then) opt?) env)
-        (error (makeTypeError opt? '(or Null List))) ))))
+        (typeError opt? '(or Null List)) ))))
 
 (defMacro whenOpt? ((pt opt?) . forms)
   #|Destructure the OPTION?.  If it's non-nil, evaluate the FORMS with
@@ -1066,7 +1066,7 @@
 (def\ getOpt? (option?)
   #|Returns the contents of the OPTION? or signals an error if it is nil.
    |#
-  (opt? option? (error (simpleError "Option is nil"))))
+  (opt? option? (simpleError "Option is nil")))
 
 
 ;;; Loop
@@ -1145,14 +1145,21 @@
 ;;; Type Checks
 
 (def\ makeTypeError (datum expected)
-  #|Create a `type-error' with the given DATUM and EXPECTED-TYPE.|#
-  (newObj Error :type 'type :datum datum :expected expected))
+  #|Create a `type-error' with the given DATUM and EXPECTED-TYPE.
+   |#
+  (newObj Error :type 'type :datum datum :expected expected) )
 
-;; TODO non più necessario, eliminare
+(def\ typeError (datum expected)
+  #|Signal a `type-error'
+   |#
+  (error (makeTypeError datum expected)) )
+
+;; TODO non più necessario se non per i test, eliminare
 (def\ assertType (object class)
-  #|Signal a `type-error' if the OBJECT is not an instance of the CLASS.|#
+  #|Signal a `type-error' if the OBJECT is not an instance of the CLASS.
+   |#
   (if (type? object class) object
-    (error (makeTypeError object (className class)))))
+    (typeError object (className class)) ))
 
 #| TODO sostituito dal seguente
 (defVau the (className object) env

@@ -318,8 +318,12 @@ public class Vm {
 	
 	// Environment
 	class Env {
-		Env parent; Map<String,Object> map = new LinkedHashMap(); 
-		Env(Env parent) { this.parent = parent; }
+		Env parent; Map<String,Object> map = new LinkedHashMap();
+		Env(Env parent, Object ... objs) {
+			this.parent = parent;
+			if (objs == null) return;
+			for (int i=0, e=objs.length; i<e; i+=1) map.put(toKey(objs[i]), objs[i+=1]);
+		}
 		record Lookup(boolean isBound, Object value) {}
 		Lookup get(Object obj) {
 			var key = toKey(obj);
@@ -344,7 +348,7 @@ public class Vm {
 			for (var env=this; env != null; env=env.parent) {
 				if (!env.map.containsKey(key)) continue;
 				if (prtrc >= 6) print("     set: ", key, "=", value, " in: ", env);
-				return env.def(key, value);
+				return env.map.put(key, value);
 			}
 			return unboundSymbolError("unbound symbol: {symbol}", obj, this);
 		};
@@ -368,14 +372,15 @@ public class Vm {
 			return false;
 		};
 	}
-	Env env(Env parent) { return new Env(parent); }
+	Env env() { return env(null); }
+	Env env(Env env, Object ... objs) { return new Env(env, objs); }
 	
 	
-	// Box, Obj and Condition
+	// Box, Obj, Condition, Error
 	public class Box implements ArgsList {
 		Object value;
 		public Box (Object val) { this.value = val; }
-		@Override public Object apply(List o) {
+		@Override public Object apply(List o) { // () | (value) | (:key value)
  			var chk = checkR(this, o, 0, 2);
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
@@ -407,11 +412,7 @@ public class Vm {
 		public Object put(Object ... objs) {
 			if (objs == null) return null;
 			Object last = null;
-			for (int i=0, e=objs.length-1; i<=e; i+=1) {
-				var key = toKey(objs[i]);
-	        	if (i == e) throw new Error("one value expected at end of: " + list(objs));
-	        	last = map.put(key, objs[i+=1]);
-	        }
+			for (int i=0, e=objs.length; i<e; i+=1) last = map.put(toKey(objs[i]), objs[i+=1]);
 			return last;
 		}
 		@Override public String toString() {
@@ -430,7 +431,7 @@ public class Vm {
 				+ (field.length() == 1 ? field : " " + field) ;
 		}
 		@Override public Object apply(List o) {
-			var chk = checkR(this, o, 1, 3, or(Keyword.class,Symbol.class,String.class)); // (key) | (key value) | (key :key value)
+			var chk = checkR(this, o, 1, 3, or(Keyword.class, Symbol.class, String.class)); // (key) | (key value) | (key :key value)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 			var key = toKey(o.car());
@@ -556,17 +557,21 @@ public class Vm {
 	
 	
 	// Bind
+	class BindException extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+		public BindException(String message) { super(message); 	}
+	}
 	Object bind(Dbg dbg, Env e, Object lhs, Object rhs) {
 		return bind(dbg, true, bndres, e, lhs, rhs);
 	}
 	Object bind(Dbg dbg, boolean def, int bndres, Env e, Object lhs, Object rhs) {
 		try {
-		  var v = bind(def, bndres, e, lhs, rhs);
-		  return bndres == 0 ? inert : v;
+			var obj = bind(def, bndres, e, lhs, rhs);
+			return obj instanceof Suspension s ? s : bndres == 0 ? inert : obj;  
 		}
-		catch (RuntimeException rte) {
+		catch (BindException be) {
 			return error(
-				rte.getMessage() + " " + (def ? "bind" : "sett") + "ing: " + toString(lhs)
+				be.getMessage() + " " + (def ? "bind" : "sett") + "ing: " + toString(lhs)
 				+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, dbg.os[0])))
 				+ " with: " + rhs,
 				"type", symbol("match")
@@ -579,24 +584,31 @@ public class Vm {
 			case Symbol s-> { var v = def ? e.def(s, rhs) : e.set(s, rhs); yield bndres == 2 ? v : rhs; }  
 			case Keyword k-> {
 				if (k.equals(rhs)) yield rhs;
-				throw new RuntimeException("not found keyword: " + k);
+				throw new BindException("not found keyword: " + k);
 			}
 			case null-> {
 				if (rhs == null) yield null;
-				throw new RuntimeException(/*"too many arguments" +*/ "none arguments expected" + ", found: " + toString(rhs));
+				throw new BindException(/*"too many arguments" +*/ "none arguments expected" + ", found: " + toString(rhs));
 			}
 			case Cons lc-> {
-				if (lc.car instanceof Symbol s && Utility.equals(s.name, "%quote", "quote")) {
-					if (equals((Object) lc.car(1), rhs)) yield null;
-					throw new RuntimeException("not found literal: " + lc.car(1));
+				if (lc.car instanceof Symbol sym && Utility.equals(sym.name, "%quote", "quote")) {
+					if (equals((Object) lc.car(1), rhs)) yield null; // or rhs?
+					throw new BindException("not found literal: " + lc.car(1));
 				}
-				if (!(rhs instanceof Cons rc)) throw new RuntimeException(/* "too few arguments" +*/ "more arguments expected" + ", found: " + toString(rhs));
-				var v = bind(def, bndres, e, lc.car, rc.car);
-				yield lc.cdr == null && rc.cdr == null ? v : bind(def, bndres, e, lc.cdr, rc.cdr);
+				if (lc.car instanceof Symbol sym && sym.name.equals("!")) {
+					yield switch (check("check", list(rhs), list((Object) getTco(evaluate(env(e, "+", more, "||", lambda(e, symbol("o"), list(list(symbol("%list->array"), symbol("o"))))), lc.car(1)))))) {
+						case Suspension s-> s;
+						case Integer i-> bind(def, bndres, e, lc.car(2), rhs);
+						case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
+					};
+				}
+				if (!(rhs instanceof Cons rc)) throw new BindException(/* "too few arguments" +*/ "more arguments expected" + ", found: " + toString(rhs));
+				var obj = bind(def, bndres, e, lc.car, rc.car);
+				yield obj instanceof Suspension s ? s : lc.cdr == null && rc.cdr == null ? obj : bind(def, bndres, e, lc.cdr, rc.cdr);
 			}
 			default-> {
-				if (equals(lhs, rhs)) yield null;
-				throw new RuntimeException("not found literal: " + toString(lhs));
+				if (equals(lhs, rhs)) yield null; // or rhs?
+				throw new BindException("not found literal: " + toString(lhs));
 			}
 		};
 	}
@@ -972,7 +984,7 @@ public class Vm {
 						switch (thw) {
 							case Value val: throw val;
 							case Error err: throw err;
-							default: return error("error executingd: " + this + " with: " + o, thw);
+							default: return error("error executing: " + this + " with: " + o, thw);
 						}
 					}
 				}
@@ -1126,9 +1138,11 @@ public class Vm {
 		var chk = cls.length == 0 ? len(o) : checkT(op, o, min, cls);
 		if (chk instanceof Suspension s) return s;
 		if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
-		if (len >= min && len <= max) return len; 
+		var rst = max != more || cls.length <= min ? 0 : (len - min) % (cls.length - min); 
+		if (len >= min && len <= max && rst == 0) return len;
+		if (rst != 0) return error("expected {+Operands} more operands at end of: " + o, "type", symbol("match"), "+Operands", rst);
 		return error((len < min ? "less then " + min : "more then " + max) + " operands combining: " + toString(op) + " with: " + toString(o),
-			"type", symbol("length"), "expected", 1 + (len<min ? min : max));
+			"type", symbol("match"), "expectedOperand", (len<min ? min : max == more ? "+" : max));
 	}
 	Object checkT(Object op, List o, int min, Object ... chks) {
 		int i=0, len=chks.length;
@@ -1394,7 +1408,7 @@ public class Vm {
 	
 	
 	// Bootstrap
-	Env vmEnv=env(null), theEnv=env(vmEnv); {
+	Env vmEnv=env(), theEnv=env(vmEnv); {
 		bind(null, vmEnv, symbol("%def"), new Def(true));
 		bind(null, vmEnv, symbol("%begin"), begin);
 		getTco(evaluate(vmEnv, parseBytecode(
@@ -1403,15 +1417,15 @@ public class Vm {
 					$("%def", "%vau", new Vau()),
 					$("%def", "%set!", new Def(false)),
 					$("%def", "%eval", wrap(new Eval())),
-					$("%def", "%newEnv", wrap(new JFun("%NewEnv", (n,o)-> checkR(n, o, 0, 1, or(null, Env.class)), (l,o)-> env(l == 0 ? null : o.car()) ))) ,
+					$("%def", "%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, list(or(list(0), list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class), Any.class)))), (l,o)-> l == 0 ? env() : env(o.car(), array(o.cdr())) ))),
 					$("%def", "%wrap", wrap(new JFun("%Wrap", (Function) this::wrap))),
 					$("%def", "%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap))),
 					$("%def", "%value", wrap(new JFun("%Value", (n,o)-> checkN(n, o, 2, Symbol.class, Env.class), (l,o)-> o.<Env>car(1).get(o.car()).value) )),
 					$("%def", "%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, Symbol.class, Env.class), (l,o)-> o.<Env>car(1).get(o.car()).isBound) )),
 					$("%def", "%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (RuntimeException rte) { return false; }} ))),
-					$("%def", "%apply", wrap(new JFun("%Apply", (ArgsList) o-> combine(o.cdr(1) == null ? env(null) : o.car(2), unwrap(o.car()), o.car(1)) ))),
-					$("%def", "%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(null), unwrap(o.car()), o.cdr()) ))),
-					$("%def", "%apply**", wrap(new JFun("%Apply**", (ArgsList) o-> combine(env(null), unwrap(o.car()), (List) listStar(o.cdr())) ))),
+					$("%def", "%apply", wrap(new JFun("%Apply", (ArgsList) o-> combine(o.cdr(1) == null ? env() : o.car(2), unwrap(o.car()), o.car(1)) ))),
+					$("%def", "%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(), unwrap(o.car()), o.cdr()) ))),
+					$("%def", "%apply**", wrap(new JFun("%Apply**", (ArgsList) o-> combine(env(), unwrap(o.car()), (List) listStar(o.cdr())) ))),
 					$("%def", "%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } ))),
 					$("%def", "%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnv = env(theEnv)))),
 					$("%def", "%popEnv", wrap(new JFun("%PopEnv", (Supplier) ()-> theEnv = theEnv.parent))),

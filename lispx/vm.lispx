@@ -16,7 +16,7 @@
 (prtrc 0)
 (bndres 0)
 (boxdft #inert)
-(aquote #f)
+(aquote #t)
 (ttrue 0)
 
 (%def Null #null)
@@ -171,6 +171,8 @@
 (repl:run)
 x
 (invokeRestart 'abort)
+(+ 100 x)
+(invokeRestart 'useValue 42)
 |#
 
 (%def milli (%- (@currentTimeMillis &java.lang.System) milli))

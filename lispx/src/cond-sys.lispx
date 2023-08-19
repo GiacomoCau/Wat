@@ -226,14 +226,14 @@
   #|Utility to signal the CONDITION.  If the signal is unhandled,
    |return void.  See `signal'.
    |#
-  (letLoop -signal- ((handlerFrame? (dget *conditionHandlerFrame?*)))
+  (let1 signal (handlerFrame? (dget *conditionHandlerFrame?*))
     ;; Payload to `lispx::findHandler?' is always nil for condition handlers.
     (ifOpt? ((handler frame) (lispx::findHandler? condition handlerFrame? #null))
       (begin
         ;; Handler found; call it, passing along frame.
         (lispx::callConditionHandler handler frame condition)
         ;; Signal unhandled: continue search for handlers.
-        (-signal- (getSlot frame 'parentFrame?)))
+        (signal (getSlot frame 'parentFrame?)))
       ;; No handler found, return void.
       #inert )))
 
@@ -261,7 +261,7 @@
   (invokeDebugger condition) )
 
 
-(def\ lispx::makeSignalWithRestartsOperator (signal-operator)
+(def\ lispx::makeSignalWithRestartsOperator (signalOperator)
   #|Metaprogramming utility to create the `signal' / `error' operators
    |that take restart handlerSpecs from the `_signal_' / `_error_' ones
    |that don't.
@@ -271,7 +271,7 @@
       (let1\ (appendAssociatedCondition (handlerSpec)
                (append handlerSpec (list :associatedConditions (list 'list condition))) )
         (eval (list 'restartCase (map appendAssociatedCondition handlerSpecs)
-                    (list signal-operator condition))
+                    (list signalOperator condition))
               env )))))
 
 (def signal
@@ -326,7 +326,7 @@
     (Symbol
      (ifOpt? (restartHandler (findRestart? restartDesignator))
        (lispx::applyHandlerFunction restartHandler (function restartHandler))
-       (error (makeRestartError restartDesignator))))
+       (restartError restartDesignator)))
     (RestartHandler
      (lispx::applyHandlerFunction restartDesignator (function restartDesignator)))))
 |#
@@ -339,11 +339,11 @@
     (Symbol
       (ifOpt? (restartHandler (findRestart? restartDesignator))
         (lispx::applyHandlerFunction restartHandler (function restartHandler))
-        (error (makeRestartError restartDesignator))))
+        (restartError restartDesignator)))
     (RestartHandler
       (lispx::applyHandlerFunction restartDesignator (function restartDesignator)))
     (else
-      (error (makeTypeError restartDesignator '(or Symbol RestartHandler) )) )))
+      (typeError restartDesignator '(or Symbol RestartHandler) ) )))
 
 (def\ lispx::findHandler? (object handlerFrame? payload?)
   #|Utility to find both condition handlers and restart handlers.
@@ -422,11 +422,11 @@
    |explicitly associated with the supplied CONDITION? or not associated
    |with any condition.
    |#
-  (letLoop -computeRestarts- 
+  (let computeRestarts 
     ( (restarts '())
       (handlerFrame? (dget *restartHandlerFrame?*)) )
     (ifOpt? (handlerFrame handlerFrame?)
-      (-computeRestarts-
+      (computeRestarts
         (append restarts
           (remove
             (\ (restart) (not (lispx::restartHandlerApplicableToCondition? restart condition?)))
@@ -443,6 +443,12 @@
   #|Create a new `restart-error' for the given RESTART-NAME.
    |#
   (newObj RestartError :restartName restartName) )
+
+(def\ restartError (restartName)
+  #|Signal a new `restart-error'.
+   |#
+  (error (makeRestartError restartName)) )
+
 
 (defClass SimpleError (Error)
   #|Class for simple errors with a MESSAGE.

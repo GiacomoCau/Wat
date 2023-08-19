@@ -243,12 +243,12 @@
   (deftest |Arity check 1.|
     (signalsError
      (vau)
-     Error :type 'length :expected 3))
+     Error :type 'match :expectedOperand 2))
 
   (deftest |Arity check 2.|
     (signalsError
      (vau x)
-     Error :type 'length expected 3)))
+     Error :type 'match :expectedOperand 2)))
 
 (defsuite quote
 
@@ -346,12 +346,12 @@
   (deftest bound?.4
     (signalsError
      (bound?)
-     Error :type 'length :expected 3))
+     Error :type 'match :expectedOperand 2))
 
   (deftest bound?.5
     (signalsError
      (bound? 'x)
-     Error :type 'length :expected 3))
+     Error :type 'match :expectedOperand 2))
 
   (deftest bound?.6
     (signalsError
@@ -366,7 +366,7 @@
   (deftest bound?.8
     (signalsError
      (bound? 'x (theEnv) #t)
-     Error :type 'length :expected 3)))
+     Error :type 'match :expectedOperand 2)))
 
 (defsuite macro
 
@@ -431,12 +431,12 @@
   (deftest defVau.3
     (signalsError
      (defVau foo)
-     Error :type 'length :expected 3))
+     Error :type 'match :expectedOperand 2))
 
   (deftest defVau.3b
     (signalsError
      (defVau foo ())
-     Error :type 'length :expected 3))
+     Error :type 'match :expectedOperand 2))
 
   (deftest defVau.4
     (begin
@@ -481,12 +481,12 @@
   (deftest def.6
     (signalsError
      (def)
-     Error :type 'length :expected 3))
+     Error :type 'match :expectedOperand 2))
 
   (deftest def.7
     (signalsError
      (def x)
-     Error :type 'length :expected 3))
+     Error :type 'match :expectedOperand 2))
 
   (deftest def.8
     (signalsError
@@ -508,12 +508,12 @@
   (deftest defConstant.2
     (signalsError
      (defConstant)
-     Error :type 'length :expected 3))
+     Error :type 'match :expectedOperand 2))
 
   (deftest defConstant.3
     (signalsError
      (defConstant x)
-     Error :type 'length :expected 3))
+     Error :type 'match :expectedOperand 2))
 
   (deftest defConstant.4
     (begin
@@ -629,12 +629,12 @@
   (deftest eval.3
     (signalsError
      (eval)
-     Error :type 'length :expected 3))
+     Error :type 'match :expectedOperand 2))
 
   (deftest eval.4
     (signalsError
      (eval '1)
-     Error :type 'length :expected 3))
+     Error :type 'match :expectedOperand 2))
 
   (deftest eval.5
     (signalsError
@@ -644,7 +644,7 @@
   (deftest eval.6
     (signalsError
      (eval '1 (theEnv) #t)
-     Error :type 'length :expected 3)))
+     Error :type 'match :expectedOperand 2)))
 
 (defsuite cons
 
@@ -659,17 +659,17 @@
   (deftest cons.3
     (signalsError
      (cons)
-     Error :type 'length :expected 3))
+     Error :type 'match :expectedOperand 2))
 
   (deftest cons.4
     (signalsError
      (cons 1)
-     Error :type 'length :expected 3))
+     Error :type 'match :expectedOperand 2))
 
   (deftest cons.5
     (signalsError
      (cons 1 2 3)
-     Error :type 'length :expected 3)))
+     Error :type 'match :expectedOperand 2)))
 
 (defsuite car
 
@@ -680,7 +680,7 @@
   (deftest car.2
     (signalsError
      (car)
-     Error :type 'length :expected 2))
+     Error :type 'match :expectedOperand 1))
 
   (deftest car.3
     (signalsError
@@ -701,7 +701,7 @@
   (deftest cdr.2
     (signalsError
      (cdr)
-     Error :type 'length :expected 2))
+     Error :type 'match :expectedOperand 1))
 
   (deftest cdr.3
     (signalsError
@@ -849,7 +849,7 @@
      (caseType (+ 2 2)
        (String 2)
        (Boolean 1)
-       (else => (\ (v) (error (makeTypeError v '(or String Boolean))))))
+       (else => (\ (v) (typeError v '(or String Boolean)))) )
      Error :type 'type :datum 4 :expected '(or String Boolean))) )
 
 (defsuite not
