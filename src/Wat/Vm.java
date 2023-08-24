@@ -185,25 +185,25 @@ public class Vm {
 	Object pipe(Resumption r, Dbg dbg, Supplier before, Function ... after) {
 		var res = r != null ? r.resume() : before.get();
 		//if (res instanceof Tco) out.println /*throw new Error*/("do getTco 1"); 
-		return res instanceof Suspension s ? s.suspend(dbg, rr-> pipe(rr, dbg, before, after)) : pipe(null, 0, dbg, res, after);
+		return res instanceof Suspension s ? s.suspend(dbg, rr-> pipe(rr, dbg, before, after)) : pipe(null, dbg, res, 0, after);
 	}
-	Object pipe(Resumption r, int i, Dbg dbg, Object res, Function ... after) {
+	Object pipe(Resumption r, Dbg dbg, Object res, int i, Function ... after) {
 		for (var first=true; i<after.length; i+=1) { // only one resume for suspension
 			res = first && r != null && !(first = false) ? r.resume() : after[i].apply(res);
 			//if (res instanceof Tco && i < after.length-1) out.println /*throw new Error*/ ("do getTco 2"); 
-			if (res instanceof Suspension s) { var ii=i; var rres=res; return s.suspend(dbg, rr-> pipe(rr, ii, dbg, rres, after)); }
+			if (res instanceof Suspension s) { var ii=i; var rres=res; return s.suspend(dbg, rr-> pipe(rr, dbg, rres, ii, after)); }
 		}
 		return res;
 	}
 	Object map(Function f, List todo) {
-		return map(null, null, f, todo);
+		return map(null, f, todo, null);
 	}
-	Object map(Resumption r, List done, Function f, List todo) {
+	Object map(Resumption r, Function f, List todo, List done) {
 		for (var first=true;;) { // only one resume for suspension
 			if (todo == null) return reverse(done); 
 			var res = first && r != null && !(first = false) ? r.resume() : f.apply(todo.car());
 			//if (res instanceof Tco) out.println /*throw new Error*/("do getTco 3"); 
-			if (res instanceof Suspension s) { List td=todo, dn=done; return s.suspend(dbg(null, "map", todo.car), rr-> map(rr, dn, f, td)); }
+			if (res instanceof Suspension s) { List td=todo, dn=done; return s.suspend(dbg(null, "map", todo.car), rr-> map(rr, f, td, dn)); }
 			todo = todo.cdr(); done = cons(res, done);
 		}
 	}
@@ -787,25 +787,24 @@ public class Vm {
 			return pipe(dbg(e, this, o), ()-> ctapv ? o.car() : getTco(evaluate(e, o.car())), tag-> combine(null, e, tag, o.car(1), o.cdr(1)) ); 
 		}
 		private Object combine(Resumption r, Env e, Object tag, Object hdl, List xs) {
-			Object res = null;
 			try {
-				res = r != null ? r.resume() : getTco(!ctapv ? begin.combine(e, xs) : Vm.this.combine(e, xs.car(), null));
+				var res = r != null ? r.resume() : getTco(!ctapv ? begin.combine(e, xs) : Vm.this.combine(e, xs.car(), null));
+				return res instanceof Suspension s ? s.suspend(dbg(e, this, tag, xs, hdl), rr-> combine(rr, e, tag, hdl, xs)) : res;
 			}
 			catch (Throwable thw) {
 				if (tag != ignore && thw instanceof Value val && val.tag != tag) throw thw; 
-				res = pipe(dbg(e, this, hdl, thw), ()-> {
-						if (hdl == null) {
-							if (thw instanceof Value val) return val.value;
-							throw thw instanceof Error err ? err : new Error(thw);
-						}
-						return (ctapv ? hdl : getTco(evaluate(e, hdl))) instanceof Apv apv && args(apv) == 1
-							? getTco(Vm.this.combine(e, unwrap(apv), list(thw instanceof Value val ? val.value : thw)))
-							: typeError("not a one arg applicative combiner: {datum}", hdl, symbol("Apv1"))
-						; 
-					}
-				);
+				if (hdl != null) return combine2(null, e, tag, hdl, thw);
+				if (thw instanceof Value val) return val.value;
+				throw thw instanceof Error err ? err : new Error(thw);
 			}
-			return res instanceof Suspension s ? s.suspend(dbg(e, this, tag, xs, hdl), rr-> combine(rr, e, tag, hdl, xs)) : res;
+		}
+		public Object combine2(Resumption r, Env e, Object tag, Object hdl, Throwable thw) {
+			Object res = r != null ? r.resume() : ctapv ? hdl : getTco(evaluate(e, hdl));
+			if (res instanceof Suspension s) return s.suspend(dbg(e, this, tag, hdl), rr-> combine2(rr, e, tag, hdl, thw));
+			return res instanceof Apv apv && args(apv) == 1
+				? getTco(Vm.this.combine(e, unwrap(apv), list(thw instanceof Value val ? val.value : thw)))
+				: typeError("not a one arg applicative combiner: {datum}", hdl, symbol("Apv1"))
+			;
 		}
 		public String toString() { return "%Catch"; }
 	}
@@ -1128,34 +1127,37 @@ public class Vm {
 	
 	// Check parameters type value
 	class Any {}
-	Object checkN(Object op, List o, int expt, Object ... cls) {
-		return checkR(op, o, expt, expt, cls);
+	Object checkN(Object op, List o, int expt, Object ... chks) {
+		return checkR(op, o, expt, expt, chks);
 	}
-	Object checkM(Object op, List o, int min, Object ... cls) {
-		return checkR(op, o, min, more, cls);
+	Object checkM(Object op, List o, int min, Object ... chks) {
+		return checkR(op, o, min, more, chks);
 	}
-	Object checkR(Object op, List o, int min, int max, Object ... cls) {
-		var chk = cls.length == 0 ? len(o) : checkT(op, o, min, cls);
+	Object checkR(Object op, List o, int min, int max, Object ... chks) {
+		var chk = chks.length == 0 ? len(o) : checkT(op, o, min, chks);
 		if (chk instanceof Suspension s) return s;
 		if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
-		var rst = max != more || cls.length <= min ? 0 : (len - min) % (cls.length - min); 
+		var rst = max != more || chks.length <= min ? 0 : (len - min) % (chks.length - min); 
 		if (len >= min && len <= max && rst == 0) return len;
-		if (rst != 0) return error("expected {+Operands} more operands at end of: " + o, "type", symbol("match"), "+Operands", rst);
-		return error((len < min ? "less then " + min : "more then " + max) + " operands combining: " + toString(op) + " with: " + toString(o),
-			"type", symbol("match"), "expectedOperand", (len<min ? min : max == more ? "+" : max));
+		return rst != 0
+			? error("expected {+Operands} more operands at end of: " + o, "type", symbol("match"), "+Operands", rst)
+			: error(
+				(len < min ? "less then " + min : "more then " + max) + " operands combining: " + toString(op) + " with: " + toString(o),
+				"type", symbol("match"), "expectedOperand", (len<min ? min : max == more ? "+" : max)
+			);
 	}
 	Object checkT(Object op, List o, int min, Object ... chks) {
 		int i=0, len=chks.length;
 		for (var ol=o; ol != null; i+=1, ol=ol.cdr()) {
 			if (len == 0) continue;
-			var chk = checkTn(op, o, ol, i-min, i < len && i < min ? chks[i] : len <= min ? Any.class : chks[min + (i-min) % (len-min)]);
+			var chk = checkTn(op, o, ol, i < len && i < min ? chks[i] : len <= min ? Any.class : chks[min + (i-min) % (len-min)]);
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer i2)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 			if (i2 > 1) return i+i2;
 		}
 		return i;
 	}
-	Object checkTn(Object op, List o, List ol, int i, Object chk) {
+	Object checkTn(Object op, List o, List ol, Object chk) {
 		var on = ol.car;
 		if (Utility.equals(on, chk)) return 1;
 		else if (chk instanceof Class cl && checkC(on, cl)) return 1;
@@ -1181,15 +1183,19 @@ public class Vm {
 				catch (Throwable thw) {
 				}
 			}
+			return typeError(
+				"not {expected}: {datum} combining: " + toString(op) + " with: " + toString(o),
+				on,	cons(symbol("or"), list( stream(chks).map(obj-> symbol(toStringChk(obj))).toArray() ))
+			);
 		}
 		return typeError(
-			"not " + (chk instanceof Object[] objs ? "" : "a ") + "{expected}: {datum} combining: " + toString(op) + " with: " + toString(o),
-			on,
-			chk == null ? symbol("Null")
-			: chk instanceof Class cl ? symbol(cl.getSimpleName())
-			: chk instanceof Object[] oa ? cons(symbol("or"), list(stream(oa).map(obj-> symbol(obj == null ? "Null" : obj instanceof Class cl ? cl.getSimpleName() : Vm.this.toString(obj))).toArray() ))
-			: chk
+			"not a {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), on, symbol(toStringChk(chk))
 		);
+	}
+	public String toStringChk(Object chk) {
+		return chk == null ? "Null"
+		: chk instanceof Class cl ? cl.getSimpleName()
+		: Vm.this.toString(chk);
 	}
 	class Apv0 extends Apv { Apv0(Combinable cmb) { super(cmb); }}
 	class Apv1 extends Apv { Apv1(Combinable cmb) { super(cmb); }}
