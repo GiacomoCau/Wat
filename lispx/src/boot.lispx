@@ -646,10 +646,10 @@
 ;(def\ (->name+lambda (lhs . rhs)) (list (if (def t :rhs (cons? lhs)) (car lhs) lhs) (list* '\ (if t (cons (cdr lhs) rhs) rhs))))
 
 
-(defMacro (let1Loop . args)
-  (if (cons? (car args))
-    (def ((name . binding) . body) args)
-    (def (name binding . body) args) )
+(defMacro (let1Loop lhs . rhs)
+  (if (cons? lhs)
+    (def* ((name . binding) body) lhs rhs)
+    (def* (name (binding . body)) lhs rhs) )
   (list
     (list* 'rec\ name (list (car binding)) body)
     (->1expr binding) ))
@@ -676,8 +676,7 @@
     (list* 'def\ binding)
     body ))
 
-
-(defMacro (letLoop . args)
+(defMacro (letLoop lhs . rhs)
   #|Labelled recursive loop, analogous to Scheme's named `let'.
    |Lexically bind a function named NAME with one PARAMETER for every
    |INITIALIZER and the FORMS as body.  Then immediately apply the
@@ -688,9 +687,9 @@
    |$(fn (name initializers . body))
    |$(syntax initializers ((parameter value) . initializers)
    |#
-  (if (cons? (car args))
-    (def ((name . bindings) . body) args)
-    (def (name bindings . body) args) )
+  (if (cons? lhs)
+    (def* ((name . bindings) body) lhs rhs)
+    (def* (name (bindings . body)) lhs rhs) )
   (list*
     (list* 'rec\ name (map car bindings) body)
     (map ->1expr bindings) ))

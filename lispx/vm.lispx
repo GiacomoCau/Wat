@@ -64,7 +64,6 @@
 (%def StandardClass Class)
 
 (%def AssertionError Error)
-(%def MatchError Error)
 (%def OutOfBoundsError Error)
 (%def PromptNotFoundError Error)
 (%def SimpleError Error)

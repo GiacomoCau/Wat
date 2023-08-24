@@ -148,9 +148,9 @@ public class Vm {
 			case Keyword k-> switch (k.name) {
 				case "rhs"-> 1;
 				case "prv"-> 2;
-				default-> typeError("invalid keyword: {datum}", k, parseBytecode("or", ":rhs", ":prv"));
+				default-> typeError("not {expected}: {datum}", k, toChk(or(keyword(":rhs"), keyword(":prv"))));
 			};
-			default-> typeError("not a #null, #inert, :rhs or :prv: {datum}", o, parseBytecode("or", "Null", "Inert", ":rhs", ":prv") );
+			default-> typeError("not {expected}: {datum}", o, toChk(or(null, Inert.class, keyword(":rhs"), keyword(":prv"))));
 		};
 	}
 	
@@ -311,6 +311,7 @@ public class Vm {
 		@Override Object setCdr(Object cdr) { return cdr == null || cdr instanceof List ? this.cdr = cdr : typeError("not a list: {datum}", cdr, symbol("List") ); }
 	}
 	public int len(List o) { int i=0; for (; o != null; i+=1, o=o.cdr()); return i; }
+	public int len(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return i; /*o == null ? i : i+1;*/ }
 	<T extends Cons> T cons(Object car, Object cdr) {
 		return (T)(cdr == null || cdr instanceof List ? new List(car, (List) cdr) : new Cons(car, cdr));
 	}
@@ -392,7 +393,7 @@ public class Vm {
 						case 0-> inert(value = o.car(len-1));
 						case 1-> value = o.car(len-1);
 						case 2-> { var v = value; value = o.car(len-1); yield v; }
-						default-> typeError("invalid bndres value: {datum}", i, parseBytecode("or", 0, 1, 2));
+						default-> typeError("invalid bndres value: {datum}", i, toChk(or(0, 1, 2)));
 					};
 					case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
 			    }; 
@@ -443,7 +444,7 @@ public class Vm {
 						case 0-> inert(put(key, o.car(len-1)));
 						case 1-> { var v = o.car(len-1); put(key, v); yield v; }
 						case 2-> put(key, o.car(len-1));
-						default-> typeError("invalid bndres value: {datum}", i, parseBytecode("or", 0, 1, 2));
+						default-> typeError("invalid bndres value: {datum}", i, toChk(or(0, 1, 2)));
 					};
 					case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
 			    }; 
@@ -481,7 +482,7 @@ public class Vm {
 	Class extend(Symbol className, Class superClass) {
 		try {
 			if (!className.name.matches("[A-Z][a-zA-Z_0-9]*")) return typeError("invalid class name: {datum}", className, parseBytecode("regex", "[A-Z][a-zA-Z_0-9]*"));
-			if (superClass != null && !of(Obj.class, Box.class).anyMatch(rc-> rc.isAssignableFrom(superClass))) return typeError("invalid class: {datum}", superClass, parseBytecode("or", Obj.class, Box.class));
+			if (superClass != null && !of(Obj.class, Box.class).anyMatch(rc-> rc.isAssignableFrom(superClass))) return typeError("invalid class: {datum}", superClass, toChk(or(Obj.class, Box.class)));
 			var c = Class.forName("Ext." + className);
 			if (prwrn) out.println("Warning: class " + className + " is already defined!");
 			return c;
@@ -557,9 +558,19 @@ public class Vm {
 	
 	
 	// Bind
-	class BindException extends RuntimeException {
+	public class BindException extends RuntimeException {
 		private static final long serialVersionUID = 1L;
-		public BindException(String message) { super(message); 	}
+		Object[] objs;
+		public BindException(String message, Object ... objs) { super(message); this.objs = objs; }
+	}
+	<T> T matchError(String msg, Object ... objs) {
+		return matchError(msg, null, objs);
+	}
+	<T> T matchError(String msg, BindException me, Object ... objs) {
+		var matchError = new Error(me == null ? msg : me.getMessage() + " " + msg, "type", symbol("match"));
+		matchError.put(objs);
+		if (me != null) matchError.put(me.objs);
+		return error(matchError);
 	}
 	Object bind(Dbg dbg, Env e, Object lhs, Object rhs) {
 		return bind(dbg, true, bndres, e, lhs, rhs);
@@ -567,14 +578,15 @@ public class Vm {
 	Object bind(Dbg dbg, boolean def, int bndres, Env e, Object lhs, Object rhs) {
 		try {
 			var obj = bind(def, bndres, e, lhs, rhs);
-			return obj instanceof Suspension s ? s : bndres == 0 ? inert : obj;  
+			return obj instanceof Suspension s ? s : bndres == 0 ? inert : obj;
+			// return pipe(null, ()-> bind(def, bndres, e, lhs, rhs), obj-> bndres == 0 ? inert : obj);
 		}
-		catch (BindException be) {
-			return error(
-				be.getMessage() + " " + (def ? "bind" : "sett") + "ing: " + toString(lhs)
+		catch (BindException me) {
+			return matchError(
+				(def ? "bind" : "sett") + "ing: " + toString(lhs)
 				+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, dbg.os[0])))
 				+ " with: " + rhs,
-				"type", symbol("match")
+				me
 			);
 		}
 	}
@@ -584,16 +596,16 @@ public class Vm {
 			case Symbol s-> { var v = def ? e.def(s, rhs) : e.set(s, rhs); yield bndres == 2 ? v : rhs; }  
 			case Keyword k-> {
 				if (k.equals(rhs)) yield rhs;
-				throw new BindException("not found keyword: " + k);
+				throw new BindException("expected keyword: {expected}, found: {datum}", "expected", k, "datum", rhs);
 			}
 			case null-> {
 				if (rhs == null) yield null;
-				throw new BindException(/*"too many arguments" +*/ "none arguments expected" + ", found: " + toString(rhs));
+				throw new BindException("expected {#operands} operand, found: {datum}", "#operands", -len(rhs), "datum", rhs);
 			}
 			case Cons lc-> {
 				if (lc.car instanceof Symbol sym && Utility.equals(sym.name, "%quote", "quote")) {
 					if (equals((Object) lc.car(1), rhs)) yield null; // or rhs?
-					throw new BindException("not found literal: " + lc.car(1));
+					throw new BindException("expected literal: {expected}, found: {datum}", "expected", lc.car(1), "datum", rhs);
 				}
 				if (lc.car instanceof Symbol sym && sym.name.equals("!")) {
 					yield switch (check("check", list(rhs), list((Object) getTco(evaluate(env(e, "+", more, "||", lambda(e, symbol("o"), list(list(symbol("%list->array"), symbol("o"))))), lc.car(1)))))) {
@@ -602,13 +614,13 @@ public class Vm {
 						case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
 					};
 				}
-				if (!(rhs instanceof Cons rc)) throw new BindException(/* "too few arguments" +*/ "more arguments expected" + ", found: " + toString(rhs));
+				if (!(rhs instanceof Cons rc)) throw new BindException("expected {#operands} operand, found: {datum}", "#operands", len(lc), "datum", rhs);
 				var obj = bind(def, bndres, e, lc.car, rc.car);
 				yield obj instanceof Suspension s ? s : lc.cdr == null && rc.cdr == null ? obj : bind(def, bndres, e, lc.cdr, rc.cdr);
 			}
 			default-> {
 				if (equals(lhs, rhs)) yield null; // or rhs?
-				throw new BindException("not found literal: " + toString(lhs));
+				throw new BindException("expected literal: {expected}, found: {datum}", "expected", lhs, "datum", rhs);
 			}
 		};
 	}
@@ -670,7 +682,7 @@ public class Vm {
 	// Built-in Combiners
 	class Vau implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkM(this, o, 2, Any.class, or(Ignore.class, Symbol.class)); // o = (pt ep) | (pt ep x ...)
+			var chk = checkM(this, o, 2); // o = (pt ep) | (pt ep x ...)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 			var pt = o.car();
@@ -693,7 +705,7 @@ public class Vm {
 			return pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> 
 				switch (bndres(len != 3 ? null : o.car(1))) {
 					case Suspension s-> s;
-					case Integer i-> i >= 0 && i <= 2 ? bind(dbg, def, i, e, pt, res) : typeError("invalid bndres value: {datum}", i, parseBytecode("or", 0, 1, 2));
+					case Integer i-> i >= 0 && i <= 2 ? bind(dbg, def, i, e, pt, res) : typeError("invalid bndres value: {datum}", i, toChk(or(0, 1, 2)));
 					case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
 				}
 			);
@@ -953,25 +965,37 @@ public class Vm {
 		JFun(Object jfun) {
 			this.jfun = switch (jfun) {
 				case ArgsList al-> al;  
-				case LenList ll-> o-> switch(check.apply(name, o)) { case Suspension s-> s; case Integer len-> ll.apply(len, o); case Object chk-> typeError("not an integer: {datum}", chk, symbol("Integer")); };  
-				case Supplier sp-> o-> switch (checkN(name, o, 0)) { case Suspension s-> s; case Integer len-> sp.get(); case Object chk-> typeError("not an integer: {datum}", chk, symbol("Integer")); };  
-				case Function f-> o-> switch (checkN(name, o, 1)) {case Suspension s-> s; case Integer len-> f.apply(o.car()); case Object chk-> typeError("not an integer: {datum}", chk, symbol("Integer")); };  
-				case BiFunction f-> o-> switch (checkN(name, o, 2)) {case Suspension s-> s; case Integer len-> f.apply(o.car(), o.car(1)); case Object chk-> typeError("not an integer: {datum}", chk, symbol("Integer")); };
-				case Field f-> o-> uncked(()-> switch (checkR(name, o, 1, 2)) {case Suspension s-> s; case Integer len-> { if (len == 1) yield f.get(o.car()); f.set(o.car(), o.car(1)); yield inert; } case Object chk-> typeError("not an integer: {datum}", chk, symbol("Integer")); });
-				case Method mt-> o-> {
+				case LenList ll-> o-> pipe(null, ()-> check.apply(name, o),
+					obj-> obj instanceof Integer len ? ll.apply(len, o)	: typeError("not an integer: {datum}", obj, symbol("Integer")));   
+				case Supplier sp-> o-> pipe(null, ()-> checkN(name, o, 0),
+					obj-> obj instanceof Integer len? sp.get() : typeError("not an integer: {datum}", obj, symbol("Integer")));  
+				case Function f-> o-> pipe(null, ()-> checkN(name, o, 1),
+					obj-> obj instanceof Integer len ? f.apply(o.car()) : typeError("not an integer: {datum}", obj, symbol("Integer")));  
+				case BiFunction f-> o-> pipe(null, ()-> checkN(name, o, 2),
+					obj-> obj instanceof Integer len ? f.apply(o.car(), o.car(1)) : typeError("not an integer: {datum}", obj, symbol("Integer")));
+				case Field f-> o-> pipe(null, ()-> checkR(name, o, 1, 2), obj->{
+						if (!(obj instanceof Integer len)) return typeError("not an integer: {datum}", obj, symbol("Integer"));
+						if (len == 1) return uncked(()-> f.get(o.car()));
+						return uncked(()->{ f.set(o.car(), o.car(1)); return inert; });
+					}
+				);
+				case Method mt-> o->{
 					var pc = mt.getParameterCount();
-					return switch (!mt.isVarArgs() ? checkN(name, o, pc+1) : checkM(name, o, pc)) {
-						case Suspension s-> s;
-						case Integer len-> uncked(()-> mt.invoke(o.car(), reorg(mt, array(o.cdr()))));
-						case Object chk-> typeError("not an integer: {datum}", chk, symbol("Integer"));
-					};
+					return pipe(null,
+						()-> !mt.isVarArgs() ? checkN(name, o, pc+1) : checkM(name, o, pc),
+						obj-> obj instanceof Integer len
+							? uncked(()-> mt.invoke(o.car(), reorg(mt, array(o.cdr()))))
+							: typeError("not an integer: {datum}", obj, symbol("Integer"))
+					);
 				};
-				case Constructor c-> o-> switch (checkN(name, o, c.getParameterCount())) {
-					case Suspension s-> s;
-					case Integer len-> uncked(()-> c.newInstance(reorg(c, array(o))));
-					case Object chk-> typeError("not an integer: {datum}", chk, symbol("Integer"));
-				};
-				default -> typeError("not a combine: {datum}", ifnull(name, jfun), parseBytecode("or", "ArgList", "LenList", "Supplier", "Function", "Bifunction", "Field", "Method", "Constructor"));
+				case Constructor c-> o->
+					pipe(null,
+						()-> checkN(name, o, c.getParameterCount()),
+						obj-> obj instanceof Integer len 
+							? uncked(()-> c.newInstance(reorg(c, array(o))))
+							: typeError("not an integer: {datum}", obj, symbol("Integer"))
+					);
+				default -> typeError("not a combine: {datum}", ifnull(name, jfun), toChk(or(ArgsList.class, LenList.class, Supplier.class, Function.class, BiFunction.class, Field.class, Executable.class)));
 			};
 		}
 		public Object combine(Env e, List o) {
@@ -1099,11 +1123,11 @@ public class Vm {
 		PTree(Object exp, Object pt, Object ep) { this.exp=exp; this.pt = pt; this.ep = ep; }
 		Object check() { 
 			if (!((pt == null || pt == ignore || pt instanceof Symbol) && syms.add(pt))) {
-				if (!(pt instanceof Cons)) return typeError("not a #null, #ignore, symbol or parameters tree: {datum} of: " + exp, pt, parseBytecode("or", "Null", "Ignore", "Symbol", "Cons") );
+				if (!(pt instanceof Cons)) return typeError("not {expected}: {datum} of: " + exp, pt, toChk(or(null, Ignore.class, Symbol.class, Cons.class)) );
 				var msg = check(pt); if (msg != null) return msg;
 			}
-			if (ep == null /* %def && %set! */ || ep == ignore) return syms.size() > 0 ? null : typeError("no one #null #ignore or symbol in: {datum} of: " + exp, pt, parseBytecode("or", "Null", "Ignore", "Symbol"));
-			if (!(ep instanceof Symbol sym)) return typeError("not a #ignore or symbol: {datum} of: " + exp, ep, parseBytecode("or", "Ignore", "Symbol"));
+			if (ep == null /* %def && %set! */ || ep == ignore) return syms.size() > 0 ? null : typeError("not one {expected} in: {datum} of: " + exp, pt, toChk(or(null, Ignore.class, Symbol.class)));
+			if (!(ep instanceof Symbol sym)) return typeError("not {expected}: {datum} of: " + exp, ep, toChk(or(Ignore.class, Symbol.class)));
 			return !syms.contains(sym) ? null : error("not a unique symbol: {datum} in: {expr}", "datum", ep, "expr", exp);
 		}
 		private Object check(Object p) {
@@ -1134,24 +1158,25 @@ public class Vm {
 		return checkR(op, o, min, more, chks);
 	}
 	Object checkR(Object op, List o, int min, int max, Object ... chks) {
-		var chk = chks.length == 0 ? len(o) : checkT(op, o, min, chks);
-		if (chk instanceof Suspension s) return s;
+		return checkR(null, op, o, min, max, chks);
+	}
+	Object checkR(Resumption r, Object op, List o, int min, int max, Object ... chks) {
+		var chk = r != null ? r.resume() : chks.length == 0 ? len(o) : checkT(null, op, o, min, max, o, 0, chks);
+		if (chk instanceof Suspension s) return s.suspend(null, rr-> checkR(rr, op, o, min, max, chks));
 		if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 		var rst = max != more || chks.length <= min ? 0 : (len - min) % (chks.length - min); 
 		if (len >= min && len <= max && rst == 0) return len;
 		return rst != 0
-			? error("expected {+Operands} more operands at end of: " + o, "type", symbol("match"), "+Operands", rst)
-			: error(
-				(len < min ? "less then " + min : "more then " + max) + " operands combining: " + toString(op) + " with: " + toString(o),
-				"type", symbol("match"), "expectedOperand", (len<min ? min : max == more ? "+" : max)
-			);
+			? matchError("expected {#operands} operand at end of: " + o, "#operands", rst)
+			: matchError("expected {#operands} operand combining: " + toString(op) + " with: " + toString(o), "#operands", len<min ? min-len : max-len)
+		;
 	}
-	Object checkT(Object op, List o, int min, Object ... chks) {
-		int i=0, len=chks.length;
-		for (var ol=o; ol != null; i+=1, ol=ol.cdr()) {
-			if (len == 0) continue;
-			var chk = checkTn(op, o, ol, i < len && i < min ? chks[i] : len <= min ? Any.class : chks[min + (i-min) % (len-min)]);
-			if (chk instanceof Suspension s) return s;
+	Object checkT(Resumption r, Object op, List o, int min, int max, List ol, int i, Object ... chks) {
+		var len=chks.length;
+		for (var first=true; ol != null; i+=1, ol=ol.cdr()) {
+			if (len == 0 || i >= max) continue;
+			var chk = first && r != null && !(first = false) ? r.resume() : checkTn(op, o, ol, i < len && i < min ? chks[i] : len <= min ? Any.class : chks[min + (i-min) % (len-min)]);
+			if (chk instanceof Suspension s) {var ii=i; var ool=ol; return s.suspend(null, rr-> checkT(rr, op, o, min, max, ool, ii, chks)); }
 			if (!(chk instanceof Integer i2)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 			if (i2 > 1) return i+i2;
 		}
@@ -1163,40 +1188,66 @@ public class Vm {
 		else if (chk instanceof Class cl && checkC(on, cl)) return 1;
 		else if (chk instanceof List chkl && on instanceof List onl) {
 			// if (chkl.car() == symbol("||")) chk = array(chkl);
-			switch (check("check", onl, chkl)) {
-				case Suspension s: return s;
-				case Integer i2: return 1;
-				case Object obj: typeError("not an integer: {datum}", obj, symbol("Integer"));
-			};
-		}
-		else if (chk instanceof Object[] chks) { // or
-			for (Object chkn: chks) {
-				if (Utility.equals(on, chkn)) return 1;
-				else if (chkn instanceof Class cl && checkC(on, cl)) return 1;
-				else if (chkn instanceof List chkl) try {
-					switch (check("check", ol, chkl)) {
-						case Suspension s: return s;
-						case Integer i2: return i2;
-						case Object obj: typeError("not an integer: {datum}", obj, symbol("Integer"));
-					}
-				}
-				catch (Throwable thw) {
-				}
-			}
-			return typeError(
-				"not {expected}: {datum} combining: " + toString(op) + " with: " + toString(o),
-				on,	cons(symbol("or"), list( stream(chks).map(obj-> symbol(toStringChk(obj))).toArray() ))
+			return pipe(null,
+				()-> check("check", onl, chkl),
+				obj-> obj instanceof Integer ? 1 : typeError("not an integer: {datum}", obj, symbol("Integer"))
 			);
 		}
-		return typeError(
-			"not a {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), on, symbol(toStringChk(chk))
+		else if (chk instanceof Object[] chks) { // or
+			return checkOr(null, op, o, ol, on, 0, chks);
+		}
+		else return typeError(
+			"not a {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), on, toChk(chk)
 		);
 	}
-	public String toStringChk(Object chk) {
-		return chk == null ? "Null"
-		: chk instanceof Class cl ? cl.getSimpleName()
-		: Vm.this.toString(chk);
+	public Object checkOr(Resumption r, Object op, List o, List ol, Object on, int i, Object[] chks) {
+		for (var first=true; i<chks.length; i+=1) {
+			try {
+				var res = first && r != null && !(first = false) ? r.resume() : apply(
+						chkn-> Utility.equals(on, chkn) ? 1
+						: chkn instanceof Class cl && checkC(on, cl) ? 1
+						: chkn instanceof List chkl ? check("check", ol, chkl)
+						: 0
+					,
+					chks[i]
+				);
+				if (res instanceof Suspension s) {var ii=i; return s.suspend(null, rr-> checkOr(rr, op, o, ol, on, ii, chks)); }
+				if (res instanceof Integer len && len > 0) return len;
+				// mancano le segnalazioni per res == 0 (or syntax error) or !Integer (invalid debug value)
+			}
+			catch (Throwable thw) {
+			}		
+		}
+		return typeError("not {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), on, toChk(chks));
 	}
+	public Object toChk(Object chk) {
+		return chk == null ? symbol("Null")
+		: chk instanceof Class cl ? symbol(cl.getSimpleName())
+		: chk instanceof Integer i && i == more ? symbol("+")
+		: chk instanceof Object[] a ? cons(symbol("or"), list(stream(a).map(o-> toChk(o)).toArray()))
+		: chk instanceof List l ? map(o-> toChk(o), l) 
+		: chk;
+	}
+	/*
+	public Object checkOr1(Resumption r, Object op, List o, List ol, Object on, int i, Object[] chks) {
+		for (var first=true; i<chks.length; i+=1) {
+			try {
+				var res = first && r != null && !(first = false) ? r.resume() : checkOr2(ol, on, chks[i]);
+				if (res instanceof Suspension s) {var ii=i; return s.suspend(null, rr-> checkOr(rr, op, o, ol, on, ii, chks)); }
+				if (res instanceof Integer len && len > 0) return len;
+			}
+			catch (Throwable trw) {
+			}
+		}
+		return typeError("not {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), on, toChk(chks));
+	}
+	public Object checkOr2(List ol, Object on, Object chkn) {
+		return Utility.equals(on, chkn) ? 1
+		: chkn instanceof Class cl && checkC(on, cl) ? 1
+		: chkn instanceof List chkl ? check("check", ol, chkl)
+		: 0;
+	}
+	*/
 	class Apv0 extends Apv { Apv0(Combinable cmb) { super(cmb); }}
 	class Apv1 extends Apv { Apv1(Combinable cmb) { super(cmb); }}
 	public boolean checkC(Object obj, Class cl) {
@@ -1209,41 +1260,15 @@ public class Vm {
 	public Object check(Object op, List o, List chk) {
 		int min=0, max=more;
 		if (chk.car instanceof Integer mn) { min = max = mn; chk = chk.cdr(); }
-		if (chk.car instanceof Integer mx) { max = mx; chk = chk.cdr(); }
-		return switch (checkR(op, o, min, max, array(chk)) ){
-			case Suspension s-> s;
-			case Integer len-> len;
-			case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
-		};
+		if (chk != null && chk.car instanceof Integer mx) { max = mx; chk = chk.cdr(); }
+		return check(op, o, min, max, chk);
 	}
-	/* TODO valutare l'idea
-	public Object checkO(Object obj, Object chk) {
-		if (Utility.equals(obj, chk)) return obj;
-		else if (chk instanceof Class cl && checkC(obj, cl)) return obj;
-		else if (chk instanceof List chkl && obj instanceof List objl) {
-			switch (check("check", objl, chkl)) {
-				case Suspension s: return s;
-				case Integer i2: return obj;
-				case Object obj2: typeError("not an integer: {datum}", obj2, symbol("Integer"));
-			};
-		}
-		else if (chk instanceof Object[] chks) { // or
-			for (Object chkn: chks) try {
-				return checkO(obj, chkn); 
-			}
-			catch (Throwable thw) {
-			}
-		}
-		return typeError(
-			"not " + (chk instanceof Object[] objs ? "" : "a ") + "{expected}: {datum}",
-			obj,
-			chk == null ? symbol("Null")
-			: chk instanceof Class cl ? symbol(cl.getSimpleName())
-			: chk instanceof Object[] oa ? cons(symbol("or"), list(stream(oa).map(o-> symbol(o == null ? "Null" : o instanceof Class cl ? cl.getSimpleName() : Vm.this.toString(o))).toArray() ))
-			: chk
+	public Object check(Object op, List o, int min, int max, List chk) {
+		return pipe(null,
+			()-> checkR(op, o, min, max, array(chk)),
+			obj-> obj instanceof Integer i ? i : typeError("not an integer: {datum}", obj, symbol("Integer"))
 		);
 	}
-	//*/
 	
 	
 	// Utilities
@@ -1429,7 +1454,7 @@ public class Vm {
 					$("%def", "%value", wrap(new JFun("%Value", (n,o)-> checkN(n, o, 2, Symbol.class, Env.class), (l,o)-> o.<Env>car(1).get(o.car()).value) )),
 					$("%def", "%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, Symbol.class, Env.class), (l,o)-> o.<Env>car(1).get(o.car()).isBound) )),
 					$("%def", "%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (RuntimeException rte) { return false; }} ))),
-					$("%def", "%apply", wrap(new JFun("%Apply", (ArgsList) o-> combine(o.cdr(1) == null ? env() : o.car(2), unwrap(o.car()), o.car(1)) ))),
+					$("%def", "%apply", wrap(new JFun("%Apply", (n,o)-> checkR(n, o, 2, 3, Combinable.class, Any.class, Env.class), (l,o)-> combine(l == 2 ? env() : o.car(2), unwrap(o.car()), o.car(1)) ))),
 					$("%def", "%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(), unwrap(o.car()), o.cdr()) ))),
 					$("%def", "%apply**", wrap(new JFun("%Apply**", (ArgsList) o-> combine(env(), unwrap(o.car()), (List) listStar(o.cdr())) ))),
 					$("%def", "%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } ))),

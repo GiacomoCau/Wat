@@ -307,7 +307,8 @@
 
 (assert (apply (\ (x) x) (list 2)) 2)
 
-(assert (unwrap (vau () #ignore)))
+(let1 (v (vau () #ignore))  (%assert (unwrap v) v))
+
 
 #|
 (let ((obj (object ("x" 1))))

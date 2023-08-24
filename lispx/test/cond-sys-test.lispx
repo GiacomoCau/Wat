@@ -5,7 +5,7 @@
   (deftest handlerBind.0
     (signalsError
      (handlerBind)
-     MatchError))
+     Error :type 'match :#operands +1))
 
   (deftest handlerBind.0b
     (handlerBind ())
@@ -102,7 +102,7 @@
   (deftest handlerCase.0
     (signalsError
      (handlerCase)
-     MatchError))
+     Error :type 'match :#operands +1))
 
   (deftest handlerCase.0b
     (handlerCase ())
@@ -170,7 +170,7 @@
   (deftest restartBind.0
     (signalsError
      (restartBind)
-     MatchError))
+     Error :type 'match :#operands +1))
 
   (deftest restartBind.0b
     (restartBind ())
@@ -276,7 +276,7 @@
   (deftest restartCase.0
     (signalsError
      (restartCase)
-     MatchError))
+     Error :type 'match :#operands +1))
 
   (deftest restartCase.0b
     (restartCase ())
@@ -379,7 +379,7 @@
   (deftest findRestart?.0
     (signalsError
      (findRestart?)
-     MatchError))
+     Error :type 'match :#operands +1))
 
   (deftest findRestart?.1
     (findRestart? 'foo)
@@ -553,7 +553,7 @@
   (deftest signal.0
     (signalsError
      (signal)
-     MatchError))
+     Error :type 'match :#operands +1))
 
   (deftest signal.1
     (signal (makeSimpleError "foo"))
@@ -620,7 +620,7 @@
   (deftest invokeRestart.0
     (signalsError
      (invokeRestart)
-     MatchError))
+     Error :type 'match :#operands +1))
 
   (deftest invokeRestart.1
     (signalsError
@@ -656,14 +656,14 @@
      (restartBind ((r1 (\ (arg1 arg2) (+ arg1 arg2))
                         :interactiveFunction (\ () '())))
        (invokeRestartInteractively 'r1))
-     MatchError))
+     Error :type 'match :#operands +2))
 
   (deftest invokeRestartInteractively.3
     (signalsError
      (restartBind ((r1 (\ (arg1) arg1)
-                        :interactiveFunction (\ () '(1 2 3))))
+                        :interactiveFunction (\ () '(1 2))))
        (invokeRestartInteractively 'r1))
-     MatchError)))
+     Error :type 'match :#operands -1)))
 
 (defsuite |Condition Handling in the Lisp Language Family|
   ;; Adapted from https://www.nhplace.com/kent/Papers/Condition-Handling-2001.html

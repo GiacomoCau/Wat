@@ -405,10 +405,10 @@
 ;(def\ (->name+lambda (lhs . rhs)) (list (if (def t :rhs (cons? lhs)) (car lhs) lhs) (list* '\ (if t (cons (cdr lhs) rhs) rhs))))
 
 
-(defMacro (let1Loop . args)
-  (if (cons? (car args))
-    (def ((name . binding) . body) args)
-    (def (name binding . body) args) )
+(defMacro (let1Loop lhs . rhs)
+  (if (cons? lhs)
+    (def* ((name . binding) body) lhs rhs)
+    (def* (name (binding . body)) lhs rhs) )
   (list
     (list* 'rec\ name (list (car binding)) body)
     (->1expr binding) ))
@@ -445,17 +445,16 @@
     (list* 'def\ binding)
     body ))
 
-
-(defMacro (letLoop . args)
-  (if (cons? (car args))
-    (def ((name . bindings) . body) args)
-    (def (name bindings . body) args) )
+(defMacro (letLoop lhs . rhs)
+  (if (cons? lhs)
+    (def* ((name . bindings) body) lhs rhs)
+    (def* (name (bindings . body)) lhs rhs) )
   (list*
     (list* 'rec\ name (map car bindings) body)
     (map ->1expr bindings) ))
 
-(assert (letLoop sum ((a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
-(assert (letLoop (sum (a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
+(%assert (letLoop sum ((a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
+(%assert (letLoop (sum (a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
 
 (defMacro (let lhs . rhs)
   (if (symbol? lhs)

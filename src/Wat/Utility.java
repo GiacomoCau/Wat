@@ -37,6 +37,9 @@ public class Utility {
 	public static Object[] $(Object... objects) {
 		return objects;
 	}
+	public static <T> T $n(Object objs, int i) {
+		return (T) ((Object[]) objs)[i];
+	}
 	public static Object or(Object... objects) {
 		return objects;
 	}
