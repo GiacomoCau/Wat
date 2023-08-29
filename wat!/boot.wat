@@ -295,6 +295,7 @@
 (def throwTag
   %throw)
 
+;; ctapv non andrebbe mai cambiato dopo il boot, anche la riesecuzione di quanto segue potrebbe non bastare!
 (if (ctapv)
   (then
     (defMacro (catch . forms)
@@ -954,9 +955,11 @@
 ;(defVau extEnv (env . bindings) denv
 ;  (eval (list* 'letEnv bindings) (eval env denv)) )
 
+; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (list* 'list xs) env)
+
 (defVau (check o . cks) env
-  (let1 (env+ (newEnv env '+ (.MAX_VALUE Integer) '|| (\ o (list->array o))))
-    (apply* @check vm "check" (eval o env) (map (\ (ck) (eval ck env+)) cks)) ))
+  (let1 (env+ (newEnv env '+ (.MAX_VALUE Integer) '|| (\ o (list->array o)) 'or (\ o (list->array o)) ))
+    (apply* @check vm "check" ((\ (o) (if (or (null? o) (list? o)) o (list o))) (eval o env)) (eval (list* 'list cks) env+)) ))
 
 (%assert (check '(1 (:a 1 :b 2) c 3) 1 + Integer (list Keyword Integer) Symbol (|| 3 4)) 4)
 (%assert (check '(a 1 2) 'a 1 2) 3)
@@ -966,7 +969,8 @@
 (%assert (check '(a :prv 1)  2 3 Symbol (|| (list 1 Any) (list 2 (|| Null Inert :prv :rhs)))) 3)
 (%assert (check '(a 1)       2 3 Symbol (|| (list 1 Any) (list 2 (|| Null Inert :prv :rhs)))) 2)
 
-(defVau check? args env (catchWth (\ (e) #f) (apply check args env)) #t)
+(defMacro check? args (list 'catchWth #f (list 'apply 'check args (theEnv)) #t))
+(defVau check? args env (catchWth #f (apply check args env) #t))
 
 ;(defVau the (ck o) env (apply* @checkO vm (eval o env) (eval ck (extEnv env (+ (.MAX_VALUE Integer)) (|| (\ o (list->array o)))))) )
 (defMacro (the type obj) (list 'let1 (list 'obj obj) (list 'check '(list obj) type) 'obj))
@@ -1270,7 +1274,7 @@
 
 (defVau (import module imports) env
   (let* ((module (eval module env))
-         (values (map (\ (import) (eval import module)) imports)) )
+         (values (eval (list* 'list imports) module)) )
     (eval (list* 'def* imports values) env) ))
 
 (assert (begin (defModule m (x) (def x 10)) (import m (x)) x) 10)

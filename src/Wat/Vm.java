@@ -134,6 +134,7 @@ public class Vm {
 	boolean prwrn = false; // print warning
 	boolean aquote = false; // auto quote list
 	boolean else1 = false; // else multiple expressions
+	boolean hdlany = true; // any value for catch hadler
 	
 	Object boxdft = null; // box/dinamic default: null, inert, ...
 	
@@ -576,21 +577,23 @@ public class Vm {
 		return bind(dbg, true, bndres, e, lhs, rhs);
 	}
 	Object bind(Dbg dbg, boolean def, int bndres, Env e, Object lhs, Object rhs) {
-		try {
-			var obj = bind(def, bndres, e, lhs, rhs);
-			return obj instanceof Suspension s ? s : bndres == 0 ? inert : obj;
-			// return pipe(null, ()-> bind(def, bndres, e, lhs, rhs), obj-> bndres == 0 ? inert : obj);
-		}
-		catch (BindException me) {
-			return matchError(
-				(def ? "bind" : "sett") + "ing: " + toString(lhs)
-				+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, dbg.os[0])))
-				+ " with: " + rhs,
-				me
-			);
-		}
+		return bind(null, dbg, def, bndres, e, lhs, rhs); 
 	}
-	Object bind(boolean def, int bndres, Env e, Object lhs, Object rhs) {
+	Object bind(Resumption r, Dbg dbg, boolean def, int bndres, Env e, Object lhs, Object rhs) {
+			try {
+				var res = r != null ? r.resume() : pipe(null, ()-> bind2(def, bndres, e, lhs, rhs), obj-> bndres == 0 ? inert : obj);
+				return res instanceof Suspension s ? s.suspend(dbg, rr-> bind(rr, dbg, def, bndres, e, lhs, rhs)) : res;
+			}
+			catch (BindException be) {
+				return matchError(
+					(def ? "bind" : "sett") + "ing: " + toString(lhs)
+					+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, dbg.os[0])))
+					+ " with: " + rhs,
+					be
+				);
+			}
+	}
+	Object bind2(boolean def, int bndres, Env e, Object lhs, Object rhs) {
 		return switch (lhs) {
 			case Ignore i-> rhs;
 			case Symbol s-> { var v = def ? e.def(s, rhs) : e.set(s, rhs); yield bndres == 2 ? v : rhs; }  
@@ -603,20 +606,25 @@ public class Vm {
 				throw new BindException("expected {#operands} operand, found: {datum}", "#operands", -len(rhs), "datum", rhs);
 			}
 			case Cons lc-> {
-				if (lc.car instanceof Symbol sym && Utility.equals(sym.name, "%quote", "quote")) {
-					if (equals((Object) lc.car(1), rhs)) yield null; // or rhs?
-					throw new BindException("expected literal: {expected}, found: {datum}", "expected", lc.car(1), "datum", rhs);
-				}
-				if (lc.car instanceof Symbol sym && sym.name.equals("!")) {
-					yield switch (check("check", list(rhs), list((Object) getTco(evaluate(env(e, "+", more, "||", lambda(e, symbol("o"), list(list(symbol("%list->array"), symbol("o"))))), lc.car(1)))))) {
-						case Suspension s-> s;
-						case Integer i-> bind(def, bndres, e, lc.car(2), rhs);
-						case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
-					};
+				if (lc.car instanceof Symbol sym) switch (sym.name) {
+					case "%quote", "quote": {
+						if (equals(lc.<Object>car(1), rhs)) yield null; // or rhs?
+						throw new BindException("expected literal: {expected}, found: {datum}", "expected", lc.car(1), "datum", rhs);
+					}
+					case "!": yield pipe(null,
+						()-> lambda(e, symbol("o"), list(list(symbol("%list->array"), symbol("o")))),
+						lmd-> getTco(evaluate(env(e, "+", more, "||", lmd, "or", lmd), lc.car(1))),
+						chk-> check("check", rhs == null ? (List) rhs : rhs instanceof List l ? l : list(rhs), list(chk)),
+						obj-> obj instanceof Integer i
+							? bind2(def, bndres, e, lc.car(2), rhs)
+							: typeError("not an integer: {datum}", obj, symbol("Integer"))
+					);
 				}
 				if (!(rhs instanceof Cons rc)) throw new BindException("expected {#operands} operand, found: {datum}", "#operands", len(lc), "datum", rhs);
-				var obj = bind(def, bndres, e, lc.car, rc.car);
-				yield obj instanceof Suspension s ? s : lc.cdr == null && rc.cdr == null ? obj : bind(def, bndres, e, lc.cdr, rc.cdr);
+				yield pipe(null,
+					()-> bind2(def, bndres, e, lc.car, rc.car),
+					obj-> lc.cdr == null && rc.cdr == null ? obj : bind2(def, bndres, e, lc.cdr, rc.cdr)
+				);
 			}
 			default-> {
 				if (equals(lhs, rhs)) yield null; // or rhs?
@@ -677,6 +685,8 @@ public class Vm {
 		: typeError("cannot unwrap: {datum}", arg, symbol("Apv"));
 	}
 	Apv lambda(Env e, Object pt, List body) { return new Apv(new Opv(e, pt, ignore, body)); }
+	Apv Apv1(Env e, Symbol sym, List body) { return lambda(e, list(sym), body); }
+	Apv Apv0(Env e, List body) { return lambda(e, null, body); }
 	
 	
 	// Built-in Combiners
@@ -709,6 +719,17 @@ public class Vm {
 					case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
 				}
 			);
+			/*
+			return pipe(dbg,
+				()-> getTco(evaluate(e, o.car(len-1))),
+				res-> $(res, bndres(len != 3 ? null : o.car(1))),
+				res-> switch ($n(res, 1)) {
+					case Integer i when i >= 0 || i <= 2-> bind(dbg, def, i, e, pt, $n(res, 0));
+					case Integer i -> typeError("invalid bndres value: {datum}", i, toChk(or(0, 1, 2)));
+					case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
+				}
+			);
+			//*/
 		}
 		public String toString() { return def ? "%Def" : "%Set!"; }
 	};
@@ -793,7 +814,7 @@ public class Vm {
 			// (catchTag tag . forms)        -> (%catch tag  () . forms)
 			// (catchWth hdl . forms)        -> (%catch #_  hdl . forms)
 			// (catchTagWth tag hdl . forms) -> (%catch tag hdl . forms)
-			var chk = !ctapv ? checkM(this, o, 2) : checkN(this, o, 3, Any.class, or(null, Apv1.class), Apv0.class);
+			var chk = !ctapv ? checkM(this, o, 2) : checkN(this, o, 3, Any.class, hdlany ? Any.class : or(null, Apv1.class), Apv0.class);
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 			return pipe(dbg(e, this, o), ()-> ctapv ? o.car() : getTco(evaluate(e, o.car())), tag-> combine(null, e, tag, o.car(1), o.cdr(1)) ); 
@@ -815,7 +836,7 @@ public class Vm {
 			if (res instanceof Suspension s) return s.suspend(dbg(e, this, tag, hdl), rr-> combine2(rr, e, tag, hdl, thw));
 			return res instanceof Apv apv && args(apv) == 1
 				? getTco(Vm.this.combine(e, unwrap(apv), list(thw instanceof Value val ? val.value : thw)))
-				: typeError("not a one arg applicative combiner: {datum}", hdl, symbol("Apv1"))
+				: hdlany ? hdl : typeError("not a one arg applicative combiner: {datum}", hdl, symbol("Apv1"))
 			;
 		}
 		public String toString() { return "%Catch"; }
@@ -1134,6 +1155,10 @@ public class Vm {
 			if (p == null || p == ignore) syms.add(p);
 			if (p instanceof Symbol) { return syms.add(p) ? null : error("not a unique symbol: {datum} in: " + pt + " of: {expr}", "datum", p, "expr", exp); }
 			if (!(p instanceof Cons c)) return null;
+			if (c.car instanceof Symbol sym) switch (sym.name) {
+				case "%quote", "quote": return len(c) == 2 ? null : error("invalid quote syntax : " + c);
+				case "!": return len(c) == 3 && c.car(2) instanceof Symbol? check(c.car(2)) : error("invalid ! syntax: " + c);
+			}
 			var msg = check(c.car); if (msg != null) return msg;
 			return c.cdr == null ? null : check(c.cdr);
 		}
@@ -1207,13 +1232,13 @@ public class Vm {
 						chkn-> Utility.equals(on, chkn) ? 1
 						: chkn instanceof Class cl && checkC(on, cl) ? 1
 						: chkn instanceof List chkl ? check("check", ol, chkl)
-						: 0
+						: -1 // TODO mancano le segnalazioni per res == -1 (or syntax error) or !Integer (invalid debug value)
 					,
 					chks[i]
 				);
 				if (res instanceof Suspension s) {var ii=i; return s.suspend(null, rr-> checkOr(rr, op, o, ol, on, ii, chks)); }
-				if (res instanceof Integer len && len > 0) return len;
-				// mancano le segnalazioni per res == 0 (or syntax error) or !Integer (invalid debug value)
+				if (res instanceof Integer len && len >= 0) return len;
+				// TODO mancano le segnalazioni per res == -1 (or syntax error) or !Integer (invalid debug value)
 			}
 			catch (Throwable thw) {
 			}		
@@ -1234,7 +1259,7 @@ public class Vm {
 			try {
 				var res = first && r != null && !(first = false) ? r.resume() : checkOr2(ol, on, chks[i]);
 				if (res instanceof Suspension s) {var ii=i; return s.suspend(null, rr-> checkOr(rr, op, o, ol, on, ii, chks)); }
-				if (res instanceof Integer len && len > 0) return len;
+				if (res instanceof Integer len && len >= 0) return len;
 			}
 			catch (Throwable trw) {
 			}
@@ -1245,7 +1270,7 @@ public class Vm {
 		return Utility.equals(on, chkn) ? 1
 		: chkn instanceof Class cl && checkC(on, cl) ? 1
 		: chkn instanceof List chkl ? check("check", ol, chkl)
-		: 0;
+		: -1; // TODO mancano le segnalazioni per res == 0 (or syntax error) or !Integer (invalid debug value)
 	}
 	*/
 	class Apv0 extends Apv { Apv0(Combinable cmb) { super(cmb); }}
@@ -1453,7 +1478,7 @@ public class Vm {
 					$("%def", "%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap))),
 					$("%def", "%value", wrap(new JFun("%Value", (n,o)-> checkN(n, o, 2, Symbol.class, Env.class), (l,o)-> o.<Env>car(1).get(o.car()).value) )),
 					$("%def", "%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, Symbol.class, Env.class), (l,o)-> o.<Env>car(1).get(o.car()).isBound) )),
-					$("%def", "%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (RuntimeException rte) { return false; }} ))),
+					$("%def", "%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind2(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (RuntimeException rte) { return false; }} ))),
 					$("%def", "%apply", wrap(new JFun("%Apply", (n,o)-> checkR(n, o, 2, 3, Combinable.class, Any.class, Env.class), (l,o)-> combine(l == 2 ? env() : o.car(2), unwrap(o.car()), o.car(1)) ))),
 					$("%def", "%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(), unwrap(o.car()), o.cdr()) ))),
 					$("%def", "%apply**", wrap(new JFun("%Apply**", (ArgsList) o-> combine(env(), unwrap(o.car()), (List) listStar(o.cdr())) ))),
@@ -1575,7 +1600,8 @@ public class Vm {
 					$("%def", "boxdft", wrap(new JFun("Boxdft", (n,o)-> checkR(n, o, 0, 1), (l,o)-> l == 0 ? boxdft : inert(boxdft=o.car()) ))),
 					$("%def", "aquote", wrap(new JFun("Aquote", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? aquote : inert(aquote=o.car()) ))),
 					$("%def", "prstk", wrap(new JFun("Prstk", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prstk : inert(prstk=o.car()) ))),
-					$("%def", "prwrn", wrap(new JFun("Prwrn", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prwrn : inert(prwrn=o.car()) )))
+					$("%def", "prwrn", wrap(new JFun("Prwrn", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prwrn : inert(prwrn=o.car()) ))),
+					$("%def", "hdlany", wrap(new JFun("Hdlany", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? hdlany : inert(hdlany=o.car()) )))
 				)
 		)));
 	}

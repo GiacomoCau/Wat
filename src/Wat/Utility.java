@@ -34,14 +34,17 @@ public class Utility {
 	
 	public static int more = Integer.MAX_VALUE;
 	
-	public static Object[] $(Object... objects) {
-		return objects;
+	public static Object[] $(Object... objs) {
+		return objs;
 	}
 	public static <T> T $n(Object objs, int i) {
 		return (T) ((Object[]) objs)[i];
 	}
-	public static Object or(Object... objects) {
-		return objects;
+	public static Object or(Object... objs) {
+		return objs;
+	}
+	public static Object last(Object ... objs) {
+		return objs[objs.length-1];
 	}
 	
 	public static <T> boolean equals(T v, T ... a) {

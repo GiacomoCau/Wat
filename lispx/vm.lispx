@@ -18,6 +18,7 @@
 (boxdft #inert)
 (aquote #t)
 (ttrue 0)
+(hdlany #t)
 
 (%def Null #null)
 (%def Any &Wat.Vm$Any)
