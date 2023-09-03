@@ -687,7 +687,7 @@
 
 (assert (case 3 ((2 4 6 8) 'pair) ((1 3 5 7 9) 'odd)) 'odd)
 
-; vedi signalsError in vm.lispx (o test-util.lispx) per codice simile
+; vedi signalsError? in vm.lispx (o test-util.lispx) per codice simile
 (defVau (caseType key . clauses) env
   (let1 (key (eval key env))
     (let1 next (clauses clauses)
@@ -696,18 +696,21 @@
           (if (|| (== test 'else)
                   (let* ( (symbol? (symbol? test))
                           (class (eval (if symbol? test (car test)) env)) )
-                    (&& (type? key class) (|| symbol? (&& (type? key Obj) (checkSlots key (map (\ (x) (eval x env)) (cdr test))) ))) ))
+                    (if symbol? (type? key class) (&& (type? key Obj) (matchSlots? key (eval (list* 'list (cdr test))  env ))) )))
             (if (== (car forms) '=>)
               (let1 ((apv) (cdr forms)) ((eval apv env) key))
               (eval (list* 'begin forms) env) )
             (next clauses) ))))))
 
-(def\ (checkSlots obj slots)
+(def\ (matchSlots? obj slots)
   (let1 next (slots slots)
     (if (null? slots) #t
       (let1 ((name value . slots) slots)
-        (if (or (! (@isBound obj name)) (! (eq? (obj name) value))) #f
-          (next slots) )))))
+        (if (&& (@isBound obj name) (eq? (obj name) value)) (next slots)
+          #f )))))
+
+(def\ (matchObj? obj class . slots)
+  (if (type? obj class) (matchSlots? obj slots) #f) )
 
 (assert (caseType 2.0 (else 3)) 3)
 (assert (caseType (+ 2 2) (else => (\(v) v))) 4)
@@ -969,11 +972,9 @@
 (%assert (check '(a :prv 1)  2 3 Symbol (|| (list 1 Any) (list 2 (|| Null Inert :prv :rhs)))) 3)
 (%assert (check '(a 1)       2 3 Symbol (|| (list 1 Any) (list 2 (|| Null Inert :prv :rhs)))) 2)
 
-(defMacro check? args (list 'catchWth #f (list 'apply 'check args (theEnv)) #t))
-(defVau check? args env (catchWth #f (apply check args env) #t))
+(defVau match? args env (catchWth #f (apply check args env) #t))
 
-;(defVau the (ck o) env (apply* @checkO vm (eval o env) (eval ck (extEnv env (+ (.MAX_VALUE Integer)) (|| (\ o (list->array o)))))) )
-(defMacro (the type obj) (list 'let1 (list 'obj obj) (list 'check '(list obj) type) 'obj))
+(defMacro (the type obj) (list 'let1 (list 'obj obj) (list 'check 'obj type) 'obj))
 
 (assert (the Integer 1) 1)
 (assert (the Integer "1"))

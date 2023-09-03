@@ -172,7 +172,7 @@
 
   (deftest makeTypeError.1
     (let ((e (makeTypeError "foo" 'Number)))
-      (assert (check? e Error :type 'type :datum "foo" :expected 'Number))
+      (assert (matchObj? e Error :type 'type :datum "foo" :expected 'Number))
       (assert (type? e Error))
       (assert (type? e Condition))
       (assert (eq? "foo" (getSlot e 'datum)))

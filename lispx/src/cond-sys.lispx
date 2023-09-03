@@ -316,20 +316,6 @@
       (whenOpt? (i-f (getSlot restartHandler 'interactiveFunction?))
         (i-f) ))))
 
-#| TODO sostituito dal seguente, eliminare
-(def\ lispx::invokeRestartWithArgumentsProducingFunction (restartDesignator function)
-  #|Utility to invoke the restart designated by RESTART-DESIGNATOR,
-   |which can be a symbol or a `restartHandler', with an arguments list
-   |produced by FUNCTION (which receives a `restartHandler' as argument).
-   |#
-  (etypecase restartDesignator
-    (Symbol
-     (ifOpt? (restartHandler (findRestart? restartDesignator))
-       (lispx::applyHandlerFunction restartHandler (function restartHandler))
-       (restartError restartDesignator)))
-    (RestartHandler
-     (lispx::applyHandlerFunction restartDesignator (function restartDesignator)))))
-|#
 (def\ lispx::invokeRestartWithArgumentsProducingFunction (restartDesignator function)
   #|Utility to invoke the restart designated by RESTART-DESIGNATOR,
    |which can be a symbol or a `RestartHandler', with an arguments list

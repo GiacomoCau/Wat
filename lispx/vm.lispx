@@ -118,19 +118,11 @@
 (defVau defsuite (name . forms) env
   (eval (list* begin forms) env) )
 
-(defVau signalsError? (form conditionClass . slots) env
-  (let1 (class (findClass conditionClass env))
+(defVau signalsError? (form class . slots) env
+  (let1 (class (findClass class env))
     (block exit
       (handlerCase
-        ( (Obj
-            (\ (obj)
-              (if (type? obj class)
-                (let1 check (slots slots)
-                  (if (null? slots) (exit #t)
-                    (let1 ((name value . slots) slots)
-                      (unless (eq? (getSlot obj name) (eval value env)) (exit #f))
-                      (check slots) )))
-                (exit #f) ))) )
+        ( (Obj (\ (obj) (exit (apply** matchObj? obj class (eval (list* 'list slots) env))) )) )
         (eval form env) )
       #f )))
 
