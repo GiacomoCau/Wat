@@ -46,11 +46,7 @@ public class Parser {
 		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 		boolean expr = true;
 		for (;;) {
-			/*
-			System.out.print("> ");
-			String line = in.readLine();
-			if (line.length() == 0) break;
-			*/
+			//System.out.print("> "); String line = in.readLine(); line += "\n";
 			String line = Wat.Utility.read();
 			if (line.equals("\n")) continue;
 			var cmd = line.substring(0,line.length()-1);
@@ -181,9 +177,9 @@ TOKEN:	// identifiers
 |	< # jvf: "$" | <letter> >
 |   < # jvn: "_" | <jvf> | <digit> >
 |   < Kwd: ":" (<Sym>)+ >
-|	< Sym: <first> ( "#" | "'" | <digit> | <first> )* >
+|	< Sym: <first> ( "#" | "'" | "|" | <digit> | <first> )* >
 |	< # first: <letter> | <special> > 
-|	< # special: [ ".", "@", "-", "&", "!", "=", ">", "<", "%", "+", "?", "/", "*", "$", "_", "~", "^", ":", "\\"] | "||" | "\\|" >
+|	< # special: "." | "@" | "-" | "&" | "!" | "=" | ">" | "<" | "%" | "+" | "?" | "/" | "*" | "$" | "_" | "~" | "^" | ":" | "\\" | "||" >
 |	< # letter: [ "A"-"Z", "a"-"z" ] >
 |	< # digit: [ "0"-"9" ] >
 }
@@ -209,7 +205,7 @@ Object Elt() throws Exception: {
 	|   t=<Dot>      { return $("%dot", $("wat-string", t.image.substring(1))); } 
 	|   t=<At>		 { return $("%at", $("wat-string", t.image.substring(1))); } 
 	|	t=<Kwd>      { return t.image; }
-	|	t=<Sym>      { return t.image.replaceAll("\\\\(.)", "$1"); }  	
+	|	t=<Sym>      { return t.image; }  	
 	//|	t=<Sym> ["::" t2=<Sym>] {	return t2 == null ? t.image : $("%eval", $("%quote", t2.image), t.image); }  	
 	|	"'" o=Elt()  { return $("%quote", o); }
 	|	",@" o=Elt() { return $("%commaAt", o); }

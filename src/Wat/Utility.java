@@ -580,7 +580,7 @@ public class Utility {
 	static public String read(int lv, InputStream in, boolean inMlComment) throws IOException {
 		var s = new StringBuilder();
 		int open = 0, close = 0;
-		boolean inEscape = false, inString = false, inUSymbol = false, inComment=false, sMlComment=false, eMlComment=false;
+		boolean inEscape = false, inString = false, inSymbol = false, inUSymbol = false, inComment=false, sMlComment=false, eMlComment=false;
 		do {
 			//out.println("loop");
 			var oc = close-open;
@@ -594,6 +594,13 @@ public class Utility {
 				else if (inString) switch (c) {
 					case '\\'-> inEscape = true;
 					case '"'-> inString = false;
+				}
+				else if (inSymbol) switch (c) {
+					case '('->{ inSymbol = false; open += 1; }
+					case ')'->{ inSymbol = false; close += 1; }
+					default-> {
+						if (c <= 32) inSymbol = false;
+					}
 				}
 				else if (inUSymbol) switch (c) {
 					case '\\'-> inEscape = true;
@@ -627,8 +634,10 @@ public class Utility {
 					case ';'-> inComment = true;
 					case '#'-> sMlComment = true;
 					case '('-> open += 1;
-					case ')'-> close += 1;
-					case '\\'-> inEscape = true;
+					case ')'-> close += 1; 
+					default-> {
+						if (c >= 32) inSymbol = true;
+					}
 				}
 				if (c >= 32 || inUSymbol) s.append((char) c);
 			}
