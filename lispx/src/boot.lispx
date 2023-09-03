@@ -946,7 +946,7 @@
               (eval (list* 'begin forms) env) )
             (next clauses) ))))))
 
-; vedi signalsError in vm.lispx (o test-util.lispx) per codice simile
+; vedi signalsError? in vm.lispx (o test-util.lispx) per codice simile
 (defVau (caseType key . clauses) env
   #|Multi-armed type test.
    |Evaluate the KEYFORM.  Go through the CLAUSES.  If the result of

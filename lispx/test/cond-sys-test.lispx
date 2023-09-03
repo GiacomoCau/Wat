@@ -3,7 +3,7 @@
   (defClass TestError (Error) ())
 
   (deftest handlerBind.0
-    (signalsError
+    (signalsError?
      (handlerBind)
      Error :type 'match :#operands +1))
 
@@ -100,7 +100,7 @@
   (defClass TestError (Error) ())
 
   (deftest handlerCase.0
-    (signalsError
+    (signalsError?
      (handlerCase)
      Error :type 'match :#operands +1))
 
@@ -168,7 +168,7 @@
 (defsuite restartBind
 
   (deftest restartBind.0
-    (signalsError
+    (signalsError?
      (restartBind)
      Error :type 'match :#operands +1))
 
@@ -193,23 +193,23 @@
     3)
 
   (deftest restartBind.no-handler.1
-    (signalsError
+    (signalsError?
      (invokeRestart 'continue)
      RestartError :restartName 'continue))
 
   (deftest restartBind.no-handler.2
-    (signalsError
+    (signalsError?
      (restartBind ((continue (\ () 'whatever)))
        (invokeRestart 'abort))
      RestartError :restartName 'abort))
 
   (deftest restartBind.no-handler.1a
-    (signalsError
+    (signalsError?
      (invokeRestartInteractively 'continue)
      RestartError :restartName 'continue))
 
   (deftest restartBind.no-handler.2a
-    (signalsError
+    (signalsError?
      (restartBind ((continue (\ () 'whatever)))
        (invokeRestartInteractively 'abort))
      RestartError :restartName 'abort))
@@ -274,7 +274,7 @@
 (defsuite restartCase
 
   (deftest restartCase.0
-    (signalsError
+    (signalsError?
      (restartCase)
      Error :type 'match :#operands +1))
 
@@ -299,12 +299,12 @@
     3)
 
   (deftest restartCase.no-handler.1
-    (signalsError
+    (signalsError?
      (invokeRestart 'continue)
      RestartError :restartName 'continue))
 
   (deftest restartCase.no-handler.2
-    (signalsError
+    (signalsError?
      (restartCase ((continue (\ () 'whatever)))
        (invokeRestart 'abort))
      RestartError :restartName 'abort))
@@ -377,7 +377,7 @@
 (defsuite findRestart?
 
   (deftest findRestart?.0
-    (signalsError
+    (signalsError?
      (findRestart?)
      Error :type 'match :#operands +1))
 
@@ -551,7 +551,7 @@
 (defsuite signal
 
   (deftest signal.0
-    (signalsError
+    (signalsError?
      (signal)
      Error :type 'match :#operands +1))
 
@@ -560,7 +560,7 @@
     #inert)
 
   (deftest signal.2
-    (signalsError
+    (signalsError?
      (signal (newObj Obj :x 1 :y 2))
      Obj :x 1 :y 2))
 
@@ -618,12 +618,12 @@
 (defsuite invokeRestart
 
   (deftest invokeRestart.0
-    (signalsError
+    (signalsError?
      (invokeRestart)
      Error :type 'match :#operands +1))
 
   (deftest invokeRestart.1
-    (signalsError
+    (signalsError?
      (invokeRestart "foo")
      Error :type 'type :datum "foo" :expected '(or Symbol RestartHandler)) ) )
 
@@ -652,14 +652,14 @@
     3)
 
   (deftest invokeRestartInteractively.2
-    (signalsError
+    (signalsError?
      (restartBind ((r1 (\ (arg1 arg2) (+ arg1 arg2))
                         :interactiveFunction (\ () '())))
        (invokeRestartInteractively 'r1))
      Error :type 'match :#operands +2))
 
   (deftest invokeRestartInteractively.3
-    (signalsError
+    (signalsError?
      (restartBind ((r1 (\ (arg1) arg1)
                         :interactiveFunction (\ () '(1 2))))
        (invokeRestartInteractively 'r1))

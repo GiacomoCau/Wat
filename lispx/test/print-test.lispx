@@ -53,7 +53,7 @@
     "1")
 
   (deftest write.2
-    (signalsError
+    (signalsError?
      (write)
      match-error))
 
@@ -66,12 +66,12 @@
            (eq? "2" (get-output-stream-string s2)))))
 
   (deftest write.4a
-    (signalsError
+    (signalsError?
      (write "foo" :stream)
      match-error))
 
   (deftest write.4b
-    (signalsError
+    (signalsError?
      (write "foo" :stream 12)
      type-error :datum 12 :expected 'OutputStream)))
 
@@ -86,7 +86,7 @@
     "\"foo\"")
 
   (deftest write-to-string.3
-    (signalsError
+    (signalsError?
      (write-to-string)
      match-error)))
 
@@ -106,7 +106,7 @@
     "\n\"foo\"\n\"bar\"")
 
   (deftest print.3
-    (signalsError
+    (signalsError?
      (print)
      match-error))
 
@@ -124,7 +124,7 @@
     "\"foo\"\"bar\"")
 
   (deftest print1.3
-    (signalsError
+    (signalsError?
      (print1)
      match-error))
 
@@ -142,7 +142,7 @@
     "\nfoo\nbar")
 
   (deftest uprint.3
-    (signalsError
+    (signalsError?
      (uprint)
      match-error))
 
@@ -156,7 +156,7 @@
     "foo")
 
   (deftest uprint1.2
-    (signalsError
+    (signalsError?
      (uprint1)
      match-error))
 

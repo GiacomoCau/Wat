@@ -12,12 +12,12 @@
     (type? (make-string-input-stream "foo") StringInputStream))
 
   (deftest make-string-input-stream.2
-    (signalsError
+    (signalsError?
      (make-string-input-stream)
      match-error))
 
   (deftest make-string-input-stream.3
-    (signalsError
+    (signalsError?
      (make-string-input-stream 12)
      type-error :datum 12 :expected 'String))
 
@@ -52,12 +52,12 @@
     "")
 
   (deftest get-output-stream-string.2
-    (signalsError
+    (signalsError?
      (get-output-stream-string)
      match-error))
 
   (deftest get-output-stream-string.3
-    (signalsError
+    (signalsError?
      (get-output-stream-string 1)
      type-error :datum 1 :expected 'StringOutputStream)))
 

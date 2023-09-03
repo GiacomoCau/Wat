@@ -12,12 +12,12 @@
          (not (js-== (to-js-string "1") (to-js-string "2")))))
 
   (deftest js-==.2
-    (signalsError
+    (signalsError?
      (js-== 1)
      match-error))
 
   (deftest js-==.3
-    (signalsError
+    (signalsError?
      (js-==)
      match-error)))
 
@@ -49,12 +49,12 @@
          (not (to-lisp-boolean +js-false+))))
 
   (deftest to-lisp-boolean.2
-    (signalsError
+    (signalsError?
      (to-lisp-boolean 12)
      type-error :datum 12 :expected "boolean"))
 
   (deftest to-lisp-boolean.3
-    (signalsError
+    (signalsError?
      (to-lisp-boolean)
      match-error))
 
@@ -63,12 +63,12 @@
          (not (to-lisp-boolean (to-js-boolean #f)))))
 
   (deftest to-js-boolean.2
-    (signalsError
+    (signalsError?
      (to-js-boolean 12)
      type-error :datum 12 :expected 'Boolean))
 
   (deftest to-js-boolean.3
-    (signalsError
+    (signalsError?
      (to-js-boolean)
      match-error)))
 
@@ -81,12 +81,12 @@
      (eq? 1 (to-lisp-number (to-js-number 1)))))
 
   (deftest to-lisp-number.2
-    (signalsError
+    (signalsError?
      (to-lisp-number #t)
      type-error :datum #t :expected "number"))
 
   (deftest to-lisp-number.3
-    (signalsError
+    (signalsError?
      (to-lisp-number)
      match-error))
 
@@ -101,12 +101,12 @@
                      (to-js-number 2)))))
 
   (deftest to-js-number.2
-    (signalsError
+    (signalsError?
      (to-js-number #t)
      type-error :datum #t :expected 'Number))
 
   (deftest to-js-number.3
-    (signalsError
+    (signalsError?
      (to-js-number)
      match-error)))
 
@@ -116,12 +116,12 @@
     (eq? "a" (to-lisp-string (to-js-string "a"))))
 
   (deftest to-lisp-string.2
-    (signalsError
+    (signalsError?
      (to-lisp-string #t)
      type-error :datum #t :expected "string"))
 
   (deftest to-lisp-string.3
-    (signalsError
+    (signalsError?
      (to-lisp-string)
      match-error))
 
@@ -136,12 +136,12 @@
                      (to-js-string "2")))))
 
   (deftest to-js-string.2
-    (signalsError
+    (signalsError?
      (to-js-string #t)
      type-error :datum #t :expected 'String))
 
   (deftest to-js-string.3
-    (signalsError
+    (signalsError?
      (to-js-string)
      match-error)))
 
@@ -157,7 +157,7 @@
       (to-lisp-boolean (call-js-function (js-global "isNaN") result))))
 
   (deftest to-lisp-function.2
-    (signalsError
+    (signalsError?
      (to-lisp-function 12)
      type-error :datum 12 :expected "function")))
 
@@ -171,7 +171,7 @@
       (eq? x 3)))
 
   (deftest to-js-function.2
-    (signalsError
+    (signalsError?
      (to-js-function 12)
      type-error :datum 12 :expected 'Operator)))
 
@@ -182,17 +182,17 @@
            (to-js-number 12)))
 
   (deftest apply-js-function.2
-    (signalsError
+    (signalsError?
      (apply-js-function 12 (list))
      type-error :datum 12 :expected "function"))
 
   (deftest apply-js-function.3
-    (signalsError
+    (signalsError?
      (apply-js-function (js-global "parseInt"))
      match-error))
 
   (deftest apply-js-function.4
-    (signalsError
+    (signalsError?
      (apply-js-function)
      match-error)))
 
@@ -203,12 +203,12 @@
            (to-js-number 12)))
 
   (deftest call-js-function.2
-    (signalsError
+    (signalsError?
      (call-js-function 12)
      type-error :datum 12 :expected "function"))
 
   (deftest call-js-function.3
-    (signalsError
+    (signalsError?
      (call-js-function)
      match-error)))
 
@@ -222,12 +222,12 @@
       (eq? x 3)))
 
   (deftest js-\.2
-    (signalsError
+    (signalsError?
      (js-\)
      match-error))
 
   (deftest js-\.3
-    (signalsError
+    (signalsError?
      (js-\ 12)
      type-error :datum 12 :expected '(or Symbol Ignore List)))
 
@@ -240,7 +240,7 @@
     #inert)
 
   (deftest js-\.barrier
-    (signalsError
+    (signalsError?
      (pushPrompt 'foo
        (call-js-function (js-\ () (takeSubcont 'foo k))))
      PromptNotFoundError :prompt 'foo)))
@@ -252,7 +252,7 @@
       (eq? 4 (to-lisp-number (call-js-method Math "round" (to-js-number 4.1))))))
 
   (deftest js-global.2
-    (signalsError
+    (signalsError?
      (js-global)
      match-error))
 
@@ -260,7 +260,7 @@
     (js-== +js-undefined+ (js-global "ThisGlobalDoesNotExist")))
 
   (deftest js-global.4
-    (signalsError
+    (signalsError?
      (js-global 12)
      type-error :datum 12 :expected 'String)))
 
@@ -272,12 +272,12 @@
            (not (to-lisp-boolean (call-js-method re "test" (to-js-string "uvwxyz")))))))
 
   (deftest js-new.2
-    (signalsError
+    (signalsError?
      (js-new)
      match-error))
 
   (deftest js-new.3
-    (signalsError
+    (signalsError?
      (js-new "foo")
      type-error :datum "foo" :expected "function")))
 
@@ -289,17 +289,17 @@
     "3.141592653589793")
 
   (deftest js-get.2
-    (signalsError
+    (signalsError?
      (js-get)
      match-error))
 
   (deftest js-get.3
-    (signalsError
+    (signalsError?
      (js-get 12)
      match-error))
 
   (deftest js-get.4
-    (signalsError
+    (signalsError?
      (js-get 12 'bar)
      type-error :datum 'bar :expected 'String)))
 
@@ -333,22 +333,22 @@
       '(1 2 3))
 
     (deftest list-to-js-array.2
-      (signalsError
+      (signalsError?
        (list-to-js-array)
        match-error))
 
     (deftest list-to-js-array.3
-      (signalsError
+      (signalsError?
        (list-to-js-array 12)
        type-error :datum 12 :expected 'List))
 
     (deftest js-array-to-list.1
-      (signalsError
+      (signalsError?
        (js-array-to-list)
        match-error))
 
     (deftest js-array-to-list.2
-      (signalsError
+      (signalsError?
        (js-array-to-list 12)
        assertion-error))
 
@@ -365,12 +365,12 @@
       2)
 
     (deftest js-array-elt.3
-      (signalsError
+      (signalsError?
        (elt (js-array 1 2 3) 10)
        out-of-bounds-error))
 
     (deftest js-array-elt.4
-      (signalsError
+      (signalsError?
        (elt (js-array 1 2 3) -1)
        out-of-bounds-error))
 
@@ -395,27 +395,27 @@
      (to-js-string "9")))
 
   (deftest apply-js-method.3
-    (signalsError
+    (signalsError?
      (apply-js-method)
      match-error))
 
   (deftest apply-js-method.4
-    (signalsError
+    (signalsError?
      (apply-js-method "foo")
      match-error))
 
   (deftest apply-js-method.4a
-    (signalsError
+    (signalsError?
      (apply-js-method "foo" "bar")
      match-error))
 
   (deftest apply-js-method.5
-    (signalsError
+    (signalsError?
      (apply-js-method "foo" "methodDoesNotExist" (list))
      type-error :expected "function"))
 
   (deftest apply-js-method.6
-    (signalsError
+    (signalsError?
      (apply-js-method "foo" 12 (list))
      type-error :datum 12 :expected 'String)))
 
@@ -432,22 +432,22 @@
      (to-js-string "9")))
 
   (deftest call-js-method.3
-    (signalsError
+    (signalsError?
      (call-js-method)
      match-error))
 
   (deftest call-js-method.4
-    (signalsError
+    (signalsError?
      (call-js-method "foo")
      match-error))
 
   (deftest call-js-method.5
-    (signalsError
+    (signalsError?
      (call-js-method "foo" "methodDoesNotExist")
      type-error :expected "function"))
 
   (deftest call-js-method.6
-    (signalsError
+    (signalsError?
      (call-js-method "foo" 12)
      type-error :datum 12 :expected 'String)))
 
@@ -459,7 +459,7 @@
       (js-== (to-string (to-js-number 12)) (to-js-string "12"))))
 
   (deftest js-method.2
-    (signalsError
+    (signalsError?
      (js-method)
      match-error)))
 
@@ -478,12 +478,12 @@
              (not (to-lisp-boolean (regexp-test re (to-js-string "uvwxyz"))))))))
 
   (deftest define-js-method.3
-    (signalsError
+    (signalsError?
      (define-js-method)
      match-error))
 
   (deftest define-js-method.4
-    (signalsError
+    (signalsError?
      (define-js-method symbol)
      match-error)))
 
@@ -498,7 +498,7 @@
     #null)
 
   (deftest js-undefined-option.3
-    (signalsError
+    (signalsError?
      (js-undefined-option)
      match-error)))
 
@@ -513,7 +513,7 @@
     #null)
 
   (deftest js-null-option.3
-    (signalsError
+    (signalsError?
      (js-null-option)
      match-error)))
 
@@ -531,14 +531,14 @@
     3)
 
   (deftest await.2
-    (signalsError
+    (signalsError?
      (begin
        (assert (eq? 1 (await (resolve Promise 1))))
        (await (reject Promise (makeSimpleError "foo"))))
      simpleError :message "foo"))
 
   (deftest await.3
-    (signalsError
+    (signalsError?
      (await)
      match-error)))
 
@@ -548,19 +548,19 @@
     (begin (sleep 1) #t))
 
   (deftest sleep.2
-    (signalsError
+    (signalsError?
      (sleep)
      match-error))
 
   (deftest sleep.3
-    (signalsError
+    (signalsError?
      (sleep "foo")
      type-error :datum "foo" :expected 'Number)))
 
 (defsuite sync
 
   (deftest sync.1
-    (signalsError
+    (signalsError?
      (sync)
      match-error))
 
@@ -580,7 +580,7 @@
     3)
 
   (deftest sync.4
-    (signalsError
+    (signalsError?
      (begin
        (assert (eq? 1 ((sync (\ () (resolve Promise 1))))))
        ((sync (\ () (reject Promise (makeSimpleError "foo"))))))
@@ -598,7 +598,7 @@
   (deftest define-js-method/sync.2
     (begin
       (define-js-method/sync reject-sync "reject")
-      (signalsError
+      (signalsError?
        (reject-sync Promise (makeSimpleError "foo"))
        simpleError :message "foo"))))
 

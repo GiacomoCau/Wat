@@ -118,7 +118,7 @@
 (defVau defsuite (name . forms) env
   (eval (list* begin forms) env) )
 
-(defVau signalsError (form conditionClass . slots) env
+(defVau signalsError? (form conditionClass . slots) env
   (let1 (class (findClass conditionClass env))
     (block exit
       (handlerCase

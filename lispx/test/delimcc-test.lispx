@@ -63,7 +63,7 @@
     27)
 
   (deftest |test3'''|
-    (signalsError
+    (signalsError?
      (begin
        (pushPrompt 'p
          (pushPrompt 'p (+ 6 (abortSubcont 'p 5)))

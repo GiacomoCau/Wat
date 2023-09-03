@@ -11,28 +11,28 @@
     'foo)
 
   (deftest read.2
-    (signalsError
+    (signalsError?
      (with-standard-input-from-string "(foo" (read))
     end-of-file))
 
   (deftest read.2a
-    (signalsError
+    (signalsError?
      (with-standard-input-from-string "(foo" (read (dget *standard-input*)))
     end-of-file))
 
   ;; Incomplete objects always cause `end-of-file', even if EOF-ERROR-P is false.
   (deftest read.2b
-    (signalsError
+    (signalsError?
      (with-standard-input-from-string "(foo" (read (dget *standard-input*) #f))
      end-of-file))
 
   (deftest read.2c1
-    (signalsError
+    (signalsError?
      (with-standard-input-from-string "" (read))
      end-of-file))
 
   (deftest read.2c2
-    (signalsError
+    (signalsError?
      (with-standard-input-from-string "" (read (dget *standard-input*)))
      end-of-file))
 
@@ -45,12 +45,12 @@
     44)
 
   (deftest read.3a
-    (signalsError
+    (signalsError?
      (with-standard-input-from-string "" (read 'not-a-stream))
      unboundMethodError :class Symbol :methodName 'stream-read))
 
   (deftest read.3b
-    (signalsError
+    (signalsError?
      (with-standard-input-from-string "" (read (dget *standard-input*) 12))
      type-error :datum 12 :expected 'Boolean))
 

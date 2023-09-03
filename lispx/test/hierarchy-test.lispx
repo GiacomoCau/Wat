@@ -52,7 +52,7 @@
        continuation)))
 
   (deftest test-hierarchy.sanity-check
-    (signalsError
+    (signalsError?
      (test-hierarchy
       '((number
          boolean)))

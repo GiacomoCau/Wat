@@ -377,7 +377,7 @@
 (defsuite pushPrompt
 
   (deftest pushPrompt.1
-    (signalsError
+    (signalsError?
      (pushPrompt)
      Error :type 'match :#operands +1))
 
@@ -417,22 +417,22 @@
 (defsuite takeSubcont
 
   (deftest takeSubcont.1
-    (signalsError
+    (signalsError?
      (takeSubcont)
      Error :type 'match :#operands +2))
 
   (deftest takeSubcont.2
-    (signalsError
+    (signalsError?
      (takeSubcont 'p)
      Error :type 'match :#operands +1))
 
   (deftest takeSubcont.3
-    (signalsError
+    (signalsError?
      (takeSubcont 'p #ignore)
      PromptNotFoundError :prompt 'p))
 
   (deftest takeSubcont.4
-    (signalsError
+    (signalsError?
      (pushPrompt 'p (takeSubcont 'q #ignore))
      PromptNotFoundError :prompt 'q))
 
@@ -451,17 +451,17 @@
 (defsuite pushDelimSubcont
 
   (deftest pushDelimSubcont.1
-    (signalsError
+    (signalsError?
      (pushDelimSubcont)
      Error :type 'match :#operands +2))
 
   (deftest pushDelimSubcont.2
-    (signalsError
+    (signalsError?
      (pushDelimSubcont 'p)
      Error :type 'match :#operands +1))
 
   (deftest pushDelimSubcont.3
-    (signalsError
+    (signalsError?
      (pushDelimSubcont 'p 12)
      Error :type 'type :datum 12))
 
@@ -481,7 +481,7 @@
 (defsuite promptSet?
 
   (deftest promptSet?.1
-    (signalsError
+    (signalsError?
      (promptSet?)
      Error :type 'match :#operands +1))
 
@@ -496,13 +496,13 @@
 (defsuite pushSubcontBarrier
 
   (deftest pushSubcontBarrier.1
-    (signalsError
+    (signalsError?
      (pushSubcontBarrier
       (takeSubcont 'p1 sk))
      PromptNotFoundError :prompt 'p1))
 
   (deftest pushSubcontBarrier.2
-    (signalsError
+    (signalsError?
      (pushPrompt 'p1
        (pushSubcontBarrier
          (takeSubcont 'p1 sk)))
@@ -644,7 +644,7 @@
 (defsuite catchTag/throwTag
 
   (deftest catchTag.1
-    (signalsError
+    (signalsError?
      (catchTag)
      Error :type 'match :#operands +1))
 
@@ -683,7 +683,7 @@
 (defsuite block/returnFrom
 
   (deftest block.1
-    (signalsError
+    (signalsError?
      (block)
      Error :type 'match :#operands +1))
 
@@ -722,7 +722,7 @@
 (defsuite finally
 
   (deftest finally.1
-    (signalsError
+    (signalsError?
      (finally)
      Error :type 'match :#operands +1))
 
