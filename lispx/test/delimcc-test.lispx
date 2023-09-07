@@ -23,7 +23,7 @@
   #|Return true if a prompt is set, false otherwise.
    |(Note that this leads to stack growth, i.e. leaks.)
    |#
-  (handlerCase ((PromptNotFoundError (\ #ignore #f)))
+  (handlerCase ((Error (\ #ignore #f)))
     (takeSubcont prompt k (pushDelimSubcont prompt k #t))))
 
 ;; The actual tests.
@@ -70,7 +70,7 @@
          (+ (abortSubcont 'p 7)
             10))
        (abortSubcont 'p 9))
-     PromptNotFoundError :prompt 'p))
+     Error :type 'unboundPrompt :prompt 'p))
 
   (deftest test4
     (+ (pushPrompt 'p

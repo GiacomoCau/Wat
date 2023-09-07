@@ -243,7 +243,7 @@
     (signalsError?
      (pushPrompt 'foo
        (call-js-function (js-\ () (takeSubcont 'foo k))))
-     PromptNotFoundError :prompt 'foo)))
+     Error :type 'unboundPrompt :prompt 'foo)))
 
 (defsuite js-global
 
@@ -606,8 +606,8 @@
 
   (deftest can-define-lisp-methods-on-js-objects
     (begin
-      (defGeneric foo (newObj))
-      (defMethod foo ((newObj object)) 12)
+      (defGeneric foo (new))
+      (defMethod foo ((new object)) 12)
       (assert (eq? 12 (foo +js-null+)))
       (assert (eq? 12 (foo (to-js-string "foo")))))
     #inert)

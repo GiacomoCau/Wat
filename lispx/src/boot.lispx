@@ -244,13 +244,13 @@
    |#
   %nthCdr)
 
-(def newObj
+(def new
   #|Create a new instance of CLASS (that must be a `standard-class').
    |The SLOT-INITS must be of even length, and alternately contain slot
    |names (symbols, typically keywords) and values.
    |$(fn (class . slotInits))
    |#
-  %newObj)
+  %new)
 
 (def reverse
   #|Reverse the LIST.
@@ -783,7 +783,7 @@
 (def\ assert (boolean)
   #|Signal an error if the BOOLEAN is false.  Otherwise return void.
    |#
-  (unless boolean (error (newObj AssertionError :type 'assertion :datum boolean :expected #t))))
+  (unless boolean (error (new AssertionError :type 'assertion :datum boolean :expected #t))))
 
 
 ;;; And Or
@@ -1149,7 +1149,7 @@
 (def\ makeTypeError (datum expected)
   #|Create a `type-error' with the given DATUM and EXPECTED-TYPE.
    |#
-  (newObj Error :type 'type :datum datum :expected expected) )
+  (new Error :type 'type :datum datum :expected expected) )
 
 (def\ typeError (datum expected)
   #|Signal a `type-error'
@@ -1200,13 +1200,6 @@
     (list 'def (car lhs) (list* 'type\ (cdr lhs) rhs))
     (list 'def lhs (car rhs)) ))
 
-
-;(defMacro letEnv bindings
-;  (list 'let bindings '(theEnv)) )
-
-;(defVau extEnv (env . bindings) denv
-;  (eval (list* 'letEnv bindings) (eval env denv)) )
-
 ; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (list* 'list xs) env)
 
 (defVau (check o . cks) env
@@ -1215,7 +1208,7 @@
 
 (defVau match? args env (catchWth #f (apply check args env) #t))
 
-(defMacro (the type obj) (list 'let1 (list 'obj obj) (list 'check '(list obj) type) 'obj))
+;(defMacro (the type obj) (list 'let1 (list 'obj obj) (list 'check '(list obj) type) 'obj))
 
 (defMacro (check\ parms . body)
   (let1rec\
@@ -1436,13 +1429,13 @@
 
 ;;; Objects
 
-(def newObj
+(def new
   #|Create a new instance of CLASS (that must be a `standard-class').
    |The SLOT-INITS must be of even length, and alternately contain slot
    |names (symbols, typically keywords) and values.
    |$(fn (class . slotInits))
    |#
-  %newObj)
+  %new)
 
 (def\ getSlot (object slotName)
   #|Return the value of the slot named SLOT-NAME of the OBJECT.
@@ -1460,7 +1453,7 @@
   (%slotBound? object slotName))
 
 (defMacro (defObj name class . attr)
-  (list 'def name (list* 'newObj class attr)) )
+  (list 'def name (list* 'new class attr)) )
 
 
 ;;; Generic Functions

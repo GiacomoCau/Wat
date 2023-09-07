@@ -24,7 +24,7 @@
 (def\ makeYieldRecord (v k)
   #|Create a new yield record with the given yielded value and resume continuation.
    |#
-  (newObj YieldRecord :value v :continuation k))
+  (new YieldRecord :value v :continuation k))
 
 (def\ fiberYield v?
   #|Yield a value (which defaults to void).
@@ -429,12 +429,12 @@
   (deftest takeSubcont.3
     (signalsError?
      (takeSubcont 'p #ignore)
-     PromptNotFoundError :prompt 'p))
+     Error :type 'unboundPrompt :prompt 'p))
 
   (deftest takeSubcont.4
     (signalsError?
      (pushPrompt 'p (takeSubcont 'q #ignore))
-     PromptNotFoundError :prompt 'q))
+     Error :type 'unboundPrompt :prompt 'q))
 
   (deftest takeSubcont.5
     (pushPrompt 'p (takeSubcont 'p #ignore))
@@ -499,14 +499,14 @@
     (signalsError?
      (pushSubcontBarrier
       (takeSubcont 'p1 sk))
-     PromptNotFoundError :prompt 'p1))
+     Error :type 'unboundPrompt :prompt 'p1))
 
   (deftest pushSubcontBarrier.2
     (signalsError?
      (pushPrompt 'p1
        (pushSubcontBarrier
          (takeSubcont 'p1 sk)))
-     PromptNotFoundError :prompt 'p1)
+     Error :type 'unboundPrompt :prompt 'p1)
     #f))
 
 (defsuite dynamics

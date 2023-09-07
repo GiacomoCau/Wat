@@ -73,7 +73,7 @@
 
   (deftest error.1
     (signalsError?
-     (error (newObj Obj :x 1 :y 2))
+     (error (new Obj :x 1 :y 2))
      Obj :x 1 :y 2))
 
   (deftest error.2
@@ -156,7 +156,7 @@
   (deftest the.3
     (signalsError?
      (the #t #f)
-     Error :type 'type :datum #f :expected #t))
+     Error :type 'type :datum #t :expected 'Class))
 
   (deftest the.4
     (signalsError?
@@ -166,7 +166,7 @@
   (deftest the.5
     (signalsError?
      (the #t)
-     Error :type 'match :#operands +1)))
+     Error :type 'type :datum #t :expected 'Class)))
 
 (defsuite makeTypeError
 
@@ -2373,7 +2373,7 @@
 
   (deftest obj.1
     (begin
-      (def obj (newObj Error :type 'type :datum 1 :expected 'String))
+      (def obj (new Error :type 'type :datum 1 :expected 'String))
       (assert (eq? (getSlot obj 'datum) 1))
       (assert (eq? (getSlot obj :datum) 1))
       (assert (eq? (getSlot obj 'expected) 'String))
@@ -2382,29 +2382,29 @@
 
   (deftest obj.2
     (signalsError?
-     (newObj)
-     Error :type 'match :#operands -1))
+     (new)
+     Error :type 'match :#operands 1))
 
   (deftest obj.3
     (signalsError?
-     (newObj 3)
-     Error :type 'type :datum 3 :expected '(or Box Obj)))
+     (new 3)
+     Error :type 'type :datum 3 :expected '(or (2 Box) (1 + Obj (or Symbol Keyword) Any))))
 
   (deftest obj.4
     (signalsError?
-     (newObj Object)
-     Error :type 'type :datum Object :expected '(or Box Obj)))
+     (new Object)
+     Error :type 'type :datum Object :expected '(or (2 Box) (1 + Obj (or Symbol Keyword) Any))))
 
   (deftest obj.5
     (signalsError?
-     (newObj Obj :x)
-     Error :type 'match :#operands +1)))
+     (new Obj :x)
+     Error :type 'type :datum Obj :expected '(or (2 Box) (1 + Obj (or Symbol Keyword) Any)))))
 
 (defsuite slots
 
   (deftest slots.1
     (begin
-      (def obj (newObj Obj))
+      (def obj (new Obj))
       (assert (not (slotBound? obj 'x)))
       (assert (not (slotBound? obj :x)))
       (assert (signalsError? (getSlot obj 'x)
@@ -2428,12 +2428,12 @@
 
   (deftest getSlot.1a
     (signalsError?
-     (getSlot (newObj Obj) "x")
+     (getSlot (new Obj) "x")
      Error :type 'type :datum "x" :expected 'Intern))
 
   (deftest getSlot.2
     (signalsError?
-     (getSlot (newObj Obj))
+     (getSlot (new Obj))
      Error :type 'match :#operands +1))
 
   (deftest getSlot.3
@@ -2448,17 +2448,17 @@
 
   (deftest setSlot.1a
     (signalsError?
-     (setSlot (newObj Obj) "x" 1)
+     (setSlot (new Obj) "x" 1)
      Error :type 'type :datum "x" :expected 'Intern))
 
   (deftest setSlot.2
     (signalsError?
-     (setSlot (newObj Obj))
+     (setSlot (new Obj))
      Error :type 'match :#operands +2))
 
   (deftest setSlot.3
     (signalsError?
-     (setSlot (newObj Obj) 'x)
+     (setSlot (new Obj) 'x)
      Error :type 'match :#operands +1))
 
   (deftest slotBound?.1
@@ -2468,7 +2468,7 @@
 
   (deftest slotBound?.1a
     (signalsError?
-     (slotBound? (newObj Obj) "x")
+     (slotBound? (new Obj) "x")
      Error :type 'type :datum "x" :expected 'Intern))
 
   (deftest slotBound?.2
@@ -2478,7 +2478,7 @@
 
   (deftest slotBound?.3
     (signalsError?
-     (slotBound? (newObj Obj))
+     (slotBound? (new Obj))
      Error :type 'match :#operands +1)))
 
 (defsuite let
@@ -3076,8 +3076,8 @@
   (deftest %newClass.1
     (let* ((c (%newClass 'Point2d Obj))
            (d (%newClass 'Point3d c))
-           (p (newObj c :x 1 :y 2))
-           (q (newObj d :x 1 :y 2 :z 3)))
+           (p (new c :x 1 :y 2))
+           (q (new d :x 1 :y 2 :z 3)))
       (classes-test c d p q))
     #inert)
 
@@ -3147,8 +3147,8 @@
     (begin
       (defClass Point2d () (x y))
       (defClass Point3d (Point2d) (z))
-      (def p (newObj Point2d :x 1 :y 2))
-      (def q (newObj Point3d :x 1 :y 2 :z 3))
+      (def p (new Point2d :x 1 :y 2))
+      (def q (new Point3d :x 1 :y 2 :z 3))
       (classes-test Point2d Point3d p q))
     #inert)
 
@@ -3157,7 +3157,7 @@
     (defClass B (A) ())
     (defGeneric foo (x))
     (defMethod foo ((a A)) "foo")
-    (def b (newObj B))
+    (def b (new B))
     (assert (subClass? B A))
     (assert (type? b B))
     (assert (type? b A))
@@ -3177,10 +3177,10 @@
     (begin
       (defClass Foo () ())
       (defClass Bar (Foo) ())
-      (def foo (newObj Foo))
-      (def bar (newObj Bar))
+      (def foo (new Foo))
+      (def bar (new Bar))
 
-      (defGeneric g1 (newObj param))
+      (defGeneric g1 (new param))
       (assert (type? g1 Function))
 
       (assert (signalsError?
@@ -3193,7 +3193,7 @@
                (g1 bar (+ 1 1))
                Error :type 'unboundExecutable :class Bar :executable 'g1))
 
-      (defMethod g1 ((newObj Foo) param)
+      (defMethod g1 ((new Foo) param)
         (+ param 100))
 
       (assert (signalsError?
@@ -3202,7 +3202,7 @@
       (assert (eq? 102 (g1 foo (+ 1 1))))
       (assert (eq? 102 (g1 bar (+ 1 1))))
 
-      (defMethod g1 ((newObj Bar) param)
+      (defMethod g1 ((new Bar) param)
         (+ param 1000))
 
       (assert (signalsError?
@@ -3211,21 +3211,21 @@
       (assert (eq? 102 (g1 foo (+ 1 1))))
       (assert (eq? 1002 (g1 bar (+ 1 1))))
 
-      (defMethod g1 ((newObj Integer) param)
+      (defMethod g1 ((new Integer) param)
         (+ param 10000))
 
       (assert (eq? 10002 (g1 12 (+ 1 1))))
       (assert (eq? 102 (g1 foo (+ 1 1))))
       (assert (eq? 1002 (g1 bar (+ 1 1))))
 
-      (defMethod g1 ((newObj Integer) param)
+      (defMethod g1 ((new Integer) param)
         (+ param 100000))
 
       (assert (eq? 100002 (g1 12 (+ 1 1))))
       (assert (eq? 102 (g1 foo (+ 1 1))))
       (assert (eq? 1002 (g1 bar (+ 1 1))))
 
-      (defMethod g1 ((newObj Object) param)
+      (defMethod g1 ((new Object) param)
         (- param))
 
       (assert (eq? 100002 (g1 12 (+ 1 1))))

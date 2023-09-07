@@ -110,8 +110,8 @@
 (def nthCdr
   %nthCdr)
 
-(def newObj
-  %newObj)
+(def new
+  %new)
 (def reverse
   %reverse)
 (def rootPrompt %rootPrompt)
@@ -715,7 +715,7 @@
 (assert (caseType 2.0 (else 3)) 3)
 (assert (caseType (+ 2 2) (else => (\(v) v))) 4)
 (assert (caseType 2.0 (String "string") (Double "double")) "double")
-(assert (caseType (newObj Obj :a 1) (Double "double") ((Obj :a 1) "Obj :a 1")) "Obj :a 1")
+(assert (caseType (new Obj :a 1) (Double "double") ((Obj :a 1) "Obj :a 1")) "Obj :a 1")
 
 
 ;;; Options
@@ -950,13 +950,6 @@
   (if (cons? lhs)
     (list 'def (car lhs) (list* 'type\ (cdr lhs) rhs))
     (list 'def lhs (car rhs)) ))
-
-
-;(defMacro letEnv bindings
-;  (list 'let bindings '(theEnv)) )
-
-;(defVau extEnv (env . bindings) denv
-;  (eval (list* 'letEnv bindings) (eval env denv)) )
 
 ; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (list* 'list xs) env)
 
@@ -1200,11 +1193,11 @@
 
 ;;; Objects
 
-(def newObj
-  %newObj)
+(def new
+  %new)
 
 (defMacro (defObj name class . attr)
-  (list 'def name (list* 'newObj class attr)) )
+  (list 'def name (list* 'new class attr)) )
 
 
 ;;; Generic Functions
@@ -1244,7 +1237,7 @@
     (assert (bar :b) 5)
     (assert (g1 bar 2) 7)
     (assert (g1 bar (* 2 (bar :b))) 15)
-    (assert (bar :b :prv 6) 5)
+    (assert (bar :prv :b 6) 5)
     (assert (bar :b) 6) )
   #t )
 
@@ -1483,7 +1476,7 @@
   (def val (eval plc env))
   (caseType val
     (Box    (let1 (() args) (val :rhs (+ (val) 1))))
-    (Obj (let1 ((fld) args) (val fld :rhs (+ (val fld) 1))))
+    (Obj (let1 ((fld) args) (val :rhs fld (+ (val fld) 1))))
     (Number (let1 (() args) (eval (list 'set! plc :rhs (+ val 1)) env)))
     (else   (error ($ "not valid type: " val))) ))
 
@@ -1491,11 +1484,11 @@
   (def val (eval plc env))
   (caseType val
     (Box    (let1 (() args) (val :rhs (- (val) 1))))
-    (Obj (let1 ((fld) args) (val fld :rhs (- (val fld) 1))))
+    (Obj (let1 ((fld) args) (val :rhs fld (- (val fld) 1))))
     (Number (let1 (() args) (eval (list 'set! plc :rhs (- val 1)) env)))
     (else   (error ($ "not valid type: " val))) ))
 
-(assert (begin (def obj (newObj Obj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
+(assert (begin (def obj (new Obj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
 (assert (begin (def box (newBox 1)) (++ box) (++ box) (-- box)) 2)
 (assert (begin (def n 1) (++ n) (++ n) (-- n)) 2)
 
@@ -1508,7 +1501,7 @@
         ((key rval) (lval key (op (lval) (eval rval env)))) ))
       (Obj (match args
         ((fld rval) (lval fld (op (lval fld) (eval rval env))))
-        ((fld key rval) (lval fld key (op (lval fld) (eval rval env)))) ))
+        ((key fld rval) (lval key fld (op (lval fld) (eval rval env)))) ))
       (Object (match args
         ((rval) (eval (list 'def plc (op lval (eval rval env))) env))
         ((key rval) (eval (list 'set! plc key (op lval (eval rval env))) env)) )))))
@@ -1519,7 +1512,7 @@
 
 (assert (begin (def a 1) (+= a :rhs 3)) 4)
 (assert (begin (def a (newBox 1)) (+= a :rhs 3)) 4)
-(assert (begin (def a (newObj Obj :fld 1)) (+= a :fld :rhs 3)) 4)
+(assert (begin (def a (new Obj :fld 1)) (+= a :rhs :fld 3)) 4)
 
 
 ;;;; Utilities

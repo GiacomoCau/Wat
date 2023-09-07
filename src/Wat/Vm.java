@@ -6,6 +6,7 @@ import static Wat.Utility.apply;
 import static Wat.Utility.binOp;
 import static Wat.Utility.eIf;
 import static Wat.Utility.eIfnull;
+import static Wat.Utility.first;
 import static Wat.Utility.getClasses;
 import static Wat.Utility.getExecutable;
 import static Wat.Utility.getField;
@@ -289,7 +290,15 @@ public class Vm {
 	class Cons {
 		Object car; private Object cdr;
 		Cons(Object car, Object cdr) { this.car = car; this.cdr = cdr; }
-		public String toString() { return "(" + toString(this) + ")"; }
+		public String toString() {
+			if (car instanceof Symbol s) switch (s.name) {
+				case "%comma": return "," + Vm.this.toString(car(1));
+				case "%commaAt": return ",@" + Vm.this.toString(car(1));
+				case "%backTick": return "`" + Vm.this.toString(car(1));
+				case "%quote", "quote": return "'" + Vm.this.toString(car(1));
+			}
+			return "(" + toString(this) + ")";
+		}
 		private String toString(Cons c) {
 			var car = c.car == null ? "()" : Vm.this.toString(true, c.car);
 			if (c.cdr == null) return car;
@@ -381,23 +390,32 @@ public class Vm {
 			return false;
 		};
 		@Override public Object apply(List o) {
-			var chk = checkR(this, o, 1, 3, or(Keyword.class, Symbol.class, String.class)); // (key) | (key value) | (key :key value)
-			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
-			var key = toKey(o.car());
-			return switch (len) { 
-				case 1-> Utility.apply(v-> v != null || isBound(key) ? v : unboundFieldError("slot: {name} not found in: {object}", o.car(), this), get(key));
-				default-> switch (bndres(len != 3 ? null : o.car(1))) {
-					case Suspension s-> s;
-					case Integer i-> switch(i) {
-						case 0-> inert(def(key, o.car(len-1)));
-						case 1-> { var v = o.car(len-1); def(key, v); yield v; }
-						case 2-> def(key, o.car(len-1));
-						case 3-> { def(key, o.car(len-1)); yield this; }
-						default-> typeError("invalid bndres value: {datum}", i, toChk(or(0, 1, 2, 3)));
-					};
-					case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
-			    }; 
+			var len = len(o);
+			return switch (len(o)) {
+				case 0-> this;
+				case 1-> {
+					var car = o.car();
+					var key = toKey(car);
+					yield Utility.apply(val-> val != null || isBound(key) ? val : unboundFieldError("slot: {name} not found in: {object}", car, this), lookup(key));
+				}
+				default-> {
+					BiFunction f =	o.car == keyword(":def") ? (k,v)-> def(k,v) : o.car == keyword(":set") ? (k,v)-> set(k,v) : null;
+					if (f == null) f = (BiFunction) (k,v)-> def(k,v); else { len-=1; o=o.cdr();  }
+					var bndres = len % 2 == 0 ? null : first(o.car(), len-=1, o=o.cdr());
+					for (; len>2; len-=2, o=o.cdr(1)) f.apply(toKey(o.car()), o.car(1));
+					var key = toKey(o.car());
+					yield switch (bndres(bndres)) {
+						case Suspension s-> s;
+						case Integer i-> switch(i) {
+							case 0-> inert(f.apply(key, o.car(1)));
+							case 1-> { var v = o.car(1); f.apply(key, v); yield v; }
+							case 2-> f.apply(key, o.car(1));
+							case 3-> { f.apply(key, o.car(1)); yield this; }
+							default-> typeError("invalid bndres value: {datum}", i, toChk(or(0, 1, 2, 3)));
+						};
+						case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
+				    };
+				}
 			};
 		}
 	}
@@ -433,13 +451,13 @@ public class Vm {
 	public class Obj extends RuntimeException implements ArgsList {
 		private static final long serialVersionUID = 1L;
 		Map<String,Object> map = new LinkedHashMap();
-		public Obj(String msg, Object ... objs) { super(msg); put(objs); }
-		public Obj(String msg, Throwable t, Object ... objs) { super(msg, t); put(objs); }
-		public Obj(Throwable t, Object ... objs) { super(t); put(objs); }
-		public Obj(Object ... objs) { put(objs); }
+		public Obj(String msg, Object ... objs) { super(msg); puts(objs); }
+		public Obj(String msg, Throwable t, Object ... objs) { super(msg, t); puts(objs); }
+		public Obj(Throwable t, Object ... objs) { super(t); puts(objs); }
+		public Obj(Object ... objs) { puts(objs); }
 		Object get(Object key) { return map.get(toKey(key)); }
 		boolean isBound(Object key) { return map.containsKey(toKey(key)); }
-		Object put(Object ... objs) {
+		Object puts(Object ... objs) {
 			if (objs == null) return null;
 			Object last = null;
 			for (int i=0, e=objs.length; i<e; i+=1) last = map.put(toKey(objs[i]), objs[i+=1]);
@@ -461,24 +479,27 @@ public class Vm {
 				+ (field.length() == 1 ? field : " " + field) ;
 		}
 		@Override public Object apply(List o) {
-			var chk = checkR(this, o, 1, 3, or(Keyword.class, Symbol.class, String.class)); // (key) | (key value) | (key :key value)
-			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
+			var len = len(o);
+			if (len == 0) return this;
+			if (len == 1) {
+				var car = o.car();
+				var key = toKey(car);
+				return Utility.apply(val-> val != null || map.containsKey(key) ? val : unboundFieldError("slot: {name} not found in: {object}", car, this), map.get(key));
+			}
+			var bndres = len % 2 == 0 ? null : first(o.car(), len-=1, o=o.cdr());
+			for (; len>2; len-=2, o=o.cdr(1)) map.put(toKey(o.car()), o.car(1));
 			var key = toKey(o.car());
-			return switch (len) { 
-				case 1-> Utility.apply(v-> v != null || isBound(key) ? v : unboundFieldError("slot: {name} not found in: {object}", o.car(), this), get(key));
-				default-> switch (bndres(len != 3 ? null : o.car(1))) {
-					case Suspension s-> s;
-					case Integer i-> switch(i) {
-						case 0-> inert(put(key, o.car(len-1)));
-						case 1-> { var v = o.car(len-1); put(key, v); yield v; }
-						case 2-> put(key, o.car(len-1));
-						case 3-> { put(key, o.car(len-1)); yield this; }
-						default-> typeError("invalid bndres value: {datum}", i, toChk(or(0, 1, 2, 3)));
-					};
-					case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
-			    }; 
-			};
+			return switch (bndres(bndres)) {
+				case Suspension s-> s;
+				case Integer i-> switch(i) {
+					case 0-> inert(map.put(key, o.car(1)));
+					case 1-> { var v = o.car(1); map.put(key, v); yield v; }
+					case 2-> map.put(key, o.car(1));
+					case 3-> { map.put(key, o.car(1)); yield this; }
+					default-> typeError("invalid bndres value: {datum}", i, toChk(or(0, 1, 2, 3)));
+				};
+				case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
+		    };
 		}
 		private static final Pattern keyword = Pattern.compile("\\{(.+?)\\}");
 		@Override public String getMessage() {
@@ -598,8 +619,8 @@ public class Vm {
 	}
 	<T> T matchError(String msg, BindException me, Object ... objs) {
 		var matchError = new Error(me == null ? msg : me.getMessage() + " " + msg, "type", symbol("match"));
-		matchError.put(objs);
-		if (me != null) matchError.put(me.objs);
+		matchError.puts(objs);
+		if (me != null) matchError.puts(me.objs);
 		return error(matchError);
 	}
 	Object bind(Dbg dbg, Env e, Object lhs, Object rhs) {
@@ -957,7 +978,7 @@ public class Vm {
 	Object pushSubcontBarrier(Resumption r, Env e, Object x) {
 		var res = r != null ? r.resume() : getTco(evaluate(e, x));
 		if (!(res instanceof Suspension s)) return res;
-		return s.suspend(dbg(e, "pushSubcontBarrier", x), rr-> pushSubcontBarrier(rr, e, x)).k.apply(()-> error("prompt not found: {prompt}", "type", symbol("prompt"), "prompt", s.prp));
+		return s.suspend(dbg(e, "pushSubcontBarrier", x), rr-> pushSubcontBarrier(rr, e, x)).k.apply(()-> error("prompt not found: {prompt}", "type", symbol("unboundPrompt"), "prompt", s.prp));
 	}
 	
 	
@@ -1157,6 +1178,7 @@ public class Vm {
 	<T> T unboundSymbolError(String msg, Object name, Env env) { return error(new Error(msg, "type", symbol("unboundSymbol"), "symbol", name, "environment", env)); }
 	<T> T unboundFieldError(String msg, Object name, Object object) { return error(new Error(msg, "type", symbol("unboundField"), "name", name, "object", object)); }
 	<T> T unboundExecutableError(String msg, Object executable, Object object) { return error(new Error(msg, "type", symbol("unboundExecutable"), "executable", executable, "class", object)); }
+	<T> T unboundPromptError(String msg, Object prompt) { return error(new Error(msg, "type", symbol("unboundPrompt"), "prompt", prompt)); }
 	class Value extends RuntimeException {
 		private static final long serialVersionUID = 1L;
 		Object tag, value;
@@ -1270,6 +1292,7 @@ public class Vm {
 				// TODO mancano le segnalazioni per res == -1 (or syntax error) or !Integer (invalid debug value)
 			}
 			catch (Throwable thw) {
+				//out.println(thw + "\nnot a " + chks[i] + ": " + o);
 			}		
 		}
 		return typeError("not {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), on, toChk(chks));
@@ -1557,7 +1580,9 @@ public class Vm {
 					// Object System
 					$("%def", "%addMethod", wrap(new JFun("%AddMethod", (n,o)-> checkN(n, o, 3, or(null, Class.class), Symbol.class, Apv.class), (l,o)-> addMethod(o.car(), o.car(1), o.car(2)) ))),
 					$("%def", "%getMethod", wrap(new JFun("%GetMethod", (n,o)-> checkN(n, o, 2, or(null, Class.class), Symbol.class), (l,o)-> getMethod(o.car(), o.car(1)) ))),
-					$("%def", "%newObj", wrap(new JFun("%NewObj", (n,o)-> checkM(n, o, 1, or(Box.class, Obj.class), or(Symbol.class, Keyword.class), Any.class), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr())) ))),
+					$("%def", "%new", wrap(new JFun("%New", (n,o)-> checkM(n, o, 1, or(list(2, Box.class), list(1, more, Obj.class, or(Symbol.class, Keyword.class), Any.class))), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr())) ))),
+					// TODO this %new! with reduced controls only for (%new! HandlerFrame ...) in lispx::makeHandlerBindOperator di cond-sys.lispx
+					$("%def", "%new!", wrap(new JFun("%New!", (n,o)-> checkM(n, o, 1, or(Box.class, Obj.class) /*,  or(list(or(Symbol.class, Keyword.class), Any.class), list(1, Any.class)) */), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr())) ))),
 					$("%def", "%newClass", wrap(new JFun("%NewClass", (n,o)-> checkR(n, o, 1, 2, Symbol.class, or(Box.class, Obj.class)), (l,o)-> extend(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr())) ))),
 					$("%def", "%subClass?", wrap(new JFun("%SubClass?", (n,o)-> checkN(n, o, 2, Class.class, Class.class), (l,o)-> o.<Class>car(1).isAssignableFrom(o.car()) ))),
 					$("%def", "%type?",  wrap(new JFun("%Type?", (n,o)-> checkN(n, o, 2, Any.class, or(null, Class.class)), (l,o)-> apply((o1, c)-> c == null ? o1 == null /*: o1 == null ? !c.isPrimitive()*/ : o1 != null && c.isAssignableFrom(o1.getClass()), o.car(), o.<Class>car(1)) ))),

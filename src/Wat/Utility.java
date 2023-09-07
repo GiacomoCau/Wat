@@ -37,11 +37,14 @@ public class Utility {
 	public static Object[] $(Object... objs) {
 		return objs;
 	}
-	public static <T> T $n(Object objs, int i) {
+	public static <T> T $n(int i, Object ... objs) {
 		return (T) ((Object[]) objs)[i];
 	}
 	public static Object or(Object... objs) {
 		return objs;
+	}
+	public static Object first(Object ... objs) {
+		return objs[0];
 	}
 	public static Object last(Object ... objs) {
 		return objs[objs.length-1];

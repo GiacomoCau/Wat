@@ -32,7 +32,7 @@
   (deftest *print-level?*.standard-object
     (begin
       (defClass a () (slot))
-      (def\ make-a (slot) (newObj A :slot slot))
+      (def\ make-a (slot) (new A :slot slot))
       (def a (make-a (make-a (make-a 12))))
       (assert (eq? "#" (write-with-level a 0)))
       (assert (eq? "#<a :slot #>" (write-with-level a 1)))
