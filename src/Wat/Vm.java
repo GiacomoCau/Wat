@@ -292,10 +292,10 @@ public class Vm {
 		Cons(Object car, Object cdr) { this.car = car; this.cdr = cdr; }
 		public String toString() {
 			if (car instanceof Symbol s) switch (s.name) {
-				case "%comma": return "," + Vm.this.toString(car(1));
-				case "%commaAt": return ",@" + Vm.this.toString(car(1));
-				case "%backTick": return "`" + Vm.this.toString(car(1));
-				case "%quote", "quote": return "'" + Vm.this.toString(car(1));
+				case "%,": return "," + Vm.this.toString(car(1));
+				case "%,@": return ",@" + Vm.this.toString(car(1));
+				case "%`": return "`" + Vm.this.toString(car(1));
+				case "%'", "quote": return "'" + Vm.this.toString(car(1));
 			}
 			return "(" + toString(this) + ")";
 		}
@@ -657,7 +657,7 @@ public class Vm {
 			}
 			case Cons lc-> {
 				if (lc.car instanceof Symbol sym) switch (sym.name) {
-					case "%quote", "quote": {
+					case "%'", "quote": {
 						if (equals(lc.<Object>car(1), rhs)) yield null; // or rhs?
 						throw new BindException("expected literal: {expected}, found: {datum}", "expected", lc.car(1), "datum", rhs);
 					}
@@ -858,7 +858,7 @@ public class Vm {
 		}
 		public String toString() { return "%Loop"; }
 	}
-	class Catch implements Combinable {
+	class CatchTagWth implements Combinable {
 		public Object combine(Env e, List o) {
 			// (catch . forms)               -> (%catch #_   () . forms)
 			// (catchTag tag . forms)        -> (%catch tag  () . forms)
@@ -889,9 +889,9 @@ public class Vm {
 				: hdlany ? hdl : typeError("not a one arg applicative combiner: {datum}", hdl, symbol("Apv1"))
 			;
 		}
-		public String toString() { return "%Catch"; }
+		public String toString() { return "%CatchTagWth"; }
 	}
-	class Throw implements Combinable {
+	class ThrowTag implements Combinable {
 		public Object combine(Env e, List o) {
 			var chk = checkR(this, o, 1, 2); // o = (tag) | (tag value)
 			if (chk instanceof Suspension s) return s;
@@ -902,7 +902,7 @@ public class Vm {
 				tag->{ throw new Value(tag, ctapv ? value : pipe(dbg, ()-> getTco(evaluate(e, value)))); }
 			);		
 		}
-		public String toString() { return "%Throw"; }
+		public String toString() { return "%ThrowTag"; }
 	}
 	class Finally implements Combinable {
 		public Object combine(Env e, List o) { return combine(null, e, o); }
@@ -1207,7 +1207,7 @@ public class Vm {
 			if (p instanceof Symbol) { return syms.add(p) ? null : error("not a unique symbol: {datum} in: " + pt + " of: {expr}", "datum", p, "expr", exp); }
 			if (!(p instanceof Cons c)) return null;
 			if (c.car instanceof Symbol sym) switch (sym.name) {
-				case "%quote", "quote": return len(c) == 2 ? null : error("invalid quote syntax : " + c);
+				case "%'", "quote": return len(c) == 2 ? null : error("invalid quote syntax : " + c);
 				case "!": return len(c) == 3 && c.car(2) instanceof Symbol? check(c.car(2)) : error("invalid ! syntax: " + c);
 			}
 			var msg = check(c.car); if (msg != null) return msg;
@@ -1556,8 +1556,8 @@ public class Vm {
 					// First-order Control
 					$("%def", "%if", new If()),
 					$("%def", "%loop", new Loop()),
-					$("%def", "%catch", apply(c-> !ctapv ? c : wrap(c), new Catch())),
-					$("%def", "%throw", apply(t-> !ctapv ? t : wrap(t), new Throw())),
+					$("%def", "%catchTagWth", apply(c-> !ctapv ? c : wrap(c), new CatchTagWth())),
+					$("%def", "%throwTag", apply(t-> !ctapv ? t : wrap(t), new ThrowTag())),
 					$("%def", "%finally", new Finally()),
 					// Delimited Control
 					$("%def", "%takeSubcont", new TakeSubcont()),
@@ -1624,7 +1624,7 @@ public class Vm {
 					$("%def", "%eq?", wrap(new JFun("%Eq?", (BiFunction<Object,Object,Boolean>) (a,b)-> Vm.this.equals(a, b) ))),
 					//
 					$("%def", "%theEnv", $("%vau", null, "env", "env")),
-					$("%def", "%quote", $("%vau", $("arg"), ignore, "arg")),
+					$("%def", "%'", $("%vau", $("arg"), ignore, "arg")),
 					$("%def", "%\\", $("%vau", $("formals", ".", "body"), "env", $("%wrap", $("%eval", $("%list*", "%vau", "formals", ignore, "body"), "env")) )),
 					//
 					$("%def", "vm", this),
@@ -1644,8 +1644,8 @@ public class Vm {
 								: inert(ctapv = o.car(),
 									bind(null, theEnv,
 										list(symbol("%catch"), symbol("%throw")),
-										list((Object) apply(c-> !ctapv ? c : wrap(c), new Catch()),
-											 (Object) apply(t-> !ctapv ? t : wrap(t), new Throw())))) ))),
+										list((Object) apply(c-> !ctapv ? c : wrap(c), new CatchTagWth()),
+											 (Object) apply(t-> !ctapv ? t : wrap(t), new ThrowTag())))) ))),
 					$("%def", "prtrc", wrap(new JFun("Prtrc", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4, 5, 6)), (l,o)-> l == 0 ? prtrc : inert(start=level-(dotco ? 0 : 3), prtrc=o.car()) ))),
 					$("%def", "ttrue", wrap(new JFun("Ttrue", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4)), (l,o)-> l == 0 ? ttrue : inert(ttrue=o.car()) ))),
 					$("%def", "bndres", wrap(new JFun("Bndres", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2)), (l,o)-> l == 0 ? bndres : inert(bndres=o.car()) ))),

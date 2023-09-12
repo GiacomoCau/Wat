@@ -145,7 +145,7 @@
 
 (def quote (vau (x) #ignore x))
 (def quote
-  %quote)
+  %')
 
 (def list (wrap (vau x #ignore x)))
 (def list
@@ -247,16 +247,16 @@
 (defMacro (expand macro)
   (list 'begin (list 'evalMacro #f) macro) )
 
-(assert (expand (defMacro (succ n) (list '+ n 1))) '(def succ (macro (n) (list (%quote +) n 1))))
-(assert (expand (defMacro succ (n) (list '+ n 1))) '(def succ (macro (n) (list (%quote +) n 1))))
+(assert (expand (defMacro (succ n) (list '+ n 1))) '(def succ (macro (n) (list (%' +) n 1))))
+(assert (expand (defMacro succ (n) (list '+ n 1))) '(def succ (macro (n) (list (%' +) n 1))))
 
 (defMacro (defVau lhs . rhs)
   (if (cons? lhs)
     (list 'def (car lhs) (list* 'vau (cdr lhs) rhs))
     (list 'def lhs (list* 'vau rhs)) ))
 
-(assert (expand (defVau (succ n) env (eval (list '+ n 1) env))) '(def succ (vau (n) env (eval (list (%quote +) n 1) env))))
-(assert (expand (defVau succ (n) env (eval (list '+ n 1) env))) '(def succ (vau (n) env (eval (list (%quote +) n 1) env))))
+(assert (expand (defVau (succ n) env (eval (list '+ n 1) env))) '(def succ (vau (n) env (eval (list (%' +) n 1) env))))
+(assert (expand (defVau succ (n) env (eval (list '+ n 1) env))) '(def succ (vau (n) env (eval (list (%' +) n 1) env))))
 
 (def defConstant
   def)
@@ -290,32 +290,29 @@
 
 (def* (then else) begin begin)
 
-(defMacro (throw . val) (list* '%throw #_ val) )
-(defMacro (throwTag tag . val) (list* '%throw tag val))
+(defMacro (throw . val) (list* '%throwTag #_ val) )
 (def throwTag
-  %throw)
+  %throwTag)
 
 ;; ctapv non andrebbe mai cambiato dopo il boot, anche la riesecuzione di quanto segue potrebbe non bastare!
 (if (ctapv)
   (then
     (defMacro (catch . forms)
-      (list '%catch #_ () (list* '\ () forms)) )
+      (list '%catchTagWth #_ () (list* '\ () forms)) )
     (defMacro (catchWth hdl . forms)
-      (list '%catch #_ hdl (list* '\ () forms)) )
+      (list '%catchTagWth #_ hdl (list* '\ () forms)) )
     (defMacro (catchTag tag . forms)
-      (list '%catch tag () (list* '\ () forms)) )
+      (list '%catchTagWth tag () (list* '\ () forms)) )
     (defMacro (catchTagWth tag hdl . forms)
-      (list '%catch tag hdl (list* '\ () forms)) )
+      (list '%catchTagWth tag hdl (list* '\ () forms)) )
   )
   (defMacro (catch . forms)
-    (list* '%catch #_ () forms))
+    (list* '%catchTagWth #_ () forms))
   (defMacro (catchWth hdl . forms)
-    (list* '%catch #_ hdl forms))
+    (list* '%catchTagWth #_ hdl forms))
   (defMacro (catchTag tag . forms)
-    (list* '%catch tag () forms) )
-  (defMacro (catchTagWth tag hdl . forms)
-    (list* '%catch tag hdl forms) )
-  (def catchTagWth %catch)
+    (list* '%catchTagWth tag () forms) )
+  (def catchTagWth %catchTagWth)
 )
 
 (assert (catch (throw)) #inert)
@@ -588,17 +585,16 @@
 ;;; Quasiquote
 
 ;; (Idea from Alf Petrofsky http://scheme-reports.org/mail/scheme-reports/msg00800.html)
-(defVau %backTick (x) env
+(defVau %` (x) env
   (defCase\ qq
-    ( ((('%commaAt x) . y) #f . d) (append (map (\ (x) (list '%commaAt x)) (apply** qq (list x) d)) (apply** qq y #f d)) )
-    ( ((('%commaAt x) . y) . d)    (append (eval x env) (apply** qq y d)) )
-    ( ((('%comma x) . y) #f . d)   (append (map (\ (x) (list '%comma x))   (apply** qq (list x) d)) (apply** qq y #f d)) )
-    ( (('%comma x) #f . d)         (list '%comma (apply** qq x d)) )
-    ;( (('%commaAt x) . d)          (error "illegal ,@") )  
-    ( (('%comma x) . d)            (eval x env) )
-    ( (('%backTick x) . d)         (list '%backTick (apply** qq x #f d)) )
-    ( ((x . y) . d)                (cons (apply** qq x d) (apply** qq y d)) )
-    ( (x . d)                      x) )
+    ( ((('%,@ x) . y) #f . d) (append (map (\ (x) (list '%,@ x)) (apply** qq (list x) d)) (apply** qq y #f d)) )
+    ( ((('%,@ x) . y) . d)    (append (eval x env) (apply** qq y d)) )
+    ( ((('%, x) . y) #f . d)  (append (map (\ (x) (list '%, x))   (apply** qq (list x) d)) (apply** qq y #f d)) )
+    ( (('%, x) #f . d)        (list '%, (apply** qq x d)) )
+    ( (('%, x) . d)           (eval x env) )
+    ( (('%` x) . d)           (list '%` (apply** qq x #f d)) )
+    ( ((x . y) . d)           (cons (apply** qq x d) (apply** qq y d)) )
+    ( (x . d)                 x) )
   (qq x))
 
 (assert (let ((a 1) (b 2) (c '(3 4))) `(,@c ,a (,a) (,@c) b ,@c)) '(3 4 1 (1) (3 4) b 3 4))

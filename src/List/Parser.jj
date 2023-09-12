@@ -177,7 +177,7 @@ TOKEN:	// identifiers
 |	< # jvf: "$" | <letter> >
 |   < # jvn: "_" | <jvf> | <digit> >
 |   < Kwd: ":" (<Sym>)+ >
-|	< Sym: <first> ( "#" | "'" | "|" | <digit> | <first> )* >
+|	< Sym: <first> ( "#" | "'" | "|" | "," | "`" | <digit> | <first> )* >
 |	< # first: <letter> | <special> > 
 |	< # special: "." | "@" | "-" | "&" | "!" | "=" | ">" | "<" | "%" | "+" | "?" | "/" | "*" | "$" | "_" | "~" | "^" | ":" | "\\" | "||" >
 |	< # letter: [ "A"-"Z", "a"-"z" ] >
@@ -206,11 +206,11 @@ Object Elt() throws Exception: {
 	|   t=<At>		 { return $("%at", $("wat-string", t.image.substring(1))); } 
 	|	t=<Kwd>      { return t.image; }
 	|	t=<Sym>      { return t.image; }  	
-	//|	t=<Sym> ["::" t2=<Sym>] {	return t2 == null ? t.image : $("%eval", $("%quote", t2.image), t.image); }  	
-	|	"'" o=Elt()  { return $("%quote", o); }
-	|	",@" o=Elt() { return $("%commaAt", o); }
-	|	"," o=Elt()  { return $("%comma", o); }
-	|	"`"  o=Elt() { return $("%backTick", o); }
+	//|	t=<Sym> ["::" t2=<Sym>] {	return t2 == null ? t.image : $("%eval", $("%'", t2.image), t.image); }  	
+	|	"'" o=Elt()  { return $("%'", o); }
+	|	",@" o=Elt() { return $("%,@", o); }
+	|	"," o=Elt()  { return $("%,", o); }
+	|	"`"  o=Elt() { return $("%`", o); }
 	|	"(" ( o=Elt(){ l.add(o); } )+ [ "." o2=Elt() ] ")" {
 		if (o2 != null && !isNil(o2)) { l.add( "." ); l.add( o2 ); };
 		return l.toArray();
