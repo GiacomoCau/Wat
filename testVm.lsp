@@ -63,7 +63,7 @@
 (%assert ((%\ (m) m) 1) 1)
 (%assert ((%\ x x) 1)   '(1))
 
-(%if (ctapv)
+(%if (ctApv)
   (%begin 
     (%assert (%catchTagWth))
     (%assert (%catchTagWth #null))
@@ -109,4 +109,4 @@
     (%assert (%catchTagWth #ignore #null (%begin (%def x 0) (%loop (%if (%== x 10) (%throwTag #ignore x)) (%def x (%+ x 1))))) 10) ))
 
 (%def testTco (%\ (n) (%if (%<= n 0) n (testTco (%- n 1)))))
-(%if (dotco) (%assert (testTco 400) 0))
+(%if (doTco) (%assert (testTco 400) 0))

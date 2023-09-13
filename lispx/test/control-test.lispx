@@ -379,7 +379,7 @@
   (deftest pushPrompt.1
     (signalsError?
      (pushPrompt)
-     Error :type 'match :#operands +1))
+     Error :type 'match :operands +1))
 
   (deftest pushPrompt.2
     (pushPrompt 'p)
@@ -419,12 +419,12 @@
   (deftest takeSubcont.1
     (signalsError?
      (takeSubcont)
-     Error :type 'match :#operands +2))
+     Error :type 'match :operands +2))
 
   (deftest takeSubcont.2
     (signalsError?
      (takeSubcont 'p)
-     Error :type 'match :#operands +1))
+     Error :type 'match :operands +1))
 
   (deftest takeSubcont.3
     (signalsError?
@@ -453,12 +453,12 @@
   (deftest pushDelimSubcont.1
     (signalsError?
      (pushDelimSubcont)
-     Error :type 'match :#operands +2))
+     Error :type 'match :operands +2))
 
   (deftest pushDelimSubcont.2
     (signalsError?
      (pushDelimSubcont 'p)
-     Error :type 'match :#operands +1))
+     Error :type 'match :operands +1))
 
   (deftest pushDelimSubcont.3
     (signalsError?
@@ -483,7 +483,7 @@
   (deftest promptSet?.1
     (signalsError?
      (promptSet?)
-     Error :type 'match :#operands +1))
+     Error :type 'match :operands +1))
 
   (deftest promptSet?.2
     (promptSet? 'p)
@@ -646,7 +646,7 @@
   (deftest catchTag.1
     (signalsError?
      (catchTag)
-     Error :type 'match :#operands +1))
+     Error :type 'match :operands +1))
 
   (deftest catchTag.2
     (catchTag 'x)
@@ -685,7 +685,7 @@
   (deftest block.1
     (signalsError?
      (block)
-     Error :type 'match :#operands +1))
+     Error :type 'match :operands +1))
 
   (deftest block.2
     (block x)
@@ -724,7 +724,7 @@
   (deftest finally.1
     (signalsError?
      (finally)
-     Error :type 'match :#operands +1))
+     Error :type 'match :operands +1))
 
   (deftest finally.2
     (finally (eq? 1 1))

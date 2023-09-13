@@ -168,7 +168,7 @@
    |#
   (lispx::makeHandlerBindOperator
     (\ ((restartName functionForm . properties) env)
-      (new RestartHandler
+      (%new! RestartHandler
         :restartName
            (the Symbol restartName)
         :handlerFunction

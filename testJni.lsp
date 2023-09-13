@@ -39,7 +39,7 @@
 		void = (.fieldName object value) = ((.fieldName (@getClass object)) object value)
 |#
 
-;(prtrc 2)
+;(prTrc 2)
 
 &Wat.Prova
 &Wat.Prova$Cls
@@ -125,4 +125,4 @@ cls
 (%def get (getMethod &Wat.Prova$Cls "get"))
 (get cls)
 
-;(prtrc 0)
+;(prTrc 0)

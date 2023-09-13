@@ -14,6 +14,10 @@
 
 ;;; Built-Ins - rename bindings that will be used as provided by VM
 
+(def assert %assert)
+(def error %error)
+(def test %test)
+
 (def ==
   %==)
 (def != %!=)
@@ -54,7 +58,6 @@
   %apply**)
 
 (def array->list %array->list)
-(def assert %assert)
 (def begin
   %begin)
 (def bind? %bind?)
@@ -72,7 +75,6 @@
 (def dval %dVal)
 (def newDVar %newDVar)
 (def eq? %eq?)
-(def error %error)
 (def eval
   %eval)
 
@@ -123,7 +125,6 @@
 (def subClass?
   %subClass?)
 
-(def test %test)
 (def the %the)
 (def type?
   %type?)
@@ -294,8 +295,8 @@
 (def throwTag
   %throwTag)
 
-;; ctapv non andrebbe mai cambiato dopo il boot, anche la riesecuzione di quanto segue potrebbe non bastare!
-(if (ctapv)
+;; ctApv non andrebbe mai cambiato dopo il boot, anche la riesecuzione di quanto segue potrebbe non bastare!
+(if (ctApv)
   (then
     (defMacro (catch . forms)
       (list '%catchTagWth #_ () (list* '\ () forms)) )
@@ -312,7 +313,8 @@
     (list* '%catchTagWth #_ hdl forms))
   (defMacro (catchTag tag . forms)
     (list* '%catchTagWth tag () forms) )
-  (def catchTagWth %catchTagWth)
+  (def catchTagWth
+    %catchTagWth)
 )
 
 (assert (catch (throw)) #inert)
@@ -409,7 +411,7 @@
     (def* (name (binding . body)) lhs rhs) )
   (list
     (list* 'rec\ name (list (car binding)) body)
-    (->1expr binding) ))
+    (->begin binding) ))
 
 (assert (let1Loop add1 (a '(1 2)) (if (null? a) () (cons (+ (car a) 1) (add1 (cdr a))))) '(2 3))
 (assert (let1Loop (add1 a '(1 2)) (if (null? a) () (cons (+ (car a) 1) (add1 (cdr a))))) '(2 3))
@@ -418,10 +420,10 @@
   (if (symbol? lhs)
     (list* 'let1Loop lhs rhs)
     (list (list* '\ (list (car lhs)) rhs)
-      (->1expr lhs) )))
+      (->begin lhs) )))
 
 (assert (let1 (a 1) a) 1)
-;(assert (let1 (a 1 2) a) 2) ; need ->begin
+(assert (let1 (a 1 2) a) 2) ; need ->begin
 (assert (let1 f (a 2) (if (zero? a) 'end (f (- a 1)))) 'end)
 
 (defMacro (let1\ binding . body)
@@ -430,13 +432,11 @@
 (assert (let1\ (f (a) a) (f 5)) 5)
 (assert (let1\ ((f a) a) (f 5)) 5)
 
-#| TODO non sembra utile
 (defMacro (let1rec binding . body)
   (def name (car binding))
   (list* 'let1 (list name #inert)
-    (list 'def (car name (->1expr binding))
-    body ))
-|#
+    (list 'def (car name (->begin binding))
+      body )))
 
 (defMacro (let1rec\ binding . body)
   (list* 'let1 (->name+#inert binding)
@@ -449,7 +449,7 @@
     (def* (name (bindings . body)) lhs rhs) )
   (list*
     (list* 'rec\ name (map car bindings) body)
-    (map ->1expr bindings) ))
+    (map ->begin bindings) ))
 
 (%assert (letLoop sum ((a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
 (%assert (letLoop (sum (a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
@@ -458,7 +458,7 @@
   (if (symbol? lhs)
     (list* 'letLoop lhs rhs)
     (list* (list* '\ (map car lhs) rhs)
-      (map ->1expr lhs) )))
+      (map ->begin lhs) )))
 
 (assert (let ((a 1)) a) 1)
 
@@ -467,15 +467,13 @@
 
 (assert (expand (let\ ((f1 (a) a) ((f2 b) b)) 1)) '(let ((f1 (\ (a) a)) (f2 (\ (b) b))) 1))
 
-#| TODO non sembra utile
 (defMacro (letrec bindings . body)
   (def names (map car bindings))
   (list* 'let (map (\ (name) (list name #inert)) names)
-    (list* 'def* names (map ->1expr bindings))
+    (list* 'def* names (map ->begin bindings))
     body ))
 
 (assert (letrec ( (even? (\ (n) (if (zero? n) #t (odd? (- n 1))))) (odd? (\ (n) (if (zero? n) #f (even? (- n 1))))) ) (even? 88)) #t)
-|#
 
 (defMacro (letrec\ bindings . body)
   (list* 'let (map ->name+#inert bindings)
@@ -692,13 +690,13 @@
           (if (|| (== test 'else)
                   (let* ( (symbol? (symbol? test))
                           (class (eval (if symbol? test (car test)) env)) )
-                    (if symbol? (type? key class) (&& (type? key Obj) (matchSlots? key (eval (list* 'list (cdr test))  env ))) )))
+                    (if symbol? (type? key class) (&& (type? key Obj) (matchObjSlots? key (eval (list* 'list (cdr test)) env)))) ))
             (if (== (car forms) '=>)
               (let1 ((apv) (cdr forms)) ((eval apv env) key))
               (eval (list* 'begin forms) env) )
             (next clauses) ))))))
 
-(def\ (matchSlots? obj slots)
+(def\ (matchObjSlots? obj slots)
   (let1 next (slots slots)
     (if (null? slots) #t
       (let1 ((name value . slots) slots)
@@ -706,7 +704,7 @@
           #f )))))
 
 (def\ (matchObj? obj class . slots)
-  (if (type? obj class) (matchSlots? obj slots) #f) )
+  (if (type? obj class) (matchObjSlots? obj slots) #f) )
 
 (assert (caseType 2.0 (else 3)) 3)
 (assert (caseType (+ 2 2) (else => (\(v) v))) 4)
@@ -925,7 +923,7 @@
 (def the
   %the)
 
-(defMacro (type\ parms . body)
+(defMacro (the\ parms . body)
   (let1rec\ ( (parms->names.checks ps)
               (if (cons? ps)
                   (let* ( ((p . ps) ps)
@@ -939,12 +937,12 @@
     (let1 ((names . checks) (parms->names.checks parms))
       (list* '\ names (if (null? checks) body (list* (list* 'begin checks) body))) )))
 
-(assert (expand (type\ (a) (+ a 1))) '(\ (a) (+ a 1)))
-(assert (expand (type\ ((a Integer)) (+ a 1))) '(\ (a) (begin (the Integer a)) (+ a 1)))
+(assert (expand (the\ (a) (+ a 1))) '(\ (a) (+ a 1)))
+(assert (expand (the\ ((a Integer)) (+ a 1))) '(\ (a) (begin (the Integer a)) (+ a 1)))
 
 (defMacro (define lhs . rhs)
   (if (cons? lhs)
-    (list 'def (car lhs) (list* 'type\ (cdr lhs) rhs))
+    (list 'def (car lhs) (list* 'the\ (cdr lhs) rhs))
     (list 'def lhs (car rhs)) ))
 
 ; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (list* 'list xs) env)
@@ -1213,7 +1211,7 @@
     (def (name ((receiver class) . parameters) . forms) args) )
   (def method (eval (list* '\ (list* receiver parameters) forms) env))
   (def prv (%addMethod (eval class env) name method))
-  (case (bndres) ((#inert) #inert) ((:rhs) method) ((:prv) prv)) )
+  (case (bndRes) ((#inert) #inert) ((:rhs) method) ((:prv) prv)) )
 
 (assert
   (begin
@@ -1440,14 +1438,14 @@
   (list* (list 'setter getter) new-val args))
 
 (set (setter elt)
-  (type\ (newVal object key)
+  (the\ (newVal object key)
     (set ((jsGetter key) object) newVal) ))
 
 (def\ (jsCallback fun)
   (%jsFunction (\ args (pushPrompt rootPrompt (apply fun args)))) )
 
 (defMacro (jsLambda parms . body)
-  (list 'jsCallback (list* 'type\ parms body)))
+  (list 'jsCallback (list* 'the\ parms body)))
 
 (def\ (log x . xs)
   (apply @log (list* &console x xs))
@@ -1459,7 +1457,7 @@
 
 (define (ref (c Cell)) (.value c))
 
-(set (setter ref) (type\ (newVal (c Cell)) (set (.value c) newVal)))
+(set (setter ref) (the\ (newVal (c Cell)) (set (.value c) newVal)))
 |#
 
 
@@ -1542,5 +1540,5 @@
   	(printFrame k) (pushPrompt rootPrompt (pushSubcont k)) ))
 
 (def\ (userBreak err)
-  (when (prstk) (log "-" (@getMessage err)) (printStacktrace))
+  (when (prStk) (log "-" (@getMessage err)) (printStacktrace))
   (throw err) )

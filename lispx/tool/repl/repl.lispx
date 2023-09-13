@@ -33,7 +33,7 @@
           (unless (== (getSlot restart 'restartName) 'replAbort)
             (print "    " (getSlot restart 'restartName))))
         (computeRestarts condition))
-  (when (prstk)
+  (when (prStk)
     (uprint "Backtrace:")
     (%printStacktrace k) )
   (repl:run))

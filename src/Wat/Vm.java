@@ -1,7 +1,6 @@
 package Wat;
 
 import static List.Parser.parse;
-import static Wat.Utility.$;
 import static Wat.Utility.apply;
 import static Wat.Utility.binOp;
 import static Wat.Utility.eIf;
@@ -119,6 +118,7 @@ import List.ParseException;
 	res: result
 	thw: throwable
 	prp: prompt
+	dft: default 
  */
 
 public class Vm {
@@ -127,25 +127,25 @@ public class Vm {
 	    for (File file: new File("bin/Ext").listFiles()) file.delete();
 	}
 
-	boolean dotco = true; // do tco
-	boolean doasrt = true; // do assert
-	boolean ctapv = false; // applicative catch & throw
-	boolean instr = false; // intern string
-	boolean prstk = false; // print stack
-	boolean prwrn = false; // print warning
-	boolean aquote = false; // auto quote list
+	boolean doTco = true; // do tco
+	boolean doAsrt = true; // do assert
+	boolean ctApv = false; // applicative catch & throw
+	boolean intStr = false; // intern string
+	boolean prStk = false; // print stack
+	boolean prWrn = false; // print warning
+	boolean aQuote = false; // auto quote list
 	boolean else1 = false; // else multiple expressions
-	boolean hdlany = true; // any value for catch hadler
+	boolean hdlAny = true; // any value for catch hadler
 	
-	Object boxdft = null; // box/dinamic default: null, inert, ...
+	Object boxDft = null; // box/dinamic default: null, inert, ...
 	
-	int prtrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
-	int ttrue = 0; // type true: 0:true, 1:!false, 2:!(or false null), 3:!(or false null inert), 4:!(or false null inert zero)
-	int prenv = 3; // print environment
-	int bndres = 0; // bind result: 0:inert 1:rhs 2:prev
-	private Object bndres(Object o) {
+	int prTrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
+	int tTrue = 0; // type true: 0:true, 1:!false, 2:!(or false null), 3:!(or false null inert), 4:!(or false null inert zero)
+	int prEnv = 3; // print environment
+	int bndRes = 0; // bind result: 0:inert 1:rhs 2:prev
+	private Object bndRes(Object o) {
 		return switch (o) {
-			case null-> bndres;
+			case null-> bndRes;
 			case Inert i-> 0; 
 			case Keyword k-> switch (k.name) {
 				case "rhs"-> 1;
@@ -236,7 +236,7 @@ public class Vm {
 	// Tail Call Optimization
 	/*
 	interface Tco extends Supplier {};
-	Object tco(Tco tco) { return dotco ? tco : tco.get(); }
+	Object tco(Tco tco) { return doTco ? tco : tco.get(); }
 	//*/
 	//* utile per debug!
 	class Tco implements Supplier {
@@ -245,7 +245,7 @@ public class Vm {
 		@Override public Object get() { return tco.get(); }
 		@Override public String toString() { return "Tco"; }
 	};
-	Object tco(Supplier tco) { return dotco ? new Tco(tco) : tco.get(); }
+	Object tco(Supplier tco) { return doTco ? new Tco(tco) : tco.get(); }
 	//*/
 	<T> T getTco(Object o) { while (o instanceof Tco tco) o = tco.get(); return (T) o; }
 	
@@ -257,7 +257,7 @@ public class Vm {
 	
 	// Evaluation Core
 	<T> T evaluate(Env e, Object o) {
-		if (prtrc >= 3) print("evaluate: ", indent(), o, "   ", e);
+		if (prTrc >= 3) print("evaluate: ", indent(), o, "   ", e);
 		Object v; try {
 			level += 1;
 			v = switch (o) {
@@ -269,7 +269,7 @@ public class Vm {
 		finally {
 			level -= 1;
 		}
-		if (prtrc >= 4) print("  return: ", indent(), v=getTco(v)); 
+		if (prTrc >= 4) print("  return: ", indent(), v=getTco(v)); 
 		return (T) v;
 	}
 	
@@ -354,18 +354,18 @@ public class Vm {
 		Object get(Object obj) {
 			var lookup = lookup(obj);
 			if (!lookup.isBound) return unboundSymbolError("unbound symbol: {symbol}", obj, this);
-			if (prtrc >= 6) print("  lookup: ", lookup.value); return lookup.value;
+			if (prTrc >= 6) print("  lookup: ", lookup.value); return lookup.value;
 		}
 		Object def(Object obj, Object value) {
 			var key = toKey(obj);
-			if (prtrc >= 6) print("    bind: ", key, "=", value, " in: ", this);
+			if (prTrc >= 6) print("    bind: ", key, "=", value, " in: ", this);
 			return map.put(key, value);
 		}
 		Object set(Object obj, Object value) {
 			var key = toKey(obj);
 			for (var env=this; env != null; env=env.parent) {
 				if (!env.map.containsKey(key)) continue;
-				if (prtrc >= 6) print("     set: ", key, "=", value, " in: ", env);
+				if (prTrc >= 6) print("     set: ", key, "=", value, " in: ", env);
 				return env.map.put(key, value);
 			}
 			return unboundSymbolError("unbound symbol: {symbol}", obj, this);
@@ -378,7 +378,7 @@ public class Vm {
 		public String toString() {
 			var deep = deep();
 			var prefix = switch(deep) { case 1-> "Vm"; case 2-> "The"; default-> ""; };
-			return "{" + prefix + "Env[" + map.size() + "]" + eIf(deep < prenv, ()-> reverseMap(map)) + eIfnull(parent, ()-> " " + parent) + "}";
+			return "{" + prefix + "Env[" + map.size() + "]" + eIf(deep < prEnv, ()-> reverseMap(map)) + eIfnull(parent, ()-> " " + parent) + "}";
 		}
 		boolean	remove(Object obj) {
 			var key = toKey(obj);
@@ -401,17 +401,17 @@ public class Vm {
 				default-> {
 					BiFunction f =	o.car == keyword(":def") ? (k,v)-> def(k,v) : o.car == keyword(":set") ? (k,v)-> set(k,v) : null;
 					if (f == null) f = (BiFunction) (k,v)-> def(k,v); else { len-=1; o=o.cdr();  }
-					var bndres = len % 2 == 0 ? null : first(o.car(), len-=1, o=o.cdr());
+					var bndRes = len % 2 == 0 ? null : first(o.car(), len-=1, o=o.cdr());
 					for (; len>2; len-=2, o=o.cdr(1)) f.apply(toKey(o.car()), o.car(1));
 					var key = toKey(o.car());
-					yield switch (bndres(bndres)) {
+					yield switch (bndRes(bndRes)) {
 						case Suspension s-> s;
 						case Integer i-> switch(i) {
 							case 0-> inert(f.apply(key, o.car(1)));
 							case 1-> { var v = o.car(1); f.apply(key, v); yield v; }
 							case 2-> f.apply(key, o.car(1));
 							case 3-> { f.apply(key, o.car(1)); yield this; }
-							default-> typeError("invalid bndres value: {datum}", i, toChk(or(0, 1, 2, 3)));
+							default-> typeError("invalid bndRes value: {datum}", i, toChk(or(0, 1, 2, 3)));
 						};
 						case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
 				    };
@@ -433,14 +433,14 @@ public class Vm {
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 			return switch (len) {
 				case 0-> value;
-				default-> switch (bndres(len != 2 ? null : o.car())) {
+				default-> switch (bndRes(len != 2 ? null : o.car())) {
 					case Suspension s-> s;
 					case Integer i-> switch(i) {
 						case 0-> inert(value = o.car(len-1));
 						case 1-> value = o.car(len-1);
 						case 2-> { var v = value; value = o.car(len-1); yield v; }
 						case 3-> { value = o.car(len-1); yield this; }
-						default-> typeError("invalid bndres value: {datum}", i, toChk(or(0, 1, 2, 3)));
+						default-> typeError("invalid bndRes value: {datum}", i, toChk(or(0, 1, 2, 3)));
 					};
 					case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
 			    }; 
@@ -486,17 +486,17 @@ public class Vm {
 				var key = toKey(car);
 				return Utility.apply(val-> val != null || map.containsKey(key) ? val : unboundFieldError("slot: {name} not found in: {object}", car, this), map.get(key));
 			}
-			var bndres = len % 2 == 0 ? null : first(o.car(), len-=1, o=o.cdr());
+			var bndRes = len % 2 == 0 ? null : first(o.car(), len-=1, o=o.cdr());
 			for (; len>2; len-=2, o=o.cdr(1)) map.put(toKey(o.car()), o.car(1));
 			var key = toKey(o.car());
-			return switch (bndres(bndres)) {
+			return switch (bndRes(bndRes)) {
 				case Suspension s-> s;
 				case Integer i-> switch(i) {
 					case 0-> inert(map.put(key, o.car(1)));
 					case 1-> { var v = o.car(1); map.put(key, v); yield v; }
 					case 2-> map.put(key, o.car(1));
 					case 3-> { map.put(key, o.car(1)); yield this; }
-					default-> typeError("invalid bndres value: {datum}", i, toChk(or(0, 1, 2, 3)));
+					default-> typeError("invalid bndRes value: {datum}", i, toChk(or(0, 1, 2, 3)));
 				};
 				case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
 		    };
@@ -530,12 +530,12 @@ public class Vm {
 	
 	
 	// Class
-	Class extend(Symbol className, Class superClass) {
+	Class newClass(Symbol className, Class superClass) {
 		try {
 			if (!className.name.matches("[A-Z][a-zA-Z_0-9]*")) return typeError("invalid class name: {datum}", className, parseBytecode("regex", "[A-Z][a-zA-Z_0-9]*"));
 			if (superClass != null && !of(Obj.class, Box.class).anyMatch(rc-> rc.isAssignableFrom(superClass))) return typeError("invalid class: {datum}", superClass, toChk(or(Obj.class, Box.class)));
 			var c = Class.forName("Ext." + className);
-			if (prwrn) out.println("Warning: class " + className + " is already defined!");
+			if (prWrn) out.println("Warning: class " + className + " is already defined!");
 			return c;
 		}
 		catch (ClassNotFoundException e) {
@@ -624,15 +624,15 @@ public class Vm {
 		return error(matchError);
 	}
 	Object bind(Dbg dbg, Env e, Object lhs, Object rhs) {
-		return bind(dbg, true, bndres, e, lhs, rhs);
+		return bind(dbg, true, bndRes, e, lhs, rhs);
 	}
-	Object bind(Dbg dbg, boolean def, int bndres, Env e, Object lhs, Object rhs) {
-		return bind(null, dbg, def, bndres, e, lhs, rhs); 
+	Object bind(Dbg dbg, boolean def, int bndRes, Env e, Object lhs, Object rhs) {
+		return bind(null, dbg, def, bndRes, e, lhs, rhs); 
 	}
-	Object bind(Resumption r, Dbg dbg, boolean def, int bndres, Env e, Object lhs, Object rhs) {
+	Object bind(Resumption r, Dbg dbg, boolean def, int bndRes, Env e, Object lhs, Object rhs) {
 			try {
-				var res = r != null ? r.resume() : pipe(null, ()-> bind2(def, bndres, e, lhs, rhs), obj-> bndres == 0 ? inert : obj);
-				return res instanceof Suspension s ? s.suspend(dbg, rr-> bind(rr, dbg, def, bndres, e, lhs, rhs)) : res;
+				var res = r != null ? r.resume() : pipe(null, ()-> bind2(def, bndRes, e, lhs, rhs), obj-> bndRes == 0 ? inert : obj);
+				return res instanceof Suspension s ? s.suspend(dbg, rr-> bind(rr, dbg, def, bndRes, e, lhs, rhs)) : res;
 			}
 			catch (BindException be) {
 				return matchError(
@@ -643,17 +643,17 @@ public class Vm {
 				);
 			}
 	}
-	Object bind2(boolean def, int bndres, Env e, Object lhs, Object rhs) {
+	Object bind2(boolean def, int bndRes, Env e, Object lhs, Object rhs) {
 		return switch (lhs) {
 			case Ignore i-> rhs;
-			case Symbol s-> { var v = def ? e.def(s, rhs) : e.set(s, rhs); yield bndres == 2 ? v : rhs; }  
+			case Symbol s-> { var v = def ? e.def(s, rhs) : e.set(s, rhs); yield bndRes == 2 ? v : rhs; }  
 			case Keyword k-> {
 				if (k.equals(rhs)) yield rhs;
 				throw new BindException("expected keyword: {expected}, found: {datum}", "expected", k, "datum", rhs);
 			}
 			case null-> {
 				if (rhs == null) yield null;
-				throw new BindException("expected {#operands} operand, found: {datum}", "#operands", -len(rhs), "datum", rhs);
+				throw new BindException("expected {operands} operand, found: {datum}", "operands", -len(rhs), "datum", rhs);
 			}
 			case Cons lc-> {
 				if (lc.car instanceof Symbol sym) switch (sym.name) {
@@ -666,14 +666,14 @@ public class Vm {
 						lmd-> getTco(evaluate(env(e, "+", more, "||", lmd, "or", lmd), lc.car(1))),
 						chk-> check("check", rhs == null ? (List) rhs : rhs instanceof List l ? l : list(rhs), list(chk)),
 						obj-> obj instanceof Integer i
-							? bind2(def, bndres, e, lc.car(2), rhs)
+							? bind2(def, bndRes, e, lc.car(2), rhs)
 							: typeError("not an integer: {datum}", obj, symbol("Integer"))
 					);
 				}
-				if (!(rhs instanceof Cons rc)) throw new BindException("expected {#operands} operand, found: {datum}", "#operands", len(lc), "datum", rhs);
+				if (!(rhs instanceof Cons rc)) throw new BindException("expected {operands} operand, found: {datum}", "operands", len(lc), "datum", rhs);
 				yield pipe(null,
-					()-> bind2(def, bndres, e, lc.car, rc.car),
-					obj-> lc.cdr() == null && rc.cdr() == null ? obj : bind2(def, bndres, e, lc.cdr(), rc.cdr())
+					()-> bind2(def, bndRes, e, lc.car, rc.car),
+					obj-> lc.cdr() == null && rc.cdr() == null ? obj : bind2(def, bndRes, e, lc.cdr(), rc.cdr())
 				);
 			}
 			default-> {
@@ -688,11 +688,11 @@ public class Vm {
 	interface Combinable { <T> T combine(Env e, List o); }
 	
 	Object combine(Env e, Object op, List o) {
-		if (prtrc >= 5) print(" combine: ", indent(), op, " ", o /*, "   ", e*/);
+		if (prTrc >= 5) print(" combine: ", indent(), op, " ", o /*, "   ", e*/);
 		if (op instanceof Combinable cmb) return cmb.combine(e, o);
 		// per default le jFun nude sono considerate applicative
 		if (isjFun(op)) return new Apv(new JFun(op)).combine(e, o);
-		return aquote ? cons(op, o) : typeError("not a combiner: {datum} in: " + cons(op, o), op, symbol("Combinable"));
+		return aQuote ? cons(op, o) : typeError("not a combiner: {datum} in: " + cons(op, o), op, symbol("Combinable"));
 	}
 	
 	class Opv implements Combinable  {
@@ -734,9 +734,10 @@ public class Vm {
 		: isjFun(arg) ? new JFun(arg)
 		: typeError("cannot unwrap: {datum}", arg, symbol("Apv"));
 	}
-	Apv lambda(Env e, Object pt, List body) { return new Apv(new Opv(e, pt, ignore, body)); }
-	Apv Apv1(Env e, Symbol sym, List body) { return lambda(e, list(sym), body); }
-	Apv Apv0(Env e, List body) { return lambda(e, null, body); }
+	Opv opv(Env e, Object pt, Object pe, List body) { return new Opv(e, pt, pe, body); } 
+	Apv lambda(Env e, Object pt, List body) { return new Apv(opv(e, pt, ignore, body)); }
+	Apv apv1(Env e, Symbol sym, List body) { return lambda(e, list(sym), body); }
+	Apv apv0(Env e, List body) { return lambda(e, null, body); }
 	
 	
 	// Built-in Combiners
@@ -763,19 +764,19 @@ public class Vm {
 			if (pt instanceof Cons) { var msg = checkPt(cons(this, o), pt); if (msg != null) return msg; }
 			var dbg = dbg(e, this, o);
 			return pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> 
-				switch (bndres(len != 3 ? null : o.car(1))) {
+				switch (bndRes(len != 3 ? null : o.car(1))) {
 					case Suspension s-> s;
-					case Integer i-> i >= 0 && i <= 2 ? bind(dbg, def, i, e, pt, res) : typeError("invalid bndres value: {datum}", i, toChk(or(0, 1, 2)));
+					case Integer i-> i >= 0 && i <= 2 ? bind(dbg, def, i, e, pt, res) : typeError("invalid bndRes value: {datum}", i, toChk(or(0, 1, 2)));
 					case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
 				}
 			);
 			/*
 			return pipe(dbg,
 				()-> getTco(evaluate(e, o.car(len-1))),
-				res-> $(res, bndres(len != 3 ? null : o.car(1))),
+				res-> $(res, bndRes(len != 3 ? null : o.car(1))),
 				res-> switch ($n(res, 1)) {
 					case Integer i when i >= 0 || i <= 2-> bind(dbg, def, i, e, pt, $n(res, 0));
-					case Integer i -> typeError("invalid bndres value: {datum}", i, toChk(or(0, 1, 2)));
+					case Integer i -> typeError("invalid bndRes value: {datum}", i, toChk(or(0, 1, 2)));
 					case Object obj-> typeError("not an integer: {datum}", obj, symbol("Integer"));
 				}
 			);
@@ -804,9 +805,9 @@ public class Vm {
 		}
 		Object begin(Resumption r, Env e, List list) {
 			for (var first = true;;) { // only one resume for suspension
-				if (prtrc >= 3 && root && r == null) print("\n--------");
+				if (prTrc >= 3 && root && r == null) print("\n--------");
 				var car = list.car;
-				if (prtrc == 2 && root && r == null) print("evaluate: ", car);
+				if (prTrc == 2 && root && r == null) print("evaluate: ", car);
 				if (list.cdr() == null) { return evaluate(e, car); } 
 				var res = first && r != null && !(first = false) ? r.resume() : getTco(evaluate(e, car));
 				if (res instanceof Suspension s) { var l = list; return s.suspend(dbg(e, this, list.car), rr-> begin(rr, e, l)); }
@@ -834,7 +835,7 @@ public class Vm {
 		public String toString() { return "%If"; }
 	}
 	Object istrue(Object res) {
-		return switch (ttrue) {
+		return switch (tTrue) {
 			case 0-> res instanceof Boolean b ? b : typeError("not a boolean: {datum}", res, symbol("Boolean")); // Kernel, Wat, Lispx
 			case 1-> !Utility.equals(res, false); // Scheme, Guile, Racket
 			case 2-> !Utility.equals(res, false, null);
@@ -864,14 +865,14 @@ public class Vm {
 			// (catchTag tag . forms)        -> (%catch tag  () . forms)
 			// (catchWth hdl . forms)        -> (%catch #_  hdl . forms)
 			// (catchTagWth tag hdl . forms) -> (%catch tag hdl . forms)
-			var chk = !ctapv ? checkM(this, o, 2) : checkN(this, o, 3, Any.class, hdlany ? Any.class : or(null, Apv1.class), Apv0.class);
+			var chk = !ctApv ? checkM(this, o, 2) : checkN(this, o, 3, Any.class, hdlAny ? Any.class : or(null, Apv1.class), Apv0.class);
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
-			return pipe(dbg(e, this, o), ()-> ctapv ? o.car() : getTco(evaluate(e, o.car())), tag-> combine(null, e, tag, o.car(1), o.cdr(1)) ); 
+			return pipe(dbg(e, this, o), ()-> ctApv ? o.car() : getTco(evaluate(e, o.car())), tag-> combine(null, e, tag, o.car(1), o.cdr(1)) ); 
 		}
 		private Object combine(Resumption r, Env e, Object tag, Object hdl, List xs) {
 			try {
-				var res = r != null ? r.resume() : getTco(!ctapv ? begin.combine(e, xs) : Vm.this.combine(e, xs.car(), null));
+				var res = r != null ? r.resume() : getTco(!ctApv ? begin.combine(e, xs) : Vm.this.combine(e, xs.car(), null));
 				return res instanceof Suspension s ? s.suspend(dbg(e, this, tag, xs, hdl), rr-> combine(rr, e, tag, hdl, xs)) : res;
 			}
 			catch (Throwable thw) {
@@ -882,11 +883,11 @@ public class Vm {
 			}
 		}
 		public Object combine2(Resumption r, Env e, Object tag, Object hdl, Throwable thw) {
-			Object res = r != null ? r.resume() : ctapv ? hdl : getTco(evaluate(e, hdl));
+			Object res = r != null ? r.resume() : ctApv ? hdl : getTco(evaluate(e, hdl));
 			if (res instanceof Suspension s) return s.suspend(dbg(e, this, tag, hdl), rr-> combine2(rr, e, tag, hdl, thw));
 			return res instanceof Apv apv && args(apv) == 1
 				? getTco(Vm.this.combine(e, unwrap(apv), list(thw instanceof Value val ? val.value : thw)))
-				: hdlany ? hdl : typeError("not a one arg applicative combiner: {datum}", hdl, symbol("Apv1"))
+				: hdlAny ? hdl : typeError("not a one arg applicative combiner: {datum}", hdl, symbol("Apv1"))
 			;
 		}
 		public String toString() { return "%CatchTagWth"; }
@@ -898,8 +899,8 @@ public class Vm {
 			if (!(chk instanceof Integer len)) return typeError("not an integer: {datum}", chk, symbol("Integer"));
 			var value = len == 1 ? inert : o.car(1);
 			var dbg = dbg(e, this, o);
-			return pipe(dbg, ()-> ctapv ? o.car() : getTco(evaluate(e, o.car())),
-				tag->{ throw new Value(tag, ctapv ? value : pipe(dbg, ()-> getTco(evaluate(e, value)))); }
+			return pipe(dbg, ()-> ctApv ? o.car() : getTco(evaluate(e, o.car())),
+				tag->{ throw new Value(tag, ctApv ? value : pipe(dbg, ()-> getTco(evaluate(e, value)))); }
 			);		
 		}
 		public String toString() { return "%ThrowTag"; }
@@ -996,7 +997,7 @@ public class Vm {
 			return new Apv( new Combinable() {
 				public Object combine(Env de, List o) { return combine(null, de, o); }
 				public Object combine(Resumption r, Env de, List o) {
-					var vals = o == null ? apply(a-> { if (boxdft != null) fill(a, boxdft); return a; }, new Object[len]) : array(o);
+					var vals = o == null ? apply(a-> { if (boxDft != null) fill(a, boxDft); return a; }, new Object[len]) : array(o);
 					if (vals.length != len) return error("not same length: " + list(vars) + " and " + o);
 					var olds = new Object[len];
 					var ndvs = new Object[len];
@@ -1009,7 +1010,7 @@ public class Vm {
 					for (int i=0; i<len; i+=1) {
 						if (ndvs[i] instanceof DVar dvar) dvar.value = vals[i]; else de.def(vars[i], new DVar(vals[i]));
 					}
-					if (body == null) return switch (bndres) { case 0-> inert; case 1-> vals[len-1]; case 2-> olds[len-1]; default-> 1; };  
+					if (body == null) return switch (bndRes) { case 0-> inert; case 1-> vals[len-1]; case 2-> olds[len-1]; default-> 1; };  
 					try {
 						Object res = r != null ? r.resume() : getTco(begin.combine(e, body));
 						return res instanceof Suspension s ? s.suspend(dbg(e, this, o), rr-> combine(rr, e, o)) : res;
@@ -1243,8 +1244,8 @@ public class Vm {
 		var rst = max != more || chks.length <= min ? 0 : (len - min) % (chks.length - min); 
 		if (len >= min && len <= max && rst == 0) return len;
 		return rst != 0
-			? matchError("expected {#operands} operand at end of: " + o, "#operands", rst)
-			: matchError("expected {#operands} operand combining: " + toString(op) + " with: " + toString(o), "#operands", len<min ? min-len : max-len)
+			? matchError("expected {operands} operand at end of: " + o, "operands", rst)
+			: matchError("expected {operands} operand combining: " + toString(op) + " with: " + toString(o), "operands", len<min ? min-len : max-len)
 		;
 	}
 	Object checkT(Resumption r, Object op, List o, int min, int max, List ol, int i, Object ... chks) {
@@ -1421,7 +1422,7 @@ public class Vm {
 	}
 	class Assert implements Combinable {
 		public Object combine(Env env, List o) {
-			if (!doasrt) return true;
+			if (!doAsrt) return true;
 			var chk = checkR(this, o, 1, 2); // o = (x) | (x v)
 			if (!(chk instanceof Integer len)) return chk;
 			return test.combine(env, cons(null, o));
@@ -1431,7 +1432,7 @@ public class Vm {
 	Assert vmAssert = new Assert();
 	class Test implements Combinable {
 		public Object combine(Env env, List o) {
-			if (!doasrt) return true;
+			if (!doAsrt) return true;
 			var chk = checkR(this, o, 2, 3); // o = (name x) | (name x v)
 			if (!(chk instanceof Integer len)) return chk;
 			var name = eIfnull(o.car(), n-> "test "+ n + ": ");
@@ -1448,7 +1449,7 @@ public class Vm {
 			}
 			catch (Throwable thw) {
 				if (len == 2) return true;
-				if (prstk) thw.printStackTrace(out);
+				if (prStk) thw.printStackTrace(out);
 				else print(name, exp, " throw ", "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
 			}
 			return false;
@@ -1465,13 +1466,13 @@ public class Vm {
 	}
 	
 	Object parseBytecode(Object o) {
-		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore", "#_" -> ignore; default-> intern(instr ? s.intern() : s); };
+		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore", "#_" -> ignore; default-> intern(intStr ? s.intern() : s); };
 		if (o instanceof Object[] a) return parseBytecode(a);
 		return o;
 	}
 	Object parseBytecode(Object ... objs) {
 		if (objs.length == 0) return null;
-		if (objs.length == 2 && objs[0] != null && objs[0].equals("wat-string")) return instr ? ((String) objs[1]).intern() : objs[1];
+		if (objs.length == 2 && objs[0] != null && objs[0].equals("wat-string")) return intStr ? ((String) objs[1]).intern() : objs[1];
 		int i = objs.length - 1;
 		Object tail = null; 
 		if (i > 1 && objs[i-1] != null && objs[i-1].equals(".")) { tail = parseBytecode(objs[i]); i-=2; }
@@ -1516,148 +1517,154 @@ public class Vm {
 	
 	
 	// Bootstrap
-	Env vmEnv=env(), theEnv=env(vmEnv); {
-		bind(null, vmEnv, symbol("%def"), new Def(true));
-		bind(null, vmEnv, symbol("%begin"), begin);
-		getTco(evaluate(vmEnv, parseBytecode(
-				$("%begin",
-					// Basics
-					$("%def", "%vau", new Vau()),
-					$("%def", "%set!", new Def(false)),
-					$("%def", "%eval", wrap(new Eval())),
-					$("%def", "%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, list(or(list(0), list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class), Any.class)))), (l,o)-> l == 0 ? env() : env(o.car(), array(o.cdr())) ))),
-					$("%def", "%wrap", wrap(new JFun("%Wrap", (Function) this::wrap))),
-					$("%def", "%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap))),
-					$("%def", "%value", wrap(new JFun("%Value", (n,o)-> checkN(n, o, 2, Symbol.class, Env.class), (l,o)-> o.<Env>car(1).lookup(o.car()).value) )),
-					$("%def", "%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, Symbol.class, Env.class), (l,o)-> o.<Env>car(1).lookup(o.car()).isBound) )),
-					$("%def", "%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind2(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (RuntimeException rte) { return false; }} ))),
-					$("%def", "%apply", wrap(new JFun("%Apply", (n,o)-> checkR(n, o, 2, 3, Combinable.class, Any.class, Env.class), (l,o)-> combine(l == 2 ? env() : o.car(2), unwrap(o.car()), o.car(1)) ))),
-					$("%def", "%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(), unwrap(o.car()), o.cdr()) ))),
-					$("%def", "%apply**", wrap(new JFun("%Apply**", (ArgsList) o-> combine(env(), unwrap(o.car()), (List) listStar(o.cdr())) ))),
-					$("%def", "%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } ))),
-					$("%def", "%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnv = env(theEnv)))),
-					$("%def", "%popEnv", wrap(new JFun("%PopEnv", (Supplier) ()-> theEnv = theEnv.parent))),
-					// Values
-					$("%def", "%car", wrap(new JFun("%Car", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().car() ))),
-					$("%def", "%cdr", wrap(new JFun("%Car", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().cdr() ))),
-					$("%def", "%cadr", wrap(new JFun("%Cadr", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().car(1) ))),
-					$("%def", "%cddr", wrap(new JFun("%Cddr", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().cdr(1) ))),
-					$("%def", "%cons", wrap(new JFun("%Cons", (BiFunction) (car,cdr)-> cons(car,cdr) ))),
-					$("%def", "%null?", wrap(new JFun("%Null?", (Function<Object, Boolean>) obj-> obj == null))),
-					$("%def", "%cons?", wrap(new JFun("%Cons?", (Function<Object, Boolean>) obj-> obj instanceof Cons))),
-					$("%def", "%list?", wrap(new JFun("%List?", (Function<Object, Boolean>) obj-> obj instanceof List))),
-					$("%def", "%symbol", wrap(new JFun("%Symbol", (n,o)-> checkN(n, o, 1, String.class), (l,o)-> symbol(o.car()) ))),
-					$("%def", "%symbol?", wrap(new JFun("%Symbol?", (Function<Object, Boolean>) obj-> obj instanceof Symbol ))),
-					$("%def", "%keyword", wrap(new JFun("%Keyword", (n,o)-> checkN(n, o, 1, String.class), (l,o)-> keyword(o.car()) ))),
-					$("%def", "%keyword?", wrap(new JFun("%Keyword?", (Function<Object, Boolean>) obj-> obj instanceof Keyword ))),
-					$("%def", "%intern", wrap(new JFun("%Intern", (n,o)-> checkN(n, o, 1, String.class), (l,o)-> intern(o.car()) ))),
-					$("%def", "%intern?", wrap(new JFun("%Intern?", (Function<Object, Boolean>) obj-> obj instanceof Intern ))),
-					$("%def", "%internName", wrap(new JFun("%InternName", (n,o)-> checkN(n, o, 1, Intern.class), (l,o)-> o.<Intern>car().name ))),
-					// First-order Control
-					$("%def", "%if", new If()),
-					$("%def", "%loop", new Loop()),
-					$("%def", "%catchTagWth", apply(c-> !ctapv ? c : wrap(c), new CatchTagWth())),
-					$("%def", "%throwTag", apply(t-> !ctapv ? t : wrap(t), new ThrowTag())),
-					$("%def", "%finally", new Finally()),
-					// Delimited Control
-					$("%def", "%takeSubcont", new TakeSubcont()),
-					$("%def", "%pushPrompt", new PushPrompt()),
-					$("%def", "%pushDelimSubcont", wrap(new PushDelimSubcont())),
-					$("%def", "%pushSubcontBarrier", wrap(new JFun("%PushSubcontBarrier", (n,o)-> checkM(n, o, 2, Env.class), (l,o)-> pushSubcontBarrier(null, o.car(), cons(begin, o.cdr())) ))),
-					// Dynamically-Scoped Variables
-					$("%def", "%newBox", wrap(new JFun("%NewBox", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new Box(l == 0 ? boxdft : o.car)))),
-					$("%def", "%newDVar", wrap(new JFun("%NewDVar", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new DVar(l == 0 ? boxdft : o.car)))),
-					$("%def", "%dVal", wrap(new JFun("%DVal", (n,o)-> checkR(n, o, 1, 2, DVar.class), (l,o)-> apply(dv-> l == 1 ? dv.value : (dv.value=o.car(1)), o.<DVar>car()) ))),
-					$("%def", "%d\\", new DLambda()),
-					// Errors
-					$("%def", "%rootPrompt", rootPrompt),
-					$("%def", "%error", wrap(new JFun("%Error", (ArgsList) o-> ((ArgsList) at("error")).apply(listStar(this, o))))),
-					// Java Interface
-					$("%def", "%jFun?", wrap(new JFun("%JFun?", (Function<Object,Boolean>) this::isjFun))),
-					$("%def", "%at", wrap(new JFun("%At", (Function<String,Object>) this::at))),
-					$("%def", "%dot", wrap(new JFun("%Dot", (Function<String,Object>) this::dot))),
-					$("%def", "%instanceOf?", wrap(new JFun("%InstanceOf?", (n,o)-> checkN(n, o, 2, Any.class, Class.class), (l,o)-> o.<Class>car(1).isInstance(o.car()) ))),
-					// Object System
-					$("%def", "%addMethod", wrap(new JFun("%AddMethod", (n,o)-> checkN(n, o, 3, or(null, Class.class), Symbol.class, Apv.class), (l,o)-> addMethod(o.car(), o.car(1), o.car(2)) ))),
-					$("%def", "%getMethod", wrap(new JFun("%GetMethod", (n,o)-> checkN(n, o, 2, or(null, Class.class), Symbol.class), (l,o)-> getMethod(o.car(), o.car(1)) ))),
-					$("%def", "%new", wrap(new JFun("%New", (n,o)-> checkM(n, o, 1, or(list(2, Box.class), list(1, more, Obj.class, or(Symbol.class, Keyword.class), Any.class))), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr())) ))),
-					// TODO this %new! with reduced controls only for (%new! HandlerFrame ...) in lispx::makeHandlerBindOperator di cond-sys.lispx
-					$("%def", "%new!", wrap(new JFun("%New!", (n,o)-> checkM(n, o, 1, or(Box.class, Obj.class) /*,  or(list(or(Symbol.class, Keyword.class), Any.class), list(1, Any.class)) */), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr())) ))),
-					$("%def", "%newClass", wrap(new JFun("%NewClass", (n,o)-> checkR(n, o, 1, 2, Symbol.class, or(Box.class, Obj.class)), (l,o)-> extend(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr())) ))),
-					$("%def", "%subClass?", wrap(new JFun("%SubClass?", (n,o)-> checkN(n, o, 2, Class.class, Class.class), (l,o)-> o.<Class>car(1).isAssignableFrom(o.car()) ))),
-					$("%def", "%type?",  wrap(new JFun("%Type?", (n,o)-> checkN(n, o, 2, Any.class, or(null, Class.class)), (l,o)-> apply((o1, c)-> c == null ? o1 == null /*: o1 == null ? !c.isPrimitive()*/ : o1 != null && c.isAssignableFrom(o1.getClass()), o.car(), o.<Class>car(1)) ))),
-					$("%def", "%classOf", wrap(new JFun("%ClassOf", (n,o)-> checkN(n, o, 1), (l,o)-> apply(o1-> o1 == null ? null : o1.getClass(), o.car()) ))),
-					$("%def", "%the", wrap(new JFun("%The", (n,o)-> checkN(n, o, 2, Class.class), (l,o)-> o.<Class>car().isInstance(o.car(1)) ? o.car(1) : typeError("not a {expected}: {datum}", o.car(1), symbol(o.<Class>car().getSimpleName())) ))),
-					// Utilities
-					$("%def", "%list", wrap(new JFun("%List", (ArgsList) o-> o))),
-					$("%def", "%list*", wrap(new JFun("%List*", (ArgsList) this::listStar))),
-					$("%def", "%len", wrap(new JFun("%Len", (n,o)-> checkM(n, o, 1, or(null, List.class)), (l,o)-> len(o.car()) ))),
-					$("%def", "%list->array", wrap(new JFun("%List->array", (n,o)-> checkM(n, o, 1, List.class), (l,o)-> array(o.car()) ))),
-					$("%def", "%array->list", wrap(new JFun("%Array->list", (n,o)-> checkM(n, o, 1, Boolean.class, Object[].class), (l,o)-> list(o.car(), o.car(1)) ))),
-					$("%def", "%reverse", wrap(new JFun("%Reverse", (n,o)-> checkM(n, o, 1, or(null, List.class)), (l,o)-> reverse(o.car()) ))),
-					$("%def", "%append", wrap(new JFun("%Append", (n,o)-> checkM(n, o, 2, or(null, List.class)), (l,o)-> append(o.car(),o.car(1)) ))),
-					// 
-					$("%def", "%$", wrap(new JFun("%$", (BiFunction<Object,Object,String>) (a,b)-> Vm.this.toString(a) + Vm.this.toString(b)))),
-					$("%def", "%+", wrap(new JFun("%+", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Pls, o.car(), o.car(1)) ))),
-					$("%def", "%*", wrap(new JFun("%*", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Pwr, o.car(), o.car(1)) ))),
-					$("%def", "%-", wrap(new JFun("%-", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Mns, o.car(), o.car(1)) ))),
-					$("%def", "%/", wrap(new JFun("%/", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Dvd, o.car(), o.car(1)) ))),
-					$("%def", "%%", wrap(new JFun("%%", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Rst, o.car(), o.car(1)) ))),
-					//
-					$("%def", "%!", wrap(new JFun("%!", (Function) a-> switch (istrue(a)) { case Suspension s-> s; case Boolean b-> !b; case Object obj-> typeError("not a boolean: {datum}", obj, symbol("Boolean")); }))),
-					$("%def", "%!!", wrap(new JFun("%!!", (Function) a-> switch (istrue(a)) { case Suspension s-> s; case Boolean b-> b; case Object obj-> typeError("not a boolean: {datum}", obj, symbol("Boolean")); }))),
-					$("%def", "%<", wrap(new JFun("%<", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Ls, o.car(), o.car(1)) ))),
-					$("%def", "%>", wrap(new JFun("%>", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Gt, o.car(), o.car(1)) ))),
-					$("%def", "%<=", wrap(new JFun("%<=", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Le, o.car(), o.car(1)) ))),
-					$("%def", "%>=", wrap(new JFun("%>=", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Ge, o.car(), o.car(1)) ))),
-					//
-					$("%def", "%~", wrap(new JFun("%~", (n,o)-> checkN(n, o, 1, Integer.class), (l,o)-> ~o.<Integer>car() ))),
-					$("%def", "%&", wrap(new JFun("%&", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(And, o.car(), o.car(1)) ))),
-					$("%def", "%|", wrap(new JFun("%|", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Or, o.car(), o.car(1)) ))),
-					$("%def", "%^", wrap(new JFun("%^", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Xor, o.car(), o.car(1)) ))),
-					$("%def", "%<<", wrap(new JFun("%<<", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Sl, o.car(), o.car(1)) ))),
-					$("%def", "%>>", wrap(new JFun("%>>", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Sr, o.car(), o.car(1)) ))),
-					$("%def", "%>>>", wrap(new JFun("%>>>", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Sr0, o.car(), o.car(1)) ))),
-					//
-					$("%def", "%==", wrap(new JFun("%==", (BiFunction<Object,Object,Boolean>) (a,b)-> a instanceof Number ? a.equals(b) : a == b ))),
-					$("%def", "%!=", wrap(new JFun("%!=", (BiFunction<Object,Object,Boolean>) (a,b)-> a instanceof Number ? !a.equals(b) : a != b ))),
-					$("%def", "%eq?", wrap(new JFun("%Eq?", (BiFunction<Object,Object,Boolean>) (a,b)-> Vm.this.equals(a, b) ))),
-					//
-					$("%def", "%theEnv", $("%vau", null, "env", "env")),
-					$("%def", "%'", $("%vau", $("arg"), ignore, "arg")),
-					$("%def", "%\\", $("%vau", $("formals", ".", "body"), "env", $("%wrap", $("%eval", $("%list*", "%vau", "formals", ignore, "body"), "env")) )),
-					//
-					$("%def", "vm", this),
-					$("%def", "%test", test),
-					$("%def", "%assert", vmAssert),
-					$("%def", "toString", wrap(new JFun("ToString", (Function<Object,String>) obj-> toString(obj)))),
-					$("%def", "log", wrap(new JFun("Log", (ArgsList) o-> log(array(o))))),
-					$("%def", "print", wrap(new JFun("Print", (ArgsList) o-> print(array(o))))),
-					$("%def", "write", wrap(new JFun("Write", (ArgsList) o-> write(array(o))))),
-					$("%def", "load", wrap(new JFun("Load", (Function<String, Object>) nf-> uncked(()-> loadText(nf))))),
-					$("%def", "read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> cons(begin, parseBytecode(uncked(()-> parse(read(l == 0 ? 0 : o.<Integer>car())))))))),
-					$("%def", "dotco", wrap(new JFun("Dotco", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? dotco : inert(dotco=o.car()) ))),
-					$("%def", "doasrt",  wrap(new JFun("Doasrt", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doasrt : inert(doasrt=o.car()) ))),
-					$("%def", "ctapv", wrap(new JFun("Ctapv",
-						(n,o)-> checkR(n, o, 0, 1, Boolean.class),
-						(l,o)-> l == 0 ? ctapv
-								: inert(ctapv = o.car(),
-									bind(null, theEnv,
-										list(symbol("%catch"), symbol("%throw")),
-										list((Object) apply(c-> !ctapv ? c : wrap(c), new CatchTagWth()),
-											 (Object) apply(t-> !ctapv ? t : wrap(t), new ThrowTag())))) ))),
-					$("%def", "prtrc", wrap(new JFun("Prtrc", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4, 5, 6)), (l,o)-> l == 0 ? prtrc : inert(start=level-(dotco ? 0 : 3), prtrc=o.car()) ))),
-					$("%def", "ttrue", wrap(new JFun("Ttrue", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4)), (l,o)-> l == 0 ? ttrue : inert(ttrue=o.car()) ))),
-					$("%def", "bndres", wrap(new JFun("Bndres", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2)), (l,o)-> l == 0 ? bndres : inert(bndres=o.car()) ))),
-					$("%def", "prenv", wrap(new JFun("Prenv", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? prenv : inert(prenv=o.car()) ))),
-					$("%def", "else1", wrap(new JFun("Else1", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? else1 : inert(else1=o.car()) ))),
-					$("%def", "boxdft", wrap(new JFun("Boxdft", (n,o)-> checkR(n, o, 0, 1), (l,o)-> l == 0 ? boxdft : inert(boxdft=o.car()) ))),
-					$("%def", "aquote", wrap(new JFun("Aquote", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? aquote : inert(aquote=o.car()) ))),
-					$("%def", "prstk", wrap(new JFun("Prstk", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prstk : inert(prstk=o.car()) ))),
-					$("%def", "prwrn", wrap(new JFun("Prwrn", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prwrn : inert(prwrn=o.car()) ))),
-					$("%def", "hdlany", wrap(new JFun("Hdlany", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? hdlany : inert(hdlany=o.car()) )))
-				)
-		)));
+	Env vmEnv=vmEnv(), theEnv=env(vmEnv);
+	Env vmEnv() {
+		Env vmEnv = env();
+		return (Env) vmEnv.apply(
+			list(keyword(":obj"),
+				// Basics
+				"%def", new Def(true),
+				"%begin", begin,
+				"%vau", new Vau(),
+				"%set!", new Def(false),
+				"%eval", wrap(new Eval()),
+				"%vmEnv", wrap(new JFun("%VmEnv", (n,o)-> checkN(n, o, 0), (l,o)-> vmEnv() )),
+				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, list(or(list(0), list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class), Any.class)))), (l,o)-> l == 0 ? env() : env(o.car(), array(o.cdr())) )),
+				"%wrap", wrap(new JFun("%Wrap", (Function) this::wrap)),
+				"%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap)),
+				"%value", wrap(new JFun("%Value", (n,o)-> checkN(n, o, 2, Symbol.class, Env.class), (l,o)-> o.<Env>car(1).lookup(o.car()).value) ),
+				"%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, Symbol.class, Env.class), (l,o)-> o.<Env>car(1).lookup(o.car()).isBound) ),
+				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind2(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (RuntimeException rte) { return false; }} )),
+				"%apply", wrap(new JFun("%Apply", (n,o)-> checkR(n, o, 2, 3, Combinable.class, Any.class, Env.class), (l,o)-> combine(l == 2 ? env() : o.car(2), unwrap(o.car()), o.car(1)) )),
+				"%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(), unwrap(o.car()), o.cdr()) )),
+				"%apply**", wrap(new JFun("%Apply**", (ArgsList) o-> combine(env(), unwrap(o.car()), (List) listStar(o.cdr())) )),
+				"%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } )),
+				"%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnv = env(theEnv))),
+				"%popEnv", wrap(new JFun("%PopEnv", (Supplier) ()-> theEnv = theEnv.parent)),
+				// Values
+				"%car", wrap(new JFun("%Car", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().car() )),
+				"%cdr", wrap(new JFun("%Car", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().cdr() )),
+				"%cadr", wrap(new JFun("%Cadr", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().car(1) )),
+				"%cddr", wrap(new JFun("%Cddr", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().cdr(1) )),
+				"%cons", wrap(new JFun("%Cons", (BiFunction) (car,cdr)-> cons(car,cdr) )),
+				"%null?", wrap(new JFun("%Null?", (Function<Object, Boolean>) obj-> obj == null)),
+				"%cons?", wrap(new JFun("%Cons?", (Function<Object, Boolean>) obj-> obj instanceof Cons)),
+				"%list?", wrap(new JFun("%List?", (Function<Object, Boolean>) obj-> obj instanceof List)),
+				"%symbol", wrap(new JFun("%Symbol", (n,o)-> checkN(n, o, 1, String.class), (l,o)-> symbol(o.car()) )),
+				"%symbol?", wrap(new JFun("%Symbol?", (Function<Object, Boolean>) obj-> obj instanceof Symbol )),
+				"%keyword", wrap(new JFun("%Keyword", (n,o)-> checkN(n, o, 1, String.class), (l,o)-> keyword(o.car()) )),
+				"%keyword?", wrap(new JFun("%Keyword?", (Function<Object, Boolean>) obj-> obj instanceof Keyword )),
+				"%intern", wrap(new JFun("%Intern", (n,o)-> checkN(n, o, 1, String.class), (l,o)-> intern(o.car()) )),
+				"%intern?", wrap(new JFun("%Intern?", (Function<Object, Boolean>) obj-> obj instanceof Intern )),
+				"%internName", wrap(new JFun("%InternName", (n,o)-> checkN(n, o, 1, Intern.class), (l,o)-> o.<Intern>car().name )),
+				// First-order Control
+				"%if", new If(),
+				"%loop", new Loop(),
+				"%catchTagWth", apply(c-> !ctApv ? c : wrap(c), new CatchTagWth()),
+				"%throwTag", apply(t-> !ctApv ? t : wrap(t), new ThrowTag()),
+				"%finally", new Finally(),
+				// Delimited Control
+				"%takeSubcont", new TakeSubcont(),
+				"%pushPrompt", new PushPrompt(),
+				"%pushDelimSubcont", wrap(new PushDelimSubcont()),
+				"%pushSubcontBarrier", wrap(new JFun("%PushSubcontBarrier", (n,o)-> checkM(n, o, 2, Env.class), (l,o)-> pushSubcontBarrier(null, o.car(), cons(begin, o.cdr())) )),
+				// Dynamically-Scoped Variables
+				"%newBox", wrap(new JFun("%NewBox", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new Box(l == 0 ? boxDft : o.car))),
+				"%newDVar", wrap(new JFun("%NewDVar", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new DVar(l == 0 ? boxDft : o.car))),
+				"%dVal", wrap(new JFun("%DVal", (n,o)-> checkR(n, o, 1, 2, DVar.class), (l,o)-> apply(dv-> l == 1 ? dv.value : (dv.value=o.car(1)), o.<DVar>car()) )),
+				"%d\\", new DLambda(),
+				// Errors
+				"%rootPrompt", rootPrompt,
+				"%error", wrap(new JFun("%Error", (ArgsList) o-> ((ArgsList) at("error")).apply(listStar(this, o)))),
+				// Java Interface
+				"%jFun?", wrap(new JFun("%JFun?", (Function<Object,Boolean>) this::isjFun)),
+				"%at", wrap(new JFun("%At", (Function<String,Object>) this::at)),
+				"%dot", wrap(new JFun("%Dot", (Function<String,Object>) this::dot)),
+				"%instanceOf?", wrap(new JFun("%InstanceOf?", (n,o)-> checkN(n, o, 2, Any.class, Class.class), (l,o)-> o.<Class>car(1).isInstance(o.car()) )),
+				// Object System
+				"%addMethod", wrap(new JFun("%AddMethod", (n,o)-> checkN(n, o, 3, or(null, Class.class), Symbol.class, Apv.class), (l,o)-> addMethod(o.car(), o.car(1), o.car(2)) )),
+				"%getMethod", wrap(new JFun("%GetMethod", (n,o)-> checkN(n, o, 2, or(null, Class.class), Symbol.class), (l,o)-> getMethod(o.car(), o.car(1)) )),
+				"%new", wrap(new JFun("%New", (n,o)-> checkM(n, o, 1, or(list(2, Box.class), list(1, more, Obj.class, or(Symbol.class, Keyword.class), Any.class))), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr())) )),
+				// TODO this %new! with reduced controls only for:
+				//		(%new! HandlerFrame ...) in (def\ lispx::makeHandlerBindOperator ...) di cond-sys.lispx
+				//		(%new! RestartHandler ...) in (def restartBind ...) di cond-sys.lispx
+				"%new!", wrap(new JFun("%New!", (n,o)-> checkM(n, o, 1, or(Box.class, Obj.class)), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr())) )),
+				"%newClass", wrap(new JFun("%NewClass", (n,o)-> checkR(n, o, 1, 2, Symbol.class, or(Box.class, Obj.class)), (l,o)-> newClass(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr())) )),
+				"%subClass?", wrap(new JFun("%SubClass?", (n,o)-> checkN(n, o, 2, Class.class, Class.class), (l,o)-> o.<Class>car(1).isAssignableFrom(o.car()) )),
+				"%type?",  wrap(new JFun("%Type?", (n,o)-> checkN(n, o, 2, Any.class, or(null, Class.class)), (l,o)-> apply((o1, c)-> c == null ? o1 == null /*: o1 == null ? !c.isPrimitive()*/ : o1 != null && c.isAssignableFrom(o1.getClass()), o.car(), o.<Class>car(1)) )),
+				"%classOf", wrap(new JFun("%ClassOf", (n,o)-> checkN(n, o, 1), (l,o)-> apply(o1-> o1 == null ? null : o1.getClass(), o.car()) )),
+				"%the", wrap(new JFun("%The", (n,o)-> checkN(n, o, 2, Class.class), (l,o)-> o.<Class>car().isInstance(o.car(1)) ? o.car(1) : typeError("not a {expected}: {datum}", o.car(1), symbol(o.<Class>car().getSimpleName())) )),
+				// Utilities
+				"%list", wrap(new JFun("%List", (ArgsList) o-> o)),
+				"%list*", wrap(new JFun("%List*", (ArgsList) this::listStar)),
+				"%len", wrap(new JFun("%Len", (n,o)-> checkM(n, o, 1, or(null, List.class)), (l,o)-> len(o.car()) )),
+				"%list->array", wrap(new JFun("%List->array", (n,o)-> checkM(n, o, 1, List.class), (l,o)-> array(o.car()) )),
+				"%array->list", wrap(new JFun("%Array->list", (n,o)-> checkM(n, o, 1, Boolean.class, Object[].class), (l,o)-> list(o.car(), o.car(1)) )),
+				"%reverse", wrap(new JFun("%Reverse", (n,o)-> checkM(n, o, 1, or(null, List.class)), (l,o)-> reverse(o.car()) )),
+				"%append", wrap(new JFun("%Append", (n,o)-> checkM(n, o, 2, or(null, List.class)), (l,o)-> append(o.car(),o.car(1)) )),
+				// String
+				"%$", wrap(new JFun("%$", (BiFunction<Object,Object,String>) (a,b)-> Vm.this.toString(a) + Vm.this.toString(b))),
+				// Math
+				"%+", wrap(new JFun("%+", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Pls, o.car(), o.car(1)) )),
+				"%*", wrap(new JFun("%*", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Pwr, o.car(), o.car(1)) )),
+				"%-", wrap(new JFun("%-", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Mns, o.car(), o.car(1)) )),
+				"%/", wrap(new JFun("%/", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Dvd, o.car(), o.car(1)) )),
+				"%%", wrap(new JFun("%%", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Rst, o.car(), o.car(1)) )),
+				// Comparator
+				"%!", wrap(new JFun("%!", (Function) a-> switch (istrue(a)) { case Suspension s-> s; case Boolean b-> !b; case Object obj-> typeError("not a boolean: {datum}", obj, symbol("Boolean")); } )),
+				"%!!", wrap(new JFun("%!!", (Function) a-> switch (istrue(a)) { case Suspension s-> s; case Boolean b-> b; case Object obj-> typeError("not a boolean: {datum}", obj, symbol("Boolean")); } )),
+				"%<", wrap(new JFun("%<", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Ls, o.car(), o.car(1)) )),
+				"%>", wrap(new JFun("%>", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Gt, o.car(), o.car(1)) )),
+				"%<=", wrap(new JFun("%<=", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Le, o.car(), o.car(1)) )),
+				"%>=", wrap(new JFun("%>=", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Ge, o.car(), o.car(1)) )),
+				// Bit
+				"%~", wrap(new JFun("%~", (n,o)-> checkN(n, o, 1, Integer.class), (l,o)-> ~o.<Integer>car() )),
+				"%&", wrap(new JFun("%&", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(And, o.car(), o.car(1)) )),
+				"%|", wrap(new JFun("%|", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Or, o.car(), o.car(1)) )),
+				"%^", wrap(new JFun("%^", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Xor, o.car(), o.car(1)) )),
+				"%<<", wrap(new JFun("%<<", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Sl, o.car(), o.car(1)) )),
+				"%>>", wrap(new JFun("%>>", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Sr, o.car(), o.car(1)) )),
+				"%>>>", wrap(new JFun("%>>>", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Sr0, o.car(), o.car(1)) )),
+				// Equals
+				"%==", wrap(new JFun("%==", (BiFunction<Object,Object,Boolean>) (a,b)-> a instanceof Number ? a.equals(b) : a == b )),
+				"%!=", wrap(new JFun("%!=", (BiFunction<Object,Object,Boolean>) (a,b)-> a instanceof Number ? !a.equals(b) : a != b )),
+				"%eq?", wrap(new JFun("%Eq?", (BiFunction<Object,Object,Boolean>) (a,b)-> Vm.this.equals(a, b) )),
+				// Derivated
+				"%theEnv", opv(vmEnv, null, symbol("env"), list(symbol("env"))),
+				"%'", opv(vmEnv, list(symbol("arg")), ignore, list(symbol("arg"))),
+				"%\\", opv(vmEnv, cons(symbol("formals"), symbol("body")), symbol("env"), list(list(symbol("%wrap"), list(symbol("%eval"), list(symbol("%list*"), symbol("%vau"), symbol("formals"), ignore, symbol("body")), symbol("env")))) ),
+				// Extra
+				"vm", this,
+				"%test", test,
+				"%assert", vmAssert,
+				"toString", wrap(new JFun("ToString", (Function<Object,String>) obj-> toString(obj) )),
+				"log", wrap(new JFun("Log", (ArgsList) o-> log(array(o)) )),
+				"print", wrap(new JFun("Print", (ArgsList) o-> print(array(o)) )),
+				"write", wrap(new JFun("Write", (ArgsList) o-> write(array(o)) )),
+				"load", wrap(new JFun("Load", (Function<String, Object>) nf-> uncked(()-> loadText(nf)) )),
+				"read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> cons(begin, parseBytecode(uncked(()-> parse(read(l == 0 ? 0 : o.<Integer>car()))))) )),
+				"doTco", wrap(new JFun("DoTco", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doTco : inert(doTco=o.car()) )),
+				"doAsrt",  wrap(new JFun("DoAsrt", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doAsrt : inert(doAsrt=o.car()) )),
+				"ctApv", wrap(new JFun("CtApv",
+							(n,o)-> checkR(n, o, 0, 1, Boolean.class),
+							(l,o)-> l == 0 ? ctApv
+									: inert(ctApv = o.car(),
+										bind(null, theEnv,
+											list(symbol("%catch"), symbol("%throw")),
+											list((Object) apply(c-> !ctApv ? c : wrap(c), new CatchTagWth()),
+												 (Object) apply(t-> !ctApv ? t : wrap(t), new ThrowTag())))) )),
+				"prTrc", wrap(new JFun("PrTrc", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4, 5, 6)), (l,o)-> l == 0 ? prTrc : inert(start=level-(doTco ? 0 : 3), prTrc=o.car()) )),
+				"tTrue", wrap(new JFun("TTrue", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4)), (l,o)-> l == 0 ? tTrue : inert(tTrue=o.car()) )),
+				"bndRes", wrap(new JFun("BndRes", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2)), (l,o)-> l == 0 ? bndRes : inert(bndRes=o.car()) )),
+				"prEnv", wrap(new JFun("PrEnv", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? prEnv : inert(prEnv=o.car()) )),
+				"else1", wrap(new JFun("Else1", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? else1 : inert(else1=o.car()) )),
+				"boxDft", wrap(new JFun("BoxDft", (n,o)-> checkR(n, o, 0, 1), (l,o)-> l == 0 ? boxDft : inert(boxDft=o.car()) )),
+				"aQuote", wrap(new JFun("AQuote", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? aQuote : inert(aQuote=o.car()) )),
+				"prStk", wrap(new JFun("PrStk", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prStk : inert(prStk=o.car()) )),
+				"prWrn", wrap(new JFun("PrWrn", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prWrn : inert(prWrn=o.car()) )),
+				"hdlAny", wrap(new JFun("HdlAny", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? hdlAny : inert(hdlAny=o.car()) ))
+			)
+		);
 	}
 	
 	
@@ -1689,15 +1696,15 @@ public class Vm {
 		}
 	}
 	public Object loadText(String fileName) throws Exception {
-		if (prtrc >= 1) print("\n--------: " + fileName);
+		if (prTrc >= 1) print("\n--------: " + fileName);
 		var v = eval(readText(fileName));
-		if (prtrc > 1) print("--------: " + fileName + " end");
+		if (prTrc > 1) print("--------: " + fileName + " end");
 		return v;
 	}
 	public Object loadBytecode(String fileName) throws Exception {
-		if (prtrc >= 1) print("\n--------: " + fileName);
+		if (prTrc >= 1) print("\n--------: " + fileName);
 		var v = exec(readBytecode(fileName));
-		if (prtrc > 1) print("--------: "  + fileName + " end");
+		if (prTrc > 1) print("--------: "  + fileName + " end");
 		return v;
 	}
 	public void repl() throws Exception {
@@ -1709,7 +1716,7 @@ public class Vm {
 					print(exec(parse(exp)));
 				}
 				catch (Throwable thw) {
-					if (prstk)
+					if (prStk)
 						thw.printStackTrace(out);
 					else if (thw instanceof ParseException pe)
 					    out.println("{&" + Utility.getMessage(pe) + "}"); 
