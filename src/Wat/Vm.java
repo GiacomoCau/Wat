@@ -506,8 +506,11 @@ public class Vm {
 			var msg = super.getMessage(); if (msg == null) return null;
 			var matcher = keyword.matcher(msg); if (!matcher.find()) return msg;
 			var sb = new StringBuffer(); do {
-				String s = matcher.group(1), k = toKey(s); var v = get(k);
-				matcher.appendReplacement(sb, Vm.this.toString(v != null || isBound(k) ? v :  "{"+ s +"}" ).replace("\\", "\\\\").replace("$", "\\$"));
+				String s = matcher.group(1);
+				var i = s.indexOf(","); 
+				var k = toKey(i == -1 ? s : s.substring(0, i));
+				var v = get(k);
+				matcher.appendReplacement(sb, (v != null || isBound(k) ? (i == -1 ? Vm.this.toString(v) : s.substring(i+1).formatted(v)) : "{"+ s +"}" ).replace("\\", "\\\\").replace("$", "\\$"));
 			} while(matcher.find());
 			matcher.appendTail(sb);
 			return sb.toString();
@@ -631,7 +634,7 @@ public class Vm {
 	}
 	Object bind(Resumption r, Dbg dbg, boolean def, int bndRes, Env e, Object lhs, Object rhs) {
 			try {
-				var res = r != null ? r.resume() : pipe(null, ()-> bind2(def, bndRes, e, lhs, rhs), obj-> bndRes == 0 ? inert : obj);
+				var res = r != null ? r.resume() : pipe(null, ()-> bind(def, bndRes, e, lhs, rhs), obj-> bndRes == 0 ? inert : obj);
 				return res instanceof Suspension s ? s.suspend(dbg, rr-> bind(rr, dbg, def, bndRes, e, lhs, rhs)) : res;
 			}
 			catch (BindException be) {
@@ -643,7 +646,7 @@ public class Vm {
 				);
 			}
 	}
-	Object bind2(boolean def, int bndRes, Env e, Object lhs, Object rhs) {
+	Object bind(boolean def, int bndRes, Env e, Object lhs, Object rhs) {
 		return switch (lhs) {
 			case Ignore i-> rhs;
 			case Symbol s-> { var v = def ? e.def(s, rhs) : e.set(s, rhs); yield bndRes == 2 ? v : rhs; }  
@@ -653,7 +656,7 @@ public class Vm {
 			}
 			case null-> {
 				if (rhs == null) yield null;
-				throw new BindException("expected {operands} operand, found: {datum}", "operands", -len(rhs), "datum", rhs);
+				throw new BindException("expected {operands,%+d} operand, found: {datum}", "operands", -len(rhs), "datum", rhs);
 			}
 			case Cons lc-> {
 				if (lc.car instanceof Symbol sym) switch (sym.name) {
@@ -666,14 +669,14 @@ public class Vm {
 						lmd-> getTco(evaluate(env(e, "+", more, "||", lmd, "or", lmd), lc.car(1))),
 						chk-> check("check", rhs == null ? (List) rhs : rhs instanceof List l ? l : list(rhs), list(chk)),
 						obj-> obj instanceof Integer i
-							? bind2(def, bndRes, e, lc.car(2), rhs)
+							? bind(def, bndRes, e, lc.car(2), rhs)
 							: typeError("not an integer: {datum}", obj, symbol("Integer"))
 					);
 				}
-				if (!(rhs instanceof Cons rc)) throw new BindException("expected {operands} operand, found: {datum}", "operands", len(lc), "datum", rhs);
+				if (!(rhs instanceof Cons rc)) throw new BindException("expected {operands,%+d} operand, found: {datum}", "operands", len(lc), "datum", rhs);
 				yield pipe(null,
-					()-> bind2(def, bndRes, e, lc.car, rc.car),
-					obj-> lc.cdr() == null && rc.cdr() == null ? obj : bind2(def, bndRes, e, lc.cdr(), rc.cdr())
+					()-> bind(def, bndRes, e, lc.car, rc.car),
+					obj-> lc.cdr() == null && rc.cdr() == null ? obj : bind(def, bndRes, e, lc.cdr(), rc.cdr())
 				);
 			}
 			default-> {
@@ -1172,7 +1175,7 @@ public class Vm {
 	<T> T error(String msg, Throwable cause, Object ... objs) { return error(new Error(msg, cause, objs)); }
 	<T> T error(Error err) {
 		var userBreak = theEnv.lookup(symbol("userBreak")).value;
-		if (userBreak == null) throw err;
+		if (userBreak == null) throw err; // TODO or new Value(ignore, err) come eventualmente la userBreak?
 		return (T) pipe(dbg(theEnv, "userBreak", err), ()-> getTco(evaluate(theEnv, list(userBreak, err)))); 
 	}
 	<T> T typeError(String msg, Object datum, Object expected) { return error(new Error(msg, "type", symbol("type"), "datum", datum, "expected", expected)); }
@@ -1244,8 +1247,8 @@ public class Vm {
 		var rst = max != more || chks.length <= min ? 0 : (len - min) % (chks.length - min); 
 		if (len >= min && len <= max && rst == 0) return len;
 		return rst != 0
-			? matchError("expected {operands} operand at end of: " + o, "operands", rst)
-			: matchError("expected {operands} operand combining: " + toString(op) + " with: " + toString(o), "operands", len<min ? min-len : max-len)
+			? matchError("expected {operands,%+d} operand at end of: " + o, "operands", rst)
+			: matchError("expected {operands,%+d} operand combining: " + toString(op) + " with: " + toString(o), "operands", len<min ? min-len : max-len)
 		;
 	}
 	Object checkT(Resumption r, Object op, List o, int min, int max, List ol, int i, Object ... chks) {
@@ -1429,6 +1432,7 @@ public class Vm {
 		}
 		public String toString() { return "Assert"; }
 	}
+	/*
 	Assert vmAssert = new Assert();
 	class Test implements Combinable {
 		public Object combine(Env env, List o) {
@@ -1457,6 +1461,200 @@ public class Vm {
 		public String toString() { return "Test"; }
 	}
 	Test test = new Test();
+	*/
+	/*
+	Combinable vmAssert = new Combinable() {
+		public Object combine(Env env, List o) {
+			if (!doAsrt) return true;
+			var chk = checkM(this, o, 2); // o = (x) | (x v)
+			if (!(chk instanceof Integer len)) return chk;
+			return test.combine(env, cons(null, o));
+		}
+		public String toString() { return "Assert"; }
+	};
+	Combinable test = new Combinable() {
+		public Object combine(Env env, List o) {
+			if (!doAsrt) return true;
+			var chk = checkM(this, o, 3); // o = (name x v)
+			if (!(chk instanceof Integer len)) return chk;
+			var name = eIfnull(o.car(), n-> "test "+ n + ": ");
+			var exp = o.car(1);
+			try {
+				env = env(env);
+				var val = pushSubcontBarrier(null, env, pushRootPrompt(exp));
+				var expt = o.car(2);
+				if (Vm.this.equals(val, pushSubcontBarrier(null, env, pushRootPrompt(expt)))) return true;
+				print(name, exp, " should be ", expt, " but is ", val);
+			}
+			catch (Error err) {
+				var env2 = env(env);
+				List expt = (List) map(x-> pushSubcontBarrier(null, env2, pushRootPrompt(x)), o.cdr(1));
+				chk: if (err.getClass() == expt.car()) {
+					for (var l=expt.cdr(); l != null; l = l.cdr(1)) {
+						if (!(Vm.this.equals(err.get(l.car()), l.car(1)))) break chk;
+					}
+					return true;
+				}
+				print(name, exp, " should be ", expt, " but is ", err);
+			}
+			catch (Throwable thw) {
+				if (prStk) thw.printStackTrace(out);
+				else print(name, exp, " throw ", "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
+			}
+			return false;
+		}
+		public String toString() { return "Test"; }
+	};
+	*/
+	/*
+	Combinable vmAssert = new Combinable() {
+		public Object combine(Env env, List o) {
+			if (!doAsrt) return true;
+			var chk = checkM(this, o, 1); // o = (x . v)
+			if (!(chk instanceof Integer len)) return chk;
+			return test.combine(env, cons(null, o));
+		}
+		public String toString() { return "Assert"; }
+	};
+	Combinable test = new Combinable() {
+		public Object combine(Env env, List o) {
+			if (!doAsrt) return true;
+			var chk = checkM(this, o, 2); // o = (name x . v)
+			if (!(chk instanceof Integer len)) return chk;
+			var name = eIfnull(o.car(), n-> "test "+ n + ": ");
+			var exp = o.car(1);
+			try {
+				env = env(env);
+				var val = pushSubcontBarrier(null, env, pushRootPrompt(exp));
+				if (len == 2) print(name, exp, " should throw but is ", val);
+				else {
+					var expt = o.car(2);
+					if (Vm.this.equals(val, pushSubcontBarrier(null, env, pushRootPrompt(expt)))) return true;
+					print(name, exp, " should be ", expt, " but is ", val);
+				}
+			}
+			catch (Error err) {
+				if (len == 2) return true;
+				var env2 = env(env);
+				List expt = (List) map(x-> pushSubcontBarrier(null, env2, pushRootPrompt(x)), o.cdr(1));
+				chk: if (err.getClass() == expt.car()) {
+					for (var l=expt.cdr(); l != null; l = l.cdr(1)) {
+						if (!(Vm.this.equals(err.get(l.car()), l.car(1)))) break chk;
+					}
+					return true;
+				}
+				print(name, exp, " should be ", expt, " but is ", err);
+			}
+			catch (Throwable thw) {
+				if (len == 2) return true;
+				if (prStk) thw.printStackTrace(out);
+				else print(name, exp, " throw ", "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
+			}
+			return false;
+		}
+		public String toString() { return "Test"; }
+	};
+	*/
+	/*
+	Combinable vmAssert = new Combinable() {
+		public Object combine(Env env, List o) {
+			if (!doAsrt) return true;
+			var chk = checkM(this, o, 1); // o = (x . v)
+			if (!(chk instanceof Integer len)) return chk;
+			return test.combine(env, cons(null, o));
+		}
+		public String toString() { return "Assert"; }
+	};
+	Combinable test = new Combinable() {
+		public Object combine(Env env, List o) {
+			if (!doAsrt) return true;
+			var chk = checkM(this, o, 2); // o = (name x . v)
+			if (!(chk instanceof Integer len)) return chk;
+			var name = eIfnull(o.car(), n-> "test "+ n + ": ");
+			var exp = o.car(1);
+			try {
+				env = env(env);
+				var val = pushSubcontBarrier(null, env, pushRootPrompt(exp));
+				if (len == 2) print(name, exp, " should throw but is ", val);
+				else {
+					var expt = o.car(2);
+					if (Vm.this.equals(val, pushSubcontBarrier(null, env, pushRootPrompt(expt)))) return true;
+					print(name, exp, " should be ", expt, " but is ", val);
+				}
+			}
+			catch (Throwable thw) {
+				if (len == 2) return true;
+				if (thw instanceof Error || thw instanceof Value v && v.value instanceof Error) {
+					Error err = (Error) (thw instanceof Error ? thw : ((Value) thw).value);
+					var env2 = env(env);
+					List expt = (List) map(x-> pushSubcontBarrier(null, env2, pushRootPrompt(x)), o.cdr(1));
+					chk: if (err.getClass() == expt.car()) {
+						for (var l=expt.cdr(); l != null; l = l.cdr(1)) {
+							if (!(Vm.this.equals(err.get(l.car()), l.car(1)))) break chk;
+						}
+						return true;
+					}
+					print(name, exp, " should be ", expt, " but is ", err);
+				}
+				else { 
+					if (prStk) thw.printStackTrace(out);
+					else print(name, exp, " throw ", "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
+				}
+			}
+			return false;
+		}
+		public String toString() { return "Test"; }
+	};
+	*/
+	Combinable vmAssert = new Combinable() {
+		public Object combine(Env env, List o) {
+			if (!doAsrt) return true;
+			var chk = checkM(this, o, 1); // o = (x . v)
+			if (!(chk instanceof Integer len)) return chk;
+			return test.combine(env, cons(null, o));
+		}
+		public String toString() { return "Assert"; }
+	};
+	Combinable test = new Combinable() {
+		public Object combine(Env env, List o) {
+			if (!doAsrt) return true;
+			var chk = checkM(this, o, 2); // o = (name x . v)
+			if (!(chk instanceof Integer len)) return chk;
+			var name = eIfnull(o.car(), n-> "test "+ n + ": ");
+			var exp = o.car(1);
+			try {
+				env = env(env);
+				var val = pushSubcontBarrier(null, env, pushRootPrompt(exp));
+				if (len == 2) print(name, exp, " should throw but is ", val);
+				else {
+					var expt = o.car(2);
+					if (Vm.this.equals(val, pushSubcontBarrier(null, env, pushRootPrompt(expt)))) return true;
+					print(name, exp, " should be ", expt, " but is ", val);
+				}
+			}
+			catch (Throwable thw) {
+				if (len == 2) return true;
+				if (thw instanceof Obj || thw instanceof Value v && v.value instanceof Obj) {
+					Obj obj = (Obj) (thw instanceof Error ? thw : ((Value) thw).value);
+					var env2 = env(env);
+					List expt = (List) map(x-> pushSubcontBarrier(null, env2, pushRootPrompt(x)), o.cdr(1));
+					chk: if (obj.getClass() == expt.car()) {
+						for (var l=expt.cdr(); l != null; l = l.cdr(1)) {
+							if (!(Vm.this.equals(obj.get(l.car()), l.car(1)))) break chk;
+						}
+						return true;
+					}
+					print(name, exp, " should be ", expt, " but is ", obj);
+				}
+				else { 
+					if (prStk) thw.printStackTrace(out);
+					else print(name, exp, " throw ", "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
+				}
+			}
+			return false;
+		}
+		public String toString() { return "Test"; }
+	};
 	
 	
 	// Bytecode parser
@@ -1534,7 +1732,7 @@ public class Vm {
 				"%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap)),
 				"%value", wrap(new JFun("%Value", (n,o)-> checkN(n, o, 2, Symbol.class, Env.class), (l,o)-> o.<Env>car(1).lookup(o.car()).value) ),
 				"%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, Symbol.class, Env.class), (l,o)-> o.<Env>car(1).lookup(o.car()).isBound) ),
-				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind2(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (RuntimeException rte) { return false; }} )),
+				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (RuntimeException rte) { return false; }} )),
 				"%apply", wrap(new JFun("%Apply", (n,o)-> checkR(n, o, 2, 3, Combinable.class, Any.class, Env.class), (l,o)-> combine(l == 2 ? env() : o.car(2), unwrap(o.car()), o.car(1)) )),
 				"%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(), unwrap(o.car()), o.cdr()) )),
 				"%apply**", wrap(new JFun("%Apply**", (ArgsList) o-> combine(env(), unwrap(o.car()), (List) listStar(o.cdr())) )),
@@ -1723,7 +1921,7 @@ public class Vm {
 					else if (thw instanceof Value v)
 					    out.println("{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}"); 
 					else do 
-						out.println(/*thw instanceof Obj ? thw : */ "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
+						out.println(thw instanceof Obj ? thw : "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
 					while ((thw = thw.getCause()) != null);
 				}
 			}

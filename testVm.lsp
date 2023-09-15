@@ -9,12 +9,12 @@
 (%assert (%' (a b)) '(a b))
 (%assert '(a b) (%' (a b)))
 
-(%assert (%def)             ) ; throw
-(%assert (%def a)           ) ; throw 
-(%assert (%def a 1)   #inert) ; a=1
-(%assert (%def 1 1)         ) ; throw
-(%assert (%def "a" 1)       ) ; throw
-(%assert (%def a 1 2)       ) ; throw
+(%assert (%def) &Wat.Vm$Error :type 'match :operands +2)
+(%assert (%def a) &Wat.Vm$Error :type 'match :operands +1) 
+(%assert (%def a 1) #inert) ; a=1
+(%assert (%def 1 1) &Wat.Vm$Error :type 'type :datum 1 :expected '(or Symbol Cons))
+(%assert (%def "a" 1) &Wat.Vm$Error :type 'type :datum "a" :expected '(or Symbol Cons))
+(%assert (%def a 1 2) &Wat.Vm$Error :type 'type :datum 1 :expected '(or Null Inert :rhs :prv))
  
 (%assert (%begin (%def (a) (%list 1)) a)         1)
 (%assert (%begin (%def (a b) (%list 1 2)) b)     2)
