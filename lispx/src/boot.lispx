@@ -286,7 +286,7 @@
    |$(type function)
    |#
   %type?)
-
+(def value %value)
 (def unwrap
   #|Return the underlying operator of a FUNCTION.
    |$(fn (function))

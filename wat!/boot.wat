@@ -128,6 +128,7 @@
 (def the %the)
 (def type?
   %type?)
+(def value %value)
 (def unwrap
   %unwrap)
 (def wrap

@@ -356,12 +356,12 @@
   (deftest bound?.6
     (signalsError?
      (bound? 12 (theEnv))
-     Error :type 'type :datum 12 :expected 'Symbol))
+     Error :type 'type :datum 12 :expected '(or Symbol Keyword)))
 
   (deftest bound?.7
     (signalsError?
      (bound? 'x 33)
-     Error :type 'type :datum 33 :expected 'Env))
+     Error :type 'type :datum 33 :expected 'Common))
 
   (deftest bound?.8
     (signalsError?

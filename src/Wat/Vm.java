@@ -329,7 +329,12 @@ public class Vm {
 	
 	
 	// Environment
-	class Env implements ArgsList {
+	interface Common {
+		Object value(Object key);
+		boolean isBound(Object key);
+		boolean remove(Object key);
+	}
+	class Env implements ArgsList, Common {
 		Env parent; Map<String,Object> map = new LinkedHashMap();
 		Env(Env parent, Object ... objs) {
 			this.parent = parent;
@@ -345,12 +350,8 @@ public class Vm {
 			}
 			return new Lookup(false, null);
 		};
-		Object value(Object obj) {
-			return lookup(obj).value;
-		}
-		boolean isBound(Object obj) {
-			return lookup(obj).isBound;
-		}
+		public Object value(Object obj) {  return lookup(obj).value; }
+		public boolean isBound(Object obj) { return lookup(obj).isBound; }
 		Object get(Object obj) {
 			var lookup = lookup(obj);
 			if (!lookup.isBound) return unboundSymbolError("unbound symbol: {symbol}", obj, this);
@@ -380,7 +381,7 @@ public class Vm {
 			var prefix = switch(deep) { case 1-> "Vm"; case 2-> "The"; default-> ""; };
 			return "{" + prefix + "Env[" + map.size() + "]" + eIf(deep < prEnv, ()-> reverseMap(map)) + eIfnull(parent, ()-> " " + parent) + "}";
 		}
-		boolean	remove(Object obj) {
+		public boolean remove(Object obj) {
 			var key = toKey(obj);
 			for (var env=this; env != null; env=env.parent) {
 				if (!env.map.containsKey(key)) continue;
@@ -448,15 +449,16 @@ public class Vm {
 		}
 		public String toString() { return "{&" + getClass().getSimpleName() + " " + Vm.this.toString(value) + "}"; }
 	}
-	public class Obj extends RuntimeException implements ArgsList {
+	public class Obj extends RuntimeException implements ArgsList, Common {
 		private static final long serialVersionUID = 1L;
 		Map<String,Object> map = new LinkedHashMap();
 		public Obj(String msg, Object ... objs) { super(msg); puts(objs); }
 		public Obj(String msg, Throwable t, Object ... objs) { super(msg, t); puts(objs); }
 		public Obj(Throwable t, Object ... objs) { super(t); puts(objs); }
 		public Obj(Object ... objs) { puts(objs); }
-		Object get(Object key) { return map.get(toKey(key)); }
-		boolean isBound(Object key) { return map.containsKey(toKey(key)); }
+		public Object value(Object key) { return map.get(toKey(key)); }
+		public boolean isBound(Object key) { return map.containsKey(toKey(key)); }
+		public boolean remove(Object key) { key=toKey(key); if (!map.containsKey(key)) return false; map.remove(key); return true; }
 		Object puts(Object ... objs) {
 			if (objs == null) return null;
 			Object last = null;
@@ -506,10 +508,10 @@ public class Vm {
 			var msg = super.getMessage(); if (msg == null) return null;
 			var matcher = keyword.matcher(msg); if (!matcher.find()) return msg;
 			var sb = new StringBuffer(); do {
-				String s = matcher.group(1);
+				var s = matcher.group(1);
 				var i = s.indexOf(","); 
 				var k = toKey(i == -1 ? s : s.substring(0, i));
-				var v = get(k);
+				var v = value(k);
 				matcher.appendReplacement(sb, (v != null || isBound(k) ? (i == -1 ? Vm.this.toString(v) : s.substring(i+1).formatted(v)) : "{"+ s +"}" ).replace("\\", "\\\\").replace("$", "\\$"));
 			} while(matcher.find());
 			matcher.appendTail(sb);
@@ -1640,7 +1642,7 @@ public class Vm {
 					List expt = (List) map(x-> pushSubcontBarrier(null, env2, pushRootPrompt(x)), o.cdr(1));
 					chk: if (obj.getClass() == expt.car()) {
 						for (var l=expt.cdr(); l != null; l = l.cdr(1)) {
-							if (!(Vm.this.equals(obj.get(l.car()), l.car(1)))) break chk;
+							if (!(Vm.this.equals(obj.value(l.car()), l.car(1)))) break chk;
 						}
 						return true;
 					}
@@ -1730,8 +1732,6 @@ public class Vm {
 				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, list(or(list(0), list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class), Any.class)))), (l,o)-> l == 0 ? env() : env(o.car(), array(o.cdr())) )),
 				"%wrap", wrap(new JFun("%Wrap", (Function) this::wrap)),
 				"%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap)),
-				"%value", wrap(new JFun("%Value", (n,o)-> checkN(n, o, 2, Symbol.class, Env.class), (l,o)-> o.<Env>car(1).lookup(o.car()).value) ),
-				"%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, Symbol.class, Env.class), (l,o)-> o.<Env>car(1).lookup(o.car()).isBound) ),
 				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (RuntimeException rte) { return false; }} )),
 				"%apply", wrap(new JFun("%Apply", (n,o)-> checkR(n, o, 2, 3, Combinable.class, Any.class, Env.class), (l,o)-> combine(l == 2 ? env() : o.car(2), unwrap(o.car()), o.car(1)) )),
 				"%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(), unwrap(o.car()), o.cdr()) )),
@@ -1739,6 +1739,10 @@ public class Vm {
 				"%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } )),
 				"%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnv = env(theEnv))),
 				"%popEnv", wrap(new JFun("%PopEnv", (Supplier) ()-> theEnv = theEnv.parent)),
+				// Common
+				"%value", wrap(new JFun("%Value", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class), Common.class), (l,o)-> o.<Common>car(1).value(o.car)) ),
+				"%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class), Common.class), (l,o)-> o.<Common>car(1).isBound(o.car)) ),
+				"%remove!", wrap(new JFun("%remove!", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class), Common.class), (l,o)-> o.<Common>car(1).remove(o.car)) ),				
 				// Values
 				"%car", wrap(new JFun("%Car", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().car() )),
 				"%cdr", wrap(new JFun("%Car", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().cdr() )),
@@ -1842,7 +1846,7 @@ public class Vm {
 				"load", wrap(new JFun("Load", (Function<String, Object>) nf-> uncked(()-> loadText(nf)) )),
 				"read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> cons(begin, parseBytecode(uncked(()-> parse(read(l == 0 ? 0 : o.<Integer>car()))))) )),
 				"doTco", wrap(new JFun("DoTco", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doTco : inert(doTco=o.car()) )),
-				"doAsrt",  wrap(new JFun("DoAsrt", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doAsrt : inert(doAsrt=o.car()) )),
+				"doAsrt", wrap(new JFun("DoAsrt", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doAsrt : inert(doAsrt=o.car()) )),
 				"ctApv", wrap(new JFun("CtApv",
 							(n,o)-> checkR(n, o, 0, 1, Boolean.class),
 							(l,o)-> l == 0 ? ctApv
