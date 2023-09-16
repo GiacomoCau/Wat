@@ -53,7 +53,7 @@
   (vau forms env
     (mocha-hook-fun
      (js-\ ()
-       (pushPrompt 'defaultPrompt
+       (pushPrompt 'coroutinePrompt
          (eval (list* begin forms) env))))))
 
 (def before (lispx::make-mocha-hook mocha:before))

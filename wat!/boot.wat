@@ -1402,7 +1402,7 @@
 (defConstant coroutinePrompt
   #|This prompt is used for general coroutine-like use of continuations.
    |#
-  'defaultPrompt)
+  'coroutine-prompt)
 
 (defMacro coroutine forms
   #|Evaluate the FORMS in a context in which `yield' can be used to pause execution.
@@ -1423,6 +1423,86 @@
    |#
   (list* 'pushDelimSubcont 'coroutinePrompt k forms))
 
+
+;;; Fibers
+
+;; The following implementation of fibers follows the one at URL
+;; `http://okmij.org/ftp/continuations/implementations.html#dget-wind'
+;;
+;; We're calling them fibers instead of coroutines so as to not
+;; conflict with the built-in coroutine operators.
+;;
+;; We use it for testing that built-in operators properly suspend and
+;; resume.
+
+(defConstant fiberPrompt
+  #|The prompt used for delimiting fibers.
+   |#
+  'fiber-prompt)
+
+(defClass YieldRecord ()
+  #|Instances of this class are yielded.
+   |#
+  (value continuation) )
+
+(def\ makeYieldRecord (v k)
+  #|Create a new yield record with the given yielded value and resume continuation.
+   |#
+  (new YieldRecord :value v :continuation k))
+
+(def\ fiberYield v?
+  #|Yield a value (which defaults to void).
+   |#
+  (takeSubcont fiberPrompt k
+    (makeYieldRecord (opt? v? #inert) k)))
+
+(def\ fiberResume (yieldRecord . v?)
+  #|Resume a suspended fiber with a value (which defaults to void).
+   |#
+  (pushDelimSubcont fiberPrompt (yieldRecord 'continuation)
+    (opt? v? #inert)))
+
+(defMacro fiber body
+  #|Evaluate the body expressions as a fiber.
+   |#
+  (list* pushPrompt 'fiberPrompt body))
+
+(def\ runFiber (thunk)
+  #|Get all values yielded by a fiber, and its final result, and
+   |collect them in a list.
+   |#
+  (let1 run (result (fiber (thunk)))
+    (if (type? result YieldRecord)
+        (cons (result 'value) (run (fiberResume result)))
+        (list result))))
+
+(def\ runFiberWithValues (thunk values)
+  #|Like `runFiber' but uses a list of values that are sent to the
+   |fiber with `fiberResume'.
+   |#
+  (let run ((result (fiber (thunk))) (values values))
+    (if (type? result YieldRecord)
+        (cons (result 'value)
+              (run (fiberResume result (car values)) (cdr values)))
+        (list result))))
+
+(def\ runFiber* (thunk . values)
+  (let run ((result (fiber (thunk))) (values values))
+    (if (type? result YieldRecord)
+      (cons (result 'value)
+        (if (null? values)
+          (run (fiberResume result) #null)
+          (run (fiberResume result (car values)) (cdr values)) ))
+      (list result) )))
+
+(%assert (runFiber* (\ () (fiberYield 1) (fiberYield 2) 3)) '(1 2 3))
+
+(%assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #t) '(1 2 #inert))
+(%assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #t #_) '(1 2 #ignore))
+(%assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #t 4) '(1 2 4))
+(%assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #f) '(1 3))
+
+(%assert (runFiber* (\ () ((\ (a b) (+ a b)) (fiberYield 1) (fiberYield 2)) ) 3 4) '(1 2 7))
 
 #| TODO da rivedere
 (defVau (object . pairs) env
@@ -1471,7 +1551,7 @@
   (def val (eval plc env))
   (caseType val
     (Box    (let1 (() args) (val :rhs (+ (val) 1))))
-    (Obj (let1 ((fld) args) (val :rhs fld (+ (val fld) 1))))
+    (Obj    (let1 ((fld) args) (val :rhs fld (+ (val fld) 1))))
     (Number (let1 (() args) (eval (list 'set! plc :rhs (+ val 1)) env)))
     (else   (error ($ "not valid type: " val))) ))
 
@@ -1479,7 +1559,7 @@
   (def val (eval plc env))
   (caseType val
     (Box    (let1 (() args) (val :rhs (- (val) 1))))
-    (Obj (let1 ((fld) args) (val :rhs fld (- (val fld) 1))))
+    (Obj    (let1 ((fld) args) (val :rhs fld (- (val fld) 1))))
     (Number (let1 (() args) (eval (list 'set! plc :rhs (- val 1)) env)))
     (else   (error ($ "not valid type: " val))) ))
 
@@ -1533,12 +1613,14 @@
 
 ;;;; Error break routine, called by VM to print stacktrace and throw
 
+(def\ (printFrames k)
+  (let1 (k (.nxt k))
+    (unless (null? k) (printFrames k)) )
+  (log "v" k) )
+
 (def\ (printStacktrace)
-  (def\ (printFrame k)
-    (let1 (k (.nxt k)) (unless (null? k) (printFrame k) ))
-    (log "v" k) )
   (takeSubcont rootPrompt k
-  	(printFrame k) (pushPrompt rootPrompt (pushSubcont k)) ))
+  	(printFrames k) (pushPrompt rootPrompt (pushSubcont k)) ))
 
 (def\ (userBreak err)
   (when (prStk) (log "-" (@getMessage err)) (printStacktrace))
