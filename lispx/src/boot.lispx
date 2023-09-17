@@ -519,7 +519,6 @@
 (def* (then else) begin begin)
 
 (defMacro (throw . val) (list* '%throwTag #_ val) )
-(defMacro (throwTag tag . val) (list* '%throw tag val))
 (def throwTag
   #|Abort to a nesting catch tag established by `catch' and pass the
    |optional RESULT? (defaults to void) to it.
@@ -968,7 +967,7 @@
           (if (|| (== test 'else)
                   (let* ( (symbol? (symbol? test))
                           (class (eval (if symbol? test (car test)) env)) )
-                    (if symbol? (type? key class) (&& (type? key Obj) (matchObjSlots? key (eval (list* 'list (cdr test))  env ))) )))
+                    (if symbol? (type? key class) (&& (type? key Obj) (matchObjSlots? key (eval (list* 'list (cdr test)) env)))) ))
             (if (== (car forms) '=>)
               (let1 ((apv) (cdr forms)) ((eval apv env) key))
               (eval (list* 'begin forms) env) )
@@ -1210,7 +1209,7 @@
 
 (defVau match? args env (catchWth #f (apply check args env) #t))
 
-;(defMacro (the type obj) (list 'let1 (list 'obj obj) (list 'check 'obj type) 'obj)) ; da problemi non equivalente
+;(defMacro (the type obj) (list 'let1 (list 'obj obj) (list 'check 'obj type) 'obj)) ; da problemi a lispx
 ;(defMacro (the type obj) (list 'let1 (list 'obj obj) (list 'check '(list obj) type) 'obj)) ; equivalente ma costa
 
 (defMacro (check\ parms . body)
@@ -1220,7 +1219,7 @@
         (let* ( ((lhs . rhs) parms)
                 ((namesRhs . checksRhs) (parms->names.checks rhs)) )
           (if (cons? lhs)
-            (if (== (car lhs) '!)  
+            (if (== (car lhs) #!)  
               (let* ( ((#_ type name) lhs)
                       (check (list 'check (list name) type)) )
                 (cons (cons name namesRhs) (cons check checksRhs)) )
@@ -1792,9 +1791,6 @@
 
 
 ;;;; Auto Increment/Decrement and Assignement Operator
-
-(defVau ($set! exp1 formals exp2) env
-  (eval (list 'def formals (list '(unwrap eval) exp2 env)) (eval exp1 env)))
 
 (defVau (++ plc . args) env
   (def val (eval plc env))

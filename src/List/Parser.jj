@@ -149,6 +149,7 @@ TOKEN:	// reserved words
 {	< Nil: "()" >
 |	< True: "#t" >
 |	< False: "#f" >
+|	< SheBang: "#!" >
 | 	< Null: "#null" >
 |	< Inert: "#inert" >
 |	< Ignore: "#ignore" | "#_" >
@@ -194,6 +195,7 @@ Object Elt() throws Exception: {
 	|	<True> 		 { return true; }    
 	|	<False> 	 { return false; }    
 	|	t=<Inert>	 { return t.image; }    
+	|	t=<SheBang>	 { return t.image; }    
 	|	t=<Ignore> 	 { return t.image; }    
 	|	t=<Double>	 { return java.lang.Double.parseDouble(t.image); }
 	|	t=<Long>	 { return java.lang.Long.parseLong(t.image.substring(0,t.image.length()-1)); }

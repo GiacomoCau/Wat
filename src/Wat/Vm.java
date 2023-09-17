@@ -232,6 +232,8 @@ public class Vm {
 	class Ignore { public String toString() { return "#ignore"; }};
 	public Ignore ignore = new Ignore();
 	
+	class SheBang { public String toString() { return "#!"; }};
+	public SheBang sheBang = new SheBang();
 	
 	// Tail Call Optimization
 	/*
@@ -661,12 +663,12 @@ public class Vm {
 				throw new BindException("expected {operands,%+d} operand, found: {datum}", "operands", -len(rhs), "datum", rhs);
 			}
 			case Cons lc-> {
-				if (lc.car instanceof Symbol sym) switch (sym.name) {
-					case "%'", "quote": {
+				if (lc.car instanceof Symbol sym && Utility.equals(sym.name, "%'", "quote")) {
 						if (equals(lc.<Object>car(1), rhs)) yield null; // or rhs?
 						throw new BindException("expected literal: {expected}, found: {datum}", "expected", lc.car(1), "datum", rhs);
-					}
-					case "!": yield pipe(null,
+				}
+				else if (lc.car == sheBang) {
+					yield pipe(null,
 						()-> lambda(e, symbol("o"), list(list(symbol("%list->array"), symbol("o")))),
 						lmd-> getTco(evaluate(env(e, "+", more, "||", lmd, "or", lmd), lc.car(1))),
 						chk-> check("check", rhs == null ? (List) rhs : rhs instanceof List l ? l : list(rhs), list(chk)),
@@ -675,8 +677,9 @@ public class Vm {
 							: typeError("not an integer: {datum}", obj, symbol("Integer"))
 					);
 				}
-				if (!(rhs instanceof Cons rc)) throw new BindException("expected {operands,%+d} operand, found: {datum}", "operands", len(lc), "datum", rhs);
-				yield pipe(null,
+				else if (!(rhs instanceof Cons rc))
+					throw new BindException("expected {operands,%+d} operand, found: {datum}", "operands", len(lc), "datum", rhs);
+				else yield pipe(null,
 					()-> bind(def, bndRes, e, lc.car, rc.car),
 					obj-> lc.cdr() == null && rc.cdr() == null ? obj : bind(def, bndRes, e, lc.cdr(), rc.cdr())
 				);
@@ -1212,10 +1215,8 @@ public class Vm {
 			if (p == null || p == ignore) syms.add(p);
 			if (p instanceof Symbol) { return syms.add(p) ? null : error("not a unique symbol: {datum} in: " + pt + " of: {expr}", "datum", p, "expr", exp); }
 			if (!(p instanceof Cons c)) return null;
-			if (c.car instanceof Symbol sym) switch (sym.name) {
-				case "%'", "quote": return len(c) == 2 ? null : error("invalid quote syntax : " + c);
-				case "!": return len(c) == 3 && c.car(2) instanceof Symbol? check(c.car(2)) : error("invalid ! syntax: " + c);
-			}
+			if (c.car instanceof Symbol sym && Utility.equals(sym.name, "%'", "quote")) return len(c) == 2 ? null : error("invalid #' syntax : " + c);
+			if (c.car == sheBang) return len(c) == 3 && c.car(2) instanceof Symbol? check(c.car(2)) : error("invalid #! syntax: " + c);
 			var msg = check(c.car); if (msg != null) return msg;
 			return c.cdr() == null ? null : check(c.cdr());
 		}
@@ -1666,7 +1667,7 @@ public class Vm {
 	}
 	
 	Object parseBytecode(Object o) {
-		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore", "#_" -> ignore; default-> intern(intStr ? s.intern() : s); };
+		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore", "#_"-> ignore; case "#!"-> sheBang; default-> intern(intStr ? s.intern() : s); };
 		if (o instanceof Object[] a) return parseBytecode(a);
 		return o;
 	}

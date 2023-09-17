@@ -962,7 +962,8 @@
 
 (defVau match? args env (catchWth #f (apply check args env) #t))
 
-(defMacro (the type obj) (list 'let1 (list 'obj obj) (list 'check 'obj type) 'obj))
+(defMacro (the type obj) (list 'let1 (list 'obj obj) (list 'check 'obj type) 'obj)) ; da problemi a lispx
+;(defMacro (the type obj) (list 'let1 (list 'obj obj) (list 'check '(list obj) type) 'obj)) ; equivalente ma costa
 
 (assert (the Integer 1) 1)
 (assert (the Integer "1"))
@@ -977,7 +978,7 @@
         (let* ( ((lhs . rhs) parms)
                 ((namesRhs . checksRhs) (parms->names.checks rhs)) )
           (if (cons? lhs)
-            (if (== (car lhs) '!)  
+            (if (== (car lhs) #!)  
               (let* ( ((#_ type name) lhs)
                       (check (list 'check (list name) type)) )
                 (cons (cons name namesRhs) (cons check checksRhs)) )
@@ -989,8 +990,8 @@
     (let1 ((names . checks) (parms->names.checks parms))
       (list* '\ names (if (null? checks) body (list* (list* 'begin checks) body))) )))
 
-(assert (expand (check\ (((! Integer b) . #_)(! Integer a)) (+ a b))) '(\ ((b . #ignore) a) (begin (check (b) Integer) (check (a) Integer)) (+ a b)))
-(assert ((check\ (((! Integer b) . #_)(! (|| 3 4) a)) (+ a b)) '(1 2) 3) 4)
+(assert (expand (check\ (((#! Integer b) . #_)(#! Integer a)) (+ a b))) '(\ ((b . #ignore) a) (begin (check (b) Integer) (check (a) Integer)) (+ a b)))
+(assert ((check\ (((#! Integer b) . #_)(#! (|| 3 4) a)) (+ a b)) '(1 2) 3) 4)
 
 
 ;;; Lists
@@ -1181,6 +1182,7 @@
   (list 'def name (list* '%newClass (list 'quote name) superClass?)))
 
 (defVau defClass (name superclass? slotSpecs . properties) env
+   ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
   (dolist (slotSpec slotSpecs) (the Symbol slotSpec))
   (let1 (superclass (findClass (opt? superclass? 'Obj) env))
     (eval (list def name (%newClass name superclass)) env)) )
@@ -1543,9 +1545,6 @@
 
 
 ;;;; Auto Increment/Decrement and Assignement Operator
-
-(defVau ($set! exp1 formals exp2) env
-  (eval (list 'def formals (list '(unwrap eval) exp2 env)) (eval exp1 env)))
 
 (defVau (++ plc . args) env
   (def val (eval plc env))
