@@ -1402,7 +1402,7 @@
   (deftest newEnv.3
     (signalsError?
      (newEnv 12)
-     Error :type 'type :datum 12 :expected '(or (0) (1 + (or Null Env) (or Symbol Keyword) Any)))))
+     Error :type 'type :datum (12) :expected '(or (0) (1 + (or Null Env) (or Symbol Keyword) Any)))))
 
 (defsuite cxxr
 
@@ -2388,17 +2388,17 @@
   (deftest obj.3
     (signalsError?
      (new 3)
-     Error :type 'type :datum 3 :expected '(or (2 Box) (1 + Obj (or Symbol Keyword) Any))))
+     Error :type 'type :datum '(3) :expected '(or (2 Box) (1 + Obj (or Symbol Keyword) Any))))
 
   (deftest obj.4
     (signalsError?
      (new Object)
-     Error :type 'type :datum Object :expected '(or (2 Box) (1 + Obj (or Symbol Keyword) Any))))
+     Error :type 'type :datum '(&java.lang.Object) :expected '(or (2 Box) (1 + Obj (or Symbol Keyword) Any))))
 
   (deftest obj.5
     (signalsError?
      (new Obj :x)
-     Error :type 'type :datum Obj :expected '(or (2 Box) (1 + Obj (or Symbol Keyword) Any)))))
+     Error :type 'type :datum '(&Wat.Vm$Obj :x) :expected '(or (2 Box) (1 + Obj (or Symbol Keyword) Any)))))
 
 (defsuite slots
 

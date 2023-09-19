@@ -216,7 +216,7 @@
 ; rec rec\ let1rec let1rec\ letrec letrec\ inizializzano a #inert le definizioni prima della valutazione
 
 
-#|
+#| TODO probabilmente da eliminare, superato da (#! ... )
 (def symdef?
   (\ (lhs rhs)
     (if (and (symbol? lhs) (> (len rhs) 1)) #t
@@ -516,6 +516,19 @@
     (list 'def dt (list (unwrap eval) value env))
     (eval ep env)))
 
+(defVau if* clauses env
+  (if (null? clauses) #inert
+    (if (null? (cdr clauses)) (eval (car clauses) env)
+      (let1 ((test then . else) clauses)
+        (if (eval test env) (eval then env)
+          (apply if* else env) )))))
+
+(%assert (if*) #inert)
+(%assert (if* 1) 1)
+(%assert (if* #t 2) 2)
+(%assert (if* #f 2 3) 3)
+(%assert (if* #f 1 #f 2) #inert)
+(%assert (if* #f 1 #f 2 3) 3)
 
 ;;; And Or
 
@@ -948,50 +961,176 @@
 
 ; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (list* 'list xs) env)
 
+#| TODO eliminare dopo verifica
 (defVau (check o . cks) env
   (let1 (env+ (newEnv env '+ (.MAX_VALUE Integer) '|| (\ o (list->array o)) 'or (\ o (list->array o)) ))
     (apply* @check vm "check" ((\ (o) (if (or (null? o) (list? o)) o (list o))) (eval o env)) (eval (list* 'list cks) env+)) ))
 
-(%assert (check '(1 (:a 1 :b 2) c 3) 1 + Integer (list Keyword Integer) Symbol (|| 3 4)) 4)
-(%assert (check '(a 1 2) 'a 1 2) 3)
-(%assert (check '(a) (|| '(b) '(a))) 1)
-(%assert (check '(a 1 2) (|| '(b 3) '(a 1 2))) 3)
-(%assert (check '(a #null 1) 2 3 Symbol (|| Any (list 2 (|| Null Inert :prv :rhs)))) 3)
-(%assert (check '(a :prv 1)  2 3 Symbol (|| (list 1 Any) (list 2 (|| Null Inert :prv :rhs)))) 3)
-(%assert (check '(a 1)       2 3 Symbol (|| (list 1 Any) (list 2 (|| Null Inert :prv :rhs)))) 2)
+; rende check pari #! ma torna sempre 1 piuttosto che la lunghezza della lista come piacerebbe
+(defVau (check o . cks) env
+  (let* (  (lta  (\ o (list->array o)))
+           (env+ (newEnv env '+ (.MAX_VALUE Integer) '|| lta 'or lta )) )
+    (apply* @check vm "check"
+      (list (eval o env))
+      (list (eval (if (== (car cks) 'or) cks (list* 'list cks)) env+)) )))
+
+; un list di troppo? però ci vuole il controllo per null e list
+
+(defVau (check o . cks) env
+  (let1 (env+ (newEnv env '+ (.MAX_VALUE Integer) 'or (\ o (list->array o)) ))
+    (apply* @check vm "check"
+      (eval o env)
+      (eval (if (== (car cks) 'or) cks (list* 'list cks)) env+)) ))
+
+(def\ (ev x env) 
+  (or (! (list? x) (== (car x) 'or)) (eval x env) (map (\ (x) (ev x env)) x)))
+
+(defVau (check* o . cks) env
+  (let1 (env+ (newEnv env '+ (.MAX_VALUE Integer) 'or (\ o (list->array o)) ))
+    (%check (eval o env) (eval (list* 'list cks) env+)) ))
+
+(defVau (check o ck) env
+  (let1 (env+ (newEnv env '+ (.MAX_VALUE Integer) 'or (\ o (list->array o)) ))
+    (%check (eval o env) (eval ck env+)) ))
+
+
+(defVau (check o ck) env
+  (let1 (env+ (newEnv env '+ (.MAX_VALUE Integer) 'or (\ o (list->array o)) ))
+    (%check (eval o env) (ev ck env+)) ))
+
+(def\ (ev x env+) 
+  (if (or (! (list? x)) (== (car x) 'or)) (eval x env+)
+    (if (or (== (car x) '%') (== (car x) 'quote)) (cadr x) (map (\ (x) (ev x env+)) x)) ))
+
+(defVau (check o ck) env
+  (let1 (env+ (newEnv env '+ (.MAX_VALUE Integer) 'or (\ o (list->array o)) ))
+    (let1rec\
+      (ev (x)
+        (if (! (cons? x))
+          (eval x env+)
+          (if (== (car x) 'or)
+            (list->array (log (ev (cdr x))))
+            (if (or (== (car x) '%') (== (car x) 'quote))
+              (cadr x)
+              (map (\ (x) (ev x)) x) )))) 
+      (%check (eval o env) (log (ev ck))) )))
+
+(defVau (check o ck) env
+  (let1rec\
+    (ev (ck)
+      (if (== ck '+) (.MAX_VALUE Integer)
+        (if (! (cons? ck)) (eval ck env)
+          (if (== (car ck) 'or) (list->array (ev (cdr ck)))
+            (if (or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
+              (map (\ (ck) (ev ck)) ck) )))))
+    (%check (eval o env) (ev ck)) ))
+
+(defVau (check0 o ck) env
+  (let1rec\
+    (ev (ck)
+      (if (== ck '+) (.MAX_VALUE Integer)
+        (if (! (cons? ck)) (eval ck env)
+          (if (== (car ck) 'or) (list->array (ev (cdr ck)))
+            (if (or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
+              (map (\ (ck) (ev ck)) ck) )))))
+    (%check o (ev ck)) ))
+
+(defVau (check o ck) env
+  (let1rec\
+    (ev (ck)
+      (cond
+        ((== ck '+) (.MAX_VALUE Integer))
+        ((! (cons? ck)) (eval ck env))
+        ((== (car ck) 'or) (list->array (ev (cdr ck))))
+        ((or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck))
+        (else (map (\ (ck) (ev ck)) ck)) ))
+    (%check (eval o env) (ev ck)) ))
+|#
+
+#| sostituito dal seguente
+(def %check
+  (let1 (%check %check)
+    (vau (o ck) env
+      (let1rec\
+        (ev (ck)
+          (if (== ck '+) (.MAX_VALUE Integer)
+            (if (! (cons? ck)) (eval ck env)
+              (if (== (car ck) 'or) (list->array (ev (cdr ck)))
+                (if (or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
+                  (map (\ (ck) (ev ck)) ck) )))))
+        (%check o (ev ck)) ))))
+
+(def %check
+  (let1 (%check %check)
+    (vau (o ck) env  
+      (let1rec\
+        (ev (ck)
+          (cond
+            ((== ck '+) (.MAX_VALUE Integer))
+            ((! (cons? ck)) (eval ck env))
+            ((== (car ck) 'or) (list->array (ev (cdr ck))))
+            ((or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck))
+            (else (map (\ (ck) (ev ck)) ck)) ))
+        (%check o (ev ck)) ))))
+|#
+(def %check
+  (let1 (%check %check)
+    (vau (o ck) env
+      (let1rec\
+        (ev (ck)
+          (if*
+            (== ck '+) (.MAX_VALUE Integer)
+            (! (cons? ck)) (eval ck env)
+            (== (car ck) 'or) (list->array (ev (cdr ck)))
+            (or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
+            (map (\ (ck) (ev ck)) ck) ))
+        (%check o (ev ck)) ))))
+
+(defVau (check o ck) env
+  ((wrap %check) (eval o env) ck) )
+
+(defMacro (check* o . cks)
+    (list 'check o cks) )
+
+(%assert (check* '(1 (:a 1 :b 2) c 3) 1 + Integer (Keyword Integer) Symbol (or 3 4)) 4)
+(%assert (check* '(a 1 2) 'a 1 2) 3)
+(%assert (check* '(a) (or '(b) '(a))) 1)
+(%assert (check* '(a 1 2) (or '(b 3) '(a 1 2))) 3)
+(%assert (check* '(a #null 1) 2 3 Symbol (or Any (2 (or Null Inert :prv :rhs)))) 3)
+(%assert (check* '(a :prv 1)  2 3 Symbol (or (1 Any) (2 (or Null Inert :prv :rhs)))) 3)
+(%assert (check* '(a 1)       2 3 Symbol (or (1 Any) (2 (or Null Inert :prv :rhs)))) 2)
 
 (defVau match? args env (catchWth #f (apply check args env) #t))
 
-(defMacro (the type obj) (list 'let1 (list 'obj obj) (list 'check 'obj type) 'obj)) ; da problemi a lispx
-;(defMacro (the type obj) (list 'let1 (list 'obj obj) (list 'check '(list obj) type) 'obj)) ; equivalente ma costa
+(defMacro (the+ ck obj) (list 'let1 (list 'obj obj) (list 'check 'obj ck) 'obj))
 
-(assert (the Integer 1) 1)
-(assert (the Integer "1"))
-(assert (the (|| 1 2) 1) 1)
-(assert (the (|| 1 2) 2) 2)
-(assert (the (|| 1 2) 3))
+(%assert (the+ Integer 1) 1)
+(%assert (the+ Integer "1") Error :type 'type :datum "1" :expected 'Integer)
+(%assert (the+ (or 1 2) 1) 1)
+(%assert (the+ (or 1 2) 2) 2)
+(%assert (the+ (or 1 2) 3) Error :type 'type :datum 3 :expected '(or 1 2))
 
-(defMacro (check\ parms . body)
+(defMacro (check\ pt . body)
   (let1rec\
-    ( (parms->names.checks parms)
-      (if (cons? parms)
-        (let* ( ((lhs . rhs) parms)
-                ((namesRhs . checksRhs) (parms->names.checks rhs)) )
+    ( (pt->pt.cks pt)
+      (if (cons? pt)
+        (let* ( ((lhs . rhs) pt)
+                ((ptRhs . cksRhs) (pt->pt.cks rhs)) )
           (if (cons? lhs)
             (if (== (car lhs) #!)  
               (let* ( ((#_ type name) lhs)
-                      (check (list 'check (list name) type)) )
-                (cons (cons name namesRhs) (cons check checksRhs)) )
-              (let1 ((namesLhs . checksLhs) (parms->names.checks lhs))
-                (cons (cons namesLhs namesRhs) (append checksLhs checksRhs)) ) )
-            (let1 ((namesRhs . checksRhs) (parms->names.checks rhs))
-              (cons (cons lhs namesRhs) checksRhs)) ))
-        (cons parms ()) ) )
-    (let1 ((names . checks) (parms->names.checks parms))
-      (list* '\ names (if (null? checks) body (list* (list* 'begin checks) body))) )))
+                      (check (list 'check name type)) )
+                (cons (cons name ptRhs) (cons check cksRhs)) )
+              (let1 ((ptLhs . cksLhs) (pt->pt.cks lhs))
+                (cons (cons ptLhs ptRhs) (append cksLhs cksRhs)) ) )
+            (let1 ((ptRhs . cksRhs) (pt->pt.cks rhs))
+              (cons (cons lhs ptRhs) cksRhs)) ))
+        (cons pt ()) ) )
+    (let1 ((pt . cks) (pt->pt.cks pt))
+      (list* '\ pt (if (null? cks) body (list* (list* 'begin cks) body))) )))
 
-(assert (expand (check\ (((#! Integer b) . #_)(#! Integer a)) (+ a b))) '(\ ((b . #ignore) a) (begin (check (b) Integer) (check (a) Integer)) (+ a b)))
-(assert ((check\ (((#! Integer b) . #_)(#! (|| 3 4) a)) (+ a b)) '(1 2) 3) 4)
+(assert (expand (check\ (((#! Integer b) . #_)(#! Integer a)) (+ a b))) '(\ ((b . #ignore) a) (begin (check b Integer) (check a Integer)) (+ a b)))
+(%assert ((check\ (((#! Integer b) . #_)(#! (or 3 4) a)) (+ a b)) '(1 2) 3) 4)
 
 
 ;;; Lists
@@ -1182,11 +1321,17 @@
   (list 'def name (list* '%newClass (list 'quote name) superClass?)))
 
 (defVau defClass (name superclass? slotSpecs . properties) env
-   ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
+  ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
   (dolist (slotSpec slotSpecs) (the Symbol slotSpec))
   (let1 (superclass (findClass (opt? superclass? 'Obj) env))
     (eval (list def name (%newClass name superclass)) env)) )
 
+#|
+(defVau defClass (name superclass? (#! (Symbol) slotSpecs) . properties) env
+  ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
+  (let1 (superclass (findClass (opt? superclass? 'Obj) env))
+    (eval (list def name (%newClass name superclass)) env)) )
+|#
 
 ;;; Objects
 
@@ -1438,50 +1583,32 @@
 ;; resume.
 
 (defConstant fiberPrompt
-  #|The prompt used for delimiting fibers.
-   |#
   'fiber-prompt)
 
 (defClass YieldRecord ()
-  #|Instances of this class are yielded.
-   |#
   (value continuation) )
 
 (def\ makeYieldRecord (v k)
-  #|Create a new yield record with the given yielded value and resume continuation.
-   |#
   (new YieldRecord :value v :continuation k))
 
 (def\ fiberYield v?
-  #|Yield a value (which defaults to void).
-   |#
   (takeSubcont fiberPrompt k
     (makeYieldRecord (opt? v? #inert) k)))
 
 (def\ fiberResume (yieldRecord . v?)
-  #|Resume a suspended fiber with a value (which defaults to void).
-   |#
   (pushDelimSubcont fiberPrompt (yieldRecord 'continuation)
     (opt? v? #inert)))
 
 (defMacro fiber body
-  #|Evaluate the body expressions as a fiber.
-   |#
   (list* pushPrompt 'fiberPrompt body))
 
 (def\ runFiber (thunk)
-  #|Get all values yielded by a fiber, and its final result, and
-   |collect them in a list.
-   |#
   (let1 run (result (fiber (thunk)))
     (if (type? result YieldRecord)
         (cons (result 'value) (run (fiberResume result)))
         (list result))))
 
 (def\ runFiberWithValues (thunk values)
-  #|Like `runFiber' but uses a list of values that are sent to the
-   |fiber with `fiberResume'.
-   |#
   (let run ((result (fiber (thunk))) (values values))
     (if (type? result YieldRecord)
         (cons (result 'value)
@@ -1505,6 +1632,7 @@
 (%assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #f) '(1 3))
 
 (%assert (runFiber* (\ () ((\ (a b) (+ a b)) (fiberYield 1) (fiberYield 2)) ) 3 4) '(1 2 7))
+
 
 #| TODO da rivedere
 (defVau (object . pairs) env

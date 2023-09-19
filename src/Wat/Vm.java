@@ -62,6 +62,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -337,7 +338,7 @@ public class Vm {
 		boolean remove(Object key);
 	}
 	class Env implements ArgsList, Common {
-		Env parent; Map<String,Object> map = new LinkedHashMap();
+		Env parent; LinkedHashMap<String,Object> map = new LinkedHashMap();
 		Env(Env parent, Object ... objs) {
 			this.parent = parent;
 			if (objs == null) return;
@@ -381,7 +382,7 @@ public class Vm {
 		public String toString() {
 			var deep = deep();
 			var prefix = switch(deep) { case 1-> "Vm"; case 2-> "The"; default-> ""; };
-			return "{" + prefix + "Env[" + map.size() + "]" + eIf(deep < prEnv, ()-> reverseMap(map)) + eIfnull(parent, ()-> " " + parent) + "}";
+			return "{" + prefix + "Env[" + map.size() + "]" + eIf(deep < prEnv, ()-> toStringSet(map.reversed().entrySet())) + eIfnull(parent, ()-> " " + parent) + "}";
 		}
 		public boolean remove(Object obj) {
 			var key = toKey(obj);
@@ -476,11 +477,11 @@ public class Vm {
 			return s;
 		}
 		public String toString(Obj obj) {
-			var field = obj.map.toString().substring(1);
 			return "{&" + obj.getClass().getCanonicalName() // or .getSimpleName()?
 				+ eIfnull(obj.getMessage(), m-> " " + Vm.this.toString(true, m))
 				//+ eIfnull(getCause(), t-> " " + t.getClass().getSimpleName())
-				+ (field.length() == 1 ? field : " " + field) ;
+				+ toStringSet(obj.map.entrySet())
+				+ "}";
 		}
 		@Override public Object apply(List o) {
 			var len = len(o);
@@ -669,12 +670,8 @@ public class Vm {
 				}
 				else if (lc.car == sheBang) {
 					yield pipe(null,
-						()-> lambda(e, symbol("o"), list(list(symbol("%list->array"), symbol("o")))),
-						lmd-> getTco(evaluate(env(e, "+", more, "||", lmd, "or", lmd), lc.car(1))),
-						chk-> check("check", rhs == null ? (List) rhs : rhs instanceof List l ? l : list(rhs), list(chk)),
-						obj-> obj instanceof Integer i
-							? bind(def, bndRes, e, lc.car(2), rhs)
-							: typeError("not an integer: {datum}", obj, symbol("Integer"))
+						()-> getTco(evaluate(e, list(symbol("%check"), rhs, lc.car(1)))),
+						obj-> obj instanceof Integer i ? bind(def, bndRes, e, lc.car(2), rhs) : typeError("not an integer!: {datum}", obj, symbol("Integer"))	
 					);
 				}
 				else if (!(rhs instanceof Cons rc))
@@ -1278,6 +1275,17 @@ public class Vm {
 		}
 		else if (chk instanceof Object[] chks) { // or
 			return checkOr(null, op, o, ol, on, 0, chks);
+			/* TODO provare a discirminare i due casi List o semplice
+			//if (chks[0] instanceof List) return checkOrList(null, op, o, ol, 0, chks);
+			if (ol.cdr() != null) return checkOrList(null, op, o, ol, 0, chks);
+			for (Object chkn: chks) {
+				if (Utility.equals(on, chkn)) return 1;
+				if (chk instanceof Class cl && checkC(on, cl)) return 1;
+			}
+			return typeError(
+				"not a {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), on, toChk(chk)
+			);
+			//*/
 		}
 		else return typeError(
 			"not a {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), on, toChk(chk)
@@ -1302,7 +1310,21 @@ public class Vm {
 				//out.println(thw + "\nnot a " + chks[i] + ": " + o);
 			}		
 		}
-		return typeError("not {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), on, toChk(chks));
+		return typeError("not {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), chks[0] instanceof List ? ol : on, toChk(chks));
+	}
+	public Object checkOrList(Resumption r, Object op, List o, List ol, int i, Object[] chks) {
+		for (var first=true; i<chks.length; i+=1) {
+			try {
+				var res = first && r != null && !(first = false) ? r.resume() : check("check", ol, (List) chks[i]);
+				if (res instanceof Suspension s) {var ii=i; return s.suspend(null, rr-> checkOrList(rr, op, o, ol, ii, chks)); }
+				if (res instanceof Integer len && len >= 0) return len;
+				// TODO mancano le segnalazioni per res == -1 (or syntax error) or !Integer (invalid debug value)
+			}
+			catch (Throwable thw) {
+				//out.println(thw + "\nnot a " + chks[i] + ": " + o);
+			}		
+		}
+		return typeError("not {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), ol, toChk(chks));
 	}
 	public Object toChk(Object chk) {
 		return chk == null ? symbol("Null")
@@ -1313,10 +1335,10 @@ public class Vm {
 		: chk;
 	}
 	/*
-	public Object checkOr1(Resumption r, Object op, List o, List ol, Object on, int i, Object[] chks) {
+	public Object checkOr(Resumption r, Object op, List o, List ol, Object on, int i, Object[] chks) {
 		for (var first=true; i<chks.length; i+=1) {
 			try {
-				var res = first && r != null && !(first = false) ? r.resume() : checkOr2(ol, on, chks[i]);
+				var res = first && r != null && !(first = false) ? r.resume() : checkOr(ol, on, chks[i]);
 				if (res instanceof Suspension s) {var ii=i; return s.suspend(null, rr-> checkOr(rr, op, o, ol, on, ii, chks)); }
 				if (res instanceof Integer len && len >= 0) return len;
 			}
@@ -1325,7 +1347,7 @@ public class Vm {
 		}
 		return typeError("not {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), on, toChk(chks));
 	}
-	public Object checkOr2(List ol, Object on, Object chkn) {
+	public Object checkOr(List ol, Object on, Object chkn) {
 		return Utility.equals(on, chkn) ? 1
 		: chkn instanceof Class cl && checkC(on, cl) ? 1
 		: chkn instanceof List chkl ? check("check", ol, chkl)
@@ -1352,6 +1374,22 @@ public class Vm {
 			()-> checkR(op, o, min, max, array(chk)),
 			obj-> obj instanceof Integer i ? i : typeError("not an integer: {datum}", obj, symbol("Integer"))
 		);
+	}	
+	public Object check(Object op, Object o, Object chk) {
+		if (chk instanceof List chkl) {
+			return o == null || o instanceof List ol ? check(op, (List) o, chkl) : typeError("not a {expected}: {datum}", o, symbol("List"));
+		}
+		if (Utility.equals(o, chk)) return 0;
+		if (chk instanceof Class cl && checkC(o, cl)) return 0;
+		if (chk instanceof Object[] chks) {
+			if (o == null || o instanceof List) return checkOrList(null, op, (List) o, (List) o, 0, chks);
+			//if (chks[0] == null || chks[0] instanceof List) return checkOrList(null, op, (List) o, (List) o, 0, chks);
+			for (Object chkn: chks) {
+				if (Utility.equals(o, chkn)) return 0;
+				if (chk instanceof Class cl && checkC(o, cl)) return 0;
+			}
+		}
+		return typeError("not a {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), o, toChk(chk));
 	}
 	
 	
@@ -1368,6 +1406,7 @@ public class Vm {
 		for (var i=len-(b?0:1); i>=0; i-=1) c = cons(args[i], c);
 		return (T) c;
 	}
+	//List toList(Object obj) { return obj == null ? (List) null : obj instanceof List l ? l : list(obj); } 
 	Object[] array(List c) {
 		return array(c, 0);
 	}
@@ -1703,8 +1742,8 @@ public class Vm {
 			default-> o.toString();
 		};
 	}
-	public static String reverseMap(Map map) {
-		var sb = new StringBuilder(); map.entrySet().forEach(e-> sb.insert(0, " " + e)); return sb.toString();
+	public static String toStringSet(Set<Entry<String,Object>> set) {
+		return set.isEmpty() ? "" : " " + set.stream().map(e-> ":" + e.getKey() + " " + e.getValue()).collect(joining(" "));
 	}
 	private String toString(String name, Object[] args) {
 		return (name.equals("new") ? "constructor: " : "method: " + name) + ifnull(args, "()", a-> toString(list(a)));
@@ -1797,6 +1836,8 @@ public class Vm {
 				"%type?",  wrap(new JFun("%Type?", (n,o)-> checkN(n, o, 2, Any.class, or(null, Class.class)), (l,o)-> apply((o1, c)-> c == null ? o1 == null /*: o1 == null ? !c.isPrimitive()*/ : o1 != null && c.isAssignableFrom(o1.getClass()), o.car(), o.<Class>car(1)) )),
 				"%classOf", wrap(new JFun("%ClassOf", (n,o)-> checkN(n, o, 1), (l,o)-> apply(o1-> o1 == null ? null : o1.getClass(), o.car()) )),
 				"%the", wrap(new JFun("%The", (n,o)-> checkN(n, o, 2, Class.class), (l,o)-> o.<Class>car().isInstance(o.car(1)) ? o.car(1) : typeError("not a {expected}: {datum}", o.car(1), symbol(o.<Class>car().getSimpleName())) )),
+				"%the+", wrap(new JFun("%The+", (n,o)-> checkN(n, o, 2), (l,o)-> check("the+", o.car(1), o.car) )),
+				"%check", wrap(new JFun("%Check", (n,o)-> checkN(n, o, 2), (l,o)-> check("check", o.car, o.car(1)) )),
 				// Utilities
 				"%list", wrap(new JFun("%List", (ArgsList) o-> o)),
 				"%list*", wrap(new JFun("%List*", (ArgsList) this::listStar)),

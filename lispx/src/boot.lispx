@@ -434,7 +434,7 @@
 ; rec rec\ let1rec let1rec\ letrec letrec\ inizializzano a #inert le definizioni prima della valutazione
 
 
-#|
+#| TODO probabilmente da eliminare, superato da (#! ... )
 (def symdef?
   (\ (lhs rhs)
     (if (and (symbol? lhs) (> (len rhs) 1)) #t
@@ -786,6 +786,13 @@
   #|Signal an error if the BOOLEAN is false.  Otherwise return void.
    |#
   (unless boolean (error (new AssertionError :type 'assertion :datum boolean :expected #t))))
+
+(defVau if* clauses env
+  (if (null? clauses) #inert
+    (if (null? (cdr clauses)) (eval (car clauses) env)
+      (let1 ((test then . else) clauses)
+        (if (eval test env) (eval then env)
+          (apply if* else env) )))))
 
 
 ;;; And Or
@@ -1203,33 +1210,73 @@
 
 ; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (list* 'list xs) env)
 
-(defVau (check o . cks) env
-  (let1 (env+ (newEnv env '+ (.MAX_VALUE Integer) '|| (\ o (list->array o)) 'or (\ o (list->array o)) ))
-    (apply* @check vm "check" ((\ (o) (if (or (null? o) (list? o)) o (list o))) (eval o env)) (eval (list* 'list cks) env+)) ))
+#| sostituito dal seguente
+(def %check
+  (let1 (%check %check)
+    (vau (o ck) env
+      (let1rec\
+        (ev (ck)
+          (if (== ck '+) (.MAX_VALUE Integer)
+            (if (! (cons? ck)) (eval ck env)
+              (if (== (car ck) 'or) (list->array (ev (cdr ck)))
+                (if (or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
+                  (map (\ (ck) (ev ck)) ck) )))))
+        (%check o (ev ck)) ))))
+
+(def %check
+  (let1 (%check %check)
+    (vau (o ck) env  
+      (let1rec\
+        (ev (ck)
+          (cond
+            ((== ck '+) (.MAX_VALUE Integer))
+            ((! (cons? ck)) (eval ck env))
+            ((== (car ck) 'or) (list->array (ev (cdr ck))))
+            ((or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck))
+            (else (map (\ (ck) (ev ck)) ck)) ))
+        (%check o (ev ck)) ))))
+|#
+(def %check
+  (let1 (%check %check)
+    (vau (o ck) env
+      (let1rec\
+        (ev (ck)
+          (if*
+            (== ck '+) (.MAX_VALUE Integer)
+            (! (cons? ck)) (eval ck env)
+            (== (car ck) 'or) (list->array (ev (cdr ck)))
+            (or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
+            (map (\ (ck) (ev ck)) ck) ))
+        (%check o (ev ck)) ))))
+
+(defVau (check o ck) env
+  ((wrap %check) (eval o env) ck) )
+
+(defMacro (check* o . cks)
+    (list 'check o cks) )
 
 (defVau match? args env (catchWth #f (apply check args env) #t))
 
-;(defMacro (the type obj) (list 'let1 (list 'obj obj) (list 'check 'obj type) 'obj)) ; da problemi a lispx
-;(defMacro (the type obj) (list 'let1 (list 'obj obj) (list 'check '(list obj) type) 'obj)) ; equivalente ma costa
+(defMacro (the+ ck obj) (list 'let1 (list 'obj obj) (list 'check 'obj ck) 'obj))
 
-(defMacro (check\ parms . body)
+(defMacro (check\ pt . body)
   (let1rec\
-    ( (parms->names.checks parms)
-      (if (cons? parms)
-        (let* ( ((lhs . rhs) parms)
-                ((namesRhs . checksRhs) (parms->names.checks rhs)) )
+    ( (pt->pt.cks pt)
+      (if (cons? pt)
+        (let* ( ((lhs . rhs) pt)
+                ((ptRhs . cksRhs) (pt->pt.cks rhs)) )
           (if (cons? lhs)
             (if (== (car lhs) #!)  
               (let* ( ((#_ type name) lhs)
-                      (check (list 'check (list name) type)) )
-                (cons (cons name namesRhs) (cons check checksRhs)) )
-              (let1 ((namesLhs . checksLhs) (parms->names.checks lhs))
-                (cons (cons namesLhs namesRhs) (append checksLhs checksRhs)) ) )
-            (let1 ((namesRhs . checksRhs) (parms->names.checks rhs))
-              (cons (cons lhs namesRhs) checksRhs)) ))
-        (cons parms ()) ) )
-    (let1 ((names . checks) (parms->names.checks parms))
-      (list* '\ names (if (null? checks) body (list* (list* 'begin checks) body))) )))
+                      (check (list 'check name type)) )
+                (cons (cons name ptRhs) (cons check cksRhs)) )
+              (let1 ((ptLhs . cksLhs) (pt->pt.cks lhs))
+                (cons (cons ptLhs ptRhs) (append cksLhs cksRhs)) ) )
+            (let1 ((ptRhs . cksRhs) (pt->pt.cks rhs))
+              (cons (cons lhs ptRhs) cksRhs)) ))
+        (cons pt ()) ) )
+    (let1 ((pt . cks) (pt->pt.cks pt))
+      (list* '\ pt (if (null? cks) body (list* (list* 'begin cks) body))) )))
 
 
 ;;; Lists
