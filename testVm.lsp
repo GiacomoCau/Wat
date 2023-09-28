@@ -9,6 +9,13 @@
 (%assert (%' (a b)) '(a b))
 (%assert '(a b) (%' (a b)))
 
+(%assert (%list-) ())
+(%assert (%list- ()) ())
+(%assert (%list- 1) '(1))
+(%assert (%list- 1 2) '(1 2))
+(%assert (%list- 1 2 ()) '(1 2))
+(%assert (%list- 1 2 '(3 4)) '(1 2 (3 4)))
+
 (%assert (%def) &Wat.Vm$Error :type 'match :operands +2)
 (%assert (%def a) &Wat.Vm$Error :type 'match :operands +1) 
 (%assert (%def a 1) #inert) ; a=1

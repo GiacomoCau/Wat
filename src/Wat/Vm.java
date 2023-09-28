@@ -573,9 +573,11 @@ public class Vm {
 				    			public %1$s(Vm vm, Throwable t, %3$s o) { %4$st, o); }
 				    			public %1$s(Vm vm, String s, Throwable t, %3$s o) {	%4$ss, t, o); }
 							""" )
-							/* + eIf(!isBox || Condition.class.isAssignableFrom(superClass), """
+							/*
+							+ eIf(!isBox || Condition.class.isAssignableFrom(superClass), """
 				    	 	 	public %1$s(Vm vm, %3$s o) { %4$so); }
-				    	 	""" ) */
+				    	 	""")
+				    	 	*/
 							+ """
 				    	 	 	 public %1$s(Vm vm, %3$s o) { %4$so); }
 							}
@@ -1394,61 +1396,67 @@ public class Vm {
 	
 	
 	// Utilities
-	List list(Object ... args) {
-		return list(true, args);
+	List list(Object ... objs) {
+		return list(true, objs);
 	}
-	<T> T listStar(Object ... args) {
-		return list(false, args);
+	<T> T listStar(Object ... objs) {
+		return list(false, objs);
 	}
-	<T> T list(boolean b, Object ... args) {
-		var len = args.length-1;
-		var c = b || len < 0 ? null : args[len];
-		for (var i=len-(b?0:1); i>=0; i-=1) c = cons(args[i], c);
+	<T> T list(boolean b, Object ... objs) {
+		var len = objs.length-1;
+		var c = b || len < 0 ? null : objs[len];
+		for (var i=len-(b?0:1); i>=0; i-=1) c = cons(objs[i], c);
 		return (T) c;
 	}
 	//List toList(Object obj) { return obj == null ? (List) null : obj instanceof List l ? l : list(obj); } 
-	Object[] array(List c) {
-		return array(c, 0);
+	Object[] array(List l) {
+		return array(l, 0);
 	}
-	Object[] array(List c, int i) {
-		return array(c, i, Object.class);
+	Object[] array(List l, int i) {
+		return array(l, i, Object.class);
 	}
-	<T> T[] array(List c, Class<T> cl) {
-		return (T[]) array(c, 0, cl);
+	<T> T[] array(List l, Class<T> cls) {
+		return (T[]) array(l, 0, cls);
 	}
-	<T> T[] array(List o, int i, Class<T> cl) {
+	<T> T[] array(List l, int i, Class<T> cls) {
 		var res = new ArrayList<T>();
-		for (; o != null; o = o.cdr()) if (i-- <= 0) res.add(o.car());
-		return res.toArray((T[]) Array.newInstance(cl, 0));
+		for (; l != null; l = l.cdr()) if (i-- <= 0) res.add(l.car());
+		return res.toArray((T[]) Array.newInstance(cls, 0));
 	}
-	List reverse(List list) {
-		List res = null;
-		for (; list != null; list = list.cdr()) res = cons(list.car, res);
-		return res;
+	List reverse(List l) {
+		List h = null;
+		for (; l != null; l = l.cdr()) h = cons(l.car, h);
+		return h;
 	}
-	Object append(List h, Object o) {
-		if (h == null) return o;
-		return cons(h.car(), append(h.cdr(), o));
+	Object append(List l, Object t) {
+		if (l == null) return t;
+		return cons(l.car(), append(l.cdr(), t));
 	}
-	Object listStar(List h) {
-		return h == null ? null : listStarN(h);
+	Object listStar(List l) {
+		return l == null ? null : listStarN(l);
 	}
-	Object listStarN(List h) {
-		var car = h.car;
-		var cdr = h.cdr();
-		return cdr == null ? car : cons(car, listStar(cdr));
+	Object listStarN(List l) {
+		var cdr = l.cdr();
+		return cdr == null ? l.car : cons(l.car, listStarN(cdr));
 	}
-	<T> T print(Object ... os) {
-		for (var o: os) out.print(toString(o)); out.println();
-		return (T)(os.length == 0 ? inert : os[os.length - 1]);
+	Object listMinus(List l) {
+		return l == null ? null : listMinusN(l);
 	}
-	<T> T write(Object ... os) {
-		for (var o: os) out.print(toString(true, o)); out.println();
-		return (T)(os.length == 0 ? inert : os[os.length - 1]);
+	Object listMinusN(List l) {
+		var cdr = l.cdr();
+		return cdr == null ? (l.car == null ? null : l) : cons(l.car, listMinusN(cdr));
 	}
-	<T> T log(Object ... os) {
-		int i=0; for (var o: os) out.print(eIf(i++ == 0, " ") + toString(o)); out.println();
-		return (T)(os.length == 0 ? inert : os[0]);
+	<T> T print(Object ... objs) {
+		for (var obj: objs) out.print(toString(obj)); out.println();
+		return (T)(objs.length == 0 ? inert : objs[objs.length - 1]);
+	}
+	<T> T write(Object ... objs) {
+		for (var obj: objs) out.print(toString(true, obj)); out.println();
+		return (T)(objs.length == 0 ? inert : objs[objs.length - 1]);
+	}
+	<T> T log(Object ... objs) {
+		int i=0; for (var obj: objs) out.print(eIf(i++ == 0, " ") + toString(obj)); out.println();
+		return (T)(objs.length == 0 ? inert : objs[0]);
 	}
 	boolean equals(Object a, Object b) {
 		if (a instanceof Object[] aa) return equals(aa, b);
@@ -1465,90 +1473,6 @@ public class Vm {
 		List exp = cons(begin, parseBytecode(parse(str)));
 		return vmAssert.combine(theEnv,  objs instanceof Throwable ? exp : cons(exp, parseBytecode(objs))); 
 	}
-	class Assert implements Combinable {
-		public Object combine(Env env, List o) {
-			if (!doAsrt) return true;
-			var chk = checkR(this, o, 1, 2); // o = (x) | (x v)
-			if (!(chk instanceof Integer len)) return chk;
-			return test.combine(env, cons(null, o));
-		}
-		public String toString() { return "Assert"; }
-	}
-	/*
-	Assert vmAssert = new Assert();
-	class Test implements Combinable {
-		public Object combine(Env env, List o) {
-			if (!doAsrt) return true;
-			var chk = checkR(this, o, 2, 3); // o = (name x) | (name x v)
-			if (!(chk instanceof Integer len)) return chk;
-			var name = eIfnull(o.car(), n-> "test "+ n + ": ");
-			var exp = o.car(1);
-			try {
-				env = env(env);
-				var val = pushSubcontBarrier(null, env, pushRootPrompt(exp));
-				if (len == 2) print(name, exp, " should throw but is ", val);
-				else {
-					var expt = o.car(2);
-					if (Vm.this.equals(val, pushSubcontBarrier(null, env, pushRootPrompt(expt)))) return true;
-					print(name, exp, " should be ", expt, " but is ", val);
-				}
-			}
-			catch (Throwable thw) {
-				if (len == 2) return true;
-				if (prStk) thw.printStackTrace(out);
-				else print(name, exp, " throw ", "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
-			}
-			return false;
-		}
-		public String toString() { return "Test"; }
-	}
-	Test test = new Test();
-	*/
-	/*
-	Combinable vmAssert = new Combinable() {
-		public Object combine(Env env, List o) {
-			if (!doAsrt) return true;
-			var chk = checkM(this, o, 2); // o = (x) | (x v)
-			if (!(chk instanceof Integer len)) return chk;
-			return test.combine(env, cons(null, o));
-		}
-		public String toString() { return "Assert"; }
-	};
-	Combinable test = new Combinable() {
-		public Object combine(Env env, List o) {
-			if (!doAsrt) return true;
-			var chk = checkM(this, o, 3); // o = (name x v)
-			if (!(chk instanceof Integer len)) return chk;
-			var name = eIfnull(o.car(), n-> "test "+ n + ": ");
-			var exp = o.car(1);
-			try {
-				env = env(env);
-				var val = pushSubcontBarrier(null, env, pushRootPrompt(exp));
-				var expt = o.car(2);
-				if (Vm.this.equals(val, pushSubcontBarrier(null, env, pushRootPrompt(expt)))) return true;
-				print(name, exp, " should be ", expt, " but is ", val);
-			}
-			catch (Error err) {
-				var env2 = env(env);
-				List expt = (List) map(x-> pushSubcontBarrier(null, env2, pushRootPrompt(x)), o.cdr(1));
-				chk: if (err.getClass() == expt.car()) {
-					for (var l=expt.cdr(); l != null; l = l.cdr(1)) {
-						if (!(Vm.this.equals(err.get(l.car()), l.car(1)))) break chk;
-					}
-					return true;
-				}
-				print(name, exp, " should be ", expt, " but is ", err);
-			}
-			catch (Throwable thw) {
-				if (prStk) thw.printStackTrace(out);
-				else print(name, exp, " throw ", "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
-			}
-			return false;
-		}
-		public String toString() { return "Test"; }
-	};
-	*/
-	/*
 	Combinable vmAssert = new Combinable() {
 		public Object combine(Env env, List o) {
 			if (!doAsrt) return true;
@@ -1556,106 +1480,7 @@ public class Vm {
 			if (!(chk instanceof Integer len)) return chk;
 			return test.combine(env, cons(null, o));
 		}
-		public String toString() { return "Assert"; }
-	};
-	Combinable test = new Combinable() {
-		public Object combine(Env env, List o) {
-			if (!doAsrt) return true;
-			var chk = checkM(this, o, 2); // o = (name x . v)
-			if (!(chk instanceof Integer len)) return chk;
-			var name = eIfnull(o.car(), n-> "test "+ n + ": ");
-			var exp = o.car(1);
-			try {
-				env = env(env);
-				var val = pushSubcontBarrier(null, env, pushRootPrompt(exp));
-				if (len == 2) print(name, exp, " should throw but is ", val);
-				else {
-					var expt = o.car(2);
-					if (Vm.this.equals(val, pushSubcontBarrier(null, env, pushRootPrompt(expt)))) return true;
-					print(name, exp, " should be ", expt, " but is ", val);
-				}
-			}
-			catch (Error err) {
-				if (len == 2) return true;
-				var env2 = env(env);
-				List expt = (List) map(x-> pushSubcontBarrier(null, env2, pushRootPrompt(x)), o.cdr(1));
-				chk: if (err.getClass() == expt.car()) {
-					for (var l=expt.cdr(); l != null; l = l.cdr(1)) {
-						if (!(Vm.this.equals(err.get(l.car()), l.car(1)))) break chk;
-					}
-					return true;
-				}
-				print(name, exp, " should be ", expt, " but is ", err);
-			}
-			catch (Throwable thw) {
-				if (len == 2) return true;
-				if (prStk) thw.printStackTrace(out);
-				else print(name, exp, " throw ", "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
-			}
-			return false;
-		}
-		public String toString() { return "Test"; }
-	};
-	*/
-	/*
-	Combinable vmAssert = new Combinable() {
-		public Object combine(Env env, List o) {
-			if (!doAsrt) return true;
-			var chk = checkM(this, o, 1); // o = (x . v)
-			if (!(chk instanceof Integer len)) return chk;
-			return test.combine(env, cons(null, o));
-		}
-		public String toString() { return "Assert"; }
-	};
-	Combinable test = new Combinable() {
-		public Object combine(Env env, List o) {
-			if (!doAsrt) return true;
-			var chk = checkM(this, o, 2); // o = (name x . v)
-			if (!(chk instanceof Integer len)) return chk;
-			var name = eIfnull(o.car(), n-> "test "+ n + ": ");
-			var exp = o.car(1);
-			try {
-				env = env(env);
-				var val = pushSubcontBarrier(null, env, pushRootPrompt(exp));
-				if (len == 2) print(name, exp, " should throw but is ", val);
-				else {
-					var expt = o.car(2);
-					if (Vm.this.equals(val, pushSubcontBarrier(null, env, pushRootPrompt(expt)))) return true;
-					print(name, exp, " should be ", expt, " but is ", val);
-				}
-			}
-			catch (Throwable thw) {
-				if (len == 2) return true;
-				if (thw instanceof Error || thw instanceof Value v && v.value instanceof Error) {
-					Error err = (Error) (thw instanceof Error ? thw : ((Value) thw).value);
-					var env2 = env(env);
-					List expt = (List) map(x-> pushSubcontBarrier(null, env2, pushRootPrompt(x)), o.cdr(1));
-					chk: if (err.getClass() == expt.car()) {
-						for (var l=expt.cdr(); l != null; l = l.cdr(1)) {
-							if (!(Vm.this.equals(err.get(l.car()), l.car(1)))) break chk;
-						}
-						return true;
-					}
-					print(name, exp, " should be ", expt, " but is ", err);
-				}
-				else { 
-					if (prStk) thw.printStackTrace(out);
-					else print(name, exp, " throw ", "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
-				}
-			}
-			return false;
-		}
-		public String toString() { return "Test"; }
-	};
-	*/
-	Combinable vmAssert = new Combinable() {
-		public Object combine(Env env, List o) {
-			if (!doAsrt) return true;
-			var chk = checkM(this, o, 1); // o = (x . v)
-			if (!(chk instanceof Integer len)) return chk;
-			return test.combine(env, cons(null, o));
-		}
-		public String toString() { return "Assert"; }
+		public String toString() { return "%Assert"; }
 	};
 	Combinable test = new Combinable() {
 		public Object combine(Env env, List o) {
@@ -1695,7 +1520,7 @@ public class Vm {
 			}
 			return false;
 		}
-		public String toString() { return "Test"; }
+		public String toString() { return "%Test"; }
 	};
 	
 	
@@ -1841,6 +1666,7 @@ public class Vm {
 				// Utilities
 				"%list", wrap(new JFun("%List", (ArgsList) o-> o)),
 				"%list*", wrap(new JFun("%List*", (ArgsList) this::listStar)),
+				"%list-", wrap(new JFun("%List-", (ArgsList) this::listMinus)),
 				"%len", wrap(new JFun("%Len", (n,o)-> checkM(n, o, 1, or(null, List.class)), (l,o)-> len(o.car()) )),
 				"%list->array", wrap(new JFun("%List->array", (n,o)-> checkM(n, o, 1, List.class), (l,o)-> array(o.car()) )),
 				"%array->list", wrap(new JFun("%Array->list", (n,o)-> checkM(n, o, 1, Boolean.class, Object[].class), (l,o)-> list(o.car(), o.car(1)) )),

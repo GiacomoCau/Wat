@@ -938,16 +938,17 @@
   %the)
 
 (defMacro (the\ parms . body)
-  (let1rec\ ( (parms->names.checks ps)
-              (if (cons? ps)
-                  (let* ( ((p . ps) ps)
-                          ((names . checks) (parms->names.checks ps)) )
-                    (if (cons? p)
-                        (let* ( ((name type) p)
-                                (check (list 'the type name)))
-                          (cons (cons name names) (cons check checks)) )
-                        (cons (cons p names) checks) ))
-                  (cons ps ()) ))
+  (let1rec\
+    ( (parms->names.checks ps)
+      (if (cons? ps)
+        (let* ( ((p . ps) ps)
+                ((names . checks) (parms->names.checks ps)) )
+          (if (cons? p)
+            (let* ( ((name type) p)
+                    (check (list 'the type name)) )
+              (cons (cons name names) (cons check checks)) )
+                    (cons (cons p names) checks) ))
+        (cons ps ()) ))
     (let1 ((names . checks) (parms->names.checks parms))
       (list* '\ names (if (null? checks) body (list* (list* 'begin checks) body))) )))
 
@@ -958,6 +959,29 @@
   (if (cons? lhs)
     (list 'def (car lhs) (list* 'the\ (cdr lhs) rhs))
     (list 'def lhs (car rhs)) ))
+
+(defMacro (the\ pt . body)
+  (let1rec\
+    ( (pt->pt.cks pt)
+      (if (cons? pt)
+        (let* ( ((lhs . rhs) pt)
+                ((ptRhs . cksRhs) (pt->pt.cks rhs)) )
+          (if (cons? lhs)
+            (if (== (car lhs) #!)  
+              (let* ( ((#_ type name) lhs)
+                      (check (list 'the type name)) )
+                (cons (cons name ptRhs) (cons check cksRhs)) )
+              (let1 ((ptLhs . cksLhs) (pt->pt.cks lhs))
+                (cons (cons ptLhs ptRhs) (append cksLhs cksRhs)) ) )
+            (let1 ((ptRhs . cksRhs) (pt->pt.cks rhs))
+              (cons (cons lhs ptRhs) cksRhs)) ))
+        (cons pt ()) ) )
+    (let1 ((pt . cks) (pt->pt.cks pt))
+      (list* '\ pt (if (null? cks) body (list* (list* 'begin cks) body))) )))
+
+(%assert (expand (the\ (((#! Integer b) . #_)(#! Integer a)) (+ a b))) '(\ ((b . #ignore) a) (begin (the Integer b) (the Integer a)) (+ a b)))
+;(%assert ((the\ (((#! Integer b) . #_)(#! (or 3 4) a)) (+ a b)) '(1 2) 3) 4)
+
 
 ; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (list* 'list xs) env)
 
@@ -1110,27 +1134,8 @@
 (%assert (the+ (or 1 2) 2) 2)
 (%assert (the+ (or 1 2) 3) Error :type 'type :datum 3 :expected '(or 1 2))
 
-(defMacro (check\ pt . body)
-  (let1rec\
-    ( (pt->pt.cks pt)
-      (if (cons? pt)
-        (let* ( ((lhs . rhs) pt)
-                ((ptRhs . cksRhs) (pt->pt.cks rhs)) )
-          (if (cons? lhs)
-            (if (== (car lhs) #!)  
-              (let* ( ((#_ type name) lhs)
-                      (check (list 'check name type)) )
-                (cons (cons name ptRhs) (cons check cksRhs)) )
-              (let1 ((ptLhs . cksLhs) (pt->pt.cks lhs))
-                (cons (cons ptLhs ptRhs) (append cksLhs cksRhs)) ) )
-            (let1 ((ptRhs . cksRhs) (pt->pt.cks rhs))
-              (cons (cons lhs ptRhs) cksRhs)) ))
-        (cons pt ()) ) )
-    (let1 ((pt . cks) (pt->pt.cks pt))
-      (list* '\ pt (if (null? cks) body (list* (list* 'begin cks) body))) )))
-
-(assert (expand (check\ (((#! Integer b) . #_)(#! Integer a)) (+ a b))) '(\ ((b . #ignore) a) (begin (check b Integer) (check a Integer)) (+ a b)))
-(%assert ((check\ (((#! Integer b) . #_)(#! (or 3 4) a)) (+ a b)) '(1 2) 3) 4)
+; TODO non è più cosi costosa la conversione, si può fare
+; (def the the+)
 
 
 ;;; Lists
@@ -1602,6 +1607,7 @@
 (defMacro fiber body
   (list* pushPrompt 'fiberPrompt body))
 
+#| TODO non più necessarie, eliminare
 (def\ runFiber (thunk)
   (let1 run (result (fiber (thunk)))
     (if (type? result YieldRecord)
@@ -1614,6 +1620,7 @@
         (cons (result 'value)
               (run (fiberResume result (car values)) (cdr values)))
         (list result))))
+|#
 
 (def\ runFiber* (thunk . values)
   (let run ((result (fiber (thunk))) (values values))
@@ -1632,6 +1639,15 @@
 (%assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #f) '(1 3))
 
 (%assert (runFiber* (\ () ((\ (a b) (+ a b)) (fiberYield 1) (fiberYield 2)) ) 3 4) '(1 2 7))
+
+(defMacro (runFiberWithValues f args) (list 'eval (list 'list* 'runFiber* f args))) 
+(defMacro (runFiberWithValues f args) (list 'apply 'runFiber* (list 'list* f args))) 
+(defMacro (runFiberWithValues f args) (list 'apply** 'runFiber* f args)) 
+
+(%assert (runFiberWithValues (\ () (fiberYield 1) (fiberYield 2)) '(#inert 3)) (1 2 3))
+(%assert (runFiberWithValues (\ () (fiberYield 1) (fiberYield 2)) (#inert 3)) (1 2 3))
+
+(def runFiber runFiber*) 
 
 
 #| TODO da rivedere
