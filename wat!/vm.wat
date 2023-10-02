@@ -51,6 +51,8 @@
 (%def Inert &Wat.Vm$Inert)
 (%def Ignore &Wat.Vm$Ignore)
 (%def Utility &Wat.Utility)
+(%def Vm &Wat.Vm)
+(%def Parser &List.Parser)
 
 (%def %zero? (%\ (v) (%== v 0)))
 (%def %inert? (%\ (v) (%== v #inert)))

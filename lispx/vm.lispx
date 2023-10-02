@@ -58,6 +58,8 @@
 (%def Inert &Wat.Vm$Inert)
 (%def Ignore &Wat.Vm$Ignore)
 (%def Utility &Wat.Utility)
+(%def Vm &Wat.Vm)
+(%def Parser &List.Parser)
 
 (%def Fexpr Opv)
 (%def Function Apv)

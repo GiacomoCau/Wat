@@ -496,7 +496,7 @@
   (deftest def.9
     (signalsError?
      (def x 1 "docstring")
-     Error :type 'type :datum 1 :expected '(or Null Inert :rhs :prv))))
+     Error :type 'type :datum 1 :expected '(or Null Inert :rhs :prv :obj))))
 
 (defsuite defConstant
 

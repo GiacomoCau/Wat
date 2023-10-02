@@ -21,7 +21,7 @@
 (%assert (%def a 1) #inert) ; a=1
 (%assert (%def 1 1) &Wat.Vm$Error :type 'type :datum 1 :expected '(or Symbol Cons))
 (%assert (%def "a" 1) &Wat.Vm$Error :type 'type :datum "a" :expected '(or Symbol Cons))
-(%assert (%def a 1 2) &Wat.Vm$Error :type 'type :datum 1 :expected '(or Null Inert :rhs :prv))
+(%assert (%def a 1 2) &Wat.Vm$Error :type 'type :datum 1 :expected '(or Null Inert :rhs :prv :obj))
  
 (%assert (%begin (%def (a) (%list 1)) a)         1)
 (%assert (%begin (%def (a b) (%list 1 2)) b)     2)
