@@ -22,7 +22,10 @@
   %==)
 (def != %!=)
 
+(def string? %string?)
 (def $ %$)
+
+(def number? %number?)
 (def + %+)
 (def * %*)
 (def - %-)
@@ -351,14 +354,6 @@
 
 
 ;;; Basic macros and functions
-
-#| TODO forse non serve, la primitiva dovrebbe essere sufficiente
-(def\ (apply appv args . env)
-  (def env (if (null? env) (newEnv) ((\ ((env)) env) env)))
-  (if (%jFun? appv)
-    (@combine (@new JFun vm appv) env args)
-    (eval (cons (unwrap appv) args) env) ))
-|#
 
 (defMacro (rec lhs . rhs)
   (list (list '\ (list lhs) (list* 'def lhs :rhs rhs)) #inert) )
@@ -1071,7 +1066,7 @@
     (%check (eval o env) (ev ck)) ))
 |#
 
-#| sostituito dal seguente
+#| TODO definito in vm, eliminare
 (def %check
   (let1 (%check %check)
     (vau (o ck) env
@@ -1096,7 +1091,7 @@
             ((or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck))
             (else (map (\ (ck) (ev ck)) ck)) ))
         (%check o (ev ck)) ))))
-|#
+
 (def %check
   (let1 (%check %check)
     (vau (o ck) env
@@ -1109,6 +1104,7 @@
             (or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
             (map (\ (ck) (ev ck)) ck) ))
         (%check o (ev ck)) ))))
+|#
 
 (defVau (check o ck) env
   ((wrap %check) (eval o env) ck) )
@@ -1145,6 +1141,8 @@
     ((rec\ (any? lst) (if (null? lst) #f (if (f (car lst)) #t (any? (cdr lst)))) ) lst)
     ((rec\ (any*? lst*) (if (null? (car lst*)) #f (if (apply f (map car lst*)) #t (any*? (map cdr lst*))))) (cons lst lst*)) ))
 
+(assert (any? null? (1 2 3 4)) #f)
+(assert (any? null? (1 2 () 4)) #t)
 (assert (any? > '(1 2) '(3 4)) #f)
 (assert (any? < '(1 2) '(3 4)) #t)
 
@@ -1153,6 +1151,8 @@
     ((rec\ (all? lst) (if (null? lst) #t (if (f (car lst)) (all? (cdr lst)) #f))) lst)
     ((rec\ (all*? lst*) (if (null? (car lst*)) #t (if (apply f (map car lst*)) (all*? (map cdr lst*)) #f))) (cons lst lst*)) ))
 
+(assert (all? number? (1 2 3 4)) #t)
+(assert (all? number? (1 2 () 4)) #f)
 (assert (all? > '(1 2) '(3 4)) #f)
 (assert (all? < '(1 2) '(3 4)) #t)
 
@@ -1161,20 +1161,27 @@
     ((rec\ (forEach lst) (unless (null? lst) (f (car lst)) (forEach (cdr lst)))) lst)
     ((rec\ (forEach* lst*) (unless (null? (car lst*)) (apply f (map car lst*)) (forEach* (map cdr lst*)) )) (cons lst lst*)) ))
 
-#|
-(forEach (\ (a) (log a)) '(1 2))
-(forEach (\ (a b) (log a b)) '(1 2) '(3 4))
-|#
+(assert (forEach (\ (#ignore)) '(1 2)) #inert)
+(assert (forEach (\ (#ignore #ignore)) '(1 2) '(3 4)) #inert)
+(assert (let1 (n 1) (forEach (\ (a) (set! n (+ n a))) '(1 2)) n) 4)
+(assert (let1 (n 1) (forEach (\ (a b) (set! n (+ n (+ a b)))) '(1 2) '(3 4)) n) 11)
 
 (def\ (forEach f lst . lst*)
   (if (null? lst*)
     (let1 (res lst) ((rec\ (forEach lst) (if (null? lst) res (f (car lst)) (forEach (cdr lst)))) res))
     (let1 (res* (cons lst lst*)) ((rec\ (forEach* lst*) (if (null? (car lst*)) res* (apply f (map car lst*)) (forEach* (map cdr lst*)) )) res*) )) )
 
+(assert (forEach (\ (#ignore)) '(1 2)) '(1 2))
+(assert (forEach (\ (#ignore #ignore)) '(1 2) '(3 4)) '((1 2) (3 4)))
+(assert (let1 (n 1) (forEach (\ (a) (set! n (+ n a))) '(1 2)) n) 4)
+(assert (let1 (n 1) (forEach (\ (a b) (set! n (+ n (+ a b)))) '(1 2) '(3 4)) n) 11)
+
 (def\ maplist (f lst . lst*)
   (if (null? lst*)
     ((rec\ (maplist lst) (if (null? lst) #null (append (f (car lst)) (maplist (cdr lst))))) lst)
     ((rec\ (maplist* lst*) (if (null? (car lst*)) #null (append (apply f (map car lst*)) (maplist* (map cdr lst*))))) (cons lst lst*)) ))
+
+(assert (maplist (\ (x) (list x)) '(1 2 3 4)) '(1 2 3 4))
 
 (def\ (filter f lst . lst*)
   (if (null? lst*)
@@ -1326,7 +1333,7 @@
   (list 'def name (list* '%newClass (list 'quote name) superClass?)))
 
 (defVau defClass (name superclass? slotSpecs . properties) env
-  ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
+   ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
   (dolist (slotSpec slotSpecs) (the Symbol slotSpec))
   (let1 (superclass (findClass (opt? superclass? 'Obj) env))
     (eval (list def name (%newClass name superclass)) env)) )
@@ -1533,20 +1540,20 @@
 (defMethod elt ((seq List) index)
   (nth index seq))
 
-(defGeneric subseq (sequence start . end?)
+(defGeneric subSeq (sequence start . end?)
   #|Create a sequence that is a copy of the subsequence
    |of the SEQUENCE bounded by START and optional END?.  If END?  is not
    |supplied or void, the subsequence stretches until the end of the list
    |#)
 
-(defMethod subseq ((seq List) start . end?)
-  (%listSubseq seq start (opt? end? #inert)))
+(defMethod subSeq ((seq List) start . end?)
+  (%subList seq start (opt? end? #inert)))
 
-(defMethod subseq ((seq Null) start . end?)
-  (%listSubseq seq start (opt? end? #inert)))
+(defMethod subSeq ((seq Null) start . end?)
+  (%subList seq start (opt? end? #inert)))
 
-(defMethod subseq ((seq String) start . end?)
-  (%stringSubseq seq start (opt? end? #inert)))
+(defMethod subSeq ((seq String) start . end?)
+  (%subString seq start (opt? end? #inert)))
 
 
 ;;; Coroutines

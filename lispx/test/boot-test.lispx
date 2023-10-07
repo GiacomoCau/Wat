@@ -1984,167 +1984,167 @@
      (nthCdr 4 '(1 2 3))
      OutOfBoundsError)))
 
-(defsuite subseq
+(defsuite subSeq
 
-  (deftest subseq.1
+  (deftest subSeq.1
     (signalsError?
-     (subseq)
+     (subSeq)
      Error))
 
-  (deftest subseq.2
+  (deftest subSeq.2
     (signalsError?
-     (subseq '())
+     (subSeq '())
      Error :type 'match :operands +1))
 
-  (deftest subseq.3
+  (deftest subSeq.3
     (signalsError?
-     (subseq 12 1 2)
-     Error :type 'unboundExecutable :class Integer :executable 'subseq)))
+     (subSeq 12 1 2)
+     Error :type 'unboundExecutable :class Integer :executable 'subSeq)))
 
 (defsuite listSubseq
 
   (deftest listSubseq.4
     (signalsError?
-     (subseq '() "a" 2)
+     (subSeq '() "a" 2)
      Error :type 'type :datum "a" :expected 'Integer))
 
   (deftest listSubseq.5
     (signalsError?
-     (subseq '() 1 "b")
+     (subSeq '() 1 "b")
      Error :type 'type :datum "b" :expected 'Integer))
 
   (deftest listSubseq.6
     (signalsError?
-     (subseq '() 1)
+     (subSeq '() 1)
      OutOfBoundsError))
 
   (deftest listSubseq.7
     (signalsError?
-     (subseq '() 0 1)
+     (subSeq '() 0 1)
      OutOfBoundsError))
 
   (deftest listSubseq.8
-    (subseq '() 0)
+    (subSeq '() 0)
     '())
 
   (deftest listSubseq.9
-    (subseq '() 0 0)
+    (subSeq '() 0 0)
     '())
 
   (deftest listSubseq.10
-    (subseq '() 0 #inert)
+    (subSeq '() 0 #inert)
     '())
 
   (deftest listSubseq.11
-    (subseq '(1 2 3) 0)
+    (subSeq '(1 2 3) 0)
     '(1 2 3))
 
   (deftest listSubseq.12
-    (subseq '(1 2 3) 0 #inert)
+    (subSeq '(1 2 3) 0 #inert)
     '(1 2 3))
 
   (deftest listSubseq.13
-    (subseq '(0 1 2 3 4 5) 2)
+    (subSeq '(0 1 2 3 4 5) 2)
     '(2 3 4 5))
 
   (deftest listSubseq.14
-    (subseq '(0 1 2 3 4 5) 3 5)
+    (subSeq '(0 1 2 3 4 5) 3 5)
     '(3 4))
 
   (deftest listSubseq.15
-    (subseq '(0 1 2 3 4 5) 0 6)
+    (subSeq '(0 1 2 3 4 5) 0 6)
     '(0 1 2 3 4 5))
 
   (deftest listSubseq.16
     (signalsError?
-     (subseq '(0 1 2 3 4 5) 0 7)
+     (subSeq '(0 1 2 3 4 5) 0 7)
      OutOfBoundsError))
 
   (deftest listSubseq.17
     (signalsError?
-     (subseq '(0 1 2 3 4 5) 7 10)
+     (subSeq '(0 1 2 3 4 5) 7 10)
      OutOfBoundsError))
 
   (deftest listSubseq.18
-    (subseq '(0 1 2 3 4 5) 6)
+    (subSeq '(0 1 2 3 4 5) 6)
     '()))
 
 (defsuite stringSubseq
 
   (deftest stringSubseq.2
     (signalsError?
-     (subseq "")
+     (subSeq "")
      Error :type 'match :operands +1))
 
   (deftest stringSubseq.4
     (signalsError?
-     (subseq "" "a" 2)
+     (subSeq "" "a" 2)
      Error :type 'type :datum "a" :expected 'Integer))
 
   (deftest stringSubseq.5
     (signalsError?
-     (subseq "foo" 1 "b")
+     (subSeq "foo" 1 "b")
      Error :type 'type :datum "b" :expected 'Integer))
 
   (deftest stringSubseq.6
     (signalsError?
-     (subseq "" 1)
+     (subSeq "" 1)
      OutOfBoundsError))
 
   (deftest stringSubseq.7
     (signalsError?
-     (subseq "" 0 1)
+     (subSeq "" 0 1)
      OutOfBoundsError))
 
   (deftest stringSubseq.8
-    (subseq "" 0)
+    (subSeq "" 0)
     "")
 
   (deftest stringSubseq.9
-    (subseq "" 0 0)
+    (subSeq "" 0 0)
     "")
 
   (deftest stringSubseq.10
-    (subseq "" 0 #inert)
+    (subSeq "" 0 #inert)
     "")
 
   (deftest stringSubseq.10.1
     (signalsError?
-     (subseq "" 1 #inert)
+     (subSeq "" 1 #inert)
      OutOfBoundsError))
 
   (deftest stringSubseq.11
-    (subseq "123" 0)
+    (subSeq "123" 0)
     "123")
 
   (deftest stringSubseq.12
-    (subseq "123" 0 #inert)
+    (subSeq "123" 0 #inert)
     "123")
 
   (deftest stringSubseq.13
-    (subseq "012345" 2)
+    (subSeq "012345" 2)
     "2345")
 
   (deftest stringSubseq.14
-    (subseq "012345" 3 5)
+    (subSeq "012345" 3 5)
     "34")
 
   (deftest stringSubseq.15
-    (subseq "012345" 0 6)
+    (subSeq "012345" 0 6)
     "012345")
 
   (deftest stringSubseq.16
     (signalsError?
-     (subseq "012345" 0 7)
+     (subSeq "012345" 0 7)
      OutOfBoundsError))
 
   (deftest stringSubseq.17
     (signalsError?
-     (subseq "012345" 7 10)
+     (subSeq "012345" 7 10)
      OutOfBoundsError))
 
   (deftest stringSubseq.18
-    (subseq "012345" 6)
+    (subSeq "012345" 6)
      ""))
 
 (defsuite elt

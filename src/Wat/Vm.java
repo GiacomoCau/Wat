@@ -1688,8 +1688,10 @@ public class Vm {
 				"%reverse", wrap(new JFun("%Reverse", (n,o)-> checkM(n, o, 1, or(null, List.class)), (l,o)-> reverse(o.car()) )),
 				"%append", wrap(new JFun("%Append", (n,o)-> checkM(n, o, 2, or(null, List.class)), (l,o)-> append(o.car(),o.car(1)) )),
 				// String
+				"%string?", wrap(new JFun("%String?", (Function<Object, Boolean>) obj-> obj instanceof String )),
 				"%$", wrap(new JFun("%$", (BiFunction<Object,Object,String>) (a,b)-> Vm.this.toString(a) + Vm.this.toString(b))),
 				// Math
+				"%number?", wrap(new JFun("%Number?", (Function<Object, Boolean>) obj-> obj instanceof Number )),
 				"%+", wrap(new JFun("%+", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Pls, o.car(), o.car(1)) )),
 				"%*", wrap(new JFun("%*", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Pwr, o.car(), o.car(1)) )),
 				"%-", wrap(new JFun("%-", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Mns, o.car(), o.car(1)) )),

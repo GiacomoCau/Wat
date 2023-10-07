@@ -27,7 +27,10 @@
   %==)
 (def != %!=)
 
+(def string? %string?)
 (def $ %$)
+
+(def number? %number?)
 (def + %+)
 (def * %*)
 (def - %-)
@@ -610,17 +613,6 @@
 
 ;;; Basic macros and functions
 
-#| TODO forse non serve, la primitiva dovrebbe essere sufficiente
-(def\ (apply appv args . env)
-  #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
-   |$(type function)
-   |#
-  (def env (if (null? env) (newEnv) ((\ ((env)) env) env)))
-  (if (%jFun? appv)
-    (@combine (@new JFun vm appv) env args)
-    (eval (cons (unwrap appv) args) env) ))
-|#
-
 (defMacro (rec lhs . rhs)
   (list (list '\ (list lhs) (list* 'def lhs :rhs rhs)) #inert) )
 
@@ -930,9 +922,9 @@
            (loop lst) )))))
 
 (def\ (get? key lst)
-  #|Search for the KEYWORD in the property list LST (a list
-   |of alternating keywords and values) and return the found value as an
-   |option.
+  #|Search for the KEYWORD in the property list LST
+   |(a list of alternating keywords and values)
+   |and return the found value as an option.
    |#
   (let1 loop (lst lst)
     (if (null? lst) #null
@@ -1228,7 +1220,7 @@
       (list* '\ pt (if (null? cks) body (list* (list* 'begin cks) body))) )))
 ; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (list* 'list xs) env)
 
-#| sostituito dal seguente
+#| TODO definito in vm, eliminare
 (def %check
   (let1 (%check %check)
     (vau (o ck) env
@@ -1253,7 +1245,7 @@
             ((or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck))
             (else (map (\ (ck) (ev ck)) ck)) ))
         (%check o (ev ck)) ))))
-|#
+
 (def %check
   (let1 (%check %check)
     (vau (o ck) env
@@ -1266,6 +1258,7 @@
             (or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
             (map (\ (ck) (ev ck)) ck) ))
         (%check o (ev ck)) ))))
+|#
 
 (defVau (check o ck) env
   ((wrap %check) (eval o env) ck) )
@@ -1715,20 +1708,20 @@
 (defMethod elt ((seq List) index)
   (nth index seq))
 
-(defGeneric subseq (sequence start . end?)
+(defGeneric subSeq (sequence start . end?)
   #|Create a sequence that is a copy of the subsequence
    |of the SEQUENCE bounded by START and optional END?.  If END?  is not
    |supplied or void, the subsequence stretches until the end of the list
    |#)
 
-(defMethod subseq ((seq List) start . end?)
-  (%listSubseq seq start (opt? end? #inert)))
+(defMethod subSeq ((seq List) start . end?)
+  (%subList seq start (opt? end? #inert)))
 
-(defMethod subseq ((seq Null) start . end?)
-  (%listSubseq seq start (opt? end? #inert)))
+(defMethod subSeq ((seq Null) start . end?)
+  (%subList seq start (opt? end? #inert)))
 
-(defMethod subseq ((seq String) start . end?)
-  (%stringSubseq seq start (opt? end? #inert)))
+(defMethod subSeq ((seq String) start . end?)
+  (%subString seq start (opt? end? #inert)))
 
 
 ;;; Coroutines
