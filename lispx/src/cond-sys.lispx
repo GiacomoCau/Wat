@@ -428,7 +428,7 @@
 (def\ makeRestartError (restartName)
   #|Create a new `restart-error' for the given RESTART-NAME.
    |#
-  (new RestartError :restartName restartName) )
+  (new RestartError :type 'restart :restartName restartName) )
 
 (def\ restartError (restartName)
   #|Signal a new `restart-error'.
@@ -444,7 +444,8 @@
 (def\ makeSimpleError (message)
   #|Create a new simple error with a MESSAGE.
    |#
-  (new SimpleError :message message) )
+  ;(new SimpleError :message message) 
+  (@new SimpleError message :type 'simple :message message) )
 
 (def\ simpleError (message)
   #|Signal a simple error with a MESSAGE.

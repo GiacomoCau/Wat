@@ -559,7 +559,7 @@
         (let1 (((bindings . forms) . clauses) clauses)
           (if (== bindings 'else)
             (if (== (car forms) '=>)
-              (let1 ((apv) (cdr forms)) ((eval apv env) value))
+              (let1 ((apv) (cdr forms)) ((eval apv env) values))
               (eval (list* 'begin forms) env) )
             (let1 (env+ (newEnv env)) 
               (if (bind? env+ bindings values)
@@ -1775,3 +1775,7 @@
 (def\ (userBreak err)
   (when (prStk) (log "-" (@getMessage err)) (printStacktrace))
   (throw err) )
+
+(def SimpleError Error)
+(def\ simpleError (message) (error (%apply* @new Error message :type 'simple :message message)))
+

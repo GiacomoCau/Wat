@@ -217,6 +217,10 @@ Object Elt() throws Exception: {
 		if (o2 != null && !isNil(o2)) { l.add( "." ); l.add( o2 ); };
 		return l.toArray();
 	} 
+	|	"[" ( o=Elt(){ l.add(o); } )+ [ "." o2=Elt() ] "]" {
+		if (o2 != null && !isNil(o2)) { l.add( "." ); l.add( o2 ); };
+		return l.toArray();
+	} 
 }
 
 Object[] parse() throws Exception: {

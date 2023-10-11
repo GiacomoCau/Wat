@@ -456,7 +456,7 @@ public class Vm {
 		private static final long serialVersionUID = 1L;
 		Map<String,Object> map = new LinkedHashMap();
 		public Obj(Object ... objs) { puts(objs); }
-		//public Obj(Throwable t, Object ... objs) { super(t); puts(objs); }
+		public Obj(Throwable t, Object ... objs) { super(t); puts(objs); }
 		public Obj(String msg, Object ... objs) { super(msg); puts(objs); }
 		public Obj(String msg, Throwable t, Object ... objs) { super(msg, t); puts(objs); }
 		public Object value(Object key) { return map.get(toKey(key)); }
@@ -473,6 +473,7 @@ public class Vm {
 			for (Throwable thw = this; thw != null; thw = thw.getCause()) {
 				if (thw instanceof Exception && !(thw instanceof RuntimeException)) break;
 				s += (s.length() == 0 ? "" : "\n") + (thw instanceof Obj obj ? toString(obj) : "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
+				break; // TODO per il momento solo il primo 
 			}
 			return s;
 		}
@@ -515,7 +516,7 @@ public class Vm {
 				var i = s.indexOf(","); 
 				var k = toKey(i == -1 ? s : s.substring(0, i));
 				var v = value(k);
-				matcher.appendReplacement(sb, (v != null || isBound(k) ? (i == -1 ? Vm.this.toString(v) : s.substring(i+1).formatted(v)) : "{"+ s +"}" ).replace("\\", "\\\\").replace("$", "\\$"));
+				matcher.appendReplacement(sb, (v != null || isBound(k) ? (i == -1 ? Vm.this.toString(true, v) : s.substring(i+1).formatted(v)) : "{"+ s +"}" ).replace("\\", "\\\\").replace("$", "\\$"));
 			} while(matcher.find());
 			matcher.appendTail(sb);
 			return sb.toString();
@@ -524,14 +525,14 @@ public class Vm {
 	public class Condition extends Obj {
 		private static final long serialVersionUID = 1L;
 		public Condition(Object ... objs) { super(objs); }
-		//public Condition(Throwable cause, Object ... objs) { super(cause, objs); }
+		public Condition(Throwable cause, Object ... objs) { super(cause, objs); }
 		public Condition(String message, Object ... objs) { super(message, objs); }
 		public Condition(String message, Throwable cause, Object ... objs) { super(message, cause, objs); }
 	}
 	public class Error extends Condition {
 		private static final long serialVersionUID = 1L;
 		public Error(Object ... objs) { super(objs); }
-		//public Error(Throwable cause, Object ... objs) { super(cause, objs); }
+		public Error(Throwable cause, Object ... objs) { super(cause, objs); }
 		public Error(String message, Object ... objs) { super(message, objs); }
 		public Error(String message, Throwable cause, Object ... objs) { super(message, cause, objs); }
 	}
@@ -573,11 +574,6 @@ public class Vm {
 				    			public %1$s(Vm vm, Throwable t, %3$s o) { %4$st, o); }
 				    			public %1$s(Vm vm, String s, Throwable t, %3$s o) {	%4$ss, t, o); }
 							""" )
-							/*
-							+ eIf(!isBox || Condition.class.isAssignableFrom(superClass), """
-				    	 	 	public %1$s(Vm vm, %3$s o) { %4$so); }
-				    	 	""")
-				    	 	*/
 							+ """
 				    	 	 	 public %1$s(Vm vm, %3$s o) { %4$so); }
 							}
@@ -592,13 +588,13 @@ public class Vm {
 			    );
 			    if (!task.call()) {
 			    	System.out.println(diagnostics.getDiagnostics());
-			    	return javaError("defining class {member}", null, className, null, null);
+			    	return javaError("error defining class {member}", null, className, null, null);
 			    }
 				new File("bin/Ext/" + className + ".class").deleteOnExit();
 				return Class.forName("Ext." + className);
 			}
 			catch (Throwable thw) {
-				return javaError("defining class {member}", thw, className, null, null);
+				return javaError("error defining class {member}", thw, className, null, null);
 			}
 		}
 	}
@@ -1148,7 +1144,7 @@ public class Vm {
 							default: // in errore senza!
 						}
 					}
-					return javaError("executing: {member} of: {object} with: {args}", thw, Vm.this.toString(name, args), Vm.this.toString(o0 /*instanceof Class cl ? cl : o0.getClass()*/), Vm.this.toString(list(args)) );
+					return javaError("error executing {member} of: {object} with: {args}", thw, Vm.this.toString(name, args), Vm.this.toString(true, o0 /*instanceof Class cl ? cl : o0.getClass()*/), Vm.this.toString(list(args)) );
 				}
 			}
 			@Override public String toString() { return "@" + name; }
@@ -1173,8 +1169,8 @@ public class Vm {
 				}
 				catch (Throwable thw) {
 					return len==1
-						? javaError("getting field {member} of: {object}", thw, name, Vm.this.toString(o0), null)
-						: javaError("setting field {member} of: {object} with: {args}", thw, name, Vm.this.toString(o0), Vm.this.toString(o.car(1)));
+						? javaError("error getting field {member} of: {object}", thw, name, Vm.this.toString(o0), null)
+						: javaError("error setting field {member} of: {object} with: {args}", thw, name, Vm.this.toString(o0), Vm.this.toString(o.car(1)));
 				}
 			}
 			@Override public String toString() { return "." + name; }
@@ -1190,7 +1186,7 @@ public class Vm {
 		if (userBreak == null) throw err; // TODO or new Value(ignore, err) come eventualmente la userBreak?
 		return (T) pipe(dbg(theEnv, "userBreak", err), ()-> getTco(evaluate(theEnv, list(userBreak, err)))); 
 	}
-	//<T> T error(Throwable cause, Object ... objs) { return error(new Error(cause, objs)); }
+	<T> T error(Throwable cause, Object ... objs) { return error(new Error(cause, objs)); }
 	<T> T error(String msg, Object ... objs) { return error(new Error(msg, objs)); }
 	<T> T error(String msg, Throwable cause, Object ... objs) { return error(new Error(msg, cause, objs)); }
 	<T> T typeError(String msg, Object datum, Object expected) { return error(msg, "type", symbol("type"), "datum", datum, "expected", expected); }
@@ -1609,10 +1605,10 @@ public class Vm {
 				"%set!", new Def(false),
 				"%eval", wrap(new Eval()),
 				"%newVmEnv", wrap(new JFun("%NewVmEnv", (n,o)-> checkN(n, o, 0), (l,o)-> vmEnv() )),
-				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, list(or(list(0), list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class), Any.class)))), (l,o)-> l == 0 ? env() : env(o.car(), array(o.cdr())) )),
+				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, list(or(list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class), Any.class), list(0)))), (l,o)-> l == 0 ? env() : env(o.car(), array(o.cdr())) )),
 				"%wrap", wrap(new JFun("%Wrap", (Function) this::wrap)),
 				"%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap)),
-				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (RuntimeException rte) { return false; }} )),
+				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { return !(bind(true, 0, o.<Env>car(), o.car(1), o.car(2)) instanceof Suspension s);} catch (RuntimeException rte) { return false; }} )),
 				"%apply", wrap(new JFun("%Apply", (n,o)-> checkR(n, o, 2, 3, Combinable.class, Any.class, Env.class), (l,o)-> combine(l == 2 ? env() : o.car(2), unwrap(o.car()), o.car(1)) )),
 				"%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(), unwrap(o.car()), o.cdr()) )),
 				"%apply**", wrap(new JFun("%Apply**", (ArgsList) o-> combine(env(), unwrap(o.car()), (List) listStar(o.cdr())) )),
