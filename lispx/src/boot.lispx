@@ -972,11 +972,19 @@
               (eval (list* 'begin forms) env) )
             (next clauses) ))))))
 
+#| TODO sostituito dal seguente, eliminare
 (def\ (matchObjSlots? obj slots)
   (let1 next (slots slots)
     (if (null? slots) #t
       (let1 ((name value . slots) slots)
         (if (&& (@isBound obj name) (eq? (obj name) value)) (next slots)
+          #f )))))
+|#
+(def\ (matchObjSlots? obj slots)
+  (let1 next (slots slots)
+    (if (null? slots) #t
+      (let1 ((name value . slots) slots)
+        (if (eq? (if (type? name AtDot) (name obj) (obj name)) value) (next slots)
           #f )))))
 
 (def\ (matchObj? obj class . slots)
@@ -1282,10 +1290,14 @@
     ((rec\ (any? lst) (if (null? lst) #f (if (f (car lst)) #t (any? (cdr lst)))) ) lst)
     ((rec\ (any*? lst*) (if (null? (car lst*)) #f (if (apply f (map car lst*)) #t (any*? (map cdr lst*))))) (cons lst lst*)) ))
 
+(defMacro (any?* f . lst) (list 'any? f lst))
+
 (def\ (all? f lst . lst*)
   (if (null? lst*)
     ((rec\ (all? lst) (if (null? lst) #t (if (f (car lst)) (all? (cdr lst)) #f))) lst)
     ((rec\ (all*? lst*) (if (null? (car lst*)) #t (if (apply f (map car lst*)) (all*? (map cdr lst*)) #f))) (cons lst lst*)) ))
+
+(defMacro (all?* f . lst) (list 'all? f lst))
 
 (def\ (forEach f lst . lst*)
   #|Apply the FUNCTION to every element of the LIST for effect.  Return the #inert.

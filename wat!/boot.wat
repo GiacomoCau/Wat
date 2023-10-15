@@ -525,6 +525,7 @@
 (%assert (if* #f 1 #f 2) #inert)
 (%assert (if* #f 1 #f 2 3) 3)
 
+
 ;;; And Or
 
 (defVau and ops env
@@ -705,11 +706,19 @@
               (eval (list* 'begin forms) env) )
             (next clauses) ))))))
 
+#| TODO sostituito dal seguente, eliminare
 (def\ (matchObjSlots? obj slots)
   (let1 next (slots slots)
     (if (null? slots) #t
       (let1 ((name value . slots) slots)
         (if (&& (@isBound obj name) (eq? (obj name) value)) (next slots)
+          #f )))))
+|#
+(def\ (matchObjSlots? obj slots)
+  (let1 next (slots slots)
+    (if (null? slots) #t
+      (let1 ((name value . slots) slots)
+        (if (eq? (if (type? name AtDot) (name obj) (obj name)) value) (next slots)
           #f )))))
 
 (def\ (matchObj? obj class . slots)
@@ -1146,6 +1155,8 @@
 (assert (any? > '(1 2) '(3 4)) #f)
 (assert (any? < '(1 2) '(3 4)) #t)
 
+(defMacro (any?* f . lst) (list 'any? f lst))
+
 (def\ (all? f lst . lst*)
   (if (null? lst*)
     ((rec\ (all? lst) (if (null? lst) #t (if (f (car lst)) (all? (cdr lst)) #f))) lst)
@@ -1155,6 +1166,8 @@
 (assert (all? number? (1 2 () 4)) #f)
 (assert (all? > '(1 2) '(3 4)) #f)
 (assert (all? < '(1 2) '(3 4)) #t)
+
+(defMacro (all?* f . lst) (list 'all? f lst))
 
 (def\ (forEach f lst . lst*)
   (if (null? lst*)
@@ -1777,5 +1790,5 @@
   (throw err) )
 
 (def SimpleError Error)
-(def\ simpleError (message) (error (%apply* @new Error message :type 'simple :message message)))
+(def\ simpleError (message) (error (%apply* @new Error message :type 'simple #|:message message|#)))
 

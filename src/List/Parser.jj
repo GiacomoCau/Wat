@@ -34,8 +34,8 @@ public class Parser {
 	//*/
 	
 	// static=false
-	public static Object[] parse(String rest) throws Exception {
-		return new Parser(rest).parse();
+	public static Object[] toByteCode(String str) throws Exception {
+		return new Parser(str).parse();
 	}
 	
 	public Parser(String line) {

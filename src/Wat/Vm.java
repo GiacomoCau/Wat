@@ -1,6 +1,7 @@
 package Wat;
 
-import static List.Parser.parse;
+import static List.Parser.toByteCode;
+import static Wat.Utility.$;
 import static Wat.Utility.apply;
 import static Wat.Utility.binOp;
 import static Wat.Utility.eIf;
@@ -541,7 +542,7 @@ public class Vm {
 	// Class
 	Object newClass(Symbol className, Class superClass) {
 		try {
-			if (!className.name.matches("[A-Z][a-zA-Z_0-9]*")) return typeError("invalid class name, not {expected}: {datum}", className, parseBytecode("regex", "[A-Z][a-zA-Z_0-9]*"));
+			if (!className.name.matches("[A-Z][a-zA-Z_0-9]*")) return typeError("invalid class name, not {expected}: {datum}", className, toLispList("regex", "[A-Z][a-zA-Z_0-9]*"));
 			if (superClass != null && !of(Obj.class, Box.class).anyMatch(rc-> rc.isAssignableFrom(superClass))) return typeError("invalid superclass, not {expected}: {datum}", superClass, toChk(or(Obj.class, Box.class)));
 			var c = Class.forName("Ext." + className);
 			if (prWrn) out.println("Warning: class " + className + " is already defined!");
@@ -1106,7 +1107,8 @@ public class Vm {
 	boolean isjFun(Object obj) {
 		return isInstance(obj, Supplier.class, Function.class, BiFunction.class, Executable.class, Field.class);
 	}
-	interface At extends ArgsList {}
+	interface AtDot extends ArgsList {}
+	interface At extends AtDot {}
 	Object at(String name) {
 		if (name == null) return typeError("method name is null, not a {expected}", name, symbol("String"));
 		return new At() {
@@ -1121,7 +1123,7 @@ public class Vm {
 				// (@getConstructor class . classes) -> class.getConstructor(classes) -> constructor
 				// (@getMethod class name . classes) -> class.getMethod(name, classes) -> method
 				// (@getField class name)            -> class.getField(name, classes) -> field
-				if (name.equals("new") && o0 instanceof Class c && of(Obj.class, Box.class).anyMatch(rc-> rc.isAssignableFrom(c)) && (args.length == 0 || args[0].getClass() != Vm.class)) {
+				if (name.equals("new") && o0 instanceof Class c && isInstance(c, Obj.class, Box.class) && (args.length == 0 || args[0].getClass() != Vm.class)) {
 					// (@new Error "assert error!") -> (@new Error vm "assert error!")
 					args = headAdd(args, Vm.this);
 				}
@@ -1150,7 +1152,7 @@ public class Vm {
 			@Override public String toString() { return "@" + name; }
 		};
 	}
-	interface Dot extends ArgsList {};
+	interface Dot extends AtDot {};
 	Object dot(String name) {
 		if (name == null) return typeError("field name is null, not a {expected}", name, symbol("String"));
 		return new Dot() {
@@ -1481,8 +1483,8 @@ public class Vm {
 		return true;
 	}
 	Object vmAssert(String str, Object objs) throws Exception {
-		List exp = cons(begin, parseBytecode(parse(str)));
-		return vmAssert.combine(theEnv,  objs instanceof Throwable ? exp : cons(exp, parseBytecode(objs))); 
+		List exp = cons(begin, toLispList(str));
+		return vmAssert.combine(theEnv,  objs instanceof Throwable ? exp : cons(exp, toLispExpr(objs))); 
 	}
 	Combinable vmAssert = new Combinable() {
 		public Object combine(Env env, List o) {
@@ -1504,6 +1506,9 @@ public class Vm {
 				env = env(env);
 				var val = pushSubcontBarrier(null, env, pushRootPrompt(exp));
 				if (len == 2) print(name, exp, " should throw but is ", val);
+				else if (val instanceof Obj obj) {
+					if (checkObjSlots(name, env, o, exp, obj)) return true;
+				}
 				else {
 					var expt = o.car(2);
 					if (Vm.this.equals(val, pushSubcontBarrier(null, env, pushRootPrompt(expt)))) return true;
@@ -1513,22 +1518,28 @@ public class Vm {
 			catch (Throwable thw) {
 				if (len == 2) return true;
 				if (thw instanceof Obj || thw instanceof Value v && v.value instanceof Obj) {
-					Obj obj = (Obj) (thw instanceof Error ? thw : ((Value) thw).value);
-					var env2 = env(env);
-					List expt = (List) map(x-> pushSubcontBarrier(null, env2, pushRootPrompt(x)), o.cdr(1));
-					chk: if (obj.getClass() == expt.car()) {
-						for (var l=expt.cdr(); l != null; l = l.cdr(1)) {
-							if (!(Vm.this.equals(obj.value(l.car()), l.car(1)))) break chk;
-						}
-						return true;
-					}
-					print(name, exp, " should be ", expt, " but is ", obj);
+					if (checkObjSlots(name, env, o, exp, (Obj) (thw instanceof Obj ? thw : ((Value) thw).value))) return true;
 				}
 				else { 
 					if (prStk) thw.printStackTrace(out);
 					else print(name, exp, " throw ", "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
 				}
 			}
+			return false;
+		}
+		private boolean checkObjSlots(String name, Env env, List o, Object exp, Obj obj) {
+			var env2 = env(env);
+			List expt = (List) map(x-> pushSubcontBarrier(null, env2, pushRootPrompt(x)), o.cdr(1));
+			chk: if (obj.getClass() == expt.car() /*|| expt.<Class>car().isAssignableFrom(obj.getClass())*/) {
+				for (var l=expt.cdr(); l != null; l = l.cdr(1)) {
+					//if (!(Vm.this.equals(obj.value(l.car()), l.car(1)))) break chk;
+					//if (!(Vm.this.equals(switch(l.car()) {case At at-> at.apply(list(obj)); case Dot dot-> dot.apply(list(obj)); case Object n-> obj.value(n); }, l.car(1)))) break chk;
+					//if (!(Vm.this.equals(switch(l.car()) {case ArgsList al-> al.apply(list(obj)); case Object n-> obj.value(n); }, l.car(1)))) break chk;
+					var car = l.car(); if (!(Vm.this.equals(car instanceof AtDot ad ? ad.apply(list(obj)) : obj.value(car), l.car(1)))) break chk;
+				}
+				return true;
+			}
+			print(name, exp, " should be ", expt, " but is ", obj);
 			return false;
 		}
 		public String toString() { return "%Test"; }
@@ -1541,23 +1552,28 @@ public class Vm {
 		return (T) interns.computeIfAbsent(name, n-> n.startsWith(":") && n.length() > 1 ? new Keyword(n.substring(1)) : new Symbol(n));
 	}
 	
-	Object parseBytecode(Object o) {
+	Object toLispExpr(Object o) {
 		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore", "#_"-> ignore; case "#!"-> sheBang; default-> intern(intStr ? s.intern() : s); };
-		if (o instanceof Object[] a) return parseBytecode(a);
+		if (o instanceof Object[] objs) {
+			if (objs.length == 0) return null;
+			if (objs.length == 2 && objs[0] != null && objs[0].equals("wat-string")) return intStr ? ((String) objs[1]).intern() : objs[1];
+			return toLispList(objs);
+		}
 		return o;
 	}
-	Object parseBytecode(Object ... objs) {
-		if (objs.length == 0) return null;
-		if (objs.length == 2 && objs[0] != null && objs[0].equals("wat-string")) return intStr ? ((String) objs[1]).intern() : objs[1];
+	<T extends Cons> T toLispList(Object ... objs) {
 		int i = objs.length - 1;
 		Object tail = null; 
-		if (i > 1 && objs[i-1] != null && objs[i-1].equals(".")) { tail = parseBytecode(objs[i]); i-=2; }
+		if (i > 1 && objs[i-1] != null && objs[i-1].equals(".")) { tail = toLispExpr(objs[i]); i-=2; }
 		for (; i>=0; i-=1) {
 			var obj = objs[i];
 			if (obj != null && obj.equals("."))	throw new Error(". not is the penultimate element in " + objs);
-			tail = cons(parseBytecode(obj), tail);
+			tail = cons(toLispExpr(obj), tail);
 		}
-		return tail;
+		return (T) tail;
+	}
+	<T extends Cons> T toLispList(String s) throws Exception {
+		return (T) toLispList(toByteCode(s));
 	}
 	
 	
@@ -1609,6 +1625,7 @@ public class Vm {
 				"%wrap", wrap(new JFun("%Wrap", (Function) this::wrap)),
 				"%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap)),
 				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { return !(bind(true, 0, o.<Env>car(), o.car(1), o.car(2)) instanceof Suspension s);} catch (RuntimeException rte) { return false; }} )),
+				//"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { return pipe(null, ()->{ try { return pipe(null, ()-> bind(true, 0, o.<Env>car(), o.car(1), o.car(2)),res-> { log(res); return true; } /*!(log(res) instanceof Error)*/); } catch (RuntimeException rte) { return false; }} ); } )),
 				"%apply", wrap(new JFun("%Apply", (n,o)-> checkR(n, o, 2, 3, Combinable.class, Any.class, Env.class), (l,o)-> combine(l == 2 ? env() : o.car(2), unwrap(o.car()), o.car(1)) )),
 				"%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(), unwrap(o.car()), o.cdr()) )),
 				"%apply**", wrap(new JFun("%Apply**", (ArgsList) o-> combine(env(), unwrap(o.car()), (List) listStar(o.cdr())) )),
@@ -1660,7 +1677,7 @@ public class Vm {
 				"%dot", wrap(new JFun("%Dot", (Function<String,Object>) this::dot)),
 				"%instanceOf?", wrap(new JFun("%InstanceOf?", (n,o)-> checkN(n, o, 2, Any.class, Class.class), (l,o)-> o.<Class>car(1).isInstance(o.car()) )),
 				// Object System
-				"%new", wrap(new JFun("%New", (n,o)-> checkM(n, o, 1, or(list(2, Box.class), list(1, more, Obj.class, or(Symbol.class, Keyword.class), Any.class))), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr())) )),
+				"%new", wrap(new JFun("%New", (n,o)-> checkM(n, o, 1, or(list(2, Box.class), list(1, more, Obj.class, or(list(or(Symbol.class, Keyword.class), Any.class), list(1, more, String.class, or(Symbol.class, Keyword.class), Any.class))))), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr())) )),
 				// TODO this %new! with reduced controls only for:
 				//		(%new! HandlerFrame ...) in (def\ lispx::makeHandlerBindOperator ...) di cond-sys.lispx
 				//		(%new! RestartHandler ...) in (def restartBind ...) di cond-sys.lispx
@@ -1718,11 +1735,7 @@ public class Vm {
 				"%\\", opv(vmEnv,
 						cons(symbol("formals"), symbol("body")),
 						symbol("env"),
-						list(
-							list(symbol("%wrap"),
-								list(symbol("%eval"),
-									list(symbol("%list*"), symbol("%vau"), symbol("formals"), ignore, symbol("body")),
-									symbol("env") ))) ),
+						uncked(()-> toLispList("(%wrap (%eval (%list* %vau formals #ignore body) env))")) ),
 				// Extra
 				"vm", this,
 				"%test", test,
@@ -1732,7 +1745,7 @@ public class Vm {
 				"print", wrap(new JFun("Print", (ArgsList) o-> print(array(o)) )),
 				"write", wrap(new JFun("Write", (ArgsList) o-> write(array(o)) )),
 				"load", wrap(new JFun("Load", (Function<String, Object>) nf-> uncked(()-> loadText(nf)) )),
-				"read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> cons(begin, parseBytecode(uncked(()-> parse(read(l == 0 ? 0 : o.<Integer>car()))))) )),
+				"read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> cons(begin, uncked(()-> toLispList(read(l == 0 ? 0 : o.<Integer>car())))) )),
 				"doTco", wrap(new JFun("DoTco", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doTco : inert(doTco=o.car()) )),
 				"doAsrt", wrap(new JFun("DoAsrt", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doAsrt : inert(doAsrt=o.car()) )),
 				"ctApv", wrap(new JFun("CtApv",
@@ -1760,28 +1773,28 @@ public class Vm {
 	
 	// API
 	public Object exec(Object bytecode) {
-		var wrapped = pushRootPrompt(cons(new Begin(true), parseBytecode(bytecode)));
+		var wrapped = pushRootPrompt(cons(new Begin(true), toLispExpr(bytecode)));
 		return pushSubcontBarrier(null, theEnv, wrapped);
 	}
 	public Object call(String funName, Object ... args) {
-		return exec(list(symbol(funName), parseBytecode(args)));
+		return exec($(funName, ".", $(args)));
 	}
 	public Object get(String varName) {
 		return exec(symbol(varName));
 	}
 	public Object eval(String exp) throws Exception {
-		return exec(parse(exp));
+		return exec(toByteCode(exp));
 	}
 	public void compile(String fileName) throws Exception {
 		try (var oos = new ObjectOutputStream(new FileOutputStream("build/" + fileName))) {
-			oos.writeObject(parse(readText(fileName)));
+			oos.writeObject(toByteCode(readText(fileName)));
 		}
 	}
 	public String readText(String fileName) throws IOException {
 		return Files.readString(Paths.get(fileName), Charset.forName("cp1252"));
 	}
-	public Object readExprs(String fileName) throws Exception {
-		return parseBytecode(parse(readText(fileName)));
+	public Object readList(String fileName) throws Exception {
+		return toLispList(toByteCode(readText(fileName)));
 	}
 	public Object readBytecode(String fileName) throws Exception {
 		try (var ois = new ObjectInputStream(new FileInputStream("build/" + fileName))) {
@@ -1806,7 +1819,7 @@ public class Vm {
 				case "\n": break;
 				case "exit\n" : break loop;
 				case String exp: try {
-					print(exec(parse(exp)));
+					print(exec(toByteCode(exp)));
 				}
 				catch (Throwable thw) {
 					if (prStk)

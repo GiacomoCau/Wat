@@ -47,7 +47,7 @@
   (deftest handlerBind.handled
     (block b
       (handlerBind ((SimpleError (\ (e)
-                                     (assert (eq? "foo" (getSlot e 'message)))
+                                     (assert (eq? "foo" (@getMessage e)))
                                      (returnFrom b 1))))
         (signal (makeSimpleError "foo"))))
     1)
@@ -131,7 +131,7 @@
 
   (deftest handlerCase.handled
     (handlerCase ((SimpleError (\ (e)
-                                   (assert (eq? "foo" (getSlot e 'message)))
+                                   (assert (eq? "foo" (@getMessage e)))
                                    'whatever)))
       (signal (makeSimpleError "foo")))
     'whatever)

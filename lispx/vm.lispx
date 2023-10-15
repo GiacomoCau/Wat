@@ -5,7 +5,7 @@
 ; #nil -> #null
 
 ; boot.lispx
-; commentare stringhe in eccesso nelle (%def name expr "..."), troppi parametri per la %def!
+; commentate stringhe in eccesso nelle (%def name expr "..."), troppi parametri per la %def!
 
 (%resetEnv)
 
@@ -24,6 +24,7 @@
 (%def Any &Wat.Vm$Any)
 (%def Apv &Wat.Vm$Apv)
 (%def At &Wat.Vm$At)
+(%def AtDot &Wat.Vm$AtDot)
 (%def Box &Wat.Vm$Box)
 (%def Boolean &java.lang.Boolean)
 (%def Class &java.lang.Class)

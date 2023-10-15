@@ -186,7 +186,7 @@
       (assert (type? e SimpleError))
       (assert (type? e Error))
       (assert (type? e Condition))
-      (assert (eq? "foo" (getSlot e 'message))))
+      (assert (eq? "foo" (@getMessage e))))
     #inert)
 
   (deftest simpleError.1
@@ -197,7 +197,7 @@
   (deftest simpleError.2
     (signalsError?
      (simpleError "foo")
-     SimpleError :message "foo")))
+     SimpleError :type 'simple @getMessage "foo")))
 
 (defsuite makeRestartError
 
@@ -840,7 +840,7 @@
   (deftest caseType.5
     (signalsError?
      (caseType (+ 2 2) (else (simpleError "none clause")))
-     SimpleError :message "none clause"))
+     SimpleError :type 'simple @getMessage "none clause"))
 
   (deftest caseType.6
     (signalsError?
@@ -2388,17 +2388,17 @@
   (deftest obj.3
     (signalsError?
      (new 3)
-     Error :type 'type :datum '(3) :expected '(or (2 Box) (1 + Obj (or Symbol Keyword) Any))))
+     Error :type 'type :datum '(3) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword) Any) (1 + String (or Symbol Keyword) Any)))) ))
 
   (deftest obj.4
     (signalsError?
      (new Object)
-     Error :type 'type :datum '(&java.lang.Object) :expected '(or (2 Box) (1 + Obj (or Symbol Keyword) Any))))
+     Error :type 'type :datum '(&java.lang.Object) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword) Any) (1 + String (or Symbol Keyword) Any)))) ))
 
   (deftest obj.5
     (signalsError?
      (new Obj :x)
-     Error :type 'type :datum '(&Wat.Vm$Obj :x) :expected '(or (2 Box) (1 + Obj (or Symbol Keyword) Any)))))
+     Error :type 'type :datum '(&Wat.Vm$Obj :x) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword) Any) (1 + String (or Symbol Keyword) Any)))) )) )
 
 (defsuite slots
 
@@ -2787,7 +2787,7 @@
   (deftest opt.lazy.2
     (signalsError?
      (opt? #null (error (makeSimpleError "foo")))
-     SimpleError :message "foo")))
+     SimpleError :type 'simple @getMessage "foo")))
 
 (defsuite opt*?
 
@@ -2837,7 +2837,7 @@
   (deftest getOpt.3
     (signalsError?
      (getOpt? #null)
-     SimpleError :message "Option is nil")))
+     SimpleError :type 'simple @getMessage "Option is nil")))
 
 (defsuite some
 

@@ -17,6 +17,7 @@
 (%def Any &Wat.Vm$Any)
 (%def Apv &Wat.Vm$Apv)
 (%def At &Wat.Vm$At)
+(%def AtDot &Wat.Vm$AtDot)
 (%def Box &Wat.Vm$Box)
 (%def Boolean &java.lang.Boolean)
 (%def Class &java.lang.Class)

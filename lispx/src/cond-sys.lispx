@@ -444,8 +444,7 @@
 (def\ makeSimpleError (message)
   #|Create a new simple error with a MESSAGE.
    |#
-  ;(new SimpleError :message message) 
-  (@new SimpleError message :type 'simple :message message) )
+  (new SimpleError message :type 'simple #|:message message|#) )
 
 (def\ simpleError (message)
   #|Signal a simple error with a MESSAGE.
