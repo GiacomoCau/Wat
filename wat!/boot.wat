@@ -1125,7 +1125,7 @@
 (%assert (check* '(a 1 2) 'a 1 2) 3)
 (%assert (check* '(a) (or '(b) '(a))) 1)
 (%assert (check* '(a 1 2) (or '(b 3) '(a 1 2))) 3)
-(%assert (check* '(a #null 1) 2 3 Symbol (or Any (2 (or Null Inert :prv :rhs)))) 3)
+(%assert (check* '(a #null 1) 2 3 Symbol (or (1 Any) (2 (or Null Inert :prv :rhs)))) 3)
 (%assert (check* '(a :prv 1)  2 3 Symbol (or (1 Any) (2 (or Null Inert :prv :rhs)))) 3)
 (%assert (check* '(a 1)       2 3 Symbol (or (1 Any) (2 (or Null Inert :prv :rhs)))) 2)
 

@@ -457,8 +457,8 @@ public class Vm {
 		private static final long serialVersionUID = 1L;
 		Map<String,Object> map = new LinkedHashMap();
 		public Obj(Object ... objs) { puts(objs); }
-		public Obj(Throwable t, Object ... objs) { super(t); puts(objs); }
 		public Obj(String msg, Object ... objs) { super(msg); puts(objs); }
+		public Obj(Throwable t, Object ... objs) { super(t); puts(objs); }
 		public Obj(String msg, Throwable t, Object ... objs) { super(msg, t); puts(objs); }
 		public Object value(Object key) { return map.get(toKey(key)); }
 		public boolean isBound(Object key) { return map.containsKey(toKey(key)); }
@@ -526,15 +526,15 @@ public class Vm {
 	public class Condition extends Obj {
 		private static final long serialVersionUID = 1L;
 		public Condition(Object ... objs) { super(objs); }
-		public Condition(Throwable cause, Object ... objs) { super(cause, objs); }
 		public Condition(String message, Object ... objs) { super(message, objs); }
+		public Condition(Throwable cause, Object ... objs) { super(cause, objs); }
 		public Condition(String message, Throwable cause, Object ... objs) { super(message, cause, objs); }
 	}
 	public class Error extends Condition {
 		private static final long serialVersionUID = 1L;
 		public Error(Object ... objs) { super(objs); }
-		public Error(Throwable cause, Object ... objs) { super(cause, objs); }
 		public Error(String message, Object ... objs) { super(message, objs); }
+		public Error(Throwable cause, Object ... objs) { super(cause, objs); }
 		public Error(String message, Throwable cause, Object ... objs) { super(message, cause, objs); }
 	}
 	
@@ -616,19 +616,21 @@ public class Vm {
 	
 	
 	// Bind
-	public class BindException extends RuntimeException {
+	public class InnerException extends RuntimeException {
 		private static final long serialVersionUID = 1L;
 		Object[] objs;
-		public BindException(String message, Object ... objs) { super(message); this.objs = objs; }
+		public InnerException(String message, Object ... objs) { super(message); this.objs = objs; }		
+	}
+	public class MatchException extends InnerException {
+		private static final long serialVersionUID = 1L;
+		public MatchException(String message, Object datum, int operands) { super(message, "datum", datum, "operands", operands); }
+	}
+	public class TypeException extends InnerException {
+		private static final long serialVersionUID = 1L;
+		public TypeException(String message, Object datum, Object expected) { super(message, "datum", datum, "expected", expected); }
 	}
 	<T> T matchError(String msg, Object ... objs) {
-		return matchError(msg, null, objs);
-	}
-	<T> T matchError(String msg, BindException me, Object ... objs) {
-		var matchError = new Error(me == null ? msg : me.getMessage() + " " + msg, "type", symbol("match"));
-		matchError.puts(objs);
-		if (me != null) matchError.puts(me.objs);
-		return error(matchError);
+		return error(msg, headAdd(objs, "type", symbol("match")));
 	}
 	Object bind(Dbg dbg, Env e, Object lhs, Object rhs) {
 		return bind(dbg, true, bndRes, e, lhs, rhs);
@@ -638,15 +640,15 @@ public class Vm {
 	}
 	Object bind(Resumption r, Dbg dbg, boolean def, int bndRes, Env e, Object lhs, Object rhs) {
 			try {
-				var res = r != null ? r.resume() : pipe(null, ()-> bind(def, bndRes, e, lhs, rhs), obj-> bndRes == 0 ? inert : obj);
-				return res instanceof Suspension s ? s.suspend(dbg, rr-> bind(rr, dbg, def, bndRes, e, lhs, rhs)) : res;
+				var res = bind(def, bndRes, e, lhs, rhs);
+				return bndRes == 0 ? inert : res;
 			}
-			catch (BindException be) {
-				return matchError(
+			catch (InnerException ie) {
+				return error(
 					(def ? "bind" : "sett") + "ing: " + toString(lhs)
 					+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, dbg.os[0])))
 					+ " with: " + rhs,
-					be
+					ie
 				);
 			}
 	}
@@ -656,33 +658,32 @@ public class Vm {
 			case Symbol s-> { var v = def ? e.def(s, rhs) : e.set(s, rhs); yield bndRes == 2 ? v : rhs; }  
 			case Keyword k-> {
 				if (k.equals(rhs)) yield rhs;
-				throw new BindException("expected keyword: {expected}, found: {datum}", "expected", k, "datum", rhs);
+				throw new TypeException("expected keyword: {expected}, found: {datum}", rhs, k);
 			}
 			case null-> {
 				if (rhs == null) yield null;
-				throw new BindException("expected {operands,%+d} operand, found: {datum}", "operands", -len(rhs), "datum", rhs);
+				throw new MatchException("expected {operands,%+d} operand, found: {datum}", rhs, -len(rhs));
 			}
 			case Cons lc-> {
 				if (lc.car instanceof Symbol sym && Utility.equals(sym.name, "%'", "quote")) {
-						if (equals(lc.<Object>car(1), rhs)) yield null; // or rhs?
-						throw new BindException("expected literal: {expected}, found: {datum}", "expected", lc.car(1), "datum", rhs);
+					if (equals(lc.<Object>car(1), rhs)) yield null; // or rhs?
+					throw new TypeException("expected literal: {expected}, found: {datum}", rhs, lc.car(1));
 				}
 				else if (lc.car == sheBang) {
-					yield pipe(null,
-						()-> getTco(evaluate(e, list(symbol("%check"), rhs, lc.car(1)))),
-						obj-> obj instanceof Integer i ? bind(def, bndRes, e, lc.car(2), rhs) : resumeError(obj, symbol("Integer"))	
-					);
+					getTco(evaluate(e, list(symbol("%checkO"), rhs, lc.car(1))));
+					yield bind(def, bndRes, e, lc.car(2), rhs); 
 				}
-				else if (!(rhs instanceof Cons rc))
-					throw new BindException("expected {operands,%+d} operand, found: {datum}", "operands", len(lc), "datum", rhs);
-				else yield pipe(null,
-					()-> bind(def, bndRes, e, lc.car, rc.car),
-					obj-> lc.cdr() == null && rc.cdr() == null ? obj : bind(def, bndRes, e, lc.cdr(), rc.cdr())
-				);
+				else if (!(rhs instanceof Cons rc)) {
+					throw new MatchException("expected {operands,%+d} operand, found: {datum}", rhs, len(lc));
+				}
+				else {
+					var res = bind(def, bndRes, e, lc.car, rc.car);
+					yield lc.cdr() == null && rc.cdr() == null ? res : bind(def, bndRes, e, lc.cdr(), rc.cdr());
+				}
 			}
 			default-> {
 				if (equals(lhs, rhs)) yield null; // or rhs?
-				throw new BindException("expected literal: {expected}, found: {datum}", "expected", lhs, "datum", rhs);
+				throw new TypeException("expected literal: {expected}, found: {datum}", rhs, lhs);
 			}
 		};
 	}
@@ -759,7 +760,7 @@ public class Vm {
 	};
 	class Def implements Combinable  {
 		boolean def;
-		Def(boolean def) {this.def = def; }
+		Def(boolean def) { this.def = def; }
 		public Object combine(Env e, List o) {
 			var chk = checkR(this, o, 2, 3, or(Symbol.class, Cons.class));  // o = (pt arg) | (pt key arg)
 			if (chk instanceof Suspension s) return s;
@@ -884,7 +885,7 @@ public class Vm {
 				if (tag != ignore && thw instanceof Value val && val.tag != tag) throw thw; 
 				if (hdl != null) return combine2(null, e, tag, hdl, thw);
 				if (thw instanceof Value val) return val.value;
-				throw thw instanceof Error err ? err : new Error(thw);
+				throw thw instanceof Error err ? err : new Error("catch error:", thw);
 			}
 		}
 		public Object combine2(Resumption r, Env e, Object tag, Object hdl, Throwable thw) {
@@ -1080,7 +1081,7 @@ public class Vm {
 							? uncked(()-> c.newInstance(reorg(c, array(o))))
 							: resumeError(obj, symbol("Integer"))
 					);
-				default -> typeError("cannot invoke java function, not a {expected}: {datum}", this, toChk(or(ArgsList.class, LenList.class, Supplier.class, Function.class, BiFunction.class, Field.class, Executable.class)));
+				default -> typeError("cannot invoke, not a {expected}: {datum}", this, toChk(or(ArgsList.class, LenList.class, Supplier.class, Function.class, BiFunction.class, Field.class, Executable.class)));
 			};
 		}
 		public Object combine(Env e, List o) {
@@ -1092,7 +1093,8 @@ public class Vm {
 						switch (thw) {
 							case Value val: throw val;
 							case Error err: throw err;
-							default: return javaError("executing: {member} with: {args} ", thw, this, null, o);
+							case InnerException ie when name.equals("%CheckO"): throw ie; 
+							default: return javaError("error executing: {member} with: {args}", thw, this, null, o);
 						}
 					}
 				}
@@ -1188,9 +1190,17 @@ public class Vm {
 		if (userBreak == null) throw err; // TODO or new Value(ignore, err) come eventualmente la userBreak?
 		return (T) pipe(dbg(theEnv, "userBreak", err), ()-> getTco(evaluate(theEnv, list(userBreak, err)))); 
 	}
-	<T> T error(Throwable cause, Object ... objs) { return error(new Error(cause, objs)); }
 	<T> T error(String msg, Object ... objs) { return error(new Error(msg, objs)); }
-	<T> T error(String msg, Throwable cause, Object ... objs) { return error(new Error(msg, cause, objs)); }
+	<T> T error(Throwable thw, Object ... objs) { return error(new Error(thw, objs)); }
+	<T> T error(String msg, Throwable thw, Object ... objs) {
+		if (thw instanceof InnerException ie) {
+			var error = new Error(ie.getMessage() + " " + msg, "type", symbol(ie.getClass().getSimpleName().replace("Exception", "").toLowerCase()));
+			error.puts(objs);
+			error.puts(ie.objs);
+			return error(error);
+		}
+		return error(new Error(msg, thw, objs));
+	}
 	<T> T typeError(String msg, Object datum, Object expected) { return error(msg, "type", symbol("type"), "datum", datum, "expected", expected); }
 	<T> T typeError(String msg, Object datum, Object expected, Object expr) { return error(msg, "type", symbol("type"), "datum", datum, "expected", expected, "expr", expr); }
 	<T> T syntaxError(String msg, Object datum, Object expr) { return error(msg, "type", symbol("syntax"), "datum", datum, "expr", expr); }
@@ -1209,7 +1219,7 @@ public class Vm {
 	}
 	
 	
-	// Check parameter tree syntax
+	// Check parameter tree
 	class PTree {
 		private Object exp, pt, ep;
 		private Set syms = new HashSet();
@@ -1244,7 +1254,7 @@ public class Vm {
 	}
 	
 	
-	// Check parameters type value
+	// Check parameters value
 	class Any {}
 	Object checkN(Object op, List o, int expt, Object ... chks) {
 		return checkR(op, o, expt, expt, chks);
@@ -1253,93 +1263,73 @@ public class Vm {
 		return checkR(op, o, min, more, chks);
 	}
 	Object checkR(Object op, List o, int min, int max, Object ... chks) {
-		return checkR(null, op, o, min, max, chks);
+		try {
+			return checkL(min, max, o, chks);
+		}
+		catch (InnerException ie) {
+			return Utility.equals(op, "check", "the+")
+				? error("checking {expr} with {check}", ie, "expr", o, "check", toChk(chks))
+				: error("combining {op} with {args}", ie, "op", op, "args", o)
+			;
+		}
 	}
-	Object checkR(Resumption r, Object op, List o, int min, int max, Object ... chks) {
-		var chk = r != null ? r.resume() : chks.length == 0 ? len(o) : checkT(null, op, o, min, max, o, 0, chks);
-		if (chk instanceof Suspension s) return s.suspend(null, rr-> checkR(rr, op, o, min, max, chks));
-		if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+	int checkL(int min, int max, List o, Object ... chks) {
+		var len = chks.length == 0 ? len(o) : checkT(min, max, o, chks);
 		var rst = max != more || chks.length <= min ? 0 : (len - min) % (chks.length - min); 
 		if (len >= min && len <= max && rst == 0) return len;
-		return rst != 0
-			? matchError("expected {operands,%+d} operand at end of: " + o, "operands", rst)
-			: matchError("expected {operands,%+d} operand combining: " + toString(op) + " with: " + toString(o), "operands", len<min ? min-len : max-len)
+		throw rst != 0
+			? new MatchException("expected {operands,%+d} arguments at end of: {datum}", o, rst)
+			: new MatchException("expected {operands,%+d} arguments in {datum} ", o, len<min ? min-len : max-len)
 		;
 	}
-	Object checkT(Resumption r, Object op, List o, int min, int max, List ol, int i, Object ... chks) {
+	int checkT(int min, int max, List o, Object ... chks) {
 		var len=chks.length;
-		for (var first=true; ol != null; i+=1, ol=ol.cdr()) {
+		int i=0; for (; o != null; i+=1, o=o.cdr()) {
 			if (len == 0 || i >= max) continue;
-			var chk = first && r != null && !(first = false) ? r.resume() : checkTn(op, o, ol, i < len && i < min ? chks[i] : len <= min ? Any.class : chks[min + (i-min) % (len-min)]);
-			if (chk instanceof Suspension s) {var ii=i; var ool=ol; return s.suspend(null, rr-> checkT(rr, op, o, min, max, ool, ii, chks)); }
-			if (!(chk instanceof Integer i2)) return resumeError(chk, symbol("Integer"));
-			if (i2 > 1) return i+i2;
+			var cksn = i < len && i < min ? chks[i] : len <= min ? Any.class : chks[min + (i-min) % (len-min)];
+			if (cksn instanceof Object[] cksna && cksna[0] instanceof List) {
+				var i2 = checkO(o, cksn);
+				if (i2 > 0) return i+i2;
+			}
+			else {
+				checkO(o.car(), cksn);
+			}
 		}
 		return i;
 	}
-	Object checkTn(Object op, List o, List ol, Object chk) {
-		var on = ol.car;
-		if (Utility.equals(on, chk)) return 1;
-		else if (chk instanceof Class cl && checkC(on, cl)) return 1;
-		else if (chk instanceof List chkl && on instanceof List onl) {
-			// if (chkl.car() == symbol("||")) chk = array(chkl);
-			return pipe(null,
-				()-> check("check", onl, chkl),
-				obj-> obj instanceof Integer ? 1 : resumeError(chk, symbol("Integer"))
-			);
-		}
-		else if (chk instanceof Object[] chks) { // or
-			return checkOr(null, op, o, ol, on, 0, chks);
-			/* TODO provare a discirminare i due casi List o semplice
-			//if (chks[0] instanceof List) return checkOrList(null, op, o, ol, 0, chks);
-			if (ol.cdr() != null) return checkOrList(null, op, o, ol, 0, chks);
-			for (Object chkn: chks) {
-				if (Utility.equals(on, chkn)) return 1;
-				if (chk instanceof Class cl && checkC(on, cl)) return 1;
+	public int checkO(Object o, Object chk) {
+		if (chk instanceof Object[] chks) {
+			if (chks[0] instanceof List) {
+				if (o != null && !(o instanceof List)) throw new TypeException("not a {expected}: {datum}", o, toChk(or(null, List.class)));
+				for (int i=0; i<chks.length; i+=1) try {
+					return checkO(o, chks[i]);
+				}
+				catch (Throwable thw) {
+				}
 			}
-			return typeError(
-				"not a {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), on, toChk(chk)
-			);
-			//*/
-		}
-		else return typeError(
-			"not a {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), on, toChk(chk)
-		);
-	}
-	public Object checkOr(Resumption r, Object op, List o, List ol, Object on, int i, Object[] chks) {
-		for (var first=true; i<chks.length; i+=1) {
-			try {
-				var res = first && r != null && !(first = false) ? r.resume() : apply(
-						chkn-> Utility.equals(on, chkn) ? 1
-						: chkn instanceof Class cl && checkC(on, cl) ? 1
-						: chkn instanceof List chkl ? check("check", ol, chkl)
-						: -1 // TODO mancano le segnalazioni per res == -1 (or syntax error) or !Integer (invalid debug value)
-					,
-					chks[i]
-				);
-				if (res instanceof Suspension s) {var ii=i; return s.suspend(null, rr-> checkOr(rr, op, o, ol, on, ii, chks)); }
-				if (res instanceof Integer len && len >= 0) return len;
-				// TODO mancano le segnalazioni per res == -1 (or syntax error) or !Integer (invalid debug value)
+			else {
+				for (int i=0; i<chks.length; i+=1) try {
+					checkO(o, chks[i]); return 0;
+				}
+				catch (Throwable thw) {
+				}
 			}
-			catch (Throwable thw) {
-				//out.println(thw + "\nnot a " + chks[i] + ": " + o);
-			}		
 		}
-		return typeError("not {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), chks[0] instanceof List ? ol : on, toChk(chks));
-	}
-	public Object checkOrList(Resumption r, Object op, List o, List ol, int i, Object[] chks) {
-		for (var first=true; i<chks.length; i+=1) {
-			try {
-				var res = first && r != null && !(first = false) ? r.resume() : check("check", ol, (List) chks[i]);
-				if (res instanceof Suspension s) {var ii=i; return s.suspend(null, rr-> checkOrList(rr, op, o, ol, ii, chks)); }
-				if (res instanceof Integer len && len >= 0) return len;
-				// TODO mancano le segnalazioni per res == -1 (or syntax error) or !Integer (invalid debug value)
-			}
-			catch (Throwable thw) {
-				//out.println(thw + "\nnot a " + chks[i] + ": " + o);
-			}		
+		else if (chk instanceof List chkl) {
+			if (o != null && !(o instanceof List)) throw new TypeException("not a {expected}: {datum}", o, toChk(or(null, List.class)));
+			var ol = (List) o;
+			int min=0, max=more;
+			if (chkl.car instanceof Integer mn) { min = max = mn; chkl = chkl.cdr(); }
+			if (chkl != null && chkl.car instanceof Integer mx) { max = mx; chkl = chkl.cdr(); }
+			return checkL(min, max, ol, array(chkl));
 		}
-		return typeError("not {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), ol, toChk(chks));
+		else if (chk instanceof Class chkc && checkC(o, chkc)) {
+			return 0;
+		}
+		else if (Utility.equals(o, chk))  {
+			return 0;
+		}
+		throw new TypeException("not a {expected}: {datum}", o, toChk(chk));
 	}
 	public Object toChk(Object chk) {
 		return chk == null ? symbol("Null")
@@ -1349,26 +1339,6 @@ public class Vm {
 		: chk instanceof List l ? map(o-> toChk(o), l) 
 		: chk;
 	}
-	/*
-	public Object checkOr(Resumption r, Object op, List o, List ol, Object on, int i, Object[] chks) {
-		for (var first=true; i<chks.length; i+=1) {
-			try {
-				var res = first && r != null && !(first = false) ? r.resume() : checkOr(ol, on, chks[i]);
-				if (res instanceof Suspension s) {var ii=i; return s.suspend(null, rr-> checkOr(rr, op, o, ol, on, ii, chks)); }
-				if (res instanceof Integer len && len >= 0) return len;
-			}
-			catch (Throwable trw) {
-			}
-		}
-		return typeError("not {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), on, toChk(chks));
-	}
-	public Object checkOr(List ol, Object on, Object chkn) {
-		return Utility.equals(on, chkn) ? 1
-		: chkn instanceof Class cl && checkC(on, cl) ? 1
-		: chkn instanceof List chkl ? check("check", ol, chkl)
-		: -1; // TODO mancano le segnalazioni per res == 0 (or syntax error) or !Integer (invalid debug value)
-	}
-	*/
 	class Apv0 extends Apv { Apv0(Combinable cmb) { super(cmb); }}
 	class Apv1 extends Apv { Apv1(Combinable cmb) { super(cmb); }}
 	public boolean checkC(Object obj, Class cl) {
@@ -1378,33 +1348,16 @@ public class Vm {
 		||  cl == Apv0.class && obj instanceof Apv apv && args(apv) == 0
 		||  cl == Apv1.class && obj instanceof Apv apv && args(apv) == 1;
 	}
-	public Object check(Object op, List o, List chk) {
-		int min=0, max=more;
-		if (chk.car instanceof Integer mn) { min = max = mn; chk = chk.cdr(); }
-		if (chk != null && chk.car instanceof Integer mx) { max = mx; chk = chk.cdr(); }
-		return check(op, o, min, max, chk);
-	}
-	public Object check(Object op, List o, int min, int max, List chk) {
-		return pipe(null,
-			()-> checkR(op, o, min, max, array(chk)),
-			obj-> obj instanceof Integer i ? i : resumeError(chk, symbol("Integer"))
-		);
-	}	
 	public Object check(Object op, Object o, Object chk) {
-		if (chk instanceof List chkl) {
-			return o == null || o instanceof List ol ? check(op, (List) o, chkl) : typeError("not a {expected}: {datum}", o, symbol("List"));
+		try {
+			return checkO(o, chk);
 		}
-		if (Utility.equals(o, chk)) return 0;
-		if (chk instanceof Class cl && checkC(o, cl)) return 0;
-		if (chk instanceof Object[] chks) {
-			if (o == null || o instanceof List) return checkOrList(null, op, (List) o, (List) o, 0, chks);
-			//if (chks[0] == null || chks[0] instanceof List) return checkOrList(null, op, (List) o, (List) o, 0, chks);
-			for (Object chkn: chks) {
-				if (Utility.equals(o, chkn)) return 0;
-				if (chk instanceof Class cl && checkC(o, cl)) return 0;
-			}
+		catch (InnerException ie) {
+			return Utility.equals(op, "check", "the+")
+				? error("checking {expr} with {check}", ie, "expr", o, "check", chk)
+				: error("combining {op} with {args}", ie, "op", op, "args", o)
+			;	
 		}
-		return typeError("not a {expected}: {datum} combining: " + toString(op) + " with: " + toString(o), o, toChk(chk));
 	}
 	
 	
@@ -1621,11 +1574,10 @@ public class Vm {
 				"%set!", new Def(false),
 				"%eval", wrap(new Eval()),
 				"%newVmEnv", wrap(new JFun("%NewVmEnv", (n,o)-> checkN(n, o, 0), (l,o)-> vmEnv() )),
-				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, list(or(list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class), Any.class), list(0)))), (l,o)-> l == 0 ? env() : env(o.car(), array(o.cdr())) )),
+				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, or(list(0), list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class), Any.class))), (l,o)-> l==0 ? env() : env(o.car(), array(o.cdr())) )),
 				"%wrap", wrap(new JFun("%Wrap", (Function) this::wrap)),
 				"%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap)),
-				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { return !(bind(true, 0, o.<Env>car(), o.car(1), o.car(2)) instanceof Suspension s);} catch (RuntimeException rte) { return false; }} )),
-				//"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { return pipe(null, ()->{ try { return pipe(null, ()-> bind(true, 0, o.<Env>car(), o.car(1), o.car(2)),res-> { log(res); return true; } /*!(log(res) instanceof Error)*/); } catch (RuntimeException rte) { return false; }} ); } )),
+				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (InnerException ie) { return false; }} )),
 				"%apply", wrap(new JFun("%Apply", (n,o)-> checkR(n, o, 2, 3, Combinable.class, Any.class, Env.class), (l,o)-> combine(l == 2 ? env() : o.car(2), unwrap(o.car()), o.car(1)) )),
 				"%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(), unwrap(o.car()), o.cdr()) )),
 				"%apply**", wrap(new JFun("%Apply**", (ArgsList) o-> combine(env(), unwrap(o.car()), (List) listStar(o.cdr())) )),
@@ -1678,10 +1630,6 @@ public class Vm {
 				"%instanceOf?", wrap(new JFun("%InstanceOf?", (n,o)-> checkN(n, o, 2, Any.class, Class.class), (l,o)-> o.<Class>car(1).isInstance(o.car()) )),
 				// Object System
 				"%new", wrap(new JFun("%New", (n,o)-> checkM(n, o, 1, or(list(2, Box.class), list(1, more, Obj.class, or(list(or(Symbol.class, Keyword.class), Any.class), list(1, more, String.class, or(Symbol.class, Keyword.class), Any.class))))), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr())) )),
-				// TODO this %new! with reduced controls only for:
-				//		(%new! HandlerFrame ...) in (def\ lispx::makeHandlerBindOperator ...) di cond-sys.lispx
-				//		(%new! RestartHandler ...) in (def restartBind ...) di cond-sys.lispx
-				"%new!", wrap(new JFun("%New!", (n,o)-> checkM(n, o, 1, or(Box.class, Obj.class)), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr())) )),
 				"%newClass", wrap(new JFun("%NewClass", (n,o)-> checkR(n, o, 1, 2, Symbol.class, or(Box.class, Obj.class)), (l,o)-> newClass(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr())) )),
 				"%subClass?", wrap(new JFun("%SubClass?", (n,o)-> checkN(n, o, 2, Class.class, Class.class), (l,o)-> o.<Class>car(1).isAssignableFrom(o.car()) )),
 				"%type?",  wrap(new JFun("%Type?", (n,o)-> checkN(n, o, 2, Any.class, or(null, Class.class)), (l,o)-> apply((o1, c)-> c == null ? o1 == null /*: o1 == null ? !c.isPrimitive()*/ : o1 != null && c.isAssignableFrom(o1.getClass()), o.car(), o.<Class>car(1)) )),
@@ -1691,6 +1639,7 @@ public class Vm {
 				"%the", wrap(new JFun("%The", (n,o)-> checkN(n, o, 2, Class.class), (l,o)-> o.<Class>car().isInstance(o.car(1)) ? o.car(1) : typeError("not a {expected}: {datum}", o.car(1), symbol(o.<Class>car().getSimpleName())) )),
 				"%the+", wrap(new JFun("%The+", (n,o)-> checkN(n, o, 2), (l,o)-> check("the+", o.car(1), o.car) )),
 				"%check", wrap(new JFun("%Check", (n,o)-> checkN(n, o, 2), (l,o)-> check("check", o.car, o.car(1)) )),
+				"%checkO", wrap(new JFun("%CheckO", (n,o)-> checkN(n, o, 2), (l,o)-> checkO(o.car, o.car(1)) )),
 				// List & Array
 				"%list", wrap(new JFun("%List", (ArgsList) o-> o)),
 				"%list*", wrap(new JFun("%List*", (ArgsList) this::listStar)),
@@ -1854,6 +1803,7 @@ public class Vm {
 		loadText("testJni.lsp");
 		//loadText("testCmt.lsp");
 		loadText("wat!/vm.wat");
+		//loadText("testChk.lsp");
 		loadText("lispx/vm.lispx");
 		print("start time: " + (currentTimeMillis() - milli));
 		print("(load \"wat!/vm.wat\")(load \"lispx/vm.lispx\")");

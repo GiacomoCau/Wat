@@ -67,9 +67,9 @@ public class Utility {
 		arraycopy(second, 0, res, first.length, second.length);
 		return res;
 	}
-	public static <T> T[] headAdd(T[] first, T ... second) {
-		T[] res = copyOf(second, first.length + second.length);
-		arraycopy(first, 0, res, second.length, first.length);
+	public static <T> T[] headAdd(T[] second, T ... first) {
+		T[] res = copyOf(first, second.length + first.length);
+		arraycopy(second, 0, res, first.length, second.length);
 		return res;
 	}
 	

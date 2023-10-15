@@ -135,7 +135,7 @@
   (vau (handlerSpecs . forms) env
     (let1
       (handlerFrame
-        (%new! HandlerFrame
+        (new HandlerFrame
           :handlers
              (map (\ (spec) (handlerSpecParser spec env)) handlerSpecs)
           :parentFrame?
@@ -168,7 +168,7 @@
    |#
   (lispx::makeHandlerBindOperator
     (\ ((restartName functionForm . properties) env)
-      (%new! RestartHandler
+      (new RestartHandler
         :restartName
            (the Symbol restartName)
         :handlerFunction
