@@ -224,7 +224,7 @@
    |$(type function)
    |#
   %null?)
-
+(def !null? %!null?)
 (def not
   #|Invert the BOOLEAN.
    |$(fn (boolean))
@@ -914,6 +914,12 @@
         (if (test (fkey (car lst)) key) lst
           (loop (cdr lst)))))))
 
+(def\ (member? key lst . keywords)
+  (!null? (apply** member key lst keywords)) )
+  
+(def\ (!member? key lst . keywords)
+  (null? (apply** member key lst keywords)) )
+
 (def\ (assoc key lst)
   (let1 loop (lst lst)
      (if (null? lst) #null
@@ -1279,7 +1285,7 @@
 
 (defMacro (the+ ck obj) (list 'let1 (list 'obj obj) (list 'check 'obj ck) 'obj))
 
-; TODO non è più cosi costosa la conversione, si può fare
+; TODO non è più così costosa la conversione, si può fare
 ; (def the the+)
 
 
@@ -1299,15 +1305,15 @@
 
 (defMacro (all?* f . lst) (list 'all? f lst))
 
-(def\ (forEach f lst . lst*)
-  #|Apply the FUNCTION to every element of the LIST for effect.  Return the #inert.
+(def\ (forEach# f lst . lst*)
+  #|Apply the FUNCTION to every element of the LIST for effect. Return the #inert.
    |#
   (if (null? lst*)
     ((rec\ (forEach lst) (unless (null? lst) (f (car lst)) (forEach (cdr lst)))) lst)
     ((rec\ (forEach* lst*) (unless (null? (car lst*)) (apply f (map car lst*)) (forEach* (map cdr lst*)) )) (cons lst lst*)) ))
 
 (def\ (forEach f lst . lst*)
-  #|Apply the FUNCTION to every element of the LIST for effect.  Return the list.
+  #|Apply the FUNCTION to every element of the LIST for effect. Return the list.
    |#
   (if (null? lst*)
     (let1 (res lst) ((rec\ (forEach lst) (if (null? lst) res (f (car lst)) (forEach (cdr lst)))) res))
@@ -1331,7 +1337,6 @@
   #|Return a new list from which the elements that satisfy the TEST have been removed.
    |#
   (list* 'filter (list 'compose '! f) lst lst*) )
-
 
 (def\ (reduceL f init lst . lst*)
   (if (null? lst*)
@@ -1629,7 +1634,7 @@
       (apply /= args) )))
 
 
-;;; Numbers
+;;; Thetic & Lytic
 
 ;; The terms thetic (for + and *) and lytic (for - and /) are due to Hankel.
 

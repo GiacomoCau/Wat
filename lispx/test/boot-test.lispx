@@ -356,7 +356,7 @@
   (deftest bound?.6
     (signalsError?
      (bound? 12 (theEnv))
-     Error :type 'type :datum 12 :expected '(or Symbol Keyword)))
+     Error :type 'type :datum 12 :expected '(or Symbol Keyword String)))
 
   (deftest bound?.7
     (signalsError?
@@ -1402,7 +1402,7 @@
   (deftest newEnv.3
     (signalsError?
      (newEnv 12)
-     Error :type 'type :datum (12) :expected '(or (0) (1 + (or Null Env) (or Symbol Keyword) Any)))))
+     Error :type 'type :datum (12) :expected '(or (0) (1 + (or Null Env) (or Symbol Keyword String) Any)))))
 
 (defsuite cxxr
 
@@ -2388,17 +2388,17 @@
   (deftest obj.3
     (signalsError?
      (new 3)
-     Error :type 'type :datum '(3) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword) Any) (1 + String (or Symbol Keyword) Any)))) ))
+     Error :type 'type :datum '(3) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword String) Any) (1 + String (or Symbol Keyword String) Any)))) ))
 
   (deftest obj.4
     (signalsError?
      (new Object)
-     Error :type 'type :datum '(&java.lang.Object) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword) Any) (1 + String (or Symbol Keyword) Any)))) ))
+     Error :type 'type :datum '(&java.lang.Object) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword String) Any) (1 + String (or Symbol Keyword String) Any)))) ))
 
   (deftest obj.5
     (signalsError?
      (new Obj :x)
-     Error :type 'type :datum '(&Wat.Vm$Obj :x) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword) Any) (1 + String (or Symbol Keyword) Any)))) )) )
+     Error :type 'type :datum '(&Wat.Vm$Obj :x) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword String) Any) (1 + String (or Symbol Keyword String) Any)))) )) )
 
 (defsuite slots
 
@@ -2657,7 +2657,7 @@
     #inert)
 
   (deftest while.3
-    (if (> (tTrue) 0) #t
+    (if (> (typeT) 0) #t
       (signalsError?
         (while 12)
         Error :type 'type :datum 12 :expected 'Boolean)))
@@ -2685,7 +2685,7 @@
     #inert)
 
   (deftest until.3
-    (if (> (tTrue) 0) #t
+    (if (> (typeT) 0) #t
       (signalsError?
         (until 12)
         Error :type 'type :datum 12 :expected 'Boolean)))

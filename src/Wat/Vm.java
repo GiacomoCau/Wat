@@ -142,7 +142,7 @@ public class Vm {
 	Object boxDft = null; // box/dinamic default: null, inert, ...
 	
 	int prTrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
-	int tTrue = 0; // type true: 0:true, 1:!false, 2:!(or false null), 3:!(or false null inert), 4:!(or false null inert zero)
+	int typeT = 0; // type true: 0:true, 1:!false, 2:!(or false null), 3:!(or false null inert), 4:!(or false null inert zero)
 	int prEnv = 3; // print environment
 	int bndRes = 0; // bind result: 0:inert 1:rhs 2:prev
 	private Object bndRes(Object o) {
@@ -238,11 +238,9 @@ public class Vm {
 	public SheBang sheBang = new SheBang();
 	
 	// Tail Call Optimization
-	/*
-	interface Tco extends Supplier {};
-	Object tco(Tco tco) { return doTco ? tco : tco.get(); }
-	//*/
-	//* utile per debug!
+	//interface Tco extends Supplier {};
+	//Object tco(Tco tco) { return doTco ? tco : tco.get(); }
+	// la classe è più utile per debug, print Tco
 	class Tco implements Supplier {
 		Supplier tco;
 		Tco(Supplier tco) { this.tco = tco; }
@@ -250,7 +248,6 @@ public class Vm {
 		@Override public String toString() { return "Tco"; }
 	};
 	Object tco(Supplier tco) { return doTco ? new Tco(tco) : tco.get(); }
-	//*/
 	<T> T getTco(Object o) { while (o instanceof Tco tco) o = tco.get(); return (T) o; }
 	
 	
@@ -326,7 +323,8 @@ public class Vm {
 		@Override List setCdr(Object cdr) { return cdr == null || cdr instanceof List ? setCdr(cdr) : typeError("cannot set cdr, not a {expected}: {datum}", cdr, symbol("List") ); }
 	}
 	public int len(List o) { int i=0; for (; o != null; i+=1, o=o.cdr()); return i; }
-	public int len(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return i; /*o == null ? i : i+1;*/ }
+	public int len(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return i; }
+	//public Object argn(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return o == null ? i : cons(i, symbol("+")) ; }
 	<T extends Cons> T cons(Object car, Object cdr) {
 		return (T)(cdr == null || cdr instanceof List ? new List(car, (List) cdr) : new Cons(car, cdr));
 	}
@@ -337,6 +335,8 @@ public class Vm {
 		Object value(Object key);
 		boolean isBound(Object key);
 		boolean remove(Object key);
+		List keys();
+		Object get(Object key);
 	}
 	class Env implements ArgsList, Common {
 		Env parent; LinkedHashMap<String,Object> map = new LinkedHashMap();
@@ -356,7 +356,7 @@ public class Vm {
 		};
 		public Object value(Object obj) {  return lookup(obj).value; }
 		public boolean isBound(Object obj) { return lookup(obj).isBound; }
-		Object get(Object obj) {
+		public Object get(Object obj) {
 			var lookup = lookup(obj);
 			if (!lookup.isBound) return unboundSymbolError("unbound symbol: {symbol}", obj, this);
 			if (prTrc >= 6) print("  lookup: ", lookup.value); return lookup.value;
@@ -381,9 +381,7 @@ public class Vm {
 		};
 		int deep() { int i=0; for (var env=this; env != null; env=env.parent) i+=1; return i; }
 		public String toString() {
-			var deep = deep();
-			var prefix = switch(deep) { case 1-> "Vm"; case 2-> "The"; default-> ""; };
-			return "{" + prefix + "Env[" + map.size() + "]" + eIf(deep < prEnv, ()-> toStringSet(map.reversed().entrySet())) + eIfnull(parent, ()-> " " + parent) + "}";
+			return "{" + (this==theEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" + (map.size() > 10 ? "[" + map.size() + "] ..." : toStringSet(map.reversed().entrySet())) + eIfnull(parent, ()-> " " + parent) + "}";
 		}
 		public boolean remove(Object obj) {
 			var key = toKey(obj);
@@ -394,15 +392,16 @@ public class Vm {
 			}
 			return false;
 		};
+		public List keys() {
+			var keys = map.keySet();
+			for (var env=parent; env != null; env=env.parent) keys.addAll(env.map.keySet());
+			return list(keys.toArray());
+		}
 		@Override public Object apply(List o) {
 			var len = len(o);
 			return switch (len(o)) {
 				case 0-> this;
-				case 1-> {
-					var car = o.car();
-					var key = toKey(car);
-					yield Utility.apply(val-> val != null || isBound(key) ? val : unboundFieldError("slot: {name} not found in: {object}", car, this), lookup(key));
-				}
+				case 1-> get(o.car);
 				default-> {
 					BiFunction f =	o.car == keyword(":def") ? (k,v)-> def(k,v) : o.car == keyword(":set") ? (k,v)-> set(k,v) : null;
 					if (f == null) f = (BiFunction) (k,v)-> def(k,v); else { len-=1; o=o.cdr();  }
@@ -463,6 +462,12 @@ public class Vm {
 		public Object value(Object key) { return map.get(toKey(key)); }
 		public boolean isBound(Object key) { return map.containsKey(toKey(key)); }
 		public boolean remove(Object key) { key=toKey(key); if (!map.containsKey(key)) return false; map.remove(key); return true; }
+		public List keys() { return list(map.keySet().toArray()); }
+		public Object get(Object obj) {
+			var key = toKey(obj);
+			var val = map.get(key);
+			return val != null || map.containsKey(key) ? val : unboundFieldError("slot: {name} not found in: {object}", obj, this);
+		}
 		Object puts(Object ... objs) {
 			if (objs == null) return null;
 			Object last = null;
@@ -482,17 +487,13 @@ public class Vm {
 			return "{&" + obj.getClass().getCanonicalName() // or .getSimpleName()?
 				+ eIfnull(obj.getMessage(), m-> " " + Vm.this.toString(true, m))
 				//+ eIfnull(getCause(), t-> " " + t.getClass().getSimpleName())
-				+ toStringSet(obj.map.entrySet())
+				+ (map.size() > 10 ? " [" + map.size() + "]" + " ..." : toStringSet(obj.map.entrySet()))
 				+ "}";
 		}
 		@Override public Object apply(List o) {
 			var len = len(o);
 			if (len == 0) return this;
-			if (len == 1) {
-				var car = o.car();
-				var key = toKey(car);
-				return Utility.apply(val-> val != null || map.containsKey(key) ? val : unboundFieldError("slot: {name} not found in: {object}", car, this), map.get(key));
-			}
+			if (len == 1) return get(o.car);
 			var bndRes = len % 2 == 0 ? null : first(o.car(), len-=1, o=o.cdr());
 			for (; len>2; len-=2, o=o.cdr(1)) map.put(toKey(o.car()), o.car(1));
 			var key = toKey(o.car());
@@ -841,7 +842,7 @@ public class Vm {
 		public String toString() { return "%If"; }
 	}
 	Object istrue(Object res) {
-		return switch (tTrue) {
+		return switch (typeT) {
 			case 0-> res instanceof Boolean b ? b : typeError("not a {expected}: {datum}", res, symbol("Boolean")); // Kernel, Wat, Lispx
 			case 1-> !Utility.equals(res, false); // Scheme, Guile, Racket
 			case 2-> !Utility.equals(res, false, null); // Clojure
@@ -1354,7 +1355,7 @@ public class Vm {
 		}
 		catch (InnerException ie) {
 			return Utility.equals(op, "check", "the+")
-				? error("checking {expr} with {check}", ie, "expr", o, "check", chk)
+				? error("checking {expr} with {check}", ie, "expr", o, "check", toChk(chk))
 				: error("combining {op} with {args}", ie, "op", op, "args", o)
 			;	
 		}
@@ -1551,7 +1552,7 @@ public class Vm {
 		return set.isEmpty() ? "" : " " + set.stream().map(e-> ":" + e.getKey() + " " + e.getValue()).collect(joining(" "));
 	}
 	private String toString(String name, Object[] args) {
-		return (name.equals("new") ? "constructor: " : "method: " + name) + ifnull(args, "()", a-> toString(list(a)));
+		return (name.equals("new") ? "constructor: " : "method: " + name) + (/*args == null ||*/ args.length == 0 ? "()" : toString(list(args)));
 	}
 	public String toKey(Object key) {
 		return switch (key) {
@@ -1574,7 +1575,7 @@ public class Vm {
 				"%set!", new Def(false),
 				"%eval", wrap(new Eval()),
 				"%newVmEnv", wrap(new JFun("%NewVmEnv", (n,o)-> checkN(n, o, 0), (l,o)-> vmEnv() )),
-				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, or(list(0), list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class), Any.class))), (l,o)-> l==0 ? env() : env(o.car(), array(o.cdr())) )),
+				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, or(list(0), list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class, String.class), Any.class))), (l,o)-> l==0 ? env() : env(o.car(), array(o.cdr())) )),
 				"%wrap", wrap(new JFun("%Wrap", (Function) this::wrap)),
 				"%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap)),
 				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (InnerException ie) { return false; }} )),
@@ -1585,9 +1586,9 @@ public class Vm {
 				"%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnv = env(theEnv))),
 				"%popEnv", wrap(new JFun("%PopEnv", (Supplier) ()-> theEnv = theEnv.parent)),
 				// Common (Env & Box)
-				"%value", wrap(new JFun("%Value", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class), Common.class), (l,o)-> o.<Common>car(1).value(o.car)) ),
-				"%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class), Common.class), (l,o)-> o.<Common>car(1).isBound(o.car)) ),
-				"%remove!", wrap(new JFun("%remove!", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class), Common.class), (l,o)-> o.<Common>car(1).remove(o.car)) ),				
+				"%value", wrap(new JFun("%Value", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), Common.class), (l,o)-> o.<Common>car(1).value(o.car)) ),
+				"%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), Common.class), (l,o)-> o.<Common>car(1).isBound(o.car)) ),
+				"%remove!", wrap(new JFun("%remove!", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), Common.class), (l,o)-> o.<Common>car(1).remove(o.car)) ),				
 				// Values
 				"%car", wrap(new JFun("%Car", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().car() )),
 				"%cdr", wrap(new JFun("%Car", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().cdr() )),
@@ -1595,6 +1596,7 @@ public class Vm {
 				"%cddr", wrap(new JFun("%Cddr", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().cdr(1) )),
 				"%cons", wrap(new JFun("%Cons", (BiFunction) (car,cdr)-> cons(car,cdr) )),
 				"%null?", wrap(new JFun("%Null?", (Function<Object, Boolean>) obj-> obj == null)),
+				"%!null?", wrap(new JFun("%!Null?", (Function<Object, Boolean>) obj-> obj != null)),
 				"%cons?", wrap(new JFun("%Cons?", (Function<Object, Boolean>) obj-> obj instanceof Cons)),
 				"%list?", wrap(new JFun("%List?", (Function<Object, Boolean>) obj-> obj instanceof List)),
 				"%symbol", wrap(new JFun("%Symbol", (n,o)-> checkN(n, o, 1, String.class), (l,o)-> symbol(o.car()) )),
@@ -1629,7 +1631,7 @@ public class Vm {
 				"%dot", wrap(new JFun("%Dot", (Function<String,Object>) this::dot)),
 				"%instanceOf?", wrap(new JFun("%InstanceOf?", (n,o)-> checkN(n, o, 2, Any.class, Class.class), (l,o)-> o.<Class>car(1).isInstance(o.car()) )),
 				// Object System
-				"%new", wrap(new JFun("%New", (n,o)-> checkM(n, o, 1, or(list(2, Box.class), list(1, more, Obj.class, or(list(or(Symbol.class, Keyword.class), Any.class), list(1, more, String.class, or(Symbol.class, Keyword.class), Any.class))))), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr())) )),
+				"%new", wrap(new JFun("%New", (n,o)-> checkM(n, o, 1, or(list(2, Box.class), list(1, more, Obj.class, or(list(or(Symbol.class, Keyword.class, String.class), Any.class), list(1, more, String.class, or(Symbol.class, Keyword.class, String.class), Any.class))))), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr())) )),
 				"%newClass", wrap(new JFun("%NewClass", (n,o)-> checkR(n, o, 1, 2, Symbol.class, or(Box.class, Obj.class)), (l,o)-> newClass(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr())) )),
 				"%subClass?", wrap(new JFun("%SubClass?", (n,o)-> checkN(n, o, 2, Class.class, Class.class), (l,o)-> o.<Class>car(1).isAssignableFrom(o.car()) )),
 				"%type?",  wrap(new JFun("%Type?", (n,o)-> checkN(n, o, 2, Any.class, or(null, Class.class)), (l,o)-> apply((o1, c)-> c == null ? o1 == null /*: o1 == null ? !c.isPrimitive()*/ : o1 != null && c.isAssignableFrom(o1.getClass()), o.car(), o.<Class>car(1)) )),
@@ -1706,7 +1708,7 @@ public class Vm {
 											list((Object) apply(c-> !ctApv ? c : wrap(c), new CatchTagWth()),
 												 (Object) apply(t-> !ctApv ? t : wrap(t), new ThrowTag())))) )),
 				"prTrc", wrap(new JFun("PrTrc", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4, 5, 6)), (l,o)-> l == 0 ? prTrc : inert(start=level-(doTco ? 0 : 3), prTrc=o.car()) )),
-				"tTrue", wrap(new JFun("TTrue", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4)), (l,o)-> l == 0 ? tTrue : inert(tTrue=o.car()) )),
+				"typeT", wrap(new JFun("TypeT", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4)), (l,o)-> l == 0 ? typeT : inert(typeT=o.car()) )),
 				"bndRes", wrap(new JFun("BndRes", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2)), (l,o)-> l == 0 ? bndRes : inert(bndRes=o.car()) )),
 				"prEnv", wrap(new JFun("PrEnv", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? prEnv : inert(prEnv=o.car()) )),
 				"else1", wrap(new JFun("Else1", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? else1 : inert(else1=o.car()) )),

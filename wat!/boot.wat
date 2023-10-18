@@ -106,6 +106,7 @@
   %newEnv)
 (def null?
   %null?)
+(def !null? %!null?)
 (def not
   !)
 
@@ -656,6 +657,12 @@
           (loop (cdr lst)))))))
 |#
 
+(def\ (member? key lst)
+  (!null? (member key lst)) )
+  
+(def\ (!member? key lst)
+  (null? (member key lst)) )
+
 (def\ (assoc key lst)
   (let1 loop (lst lst)
      (if (null? lst) #null
@@ -986,94 +993,7 @@
 (%assert (expand (the\ (((#! Integer b) . #_)(#! Integer a)) (+ a b))) '(\ ((b . #ignore) a) (begin (the Integer b) (the Integer a)) (+ a b)))
 ;(%assert ((the\ (((#! Integer b) . #_)(#! (or 3 4) a)) (+ a b)) '(1 2) 3) 4)
 
-
 ; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (list* 'list xs) env)
-
-#| TODO eliminare dopo verifica
-(defVau (check o . cks) env
-  (let1 (env+ (newEnv env '+ (.MAX_VALUE Integer) '|| (\ o (list->array o)) 'or (\ o (list->array o)) ))
-    (apply* @check vm "check" ((\ (o) (if (or (null? o) (list? o)) o (list o))) (eval o env)) (eval (list* 'list cks) env+)) ))
-
-; rende check pari #! ma torna sempre 1 piuttosto che la lunghezza della lista come piacerebbe
-(defVau (check o . cks) env
-  (let* (  (lta  (\ o (list->array o)))
-           (env+ (newEnv env '+ (.MAX_VALUE Integer) '|| lta 'or lta )) )
-    (apply* @check vm "check"
-      (list (eval o env))
-      (list (eval (if (== (car cks) 'or) cks (list* 'list cks)) env+)) )))
-
-; un list di troppo? però ci vuole il controllo per null e list
-
-(defVau (check o . cks) env
-  (let1 (env+ (newEnv env '+ (.MAX_VALUE Integer) 'or (\ o (list->array o)) ))
-    (apply* @check vm "check"
-      (eval o env)
-      (eval (if (== (car cks) 'or) cks (list* 'list cks)) env+)) ))
-
-(def\ (ev x env) 
-  (or (! (list? x) (== (car x) 'or)) (eval x env) (map (\ (x) (ev x env)) x)))
-
-(defVau (check* o . cks) env
-  (let1 (env+ (newEnv env '+ (.MAX_VALUE Integer) 'or (\ o (list->array o)) ))
-    (%check (eval o env) (eval (list* 'list cks) env+)) ))
-
-(defVau (check o ck) env
-  (let1 (env+ (newEnv env '+ (.MAX_VALUE Integer) 'or (\ o (list->array o)) ))
-    (%check (eval o env) (eval ck env+)) ))
-
-
-(defVau (check o ck) env
-  (let1 (env+ (newEnv env '+ (.MAX_VALUE Integer) 'or (\ o (list->array o)) ))
-    (%check (eval o env) (ev ck env+)) ))
-
-(def\ (ev x env+) 
-  (if (or (! (list? x)) (== (car x) 'or)) (eval x env+)
-    (if (or (== (car x) '%') (== (car x) 'quote)) (cadr x) (map (\ (x) (ev x env+)) x)) ))
-
-(defVau (check o ck) env
-  (let1 (env+ (newEnv env '+ (.MAX_VALUE Integer) 'or (\ o (list->array o)) ))
-    (let1rec\
-      (ev (x)
-        (if (! (cons? x))
-          (eval x env+)
-          (if (== (car x) 'or)
-            (list->array (log (ev (cdr x))))
-            (if (or (== (car x) '%') (== (car x) 'quote))
-              (cadr x)
-              (map (\ (x) (ev x)) x) )))) 
-      (%check (eval o env) (log (ev ck))) )))
-
-(defVau (check o ck) env
-  (let1rec\
-    (ev (ck)
-      (if (== ck '+) (.MAX_VALUE Integer)
-        (if (! (cons? ck)) (eval ck env)
-          (if (== (car ck) 'or) (list->array (ev (cdr ck)))
-            (if (or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
-              (map (\ (ck) (ev ck)) ck) )))))
-    (%check (eval o env) (ev ck)) ))
-
-(defVau (check0 o ck) env
-  (let1rec\
-    (ev (ck)
-      (if (== ck '+) (.MAX_VALUE Integer)
-        (if (! (cons? ck)) (eval ck env)
-          (if (== (car ck) 'or) (list->array (ev (cdr ck)))
-            (if (or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
-              (map (\ (ck) (ev ck)) ck) )))))
-    (%check o (ev ck)) ))
-
-(defVau (check o ck) env
-  (let1rec\
-    (ev (ck)
-      (cond
-        ((== ck '+) (.MAX_VALUE Integer))
-        ((! (cons? ck)) (eval ck env))
-        ((== (car ck) 'or) (list->array (ev (cdr ck))))
-        ((or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck))
-        (else (map (\ (ck) (ev ck)) ck)) ))
-    (%check (eval o env) (ev ck)) ))
-|#
 
 #| TODO definito in vm, eliminare
 (def %check
@@ -1139,7 +1059,7 @@
 (%assert (the+ (or 1 2) 2) 2)
 (%assert (the+ (or 1 2) 3) Error :type 'type :datum 3 :expected '(or 1 2))
 
-; TODO non è più cosi costosa la conversione, si può fare
+; TODO non è più così costosa la conversione, si può fare
 ; (def the the+)
 
 
@@ -1169,15 +1089,15 @@
 
 (defMacro (all?* f . lst) (list 'all? f lst))
 
-(def\ (forEach f lst . lst*)
+(def\ (forEach# f lst . lst*)
   (if (null? lst*)
     ((rec\ (forEach lst) (unless (null? lst) (f (car lst)) (forEach (cdr lst)))) lst)
     ((rec\ (forEach* lst*) (unless (null? (car lst*)) (apply f (map car lst*)) (forEach* (map cdr lst*)) )) (cons lst lst*)) ))
 
-(assert (forEach (\ (#ignore)) '(1 2)) #inert)
-(assert (forEach (\ (#ignore #ignore)) '(1 2) '(3 4)) #inert)
-(assert (let1 (n 1) (forEach (\ (a) (set! n (+ n a))) '(1 2)) n) 4)
-(assert (let1 (n 1) (forEach (\ (a b) (set! n (+ n (+ a b)))) '(1 2) '(3 4)) n) 11)
+(assert (forEach# (\ (#ignore)) '(1 2)) #inert)
+(assert (forEach# (\ (#ignore #ignore)) '(1 2) '(3 4)) #inert)
+(assert (let1 (n 1) (forEach# (\ (a) (set! n (+ n a))) '(1 2)) n) 4)
+(assert (let1 (n 1) (forEach# (\ (a b) (set! n (+ n (+ a b)))) '(1 2) '(3 4)) n) 11)
 
 (def\ (forEach f lst . lst*)
   (if (null? lst*)
@@ -1484,7 +1404,7 @@
       (apply /= args) )))
 
 
-;;; Numbers
+;;; Thetic & Lytic
 
 ;; The terms thetic (for + and *) and lytic (for - and /) are due to Hankel.
 

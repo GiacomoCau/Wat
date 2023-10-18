@@ -17,7 +17,7 @@
 (bndRes 0)
 (boxDft #inert)
 (aQuote #t)
-(tTrue 0)
+(typeT 0)
 (hdlAny #t)
 
 (%def Null #null)

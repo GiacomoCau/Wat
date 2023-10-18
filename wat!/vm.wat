@@ -10,7 +10,7 @@
 (bndRes 0)
 (boxDft #null)
 (aQuote #t)
-(tTrue 1)
+(typeT 1)
 (hdlAny #t)
 
 (%def Null #null)
