@@ -762,7 +762,7 @@
         (eval (\01+ else) env))
       (if (list? opt?)
         (eval (list* (list 'vau (list pt) #ignore then) opt?) env)
-        (error ($ "not (or Null List): " opt?)) ))))
+        (error ($ "not (or () List): " opt?)) ))))
 
 (assert (ifOpt? (a ()) (+ a 1)) #null)
 (assert (ifOpt? (a '(2)) (+ a 1)) 3)
@@ -775,7 +775,7 @@
         (eval (\01+ else) env))
       (if (list? opt?)
         (eval (list* (list 'vau pt #ignore then) opt?) env)
-        (error ($ "not (or Null List): " opt?)) ))))
+        (error ($ "not (or () List): " opt?)) ))))
 
 (assert (ifOpt*? ((a) ()) (+ 1 a)) #null)
 (assert (ifOpt*? ((a) ()) (+ 1 a) 0) 0)
@@ -1045,9 +1045,9 @@
 (%assert (check* '(a 1 2) 'a 1 2) 3)
 (%assert (check* '(a) (or '(b) '(a))) 1)
 (%assert (check* '(a 1 2) (or '(b 3) '(a 1 2))) 3)
-(%assert (check* '(a #null 1) 2 3 Symbol (or (1 Any) (2 (or Null Inert :prv :rhs)))) 3)
-(%assert (check* '(a :prv 1)  2 3 Symbol (or (1 Any) (2 (or Null Inert :prv :rhs)))) 3)
-(%assert (check* '(a 1)       2 3 Symbol (or (1 Any) (2 (or Null Inert :prv :rhs)))) 2)
+(%assert (check* '(a #null 1) 2 3 Symbol (or (1) (2 (or () Inert :prv :rhs)))) 3)
+(%assert (check* '(a :prv 1)  2 3 Symbol (or (1) (2 (or () Inert :prv :rhs)))) 3)
+(%assert (check* '(a 1)       2 3 Symbol (or (1) (2 (or () Inert :prv :rhs)))) 2)
 
 (defVau match? args env (catchWth #f (apply check args env) #t))
 

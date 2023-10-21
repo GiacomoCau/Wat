@@ -1022,7 +1022,7 @@
         (eval (\01+ else) env))
       (if (list? opt?)
         (eval (list* (list 'vau (list pt) #ignore then) opt?) env)
-        (typeError opt? '(or Null List)) ))))
+        (typeError opt? '(or () List)) ))))
 
 (defVau (ifOpt*? (pt opt?) then . else) env
   (let1 (opt? (eval opt? env))
@@ -1031,7 +1031,7 @@
         (eval (\01+ else) env))
       (if (list? opt?)
         (eval (list* (list 'vau pt #ignore then) opt?) env)
-        (typeError opt? '(or Null List)) ))))
+        (typeError opt? '(or () List)) ))))
 
 (defMacro whenOpt? ((pt opt?) . forms)
   #|Destructure the OPTION?.  If it's non-nil, evaluate the FORMS with

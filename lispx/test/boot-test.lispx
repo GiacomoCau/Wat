@@ -130,7 +130,7 @@
   (deftest assertType.3
     (signalsError?
      (assertType #t #f)
-     Error :type 'type :datum #f :expected '(or Null Class)))
+     Error :type 'type :datum #f :expected '(or () Class)))
 
   (deftest assertType.4
     (signalsError?
@@ -496,7 +496,7 @@
   (deftest def.9
     (signalsError?
      (def x 1 "docstring")
-     Error :type 'type :datum 1 :expected '(or Null Inert :rhs :prv :obj))))
+     Error :type 'type :datum 1 :expected '(or () #inert :rhs :prv :obj))))
 
 (defsuite defConstant
 
@@ -544,7 +544,7 @@
   (deftest \.4
     (signalsError?
      (\ #t)
-     Error :type 'type :datum #t :expected '(or Null Ignore Symbol Cons))))
+     Error :type 'type :datum #t :expected '(or () #ignore Symbol Cons))))
 
 (defsuite def\
 
@@ -1402,7 +1402,7 @@
   (deftest newEnv.3
     (signalsError?
      (newEnv 12)
-     Error :type 'type :datum (12) :expected '(or (0) (1 + (or Null Env) (or Symbol Keyword String) Any)))))
+     Error :type 'type :datum (12) :expected '(or () (1 + (or () Env) (or Symbol Keyword String) Any)))))
 
 (defsuite cxxr
 
@@ -1771,7 +1771,7 @@
   (deftest dolist.6
     (signalsError?
      (dolist ("not-a-symbol" '(1 2 3)))
-    Error :type 'type :datum '("not-a-symbol") :expected '(or Null Ignore Symbol)))
+    Error :type 'type :datum '("not-a-symbol") :expected '(or () #ignore Symbol)))
 
   (deftest dolist.7
     (let ((ct 0))
@@ -1844,12 +1844,12 @@
   (deftest reverse.2
     (signalsError?
      (reverse "foo")
-     Error :type 'type :datum "foo" :expected '(or Null List)))
+     Error :type 'type :datum "foo" :expected '(or () List)))
 
   (deftest reverse.3
     (signalsError?
      (reverse "foo" "bar")
-     Error :type 'type :datum "foo" :expected '(or Null List)))
+     Error :type 'type :datum "foo" :expected '(or () List)))
 
   (deftest reverse.4
     (reverse ())
@@ -1878,7 +1878,7 @@
   (deftest append.3
     (signalsError?
      (append 1 '())
-     Error :type 'type :datum 1 :expected '(or Null List)))
+     Error :type 'type :datum 1 :expected '(or () List)))
 
   (deftest append.4
     (append '() '())
@@ -2164,12 +2164,12 @@
   (deftest list-elt.2
     (signalsError?
      (elt '())
-     Error :type 'unboundExecutable :class Null :executable 'elt))
+     Error :type 'unboundExecutable :class () :executable 'elt))
 
   (deftest list-elt.3a
     (signalsError?
      (elt '() 1)
-     Error :type 'unboundExecutable :class Null :executable 'elt))
+     Error :type 'unboundExecutable :class () :executable 'elt))
 
   (deftest list-elt.5
     (elt '(1 2) 0)
@@ -2524,7 +2524,7 @@
   (deftest let.8
     (signalsError?
      (let ((#t 1)))
-     Error :type 'type :datum '(#t) :expected '(or Null Ignore Symbol))))
+     Error :type 'type :datum '(#t) :expected '(or () #ignore Symbol))))
 
 (defsuite let*
 
@@ -2552,7 +2552,7 @@
   (deftest let*.5
     (signalsError?
      (let* ((#t 1)))
-     Error :type 'type :datum '(#t) :expected '(or Null Ignore Symbol))))
+     Error :type 'type :datum '(#t) :expected '(or () #ignore Symbol))))
 
 (defsuite let\
 
@@ -2778,7 +2778,7 @@
   (deftest opt.6
     (signalsError?
      (opt? 1)
-     Error :type 'type :datum 1 :expected '(or Null List) ))
+     Error :type 'type :datum 1 :expected '(or () List) ))
 
   (deftest opt.lazy.1
     (opt? (some 1) (error (makeSimpleError "foo")))

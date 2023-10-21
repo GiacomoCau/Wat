@@ -155,7 +155,7 @@ public class Vm {
 				case "obj"-> 3;
 				default-> typeError("cannot determine bndRes, not {expected}: {datum}", k, toChk(or(keyword(":rhs"), keyword(":prv"), keyword(":obj"))));
 			};
-			default-> typeError("cannot determine bndRes, not {expected}: {datum}", o, toChk(or(null, Inert.class, keyword(":rhs"), keyword(":prv"), keyword(":obj"))));
+			default-> typeError("cannot determine bndRes, not {expected}: {datum}", o, toChk(or(null, inert, keyword(":rhs"), keyword(":prv"), keyword(":obj"))));
 		};
 	}
 	
@@ -942,7 +942,7 @@ public class Vm {
 	// Delimited Control
 	class TakeSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkM(this, o, 2, Any.class, or(Ignore.class, Symbol.class)); // o = (prp (or ignore symbol) . body)
+			var chk = checkM(this, o, 2, Any.class, or(ignore, Symbol.class)); // o = (prp (or ignore symbol) . body)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, o.car())),
@@ -1227,11 +1227,11 @@ public class Vm {
 		PTree(Object exp, Object pt, Object ep) { this.exp=exp; this.pt = pt; this.ep = ep; }
 		Object check() { 
 			if (!((pt == null || pt == ignore || pt instanceof Symbol) && syms.add(pt))) {
-				if (!(pt instanceof Cons)) return typeError("invalid parameter tree, not {expected}: {datum} of: {expr}", pt, toChk(or(null, Ignore.class, Symbol.class, Cons.class)), exp );
+				if (!(pt instanceof Cons)) return typeError("invalid parameter tree, not {expected}: {datum} of: {expr}", pt, toChk(or(null, ignore, Symbol.class, Cons.class)), exp );
 				var msg = check(pt); if (msg != null) return msg;
 			}
-			if (ep == null /* %def && %set! */ || ep == ignore) return syms.size() > 0 ? null : typeError("invalid parameter tree syntax, not one {expected} in: {datum} of: {expr}", pt, toChk(or(null, Ignore.class, Symbol.class)), exp);
-			if (!(ep instanceof Symbol sym)) return typeError("invalid parameter tree, not {expected}: {datum} of: {expr}", ep, toChk(or(Ignore.class, Symbol.class)), exp);
+			if (ep == null /* %def && %set! */ || ep == ignore) return syms.size() > 0 ? null : typeError("invalid parameter tree syntax, not one {expected} in: {datum} of: {expr}", pt, toChk(or(null, ignore, Symbol.class)), exp);
+			if (!(ep instanceof Symbol sym)) return typeError("invalid parameter tree, not {expected}: {datum} of: {expr}", ep, toChk(or(ignore, Symbol.class)), exp);
 			return !syms.contains(sym) ? null : syntaxError("invalid parameter tree syntax, not a unique symbol: {datum} in: {expr}", ep, exp);
 		}
 		private Object check(Object p) {
@@ -1289,8 +1289,8 @@ public class Vm {
 			if (len == 0 || i >= max) continue;
 			var cksn = i < len && i < min ? chks[i] : len <= min ? Any.class : chks[min + (i-min) % (len-min)];
 			if (cksn instanceof Object[] cksna && cksna[0] instanceof List) {
-				var i2 = checkO(o, cksn);
-				if (i2 > 0) return i+i2;
+				var res = checkO(o, cksn);
+				if (res > 0) return i+res;
 			}
 			else {
 				checkO(o.car(), cksn);
@@ -1300,17 +1300,11 @@ public class Vm {
 	}
 	public int checkO(Object o, Object chk) {
 		if (chk instanceof Object[] chks) {
-			if (chks[0] instanceof List) {
-				if (o != null && !(o instanceof List)) throw new TypeException("not a {expected}: {datum}", o, toChk(or(null, List.class)));
-				for (int i=0; i<chks.length; i+=1) try {
-					return checkO(o, chks[i]);
-				}
-				catch (Throwable thw) {
-				}
-			}
-			else {
-				for (int i=0; i<chks.length; i+=1) try {
-					checkO(o, chks[i]); return 0;
+			for (int i=0; i<chks.length; i+=1) {
+				try {
+					if (chks[i] instanceof List) return checkO(o, chks[i]);
+					checkO(o, chks[i]);
+					return 0;
 				}
 				catch (Throwable thw) {
 				}
@@ -1324,8 +1318,8 @@ public class Vm {
 			if (chkl != null && chkl.car instanceof Integer mx) { max = mx; chkl = chkl.cdr(); }
 			return checkL(min, max, ol, array(chkl));
 		}
-		else if (chk instanceof Class chkc && checkC(o, chkc)) {
-			return 0;
+		else if (chk instanceof Class chkc) {
+			if (checkC(o, chkc)) return 0;
 		}
 		else if (Utility.equals(o, chk))  {
 			return 0;
@@ -1333,12 +1327,12 @@ public class Vm {
 		throw new TypeException("not a {expected}: {datum}", o, toChk(chk));
 	}
 	public Object toChk(Object chk) {
-		return chk == null ? symbol("Null")
-		: chk instanceof Class cl ? symbol(cl.getSimpleName())
-		: chk instanceof Integer i && i == more ? symbol("+")
-		: chk instanceof Object[] a ? cons(symbol("or"), list(stream(a).map(o-> toChk(o)).toArray()))
-		: chk instanceof List l ? map(o-> toChk(o), l) 
-		: chk;
+		return chk instanceof Class cl ? symbol(cl.getSimpleName())
+			 : chk instanceof Integer i && i == more ? symbol("+")
+			 : chk instanceof Object[] a ? cons(symbol("or"), list(stream(a).map(o-> toChk(o)).toArray()))
+			 : chk instanceof List l ? map(o-> toChk(o), l) 
+			 : chk
+		;
 	}
 	class Apv0 extends Apv { Apv0(Combinable cmb) { super(cmb); }}
 	class Apv1 extends Apv { Apv1(Combinable cmb) { super(cmb); }}
@@ -1575,7 +1569,7 @@ public class Vm {
 				"%set!", new Def(false),
 				"%eval", wrap(new Eval()),
 				"%newVmEnv", wrap(new JFun("%NewVmEnv", (n,o)-> checkN(n, o, 0), (l,o)-> vmEnv() )),
-				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, or(list(0), list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class, String.class), Any.class))), (l,o)-> l==0 ? env() : env(o.car(), array(o.cdr())) )),
+				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, or(null, list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class, String.class), Any.class))), (l,o)-> l==0 ? env() : env(o.car(), array(o.cdr())) )),
 				"%wrap", wrap(new JFun("%Wrap", (Function) this::wrap)),
 				"%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap)),
 				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (InnerException ie) { return false; }} )),
