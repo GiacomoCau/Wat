@@ -153,7 +153,8 @@
     (\ ((className functionForm) env)
       (new ConditionHandler
         :conditionClass
-           (the Class (findClass className env))
+           (the+ (or Class (1 + Class (or Intern AtDot) Any))
+             (if (cons? className) (eval (cons 'list className) env) (eval className env)) )
         :handlerFunction
            (the Function (eval functionForm env)) ))
     *conditionHandlerFrame?* ))
@@ -374,7 +375,10 @@
   #|A condition handler is applicable if the condition is an instance
    |of its condition class.
    |#
-  (type? condition (getSlot handler 'conditionClass)))
+  (let1 (conditionClass (getSlot handler 'conditionClass))
+    (if (cons? conditionClass)
+      (matchObj? condition (car conditionClass) (cdr conditionClass))
+      (type? condition conditionClass) )))
 
 (defMethod lispx::handlerApplicable? ((handler RestartHandler) restartName condition?)
   #|A restart handler is applicable to a restart name and optional condition...

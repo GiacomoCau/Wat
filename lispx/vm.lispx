@@ -137,13 +137,13 @@
   (list deftest name (list* prog1 #t forms)) )
 
 (defVau defsuite (name . forms) env
-  (eval (list* begin forms) env) )
+  (eval (list* 'begin forms) env) )
 
 (defVau signalsError? (form class . slots) env
   (let1 (class (findClass class env))
     (block exit
       (handlerCase
-        ( (Obj (\ (obj) (exit (apply** matchObj? obj class (eval (list* 'list slots) env))) )) )
+        ( (Obj (\ (obj) (exit (apply* matchObj? obj class (eval (cons 'list slots) env))) )) )
         (eval form env) )
       #f )))
 

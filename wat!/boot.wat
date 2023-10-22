@@ -498,7 +498,7 @@
 
 (defVau prog1 (form . forms) env
   (let1 (result (eval form env))
-    (eval (list* begin forms) env)
+    (eval (list* 'begin forms) env)
     result))
 
 (defMacro (when test . forms)
@@ -707,7 +707,7 @@
           (if (|| (== test 'else)
                   (let* ( (symbol? (symbol? test))
                           (class (eval (if symbol? test (car test)) env)) )
-                    (if symbol? (type? key class) (&& (type? key Obj) (matchObjSlots? key (eval (list* 'list (cdr test)) env)))) ))
+                    (if symbol? (type? key class) (&& (type? key Obj) (matchObjSlots? key (eval (cons 'list (cdr test)) env)))) ))
             (if (== (car forms) '=>)
               (let1 ((apv) (cdr forms)) ((eval apv env) key))
               (eval (list* 'begin forms) env) )
@@ -728,8 +728,11 @@
         (if (eq? (if (type? name AtDot) (name obj) (obj name)) value) (next slots)
           #f )))))
 
-(def\ (matchObj? obj class . slots)
+(def\ (matchObj? obj class slots)
   (if (type? obj class) (matchObjSlots? obj slots) #f) )
+
+(def\ (matchObj*? obj class . slots)
+  (matchObj? obj class slots) )
 
 (assert (caseType 2.0 (else 3)) 3)
 (assert (caseType (+ 2 2) (else => (\(v) v))) 4)
@@ -993,7 +996,7 @@
 (%assert (expand (the\ (((#! Integer b) . #_)(#! Integer a)) (+ a b))) '(\ ((b . #ignore) a) (begin (the Integer b) (the Integer a)) (+ a b)))
 ;(%assert ((the\ (((#! Integer b) . #_)(#! (or 3 4) a)) (+ a b)) '(1 2) 3) 4)
 
-; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (list* 'list xs) env)
+; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (cons 'list xs) env)
 
 #| TODO definito in vm, eliminare
 (def %check
@@ -1355,7 +1358,7 @@
 
 (defVau (import module imports) env
   (let* ((module (eval module env))
-         (values (eval (list* 'list imports) module)) )
+         (values (eval (cons 'list imports) module)) )
     (eval (list* 'def* imports values) env) ))
 
 (assert (begin (defModule m (x) (def x 10)) (import m (x)) x) 10)

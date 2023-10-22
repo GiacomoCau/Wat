@@ -37,6 +37,11 @@
       (signal (makeSimpleError "foo")))
     #inert)
 
+  (deftest handlerBind.unhandled'
+    (handlerBind (((Error :type 'simple @getMessage "foo") (\ (e) 'whatever)))
+      (signal (new Error "foo" :type 'simple)))
+    #inert)
+
   (deftest handlerBind.decline
     (block b
       (handlerBind ((SimpleError (\ (e) (returnFrom b 1))))
@@ -46,10 +51,18 @@
 
   (deftest handlerBind.handled
     (block b
-      (handlerBind ((SimpleError (\ (e)
-                                     (assert (eq? "foo" (@getMessage e)))
-                                     (returnFrom b 1))))
+      (handlerBind
+        ((SimpleError
+           (\ (e) (assert (eq? "foo" (@getMessage e))) (returnFrom b 1))))
         (signal (makeSimpleError "foo"))))
+    1)
+
+  (deftest handlerBind.handled'
+    (block b
+      (handlerBind
+        (((Error :type 'simple)
+            (\ (e) (assert (eq? "foo" (@getMessage e))) (returnFrom b 1))))
+        (signal (new Error "foo" :type 'simple))))
     1)
 
   (deftest handlerBind.nested
@@ -69,10 +82,25 @@
   (deftest handlerBind.firewall
     (block b
       (handlerBind ((TestError (\ (e) (returnFrom b 'outer))))
-        (handlerBind ((SimpleError (\ (e)
-                                       (signal (new TestError)))))
+        (handlerBind ((SimpleError (\ (e) (signal (new TestError)))))
           (handlerBind ((TestError (\ (e) (returnFrom b 'inner))))
             (signal (makeSimpleError "foo"))))))
+    'outer)
+
+  (deftest handlerBind.firewall'
+    (block b
+      (handlerBind ((TestError (\ (e) (returnFrom b 'outer))))
+        (handlerBind (((Error :type 'simple) (\ (e) (signal (new TestError)))))
+          (handlerBind ((TestError (\ (e) (returnFrom b 'inner))))
+            (signal (new Error "foo" :type 'simple))))))
+    'outer)
+
+  (deftest handlerBind.firewall''
+    (block b
+      (handlerBind (((Error :type 'test) (\ (e) (returnFrom b 'outer))))
+        (handlerBind (((Error :type 'simple) (\ (e) (signal (new Error :type 'test)))))
+          (handlerBind (((Error :type 'test) (\ (e) (returnFrom b 'inner))))
+            (signal (new Error "foo" :type 'simple))))))
     'outer)
 
   (deftest handlerBind.multiple.1

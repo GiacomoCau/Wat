@@ -23,7 +23,7 @@
   #|Return true if a prompt is set, false otherwise.
    |(Note that this leads to stack growth, i.e. leaks.)
    |#
-  (handlerCase ((Error (\ #ignore #f)))
+  (handlerCase (((Error :type 'unboundPrompt) (\ #ignore #f)))
     (takeSubcont prompt k (pushDelimSubcont prompt k #t))))
 
 ;; The actual tests.
