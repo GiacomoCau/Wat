@@ -212,7 +212,7 @@
       (list 'makeMacro (list* 'vau pt #ignore forms)) )))
 
 
-; defMacro defVau def\ def*\ rec\ let1\ let1rec\ let\ letrec\ permettono la definizione con due sintassi
+; defMacro defVau def\ def*\ rec\ let1\ let1rec\ let\ letrec\ permettono la definizione in due forme
 ;
 ;    (_ name parameters . body)
 ;    (_ (name . parameters) . body)
@@ -220,30 +220,6 @@
 ; rec rec\ let1rec let1rec\ letrec letrec\ inizializzano a #inert le definizioni prima della valutazione
 
 
-#| TODO probabilmente da eliminare, superato da (#! ... )
-(def symdef?
-  (\ (lhs rhs)
-    (if (and (symbol? lhs) (> (len rhs) 1)) #t
-      (if (and (cons? lhs) (symbol? (car lhs))) #f
-        (error "not (or (Symbol pt . forms) ((Symbol . pt) . forms))") ))))
-
-(def symdef?
-  (\ (lhs rhs)
-    (if (and (symbol? lhs) (cons? rhs)) #t
-      (if (and (cons? lhs) (symbol? (car lhs))) #f
-        (error "not (or (Symbol pt . forms) ((Symbol . pt) . forms))") ))))
-
-(def symdef?
-  (\ (lhs rhs)
-    (if (cons? lhs)
-       (if (symbol? (car lhs)) #f
-         (error "not ((Symbol . pt) . forms)") )
-       (if (and (symbol? lhs) (cons? rhs)) #t
-         (error "not (Symbol pt . forms)") ))))
-
-(def dec ((\ (f) (def\ (f n) (if (zero? n) 0 (f (- n 1)))) f) #inert))
-|#
-	
 (def defMacro
   (macro (lhs . rhs)
     (if (cons? lhs)
@@ -647,6 +623,12 @@
 (assert (member 'b '(a b c d)) '(b c d))
 ;(assert (member "b" '("a" "b" "c" "d")) '("b" "c" "d")) ; solo se String interned!
 
+(def\ (member? key lst)
+  (!null? (member key lst)) )
+  
+(def\ (!member? key lst)
+  (null? (member key lst)) )
+
 #|
 (def\ (member key lst . keywords)
   (let ( (test (opt? (get? :test keywords) ==))
@@ -655,13 +637,13 @@
       (if (null? lst) #null
         (if (test (fkey (car lst)) key) lst
           (loop (cdr lst)))))))
-|#
 
-(def\ (member? key lst)
-  (!null? (member key lst)) )
+(def\ (member? key lst . keywords)
+  (!null? (apply** member key lst keywords)) )
   
-(def\ (!member? key lst)
-  (null? (member key lst)) )
+(def\ (!member? key lst . keywords)
+  (null? (apply** member key lst keywords)) )
+|#
 
 (def\ (assoc key lst)
   (let1 loop (lst lst)
@@ -1399,7 +1381,8 @@
 (assert (<= 1 2 2 3) #t)
 (assert (>= 3 2 2 1) #t)
 
-(def\ (!= . args) (! (apply == args)))
+(def\ (!= . args)
+  (! (apply == args)))
 
 (def\ /= (arg . args)
   (if (null? args) #t

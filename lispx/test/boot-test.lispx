@@ -161,7 +161,7 @@
   (deftest the.4
     (signalsError?
      (the)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest the.5
     (signalsError?
@@ -243,12 +243,12 @@
   (deftest |Arity check 1.|
     (signalsError?
      (vau)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest |Arity check 2.|
     (signalsError?
      (vau x)
-     Error :type 'match :operands +1)))
+     Error :type 'match :operands# +1)))
 
 (defsuite quote
 
@@ -346,12 +346,12 @@
   (deftest bound?.4
     (signalsError?
      (bound?)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest bound?.5
     (signalsError?
      (bound? 'x)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest bound?.6
     (signalsError?
@@ -361,12 +361,12 @@
   (deftest bound?.7
     (signalsError?
      (bound? 'x 33)
-     Error :type 'type :datum 33 :expected 'Common))
+     Error :type 'type :datum 33 :expected 'ObjEnv))
 
   (deftest bound?.8
     (signalsError?
      (bound? 'x (theEnv) #t)
-     Error :type 'match :operands -1)))
+     Error :type 'match :operands# -1)))
 
 (defsuite macro
 
@@ -431,12 +431,12 @@
   (deftest defVau.3
     (signalsError?
      (defVau foo)
-     Error :type 'match :operands '+2))
+     Error :type 'match :operands# '+2))
 
   (deftest defVau.3b
     (signalsError?
      (defVau foo ())
-     Error :type 'match :operands '+1))
+     Error :type 'match :operands# '+1))
 
   (deftest defVau.4
     (begin
@@ -481,12 +481,12 @@
   (deftest def.6
     (signalsError?
      (def)
-     Error :type 'match :operands '+2))
+     Error :type 'match :operands# '+2))
 
   (deftest def.7
     (signalsError?
      (def x)
-     Error :type 'match :operands '+1))
+     Error :type 'match :operands# '+1))
 
   (deftest def.8
     (signalsError?
@@ -509,12 +509,12 @@
   (deftest defConstant.2
     (signalsError?
      (defConstant)
-     Error :type 'match :operands '+2))
+     Error :type 'match :operands# '+2))
 
   (deftest defConstant.3
     (signalsError?
      (defConstant x)
-     Error :type 'match :operands '+1))
+     Error :type 'match :operands# '+1))
 
   (deftest defConstant.4
     (begin
@@ -630,7 +630,7 @@
   (deftest eval.3
     (signalsError?
      (eval)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest eval.4
      (eval '1)
@@ -644,7 +644,7 @@
   (deftest eval.6
     (signalsError?
      (eval '1 (theEnv) #t)
-     Error :type 'match :operands -1)))
+     Error :type 'match :operands# -1)))
 
 (defsuite cons
 
@@ -659,17 +659,17 @@
   (deftest cons.3
     (signalsError?
      (cons)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest cons.4
     (signalsError?
      (cons 1)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest cons.5
     (signalsError?
      (cons 1 2 3)
-     Error :type 'match :operands -1)))
+     Error :type 'match :operands# -1)))
 
 (defsuite car
 
@@ -680,7 +680,7 @@
   (deftest car.2
     (signalsError?
      (car)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest car.3
     (signalsError?
@@ -701,7 +701,7 @@
   (deftest cdr.2
     (signalsError?
      (cdr)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest cdr.3
     (signalsError?
@@ -727,7 +727,7 @@
   (deftest symbolName.5
     (signalsError?
      (symbolName)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest symbolName.6
     (signalsError?
@@ -743,7 +743,7 @@
   (deftest wrap.2
     (signalsError?
      (wrap)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest wrap.3
     (signalsError?
@@ -759,7 +759,7 @@
   (deftest unwrap.2
     (signalsError?
      (unwrap)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest unwrap.3
     (signalsError?
@@ -779,12 +779,12 @@
   (deftest if.3
     (signalsError?
      (if)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest if.4
     (signalsError?
      (if #t)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest if.5
      (if #t #f)
@@ -819,7 +819,7 @@
   (deftest caseType.1
     (signalsError?
      (caseType)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest caseType.2
     (caseType (+ 2 2))
@@ -863,7 +863,7 @@
   (deftest not.3
     (signalsError?
      (not)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest not.4
     (signalsError?
@@ -911,12 +911,12 @@
   (deftest ==.10
     (signalsError?
      (==)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest ==.11
     (signalsError?
      (== 11)
-     Error :type 'match :operands +1)))
+     Error :type 'match :operands# +1)))
 
 (defsuite eq?
 
@@ -947,12 +947,12 @@
   (deftest eq?.7
     (signalsError?
      (eq?)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest eq?.8
     (signalsError?
      (eq? 1)
-     Error :type 'match :operands +1)))
+     Error :type 'match :operands# +1)))
 
 (defsuite /=
 
@@ -991,7 +991,7 @@
   (deftest /=.7
     (signalsError?
      (/=)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest /=.8
     (/= 1)
@@ -1053,12 +1053,12 @@
   (deftest <.7
     (signalsError?
      (<)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest <.8
     (signalsError?
      (< 1)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest <.9
     (< 1 2 3 3)
@@ -1101,12 +1101,12 @@
   (deftest >.7
     (signalsError?
      (>)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest >.8
     (signalsError?
      (> 1)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest >.9
     (> 3 2 1 1)
@@ -1149,12 +1149,12 @@
   (deftest <=.7
     (signalsError?
      (<=)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest <=.8
     (signalsError?
      (<= 1)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest <=.9
     (<= 1 2 3 3)
@@ -1201,12 +1201,12 @@
   (deftest >=.7
     (signalsError?
      (>=)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest >=.8
     (signalsError?
      (>= 1)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest >=.9
     (>= 3 3 2 1)
@@ -1240,7 +1240,7 @@
   (deftest -.1
     (signalsError?
      (-)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest -.2
     (- 1)
@@ -1273,7 +1273,7 @@
   (deftest /.1
     (signalsError?
      (/)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest /.2
     (/ 10d)
@@ -1307,12 +1307,12 @@
   (deftest type?.3
     (signalsError?
      (type?)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest type?.3
     (signalsError?
      (type? "foo")
-     Error :type 'match :operands +1)))
+     Error :type 'match :operands# +1)))
 
 (defsuite intern
 
@@ -1327,7 +1327,7 @@
   (deftest intern.3
     (signalsError?
      (intern)
-     Error :type 'match :operands +1)))
+     Error :type 'match :operands# +1)))
 
 (defsuite apply
 
@@ -1342,12 +1342,12 @@
   (deftest apply.3
     (signalsError?
      (apply)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest apply.4
     (signalsError?
      (apply list)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest apply.5
     (signalsError?
@@ -1363,12 +1363,12 @@
   (deftest findClass.2a
     (signalsError?
      (findClass)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest findClass.2b
     (signalsError?
      (findClass 'foo)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest findClass.3
     (signalsError?
@@ -1413,7 +1413,7 @@
   (deftest caar.2
     (signalsError?
      (caar)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest caar.3
     (signalsError?
@@ -1427,7 +1427,7 @@
   (deftest cadr.2
     (signalsError?
      (cadr)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest cadr.3
     (signalsError?
@@ -1441,7 +1441,7 @@
   (deftest cddr.2
     (signalsError?
      (cddr)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest cddr.3
     (signalsError?
@@ -1455,7 +1455,7 @@
   (deftest cdar.2
     (signalsError?
      (cdar)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest cdar.3
     (signalsError?
@@ -1483,7 +1483,7 @@
   (deftest when.5
     (signalsError?
      (when)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest when.6
     (signalsError?
@@ -1511,7 +1511,7 @@
   (deftest unless.5
     (signalsError?
      (unless)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest unless.6
     (signalsError?
@@ -1531,7 +1531,7 @@
   (deftest null?.3
     (signalsError?
      (null?)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest null?.4
     (null? 1)
@@ -1550,7 +1550,7 @@
   (deftest cons?.3
     (signalsError?
      (cons?)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest cons?.4
     (cons? 1)
@@ -1569,7 +1569,7 @@
   (deftest identity.3
     (signalsError?
      (identity)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest identity.4
     (identity (+ 1 1))
@@ -1580,12 +1580,12 @@
   (deftest compose.1
     (signalsError?
      (compose)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest compose.2
     (signalsError?
      (compose (\ ()))
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest compose.3
     (type? (compose (\ ()) (\ ())) Function))
@@ -1615,12 +1615,12 @@
   (deftest map.3
     (signalsError?
      (map)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest map.4
     (signalsError?
      (map intern)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest map.5
     (signalsError?
@@ -1646,17 +1646,17 @@
   (deftest reduce.3
     (signalsError?
      (reduce)
-     Error :type 'match :operands +3))
+     Error :type 'match :operands# +3))
 
   (deftest reduce.4
     (signalsError?
      (reduce %*)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest reduce.5
     (signalsError?
      (reduce %* (list))
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest reduce.ansi.3
     (reduce cons 'z '(a b c d e f) )
@@ -1671,12 +1671,12 @@
   (deftest forEach.1
     (signalsError?
      (forEach)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest forEach.2
     (signalsError?
      (forEach (\ (x) x))
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest forEach.3
     (if (aQuote) #t
@@ -1715,12 +1715,12 @@
   (deftest maplist.3
     (signalsError?
      (maplist)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest maplist.4
     (signalsError?
      (maplist list)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest maplist.5
     (signalsError?
@@ -1747,17 +1747,17 @@
   (deftest dolist.1
     (signalsError?
      (dolist)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest dolist.2
     (signalsError?
      (dolist ())
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest dolist.3
     (signalsError?
      (dolist (x))
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest dolist.4
     (dolist (x '(1 2 3)))
@@ -1799,12 +1799,12 @@
   (deftest nth.1
     (signalsError?
      (nth)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest nth.2
     (signalsError?
      (nth '())
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest nth.3
     (signalsError?
@@ -1839,7 +1839,7 @@
   (deftest reverse.1
     (signalsError?
      (reverse)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest reverse.2
     (signalsError?
@@ -1868,12 +1868,12 @@
   (deftest append.1
     (signalsError?
      (append)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest append.2
     (signalsError?
      (append '())
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest append.3
     (signalsError?
@@ -1927,12 +1927,12 @@
   (deftest nthCdr.1
     (signalsError?
      (nthCdr)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest nthCdr.2
     (signalsError?
      (nthCdr 1)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest nthCdr.3
     (signalsError?
@@ -1994,7 +1994,7 @@
   (deftest subSeq.2
     (signalsError?
      (subSeq '())
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest subSeq.3
     (signalsError?
@@ -2074,7 +2074,7 @@
   (deftest stringSubseq.2
     (signalsError?
      (subSeq "")
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest stringSubseq.4
     (signalsError?
@@ -2189,12 +2189,12 @@
   (deftest member.1
     (signalsError?
      (member)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest member.2
     (signalsError?
      (member 'a)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest member.3
     (member 'a '() :test ==)
@@ -2253,12 +2253,12 @@
   (deftest remove.1
     (signalsError?
      (remove)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest remove.2
     (signalsError?
      (remove (\ (item) #t))
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest remove.3
     (signalsError?
@@ -2299,17 +2299,17 @@
   (deftest get?.5
     (signalsError?
      (get?)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest get?.6
     (signalsError?
      (get? '())
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest get?.7
     (signalsError?
      (get? :quux 12)
-     Error :type 'match :operands +2)))
+     Error :type 'match :operands# +2)))
 
 (defsuite and
 
@@ -2383,7 +2383,7 @@
   (deftest obj.2
     (signalsError?
      (new)
-     Error :type 'match :operands 1))
+     Error :type 'match :operands# 1))
 
   (deftest obj.3
     (signalsError?
@@ -2408,9 +2408,9 @@
       (assert (not (slotBound? obj 'x)))
       (assert (not (slotBound? obj :x)))
       (assert (signalsError? (getSlot obj 'x)
-                             Error :type 'unboundField :object obj :name 'x))
+                             Error :type 'unboundField :object obj :field "x"))
       (assert (signalsError? (getSlot obj :x)
-                             Error :type 'unboundField :object obj :name :x))
+                             Error :type 'unboundField :object obj :field "x"))
       (setSlot obj 'x 1)
       (assert (slotBound? obj 'x))
       (assert (slotBound? obj :x))
@@ -2434,12 +2434,12 @@
   (deftest getSlot.2
     (signalsError?
      (getSlot (new Obj))
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest getSlot.3
     (signalsError?
      (getSlot)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest setSlot.1
     (signalsError?
@@ -2454,12 +2454,12 @@
   (deftest setSlot.2
     (signalsError?
      (setSlot (new Obj))
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest setSlot.3
     (signalsError?
      (setSlot (new Obj) 'x)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest slotBound?.1
     (signalsError?
@@ -2474,12 +2474,12 @@
   (deftest slotBound?.2
     (signalsError?
      (slotBound?)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest slotBound?.3
     (signalsError?
      (slotBound? (new Obj))
-     Error :type 'match :operands +1)))
+     Error :type 'match :operands# +1)))
 
 (defsuite let
 
@@ -2514,7 +2514,7 @@
   (deftest let.6
     (signalsError?
      (let)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest let.7
     (signalsError?
@@ -2542,7 +2542,7 @@
   (deftest let*.3
     (signalsError?
      (let*)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest let*.4
     (signalsError?
@@ -2576,7 +2576,7 @@
   (deftest let\.3
     (signalsError?
      (let\ )
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest let\.4
     (signalsError?
@@ -2609,7 +2609,7 @@
   (deftest labels.4
     (signalsError?
      (labels)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest labels.5
     (signalsError?
@@ -2630,7 +2630,7 @@
   (deftest letLoop.2
     (signalsError?
      (letLoop -name-)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest letLoop.3
     (letLoop -name- ())
@@ -2650,7 +2650,7 @@
   (deftest while.1
     (signalsError?
      (while)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest while.2
     (while (eq? 1 2))
@@ -2678,7 +2678,7 @@
   (deftest until.1
     (signalsError?
      (until)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest until.2
     (until (/= 1 2))
@@ -2718,12 +2718,12 @@
   (deftest dotimes.3
     (signalsError?
      (dotimes)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest dotimes.4
     (signalsError?
      (dotimes (x))
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest dotimes.5
     (dotimes (x 0))
@@ -2773,7 +2773,7 @@
   (deftest opt.5
     (signalsError?
      (opt?)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest opt.6
     (signalsError?
@@ -2828,7 +2828,7 @@
   (deftest getOpt.1
     (signalsError?
      (getOpt?)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest getOpt.2
     (getOpt? (some 2))
@@ -2848,12 +2848,12 @@
   (deftest some.2
     (signalsError?
      (some)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest some.3
     (signalsError?
      (some 1 2)
-     Error :type 'match :operands -1)))
+     Error :type 'match :operands# -1)))
 
 (defsuite ifOpt
 
@@ -2872,22 +2872,22 @@
   (deftest ifOpt.3
     (signalsError?
      (ifOpt?)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest ifOpt.4
     (signalsError?
      (ifOpt? (name))
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest ifOpt.4.2
     (signalsError?
      (ifOpt? (name) then)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest ifOpt.5
     (signalsError?
      (ifOpt? (name option))
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest ifOpt.6
     (signalsError?
@@ -2913,12 +2913,12 @@
   (deftest whenOpt.3
     (signalsError?
      (whenOpt?)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest whenOpt.4
     (signalsError?
      (whenOpt? (name))
-     Error :type 'match :operands +1)))
+     Error :type 'match :operands# +1)))
 
 (defsuite unlessOpt
 
@@ -2937,7 +2937,7 @@
   (deftest unlessOpt.3
     (signalsError?
      (unlessOpt?)
-     Error :type 'match :operands +1)))
+     Error :type 'match :operands# +1)))
 
 (defsuite classOf
 
@@ -2951,7 +2951,7 @@
   (deftest classOf.2
     (signalsError?
      (classOf)
-     Error :type 'match :operands +1)))
+     Error :type 'match :operands# +1)))
 
 (defsuite set
 
@@ -2977,17 +2977,17 @@
   (deftest set.4
     (signalsError?
      (set)
-     Error :type 'match :operands +3))
+     Error :type 'match :operands# +3))
 
   (deftest set.5
     (signalsError?
      (set (theEnv))
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest set.6
     (signalsError?
      (set (theEnv) x)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest set.7
     (signalsError?
@@ -2999,7 +2999,7 @@
   (deftest className.1
     (signalsError?
      (className)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest className.2
     (signalsError?
@@ -3015,12 +3015,12 @@
   (deftest subClass?.1
     (signalsError?
      (subClass?)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest subClass?.2
     (signalsError?
      (subClass? Object)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest subClass?.3
     (signalsError?
@@ -3093,7 +3093,7 @@
   (deftest %newClass.4
     (signalsError?
      (%newClass)
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest %newClass.5
     (signalsError?
@@ -3128,17 +3128,17 @@
   (deftest defClass.2
     (signalsError?
      (defClass)
-     Error :type 'match :operands +3))
+     Error :type 'match :operands# +3))
 
   (deftest defClass.3
     (signalsError?
      (defClass Foo)
-     Error :type 'match :operands +2))
+     Error :type 'match :operands# +2))
 
   (deftest defClass.4
     (signalsError?
      (defClass Foo ())
-     Error :type 'match :operands +1))
+     Error :type 'match :operands# +1))
 
   (deftest defClass.5
     (type? (defClass C () ()) (if (== (bndRes) 1) StandardClass Inert)))

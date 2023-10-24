@@ -331,14 +331,14 @@ public class Vm {
 	
 	
 	// Environment
-	interface Common {
+	interface ObjEnv {
 		Object value(Object key);
 		boolean isBound(Object key);
 		boolean remove(Object key);
 		List keys();
 		Object get(Object key);
 	}
-	class Env implements ArgsList, Common {
+	class Env implements ArgsList, ObjEnv {
 		Env parent; LinkedHashMap<String,Object> map = new LinkedHashMap();
 		Env(Env parent, Object ... objs) {
 			this.parent = parent;
@@ -452,7 +452,7 @@ public class Vm {
 		}
 		public String toString() { return "{&" + getClass().getSimpleName() + " " + Vm.this.toString(value) + "}"; }
 	}
-	public class Obj extends RuntimeException implements ArgsList, Common {
+	public class Obj extends RuntimeException implements ArgsList, ObjEnv {
 		private static final long serialVersionUID = 1L;
 		Map<String,Object> map = new LinkedHashMap();
 		public Obj(Object ... objs) { puts(objs); }
@@ -466,7 +466,7 @@ public class Vm {
 		public Object get(Object obj) {
 			var key = toKey(obj);
 			var val = map.get(key);
-			return val != null || map.containsKey(key) ? val : unboundFieldError("slot: {name} not found in: {object}", obj, this);
+			return val != null || map.containsKey(key) ? val : unboundFieldError("slot: {field} not found in: {object}", key, this);
 		}
 		Object puts(Object ... objs) {
 			if (objs == null) return null;
@@ -612,7 +612,7 @@ public class Vm {
 			var ms = methods.get(c); if (ms == null) continue;
 			var m = ms.get(symbol); if (m != null) return m;
 		} while (c != null && (c = c.getSuperclass()) != null);
-		return unboundExecutableError("method {executable} not found in: {class}", symbol, cls);
+		return unboundExecutableError("method: {executable} not found in: {class}", symbol, cls);
 	}	
 	
 	
@@ -624,7 +624,7 @@ public class Vm {
 	}
 	public class MatchException extends InnerException {
 		private static final long serialVersionUID = 1L;
-		public MatchException(String message, Object datum, int operands) { super(message, "datum", datum, "operands", operands); }
+		public MatchException(String message, Object datum, int operands) { super(message, "datum", datum, "operands#", operands); }
 	}
 	public class TypeException extends InnerException {
 		private static final long serialVersionUID = 1L;
@@ -663,7 +663,7 @@ public class Vm {
 			}
 			case null-> {
 				if (rhs == null) yield null;
-				throw new MatchException("expected {operands,%+d} operand, found: {datum}", rhs, -len(rhs));
+				throw new MatchException("expected {operands#,%+d} operands, found: {datum}", rhs, -len(rhs));
 			}
 			case Cons lc-> {
 				if (lc.car instanceof Symbol sym && Utility.equals(sym.name, "%'", "quote")) {
@@ -675,7 +675,7 @@ public class Vm {
 					yield bind(def, bndRes, e, lc.car(2), rhs); 
 				}
 				else if (!(rhs instanceof Cons rc)) {
-					throw new MatchException("expected {operands,%+d} operand, found: {datum}", rhs, len(lc));
+					throw new MatchException("expected {operands#,%+d} operands, found: {datum}", rhs, len(lc));
 				}
 				else {
 					var res = bind(def, bndRes, e, lc.car, rc.car);
@@ -986,7 +986,7 @@ public class Vm {
 	Object pushSubcontBarrier(Resumption r, Env e, Object x) {
 		var res = r != null ? r.resume() : getTco(evaluate(e, x));
 		if (!(res instanceof Suspension s)) return res;
-		return s.suspend(dbg(e, "pushSubcontBarrier", x), rr-> pushSubcontBarrier(rr, e, x)).k.apply(()-> error("prompt not found: {prompt}", "type", symbol("unboundPrompt"), "prompt", s.prp));
+		return s.suspend(dbg(e, "pushSubcontBarrier", x), rr-> pushSubcontBarrier(rr, e, x)).k.apply(()-> unboundPromptError("prompt not found: {prompt}", s.prp));
 	}
 	
 	
@@ -1095,7 +1095,7 @@ public class Vm {
 							case Value val: throw val;
 							case Error err: throw err;
 							case InnerException ie when name.equals("%CheckO"): throw ie; 
-							default: return javaError("error executing: {member} with: {args}", thw, this, null, o);
+							default: return javaError("error executing: {member} with: {args}", thw, symbol(name), o, null);
 						}
 					}
 				}
@@ -1132,7 +1132,7 @@ public class Vm {
 				}
 				var classes = getClasses(args);
 				Executable executable = getExecutable(o0, name, classes);
-				if (executable == null) return unboundExecutableError("{executable} not found in: {class}", Vm.this.toString(name, classes), Vm.this.toString(o0 instanceof Class cl ? cl : o0.getClass()));
+				if (executable == null) return unboundExecutableError(Vm.this.toString(name, classes) + " not found in: {class}", symbol(name), list((Object[])classes), o0 instanceof Class cl ? cl : o0.getClass());
 				try {
 					//executable.setAccessible(true);
 					args = reorg(executable, args);
@@ -1149,7 +1149,7 @@ public class Vm {
 							default: // in errore senza!
 						}
 					}
-					return javaError("error executing {member} of: {object} with: {args}", thw, Vm.this.toString(name, args), Vm.this.toString(true, o0 /*instanceof Class cl ? cl : o0.getClass()*/), Vm.this.toString(list(args)) );
+					return javaError("error executing " + Vm.this.toString(name, args) + " of: {object} with: {args}", thw, symbol(name), list(args), o0);
 				}
 			}
 			@Override public String toString() { return "@" + name; }
@@ -1167,15 +1167,15 @@ public class Vm {
 				// (.<name> object)       -> object.getclass().getField(name).get(object) -> field.get(object) 
 				// (.<name> object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
 				Field field = getField(o0 instanceof Class ? (Class) o0 : o0.getClass(), name);
-				if (field == null) return unboundFieldError("field: {name} not found in: {object}", name, o0 instanceof Class cl ? cl : o0.getClass());
+				if (field == null) return unboundFieldError("field: {field} not found in: {object}", name, o0 instanceof Class cl ? cl : o0.getClass());
 				try {
 					if (len == 1) return field.get(o0);
 					field.set(o0, o.car(1)); return inert;
 				}
 				catch (Throwable thw) {
 					return len==1
-						? javaError("error getting field {member} of: {object}", thw, name, Vm.this.toString(o0), null)
-						: javaError("error setting field {member} of: {object} with: {args}", thw, name, Vm.this.toString(o0), Vm.this.toString(o.car(1)));
+						? javaError("error getting field {member} of: {object}", thw, symbol(name), null, o0)
+						: javaError("error setting field {member} of: {object} with: {args}", thw, symbol(name), o.cdr(), o0);
 				}
 			}
 			@Override public String toString() { return "." + name; }
@@ -1192,10 +1192,10 @@ public class Vm {
 		return (T) pipe(dbg(theEnv, "userBreak", err), ()-> getTco(evaluate(theEnv, list(userBreak, err)))); 
 	}
 	<T> T error(String msg, Object ... objs) { return error(new Error(msg, objs)); }
-	<T> T error(Throwable thw, Object ... objs) { return error(new Error(thw, objs)); }
+	<T> T error(Throwable thw, Object ... objs) { return error(null, thw, objs); }
 	<T> T error(String msg, Throwable thw, Object ... objs) {
 		if (thw instanceof InnerException ie) {
-			var error = new Error(ie.getMessage() + " " + msg, "type", symbol(ie.getClass().getSimpleName().replace("Exception", "").toLowerCase()));
+			var error = new Error(ie.getMessage() + eIfnull(msg, ()->" " + msg), "type", symbol(ie.getClass().getSimpleName().replace("Exception", "").toLowerCase()));
 			error.puts(objs);
 			error.puts(ie.objs);
 			return error(error);
@@ -1207,10 +1207,11 @@ public class Vm {
 	<T> T syntaxError(String msg, Object datum, Object expr) { return error(msg, "type", symbol("syntax"), "datum", datum, "expr", expr); }
 	<T> T resumeError(Object datum, Object expected) { return error("invalid resume value, not a {expected}: {datum}", "type", symbol("resume"), "datum", datum, "expected", expected); }
 	<T> T unboundSymbolError(String msg, Object name, Env env) { return error(msg, "type", symbol("unboundSymbol"), "symbol", name, "environment", env); }
-	<T> T unboundFieldError(String msg, Object name, Object object) { return error(msg, "type", symbol("unboundField"), "name", name, "object", object); }
-	<T> T unboundExecutableError(String msg, Object executable, Object object) { return error(msg, "type", symbol("unboundExecutable"), "executable", executable, "class", object); }
+	<T> T unboundFieldError(String msg, String field, Object object) { return error(msg, "type", symbol("unboundField"), "field", field, "object", object); }
+	<T> T unboundExecutableError(String msg, Symbol executable, Object object) { return error(msg, "type", symbol("unboundExecutable"), "executable", executable, "class", object); }
+	<T> T unboundExecutableError(String msg, Symbol executable, List classes, Object object) { return error(msg, "type", symbol("unboundExecutable"), "executable", executable, "classes", classes, "class", object); }
 	<T> T unboundPromptError(String msg, Object prompt) { return error(msg, "type", symbol("unboundPrompt"), "prompt", prompt); }
-	<T> T javaError(String msg, Throwable cause, Object member, Object object, Object args) { return error(msg, cause, "type", symbol("java"), "member", member, "object", object, "args", args); }
+	<T> T javaError(String msg, Throwable cause, Symbol member, List args, Object object) { return error(msg, cause, "type", symbol("java"), "member", member, "object", object, "args", args); }
 	class Value extends RuntimeException {
 		private static final long serialVersionUID = 1L;
 		Object tag, value;
@@ -1268,10 +1269,7 @@ public class Vm {
 			return checkL(min, max, o, chks);
 		}
 		catch (InnerException ie) {
-			return Utility.equals(op, "check", "the+")
-				? error("checking {expr} with {check}", ie, "expr", o, "check", toChk(chks))
-				: error("combining {op} with {args}", ie, "op", op, "args", o)
-			;
+			return innerError(ie, op, o, chks);	
 		}
 	}
 	int checkL(int min, int max, List o, Object ... chks) {
@@ -1279,8 +1277,8 @@ public class Vm {
 		var rst = max != more || chks.length <= min ? 0 : (len - min) % (chks.length - min); 
 		if (len >= min && len <= max && rst == 0) return len;
 		throw rst != 0
-			? new MatchException("expected {operands,%+d} arguments at end of: {datum}", o, rst)
-			: new MatchException("expected {operands,%+d} arguments in {datum} ", o, len<min ? min-len : max-len)
+			? new MatchException("expected {operands#,%+d} operands at end of: {datum}", o, rst)
+			: new MatchException("expected {operands#,%+d} operands in {datum}", o, len<min ? min-len : max-len)
 		;
 	}
 	int checkT(int min, int max, List o, Object ... chks) {
@@ -1311,6 +1309,7 @@ public class Vm {
 			}
 		}
 		else if (chk instanceof List chkl) {
+			if (chkl.car instanceof Object[] chks && chkl.cdr() == null) return checkO(o, chks);
 			if (o != null && !(o instanceof List)) throw new TypeException("not a {expected}: {datum}", o, toChk(or(null, List.class)));
 			var ol = (List) o;
 			int min=0, max=more;
@@ -1348,11 +1347,16 @@ public class Vm {
 			return checkO(o, chk);
 		}
 		catch (InnerException ie) {
-			return Utility.equals(op, "check", "the+")
-				? error("checking {expr} with {check}", ie, "expr", o, "check", toChk(chk))
-				: error("combining {op} with {args}", ie, "op", op, "args", o)
-			;	
+			return innerError(ie, op, o, chk);	
 		}
+	}
+	private Object innerError(InnerException ie, Object op, Object o, Object chk) {
+		return !Utility.equals(op, "check", "the+")
+			? error("combining {operator} with {operands}", ie, "operator", op, "operands", o)
+			: ie.objs[1] != o /*&& ie.objs[3].equals(toChk(chk))*/
+			? error("checking {operands} with {check}", ie, "operands", o, "check", toChk(chk))
+			: error(ie)
+		;
 	}
 	
 	
@@ -1542,8 +1546,8 @@ public class Vm {
 			default-> o.toString();
 		};
 	}
-	public static String toStringSet(Set<Entry<String,Object>> set) {
-		return set.isEmpty() ? "" : " " + set.stream().map(e-> ":" + e.getKey() + " " + e.getValue()).collect(joining(" "));
+	public String toStringSet(Set<Entry<String,Object>> set) {
+		return set.isEmpty() ? "" : " " + set.stream().map(e-> ":" + e.getKey() + " " + toString(true, e.getValue())).collect(joining(" "));
 	}
 	private String toString(String name, Object[] args) {
 		return (name.equals("new") ? "constructor: " : "method: " + name) + (/*args == null ||*/ args.length == 0 ? "()" : toString(list(args)));
@@ -1551,7 +1555,7 @@ public class Vm {
 	public String toKey(Object key) {
 		return switch (key) {
 			case Intern i-> i.name;
-			case Object o-> Utility.apply(s-> s.startsWith(":") ? s.substring(1) : s, o instanceof String s ? s : Vm.this.toString(o));
+			case Object o-> Utility.apply(s-> s.startsWith(":") ? s.substring(1) : s, o instanceof String s ? s : toString(o));
 		};
 	}
 	
@@ -1579,10 +1583,10 @@ public class Vm {
 				"%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } )),
 				"%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnv = env(theEnv))),
 				"%popEnv", wrap(new JFun("%PopEnv", (Supplier) ()-> theEnv = theEnv.parent)),
-				// Common (Env & Box)
-				"%value", wrap(new JFun("%Value", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), Common.class), (l,o)-> o.<Common>car(1).value(o.car)) ),
-				"%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), Common.class), (l,o)-> o.<Common>car(1).isBound(o.car)) ),
-				"%remove!", wrap(new JFun("%remove!", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), Common.class), (l,o)-> o.<Common>car(1).remove(o.car)) ),				
+				// Env & Obj
+				"%value", wrap(new JFun("%Value", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), ObjEnv.class), (l,o)-> o.<ObjEnv>car(1).value(o.car)) ),
+				"%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), ObjEnv.class), (l,o)-> o.<ObjEnv>car(1).isBound(o.car)) ),
+				"%remove!", wrap(new JFun("%remove!", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), ObjEnv.class), (l,o)-> o.<ObjEnv>car(1).remove(o.car)) ),				
 				// Values
 				"%car", wrap(new JFun("%Car", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().car() )),
 				"%cdr", wrap(new JFun("%Car", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().cdr() )),
@@ -1600,7 +1604,7 @@ public class Vm {
 				"%intern", wrap(new JFun("%Intern", (n,o)-> checkN(n, o, 1, String.class), (l,o)-> intern(o.car()) )),
 				"%intern?", wrap(new JFun("%Intern?", (Function<Object, Boolean>) obj-> obj instanceof Intern )),
 				"%internName", wrap(new JFun("%InternName", (n,o)-> checkN(n, o, 1, Intern.class), (l,o)-> o.<Intern>car().name )),
-				// First-order Control
+				// First-Order Control
 				"%if", new If(),
 				"%loop", new Loop(),
 				"%finally", new Finally(),
@@ -1773,12 +1777,12 @@ public class Vm {
 					    out.println("{&" + Utility.getMessage(pe) + "}"); 
 					else if (thw instanceof Value v) {
 						//out.println(v.value instanceof Condition e ? e.getMessage() : "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
-						if (v.value instanceof Obj o) out.println(o.getMessage());
+						if (v.value instanceof Obj o) out.println(o.getMessage() /*+ toStringSet(o.map.entrySet())*/);
 						else do out.println(thw instanceof Obj ? thw : "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
 						while ((thw = thw.getCause()) != null);
 					}
 					else {
-						if (thw instanceof Obj o) out.println(o.getMessage());
+						if (thw instanceof Obj o) out.println(o.getMessage() /*+ toStringSet(o.map.entrySet())*/);
 						else do	out.println(thw instanceof Obj ? thw : "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
 						while ((thw = thw.getCause()) != null);
 					}

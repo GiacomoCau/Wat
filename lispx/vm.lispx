@@ -69,8 +69,6 @@
 
 (%def AssertionError Error)
 (%def OutOfBoundsError Error)
-(%def SimpleError Error)
-(%def RestartError Error)
 
 (%def %zero? (%\ (v) (%== v 0)))
 (%def %inert? (%\ (v) (%== v #inert)))

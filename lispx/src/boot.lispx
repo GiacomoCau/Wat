@@ -429,7 +429,7 @@
       (list 'makeMacro (list* 'vau pt #ignore forms)) )))
 
 
-; defMacro defVau def\ def*\ rec\ let1\ let1rec\ let\ letrec\ permettono la definizione con due sintassi
+; defMacro defVau def\ def*\ rec\ let1\ let1rec\ let\ letrec\ permettono la definizione in due forme
 ;
 ;    (_ name parameters . body)
 ;    (_ (name . parameters) . body)
@@ -437,30 +437,6 @@
 ; rec rec\ let1rec let1rec\ letrec letrec\ inizializzano a #inert le definizioni prima della valutazione
 
 
-#| TODO probabilmente da eliminare, superato da (#! ... )
-(def symdef?
-  (\ (lhs rhs)
-    (if (and (symbol? lhs) (> (len rhs) 1)) #t
-      (if (and (cons? lhs) (symbol? (car lhs))) #f
-        (typeError (cons lhs rhs) '(or (Symbol pt . forms) ((Symbol pt) . forms))) ))))
-
-(def symdef?
-  (\ (lhs rhs)
-    (if (and (symbol? lhs) (cons? rhs)) #t
-      (if (and (cons? lhs) (symbol? (car lhs))) #f
-        (typeError (cons lhs rhs) '(or (Symbol pt . forms) ((Symbol pt) . forms))) ))))
-
-(def symdef?
-  (\ (lhs rhs)
-    (if (cons? lhs)
-       (if (symbol? (car lhs)) #f
-         (typeError (cons lhs rhs) '((Symbol . pt) . forms)) )
-       (if (and (symbol? lhs) (cons? rhs)) #t
-         (typeError (cons lhs rhs) '(Symbol pt . forms)) ))))
-
-(def dec ((\ (f) (def\ (f n) (if (zero? n) 0 (f (- n 1)))) f) #inert))
-|#
-	
 (def defMacro
   #|Define a macro with the given NAME, PARAMETER-TREE, and FORMS.
    |$(fn (name parameterTree . forms))
@@ -749,7 +725,7 @@
   #|Evaluate FORM and any additional FORMS, and return the result of FORM.
    |#
   (let1 (result (eval form env))
-    (eval (list* begin forms) env)
+    (eval (list* 'begin forms) env)
     result))
 
 (defMacro (when test . forms)
@@ -899,6 +875,18 @@
 
 
 ;;;; Member Assoc Get
+
+(def\ (member key lst)
+  (let1 loop (lst lst)
+     (if (null? lst) #null
+       (if (== key (car lst)) lst
+         (loop (cdr lst)) ))))
+
+(def\ (member? key lst)
+  (!null? (member key lst)) )
+  
+(def\ (!member? key lst)
+  (null? (member key lst)) )
 
 (def\ (member key lst . keywords)
   #|Search for ITEM in the LIST according to the TEST predicate
@@ -1236,7 +1224,7 @@
         (cons pt ()) ) )
     (let1 ((pt . cks) (pt->pt.cks pt))
       (list* '\ pt (if (null? cks) body (list* (list* 'begin cks) body))) )))
-      
+
 ; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (cons 'list xs) env)
 
 #| TODO definito in vm, eliminare
@@ -1549,7 +1537,6 @@
     (case (bndRes) ((#inert) #inert) ((:rhs) method) ((:prv) prv)) ))
 
 
-
 ;;; Modules
 
 (defVau (provide symbols . body) env
@@ -1629,6 +1616,9 @@
    |#
   (relationalOp >=) )
 
+(def\ (!= . args)
+  (! (apply == args)))
+
 (def\ /= (arg . args)
   #|Return true if no two ARGUMENTS are the same, false otherwise.
    |$(fn arguments)
@@ -1667,7 +1657,6 @@
    |$(type function)
    |#
   (theticOp $ "") )
-
 
 (def\ (lyticOp binOp unit)
   #|Utility to create an n-ary lytic operator from a BINARY-OPERATOR and INITIAL-VALUE.
@@ -1710,7 +1699,6 @@
     (if (or (zero? a) (zero? b)) 0
       (abs (* b (/ a (gcd a b)))) )
     (lcm a (apply lcm (cons b more))) ))
-
 
 
 ;;; Sequences
@@ -1900,7 +1888,6 @@
 (def $= (assignOp %$))
 (def += (assignOp %+))
 (def -= (assignOp %-))
-
 
 
 ;;;; Utilities

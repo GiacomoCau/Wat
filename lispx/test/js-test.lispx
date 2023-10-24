@@ -614,7 +614,7 @@
 
   (deftest js-exception-becomes-condition
     (block exit
-      (handlerBind ((object (\ (c)
+      (handlerBind ((Object (\ (c)
                                (when (js-== (call-js-method c "toString")
                                             (to-js-string "ReferenceError: x is not defined"))
                                  (returnFrom exit #t)))))
