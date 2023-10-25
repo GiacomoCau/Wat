@@ -72,5 +72,5 @@
       (with-standard-output-to-string
        (fresh-line) (uprint1 "a") (fresh-line)
        (fresh-line sos) (dlet ((*standard-output* sos)) (uprint1 "b")) (fresh-line sos)
-       (assert (eq? "\nb\n" (get-output-stream-string sos)))))
+       (assert#t (eq? "\nb\n" (get-output-stream-string sos)))))
     "\na\n"))

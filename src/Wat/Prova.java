@@ -7,8 +7,10 @@ import static java.nio.file.Paths.get;
 import static java.util.Map.of;
 import static java.util.regex.Pattern.compile;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
@@ -39,6 +41,14 @@ import Wat.Vm.Keyword;
 import Wat.Vm.Symbol;
 
 public class Prova {
+	
+	public static void main(String[] args) throws FileNotFoundException, IOException {
+		try (var x = new BufferedReader(new FileReader("testFile.txt")); ) {
+			for (String l=null; (l = x.readLine()) != null; ) {
+				out.println(l);
+			}
+		}
+	}
 	
 	public static void replaceAll() {
 		//out.println(Pattern.compile("\\|").matcher("\\|").quoteReplacement("|"));

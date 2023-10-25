@@ -56,8 +56,8 @@
 
   (deftest read.4
     (with-standard-input-from-string "1 2 3"
-      (assert (eq? 1 (read)))
-      (assert (eq? 2 (read)))
-      (assert (eq? 3 (read)))
-      (assert (eq? 4 (read (dget *standard-input*) #f 4)))
+      (assert#t (eq? 1 (read)))
+      (assert#t (eq? 2 (read)))
+      (assert#t (eq? 3 (read)))
+      (assert#t (eq? 4 (read (dget *standard-input*) #f 4)))
       #t)))

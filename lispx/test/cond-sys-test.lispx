@@ -53,7 +53,7 @@
     (block b
       (handlerBind
         ((SimpleError
-           (\ (e) (assert (eq? "foo" (@getMessage e))) (returnFrom b 1))))
+           (\ (e) (assert#t (eq? "foo" (@getMessage e))) (returnFrom b 1))))
         (signal (makeSimpleError "foo"))))
     1)
 
@@ -61,7 +61,7 @@
     (block b
       (handlerBind
         (((Error :type 'simple)
-            (\ (e) (assert (eq? "foo" (@getMessage e))) (returnFrom b 1))))
+            (\ (e) (assert#t (eq? "foo" (@getMessage e))) (returnFrom b 1))))
         (signal (new Error "foo" :type 'simple))))
     1)
 
@@ -159,7 +159,7 @@
 
   (deftest handlerCase.handled
     (handlerCase ((SimpleError (\ (e)
-                                   (assert (eq? "foo" (@getMessage e)))
+                                   (assert#t (eq? "foo" (@getMessage e)))
                                    'whatever)))
       (signal (makeSimpleError "foo")))
     'whatever)
@@ -251,14 +251,14 @@
     (restartBind ((continue (\ () 'whatever)))
       (ifOpt? (restartHandler (findRestart? 'continue))
         (invokeRestart restartHandler)
-        (assert #f)))
+        (assert#t #f)))
     'whatever)
 
   (deftest restartBind.handled
     (block b
       (restartBind ((abort (\ (arg1 arg2)
-                              (assert (eq? 1 arg1))
-                              (assert (eq? 2 arg2))
+                              (assert#t (eq? 1 arg1))
+                              (assert#t (eq? 2 arg2))
                               (returnFrom b 3))))
         (invokeRestart 'abort (+ 0 1) (+ 1 1))))
     3)
@@ -346,13 +346,13 @@
     (restartCase ((continue (\ () 'whatever)))
       (ifOpt? (restartHandler (findRestart? 'continue))
         (invokeRestart restartHandler)
-        (assert #f)))
+        (assert#t #f)))
     'whatever)
 
   (deftest restartCase.handled
     (restartCase ((abort (\ (arg1 arg2)
-                            (assert (eq? 1 arg1))
-                            (assert (eq? 2 arg2))
+                            (assert#t (eq? 1 arg1))
+                            (assert#t (eq? 2 arg2))
                             3)))
       (invokeRestart 'abort (+ 0 1) (+ 1 1)))
     3)
@@ -427,20 +427,20 @@
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg)))))
         (ifOpt? (r (findRestart? 'x))
           (begin
-            (assert (eq? (getSlot r 'restartName) 'x))
-            (assert (eq? (getSlot r 'associatedConditions) '()))
+            (assert#t (eq? (getSlot r 'restartName) 'x))
+            (assert#t (eq? (getSlot r 'associatedConditions) '()))
             (invokeRestart r 1))
-          (assert #f))))
+          (assert#t #f))))
     1001)
 
   (deftest findRestart?.3b
     (restartCase ((x (\ (arg) (+ 1000 arg))))
       (ifOpt? (r (findRestart? 'x))
         (begin
-          (assert (eq? (getSlot r 'restartName) 'x))
-          (assert (eq? (getSlot r 'associatedConditions) '()))
+          (assert#t (eq? (getSlot r 'restartName) 'x))
+          (assert#t (eq? (getSlot r 'associatedConditions) '()))
           (invokeRestart r 1))
-        (assert #f)))
+        (assert#t #f)))
     1001)
 
   (deftest findRestart?.4
@@ -450,10 +450,10 @@
                         :associatedConditions (list c)))
         (ifOpt? (r (findRestart? 'x c))
           (begin
-            (assert (eq? (getSlot r 'restartName) 'x))
-            (assert (eq? (getSlot r 'associatedConditions) (list c)))
+            (assert#t (eq? (getSlot r 'restartName) 'x))
+            (assert#t (eq? (getSlot r 'associatedConditions) (list c)))
             (invokeRestart r 1))
-          (assert #f))))
+          (assert#t #f))))
     1001)
 
   (deftest findRestart?.4b
@@ -463,10 +463,10 @@
                         :associatedConditions (list c)))
         (ifOpt? (r (findRestart? 'x c))
           (begin
-            (assert (eq? (getSlot r 'restartName) 'x))
-            (assert (eq? (getSlot r 'associatedConditions) (list c)))
+            (assert#t (eq? (getSlot r 'restartName) 'x))
+            (assert#t (eq? (getSlot r 'associatedConditions) (list c)))
             (invokeRestart r 1))
-          (assert #f))))
+          (assert#t #f))))
     1001)
 
   (deftest findRestart?.5
@@ -477,7 +477,7 @@
         (restartBind ((x (\ (arg) (returnFrom exit (- 1000 arg)))))
           (ifOpt? (r (findRestart? 'x c))
             (invokeRestart r 1)
-            (assert #f)))))
+            (assert#t #f)))))
     999)
 
   (deftest findRestart?.5b
@@ -488,7 +488,7 @@
         (restartCase ((x (\ (arg) (- 1000 arg))))
           (ifOpt? (r (findRestart? 'x c))
             (invokeRestart r 1)
-            (assert #f)))))
+            (assert#t #f)))))
     999)
 
   (deftest findRestart?.6
@@ -501,7 +501,7 @@
                           :associatedConditions (list d)))
           (ifOpt? (r (findRestart? 'x c))
             (invokeRestart r 1)
-            (assert #f)))))
+            (assert#t #f)))))
     1001)
 
   (deftest findRestart?.6b
@@ -514,7 +514,7 @@
                           :associatedConditions (list d)))
           (ifOpt? (r (findRestart? 'x c))
             (invokeRestart r 1)
-            (assert #f)))))
+            (assert#t #f)))))
     1001))
 
 (defsuite computeRestarts
@@ -536,7 +536,7 @@
                      (middle2 (\ ())))
         (restartCase ((inner1 (\ ()))
                        (inner2 (\ ())))
-          (assert (eq? (restart-names)
+          (assert#t (eq? (restart-names)
                      '(inner1
                        inner2
                        middle1
@@ -555,21 +555,21 @@
                        (middle2 (\ ())))
           (restartCase ((inner1 (\ ()) :associatedConditions (list c d))
                          (inner2 (\ ())))
-            (assert (eq? (restart-names)
+            (assert#t (eq? (restart-names)
                        '(inner1
                          inner2
                          middle1
                          middle2
                          outer1
                          outer2)))
-            (assert (eq? (restart-names c)
+            (assert#t (eq? (restart-names c)
                        '(inner1
                          inner2
                          middle1
                          middle2
                          outer1
                          outer2)))
-            (assert (eq? (restart-names d)
+            (assert#t (eq? (restart-names d)
                        '(inner1
                          inner2
                          middle2
@@ -638,7 +638,7 @@
                         (\ (e)
                           (let* ((handler (opt? (findRestart? 'r e)))
                                  (a-cs (getSlot handler 'associatedConditions)))
-                            (assert (cons? (member e a-cs)))
+                            (assert#t (cons? (member e a-cs)))
                             (returnFrom ok)))))
           (signal-operator (makeSimpleError "error!")
             (r (\ () 1))))))))
@@ -706,7 +706,7 @@
                (handlerCase ((UnboundVariable (\ (c) (list 'inner c))))
                  ;; Signal an arbitrary error:
                  (simpleError "Not an UNBOUND-VARIABLE error."))))))
-      (assert (and (== (car result) 'outer)
+      (assert#t (and (== (car result) 'outer)
                    (type? (cadr result) UnboundVariable)
                    (== (getSlot (cadr result) 'name) 'fred)))))
 
@@ -717,6 +717,6 @@
                                      (error (new UnboundVariable :name 'fred)))))
                (handlerCase ((UnboundVariable (\ (c) (list 'inner c))))
                  (error (new UnboundVariable :name 'marvin)))))))
-      (assert (and (== (car result) 'inner)
+      (assert#t (and (== (car result) 'inner)
                    (type? (cadr result) UnboundVariable)
                    (== (getSlot (cadr result) 'name) 'marvin))))))

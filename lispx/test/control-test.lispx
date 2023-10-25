@@ -9,9 +9,9 @@
   (deftest fiber.2
     (begin
       (def yield-record (fiber 1 2 (+ (fiberYield (eq? 1 1)) 3)))
-      (assert (type? yield-record YieldRecord))
-      (assert (eq? #t (getSlot yield-record 'value)))
-      (assert (eq? 33 (fiberResume yield-record 30))))
+      (assert#t (type? yield-record YieldRecord))
+      (assert#t (eq? #t (getSlot yield-record 'value)))
+      (assert#t (eq? 33 (fiberResume yield-record 30))))
     #inert)
 
   (deftest fiber.begin.1
@@ -330,25 +330,25 @@
     (begin
       (block ret
         (pushPrompt 'p
-          (assert (promptSet? 'p))
+          (assert#t (promptSet? 'p))
           (returnFrom ret)))
-      (assert (not (promptSet? 'p))))
+      (assert#t (not (promptSet? 'p))))
     #inert)
 
   (deftest pushPrompt.5
     (begin
-      (assert (not (promptSet? 'p)))
-      (assert (not (promptSet? 'q)))
+      (assert#t (not (promptSet? 'p)))
+      (assert#t (not (promptSet? 'q)))
       (pushPrompt 'p
-        (assert (promptSet? 'p))
-        (assert (not (promptSet? 'q)))
+        (assert#t (promptSet? 'p))
+        (assert#t (not (promptSet? 'q)))
         (pushPrompt 'q
-          (assert (promptSet? 'p))
-          (assert (promptSet? 'q)))
-        (assert (promptSet? 'p))
-        (assert (not (promptSet? 'q))))
-      (assert (not (promptSet? 'p)))
-      (assert (not (promptSet? 'q))))
+          (assert#t (promptSet? 'p))
+          (assert#t (promptSet? 'q)))
+        (assert#t (promptSet? 'p))
+        (assert#t (not (promptSet? 'q))))
+      (assert#t (not (promptSet? 'p)))
+      (assert#t (not (promptSet? 'q))))
     #inert))
 
 (defsuite takeSubcont
@@ -404,15 +404,15 @@
 
   (deftest pushDelimSubcont.4
     (let ((k (pushPrompt 'p (+ 100 (takeSubcont 'p k k)))))
-      (assert (eq? 102 (pushDelimSubcont 'p k (+ 1 1))))
-      (assert (eq? 120 (pushDelimSubcont 'p k (+ 10 10)))))
+      (assert#t (eq? 102 (pushDelimSubcont 'p k (+ 1 1))))
+      (assert#t (eq? 120 (pushDelimSubcont 'p k (+ 10 10)))))
     #inert)
 
   (deftest pushDelimSubcont.5
     (let ((k (pushPrompt 'p (pushPrompt 'q (takeSubcont 'p k k)))))
       (pushDelimSubcont 'p k
-        (assert (promptSet? 'q))
-        (assert (promptSet? 'p))))
+        (assert#t (promptSet? 'q))
+        (assert#t (promptSet? 'p))))
     #inert))
 
 (defsuite promptSet?
@@ -452,61 +452,61 @@
     (begin
       (ddef *x* 1)
       (ddef *y* (+ 1 1))
-      (assert (eq? (dget *x*) 1))
-      (assert (eq? (dget *y*) 2))
+      (assert#t (eq? (dget *x*) 1))
+      (assert#t (eq? (dget *y*) 2))
       (dlet ((*x* 3))
-        (assert (eq? (dget *x*) 3))
-        (assert (eq? (dget *y*) 2))
+        (assert#t (eq? (dget *x*) 3))
+        (assert#t (eq? (dget *y*) 2))
         (dlet ((*y* 4))
-          (assert (eq? (dget *x*) 3))
-          (assert (eq? (dget *y*) 4)))
-        (assert (eq? (dget *x*) 3))
-        (assert (eq? (dget *y*) 2)))
-      (assert (eq? (dget *x*) 1))
-      (assert (eq? (dget *y*) 2)))
+          (assert#t (eq? (dget *x*) 3))
+          (assert#t (eq? (dget *y*) 4)))
+        (assert#t (eq? (dget *x*) 3))
+        (assert#t (eq? (dget *y*) 2)))
+      (assert#t (eq? (dget *x*) 1))
+      (assert#t (eq? (dget *y*) 2)))
     #inert)
 
   (deftest* ddef.redefine
     (ddef *a* (+ 1 1))
     (def old-a *a*)
-    (assert (eq? (dget *a*) 2))
-    (assert (eq? (dget old-a) 2))
+    (assert#t (eq? (dget *a*) 2))
+    (assert#t (eq? (dget old-a) 2))
     (ddef *a* (+ 2 2))
-    (assert (eq? (dget *a*) 4))
-    (assert (eq? (dget old-a) 4))
-    (assert (== old-a *a*))
+    (assert#t (eq? (dget *a*) 4))
+    (assert#t (eq? (dget old-a) 4))
+    (assert#t (== old-a *a*))
     (ddef *a*)
-    (assert (eq? (dget *a*) #inert))
-    (assert (eq? (dget old-a) #inert))
-    (assert (== old-a *a*)))
+    (assert#t (eq? (dget *a*) #inert))
+    (assert#t (eq? (dget old-a) #inert))
+    (assert#t (== old-a *a*)))
 
   (deftest progv.1
     (begin
       (ddef *x* 1)
       (ddef *y* 2)
-      (assert (eq? (dget *x*) 1))
-      (assert (eq? (dget *y*) 2))
+      (assert#t (eq? (dget *x*) 1))
+      (assert#t (eq? (dget *y*) 2))
       (progv (*x*) (3)
-        (assert (eq? (dget *x*) 3))
-        (assert (eq? (dget *y*) 2))
+        (assert#t (eq? (dget *x*) 3))
+        (assert#t (eq? (dget *y*) 2))
         (progv (*y*) (4)
-          (assert (eq? (dget *x*) 3))
-          (assert (eq? (dget *y*) 4)))
-        (assert (eq? (dget *x*) 3))
-        (assert (eq? (dget *y*) 2)))
-      (assert (eq? (dget *x*) 1))
-      (assert (eq? (dget *y*) 2)))
+          (assert#t (eq? (dget *x*) 3))
+          (assert#t (eq? (dget *y*) 4)))
+        (assert#t (eq? (dget *x*) 3))
+        (assert#t (eq? (dget *y*) 2)))
+      (assert#t (eq? (dget *x*) 1))
+      (assert#t (eq? (dget *y*) 2)))
     #inert)
 
   (deftest dget.1
     (begin
       (ddef *foo*)
-      (assert (eq? (dget *foo*) #inert))
-      (assert (type? *foo* DVar))
-      (assert (type? *foo* Box))
-      (assert (type? *foo* Object))
-      (assert (subClass? DVar Box))
-      (assert (subClass? DVar Object)))
+      (assert#t (eq? (dget *foo*) #inert))
+      (assert#t (type? *foo* DVar))
+      (assert#t (type? *foo* Box))
+      (assert#t (type? *foo* Object))
+      (assert#t (subClass? DVar Box))
+      (assert#t (subClass? DVar Object)))
     #inert)
 
   (deftest dset.1
@@ -514,13 +514,13 @@
       (ddef *bar*)
       (dlet ((*bar* 1))
         (dset *bar* 2)
-        (assert (eq? 2 (dget *bar*)))
+        (assert#t (eq? 2 (dget *bar*)))
         (dlet ((*bar* 3))
-          (assert (eq? 3 (dget *bar*))))
-        (assert (eq? 2 (dget *bar*)))
+          (assert#t (eq? 3 (dget *bar*))))
+        (assert#t (eq? 2 (dget *bar*)))
         (dset *bar* 4)
-        (assert (eq? 4 (dget *bar*))))
-      (assert (eq? #inert (dget *bar*)))
+        (assert#t (eq? 4 (dget *bar*))))
+      (assert#t (eq? #inert (dget *bar*)))
       #t))
 
   (deftest dlet*.1

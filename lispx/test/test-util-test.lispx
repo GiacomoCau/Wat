@@ -11,24 +11,24 @@
   (after
     (sleep 1)
     (sleep 1)
-    (assert (eq? (test-util-test:x) 3))
+    (assert#t (eq? (test-util-test:x) 3))
     (test-util-test:x 4)
     (sleep 1))
   (deftest* check-it
     (sleep 1)
     (sleep 1)
-    (assert (eq? (test-util-test:x) 2))
+    (assert#t (eq? (test-util-test:x) 2))
     (test-util-test:x 3)
     (sleep 1))
   (deftest* check-it-again
     (sleep 1)
     (sleep 1)
-    (assert (eq? (test-util-test:x) 3))
+    (assert#t (eq? (test-util-test:x) 3))
     (sleep 1)))
 
 (defsuite test-util-test:2
   (deftest* check-it-again-afterwards
-    (assert (eq? (test-util-test:x) 4))))
+    (assert#t (eq? (test-util-test:x) 4))))
 
 ;; Test before-each and after-each
 
@@ -49,17 +49,17 @@
   (deftest* t1
     (sleep 1)
     (sleep 1)
-    (assert (eq? (test-util-test:y) 2))
-    (assert (eq? (test-util-test:z) 10))
+    (assert#t (eq? (test-util-test:y) 2))
+    (assert#t (eq? (test-util-test:z) 10))
       (sleep 1))
   (deftest* t2
     (sleep 1)
     (sleep 1)
-    (assert (eq? (test-util-test:y) 3))
-    (assert (eq? (test-util-test:z) 9))
+    (assert#t (eq? (test-util-test:y) 3))
+    (assert#t (eq? (test-util-test:z) 9))
     (sleep 1)))
 
 (defsuite test-util-test:4
   (deftest* t3
-    (assert (eq? (test-util-test:y) 3))
-    (assert (eq? (test-util-test:z) 8))))
+    (assert#t (eq? (test-util-test:y) 3))
+    (assert#t (eq? (test-util-test:z) 8))))

@@ -9,10 +9,10 @@
           (etypecase c
             (Symbol
              (let ((class (findClass c env)))
-               (assert (subClass? class superclass))))
+               (assert#t (subClass? class superclass))))
             (Cons
              (let ((class (findClass (car c) env)))
-               (assert (subClass? class superclass))
+               (assert#t (subClass? class superclass))
                (-test-classes- (cdr c) class))))))))
 
   (deftest test-hierarchy

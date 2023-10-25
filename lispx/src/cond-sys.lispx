@@ -141,7 +141,7 @@
           :parentFrame?
              (dget handlerFrameDynamic) ))
       (progv (handlerFrameDynamic) ((some handlerFrame))
-        (eval (list* begin forms) env) ))))
+        (eval (cons 'begin forms) env) ))))
 
 (def handlerBind
   #|Establish condition handlers specified by HANDLER-SPECS around FORMS.
@@ -204,7 +204,7 @@
                                           (\ () (apply (eval functionForm env) args) )))
                                       properties ))
                           handlerSpecs)
-                     (list returnFrom exit (list* begin forms)))
+                     (list returnFrom exit (cons 'begin forms)))
                env ))))))
 
 (def handlerCase

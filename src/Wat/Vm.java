@@ -381,7 +381,7 @@ public class Vm {
 		};
 		int deep() { int i=0; for (var env=this; env != null; env=env.parent) i+=1; return i; }
 		public String toString() {
-			return "{" + (this==theEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" + (map.size() > 10 ? "[" + map.size() + "] ..." : toStringSet(map.reversed().entrySet())) + eIfnull(parent, ()-> " " + parent) + "}";
+			return "{" + (this==theEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" + (map.size() > 10 ? "[" + map.size() + "] ..." : Vm.this.toStringSet(map.reversed().entrySet())) + eIfnull(parent, ()-> " " + parent) + "}";
 		}
 		public boolean remove(Object obj) {
 			var key = toKey(obj);
@@ -474,6 +474,7 @@ public class Vm {
 			for (int i=0, e=objs.length; i<e; i+=1) last = map.put(toKey(objs[i]), objs[i+=1]);
 			return last;
 		}
+		@SuppressWarnings("unused")
 		@Override public String toString() {
 			var s = "";
 			for (Throwable thw = this; thw != null; thw = thw.getCause()) {
@@ -486,8 +487,8 @@ public class Vm {
 		public String toString(Obj obj) {
 			return "{&" + obj.getClass().getCanonicalName() // or .getSimpleName()?
 				+ eIfnull(obj.getMessage(), m-> " " + Vm.this.toString(true, m))
-				//+ eIfnull(getCause(), t-> " " + t.getClass().getSimpleName())
-				+ (map.size() > 10 ? " [" + map.size() + "]" + " ..." : toStringSet(obj.map.entrySet()))
+				//+ eIfnull(getCause(), t-> " " + symbol(t.getClass().getSimpleName()))
+				+ (map.size() > 10 ? " [" + map.size() + "]" + " ..." : Vm.this.toStringSet(obj.map.entrySet()))
 				+ "}";
 		}
 		@Override public Object apply(List o) {
@@ -763,7 +764,7 @@ public class Vm {
 		boolean def;
 		Def(boolean def) { this.def = def; }
 		public Object combine(Env e, List o) {
-			var chk = checkR(this, o, 2, 3, or(Symbol.class, Cons.class));  // o = (pt arg) | (pt key arg)
+			var chk = checkR(this, o, 2, 3, or(/*null, #inert,*/ Symbol.class, Cons.class));  // o = (pt arg) | (pt key arg)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			var pt = o.car();
@@ -772,22 +773,12 @@ public class Vm {
 			return pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> 
 				switch (bndRes(len != 3 ? null : o.car(1))) {
 					case Suspension s-> s;
-					case Integer i-> i >= 0 && i <= 2 ? bind(dbg, def, i, e, pt, res)
+					case Integer i-> i >= 0 && i <= 2
+						? bind(dbg, def, i, e, pt, res)
 						: typeError("cannot " + (def ? "def" : "set!") + ", invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2)));
 					case Object obj-> resumeError(chk, symbol("Integer"));
 				}
 			);
-			/*
-			return pipe(dbg,
-				()-> getTco(evaluate(e, o.car(len-1))),
-				res-> $(res, bndRes(len != 3 ? null : o.car(1))),
-				res-> switch ($n(res, 1)) {
-					case Integer i when i >= 0 || i <= 2-> bind(dbg, def, i, e, pt, $n(res, 0));
-					case Integer i -> typeError("invalid bndRes value: {datum}", i, toChk(or(0, 1, 2)));
-					case Object obj-> typeError("not a integer: {datum}", obj, symbol("Integer"));
-				}
-			);
-			//*/
 		}
 		public String toString() { return def ? "%Def" : "%Set!"; }
 	};
@@ -894,7 +885,7 @@ public class Vm {
 			if (res instanceof Suspension s) return s.suspend(dbg(e, this, tag, hdl), rr-> combine2(rr, e, tag, hdl, thw));
 			return res instanceof Apv apv && args(apv) == 1
 				? getTco(Vm.this.combine(e, unwrap(apv), list(thw instanceof Value val ? val.value : thw)))
-				: hdlAny ? hdl : typeError("cannot apply handler, not a {expected}: {datum}", hdl, symbol("Apv1"))
+				: hdlAny ? res : typeError("cannot apply handler, not a {expected}: {datum}", res, symbol("Apv1"))
 			;
 		}
 		public String toString() { return "%CatchTagWth"; }
@@ -1149,7 +1140,7 @@ public class Vm {
 							default: // in errore senza!
 						}
 					}
-					return javaError("error executing " + Vm.this.toString(name, args) + " of: {object} with: {args}", thw, symbol(name), list(args), o0);
+					return javaError("error executing " + Vm.this.toString(name, classes) + " of: {object} with: {args}", thw, symbol(name), list(args), o0);
 				}
 			}
 			@Override public String toString() { return "@" + name; }
@@ -1549,8 +1540,10 @@ public class Vm {
 	public String toStringSet(Set<Entry<String,Object>> set) {
 		return set.isEmpty() ? "" : " " + set.stream().map(e-> ":" + e.getKey() + " " + toString(true, e.getValue())).collect(joining(" "));
 	}
-	private String toString(String name, Object[] args) {
-		return (name.equals("new") ? "constructor: " : "method: " + name) + (/*args == null ||*/ args.length == 0 ? "()" : toString(list(args)));
+	private String toString(String name, Class[] classes) {
+		return (name.equals("new") ? "constructor: " : "method: ") + name
+			+ "(" + stream(classes).map(Class::getSimpleName).collect(joining(", ")) + ")"
+		;
 	}
 	public String toKey(Object key) {
 		return switch (key) {
@@ -1629,7 +1622,15 @@ public class Vm {
 				"%dot", wrap(new JFun("%Dot", (Function<String,Object>) this::dot)),
 				"%instanceOf?", wrap(new JFun("%InstanceOf?", (n,o)-> checkN(n, o, 2, Any.class, Class.class), (l,o)-> o.<Class>car(1).isInstance(o.car()) )),
 				// Object System
-				"%new", wrap(new JFun("%New", (n,o)-> checkM(n, o, 1, or(list(2, Box.class), list(1, more, Obj.class, or(list(or(Symbol.class, Keyword.class, String.class), Any.class), list(1, more, String.class, or(Symbol.class, Keyword.class, String.class), Any.class))))), (l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr())) )),
+				"%new", wrap(new JFun("%New", (n,o)-> checkM(n, o, 1,
+					or( list(2, Box.class),
+						list(1, more, Obj.class,
+							or( list(or(Symbol.class, Keyword.class, String.class), Any.class),
+								list(1, more, Throwable.class, or(Symbol.class, Keyword.class, String.class), Any.class),
+								list(1, more, String.class,
+									or(	list(or(Symbol.class, Keyword.class, String.class), Any.class),
+									    list(1, more, Throwable.class, or(Symbol.class, Keyword.class, String.class), Any.class) )))))),
+					(l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr())) )),
 				"%newClass", wrap(new JFun("%NewClass", (n,o)-> checkR(n, o, 1, 2, Symbol.class, or(Box.class, Obj.class)), (l,o)-> newClass(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr())) )),
 				"%subClass?", wrap(new JFun("%SubClass?", (n,o)-> checkN(n, o, 2, Class.class, Class.class), (l,o)-> o.<Class>car(1).isAssignableFrom(o.car()) )),
 				"%type?",  wrap(new JFun("%Type?", (n,o)-> checkN(n, o, 2, Any.class, or(null, Class.class)), (l,o)-> apply((o1, c)-> c == null ? o1 == null /*: o1 == null ? !c.isPrimitive()*/ : o1 != null && c.isAssignableFrom(o1.getClass()), o.car(), o.<Class>car(1)) )),
@@ -1776,20 +1777,34 @@ public class Vm {
 					else if (thw instanceof ParseException pe)
 					    out.println("{&" + Utility.getMessage(pe) + "}"); 
 					else if (thw instanceof Value v) {
-						//out.println(v.value instanceof Condition e ? e.getMessage() : "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
-						if (v.value instanceof Obj o) out.println(o.getMessage() /*+ toStringSet(o.map.entrySet())*/);
-						else do out.println(thw instanceof Obj ? thw : "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
-						while ((thw = thw.getCause()) != null);
+						print(apply(c-> c != null ? c : v, v.getCause()));
 					}
 					else {
-						if (thw instanceof Obj o) out.println(o.getMessage() /*+ toStringSet(o.map.entrySet())*/);
-						else do	out.println(thw instanceof Obj ? thw : "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
-						while ((thw = thw.getCause()) != null);
+						print(thw);
 					}
 				}
 			}
 		}
 		print("\nfinito");
+	}
+	private void print(Throwable thw) {
+		/*
+		if (thw instanceof Obj o) out.println(
+			o.getMessage()
+			//+ toStringSet(o.map.entrySet())
+		);
+		else do	out.println(thw instanceof Obj o 
+			? thw
+			: "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}"
+		);
+		while ((thw = thw.getCause()) != null);
+		*/
+		do out.println(
+			thw instanceof Obj o 
+			? o.getMessage() + Vm.this.toStringSet(o.map.entrySet())
+			: thw.getClass().getCanonicalName() + ": " + thw.getMessage()
+		);
+		while ((thw = thw.getCause()) != null);
 	}
 	
 	

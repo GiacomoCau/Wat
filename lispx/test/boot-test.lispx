@@ -43,30 +43,30 @@
      Error :type 'match)
     #f))
 
-(defsuite assert
+(defsuite assert#t
 
-  (deftest assert.1
-    (assert (eq? 1 1))
+  (deftest assert#t.1
+    (assert#t (eq? 1 1))
     #inert)
 
-  (deftest assert.2
+  (deftest assert#t.2
     (signalsError?
-     (assert (eq? 1 2))
-     AssertionError))
+     (assert#t (eq? 1 2))
+     Error :type 'assert))
 
-  (deftest assert.3
+  (deftest assert#t.3
     (signalsError?
-     (assert)
+     (assert#t)
      Error :type 'match))
 
-  (deftest assert.4
+  (deftest assert#t.4
     (signalsError?
-     (assert 1)
+     (assert#t 1)
      Error :type 'type :datum 1 :expected 'Boolean))
 
-  (deftest assert.5
+  (deftest assert#t.5
     (signalsError?
-     (assert #t #t)
+     (assert#t #t #t)
      Error :type 'match)))
 
 (defsuite error
@@ -82,16 +82,14 @@
      Error :type 'match))
 
   (deftest error.3
-    (handlerBind ((SimpleError (\ (e)
-                                   (invokeRestart 'continue 12))))
+    (handlerBind ((SimpleError (\ (e) (invokeRestart 'continue 12))))
       (error (makeSimpleError "Foo!")
         (abort (\ (value) (* value 10)))
         (continue (\ (value) (* value 2)))))
     24)
 
   (deftest error.3b
-    (handlerBind ((SimpleError (\ (e)
-                                   (invokeRestart 'abort 12))))
+    (handlerBind ((SimpleError (\ (e) (invokeRestart 'abort 12))))
       (error (makeSimpleError "Foo!")
         (abort (\ (value) (* value 10)))
         (continue (\ (value) (* value 2)))))
@@ -99,8 +97,7 @@
 
   (deftest error.4
     (restartCase ((abort (\ (value) (* 1000 value))))
-      (handlerBind ((SimpleError (\ (e)
-                                     (invokeRestart 'abort 12))))
+      (handlerBind ((SimpleError (\ (e) (invokeRestart 'abort 12))))
         (error (error (makeSimpleError "Foo!"))
           (abort (\ (value) (* value 10)))
           (continue (\ (value) (* value 2))))))
@@ -109,10 +106,10 @@
   (deftest error.4b
     (block b
       (restartCase ((abort (\ (value) (* 1000 value))))
-        (handlerBind ((SimpleError (\ (e)
-                                       (invokeRestart 'abort 12))))
-          (error (error (makeSimpleError "Foo!")
-                   (abort (\ (value) (returnFrom b (* 10000 value)))))
+        (handlerBind ((SimpleError (\ (e) (invokeRestart 'abort 12))))
+          (error
+            (error (makeSimpleError "Foo!")
+              (abort (\ (value) (returnFrom b (* 10000 value)))) )
             (abort (\ (value) (* value 10)))
             (continue (\ (value) (* value 2)))))))
     120000))
@@ -172,21 +169,21 @@
 
   (deftest makeTypeError.1
     (let ((e (makeTypeError "foo" 'Number)))
-      (assert (matchObj*? e Error :type 'type :datum "foo" :expected 'Number))
-      (assert (type? e Error))
-      (assert (type? e Condition))
-      (assert (eq? "foo" (getSlot e 'datum)))
-      (assert (eq? 'Number (getSlot e 'expected))))
+      (assert#t (matchObj*? e Error :type 'type :datum "foo" :expected 'Number))
+      (assert#t (type? e Error))
+      (assert#t (type? e Condition))
+      (assert#t (eq? "foo" (getSlot e 'datum)))
+      (assert#t (eq? 'Number (getSlot e 'expected))))
     #inert))
 
 (defsuite simpleError
 
   (deftest makeSimpleError.1
     (let ((e (makeSimpleError "foo")))
-      (assert (type? e SimpleError))
-      (assert (type? e Error))
-      (assert (type? e Condition))
-      (assert (eq? "foo" (@getMessage e))))
+      (assert#t (type? e SimpleError))
+      (assert#t (type? e Error))
+      (assert#t (type? e Condition))
+      (assert#t (eq? "foo" (@getMessage e))))
     #inert)
 
   (deftest simpleError.1
@@ -203,10 +200,10 @@
 
   (deftest makeRestartError.1
     (let ((e (makeRestartError 'continue)))
-      (assert (type? e RestartError))
-      (assert (type? e Error))
-      (assert (type? e Condition))
-      (assert (eq? 'continue (getSlot e 'restartName))))
+      (assert#t (type? e RestartError))
+      (assert#t (type? e Error))
+      (assert#t (type? e Condition))
+      (assert#t (eq? 'continue (getSlot e 'restartName))))
     #inert))
 
 (defsuite vau
@@ -222,9 +219,9 @@
   (deftest |A fexpr can have multiple body expressions.|
     (begin
       (def env (theEnv))
-      (assert (eq? ((vau ops #ignore (set env var 1) ops) x y z)
+      (assert#t (eq? ((vau ops #ignore (set env var 1) ops) x y z)
                  '(x y z)))
-      (assert (eq? (eval 'var env) 1)))
+      (assert#t (eq? (eval 'var env) 1)))
     #inert)
 
   (deftest |The environment parameter receives the current environment.|
@@ -419,7 +416,7 @@
   (deftest defVau.1
     (begin
       (defVau mybegin body env
-        (eval (list* begin body) env))
+        (eval (cons 'begin body) env))
       (mybegin 1 2 3))
     3)
 
@@ -449,9 +446,9 @@
   (deftest def.1
     (begin
       (def (x y z) (list 1 2 3))
-      (assert (eq? x 1))
-      (assert (eq? y 2))
-      (assert (eq? z 3)))
+      (assert#t (eq? x 1))
+      (assert#t (eq? y 2))
+      (assert#t (eq? z 3)))
     #inert)
 
   (deftest def.2
@@ -613,7 +610,7 @@
   (deftest prog1.4
     (begin
       (def env (theEnv))
-      (assert (eq? 4 (prog1 4 (set env x 2))))
+      (assert#t (eq? 4 (prog1 4 (set env x 2))))
       x)
     2))
 
@@ -1390,13 +1387,13 @@
   (deftest newEnv.2
     (let* ((env (newEnv (theEnv)))
            (child (newEnv env)))
-      (assert (not (bound? 'x env)))
-      (assert (not (bound? 'x child)))
+      (assert#t (not (bound? 'x env)))
+      (assert#t (not (bound? 'x child)))
       (eval '(def x 1) env)
-      (assert (bound? 'x env))
-      (assert (bound? 'x child))
-      (assert (eq? 1 (eval 'x env)))
-      (assert (eq? 1 (eval 'x child))))
+      (assert#t (bound? 'x env))
+      (assert#t (bound? 'x child))
+      (assert#t (eq? 1 (eval 'x env)))
+      (assert#t (eq? 1 (eval 'x child))))
     #inert)
 
   (deftest newEnv.3
@@ -1776,7 +1773,7 @@
   (deftest dolist.7
     (let ((ct 0))
       (def env (theEnv))
-      (assert (eq? #inert (dolist (x '(1 2 3 4))
+      (assert#t (eq? #inert (dolist (x '(1 2 3 4))
                          'bla
                          (set env ct (+ ct x)))))
       ct)
@@ -2011,7 +2008,7 @@
   (deftest listSubseq.5
     (signalsError?
      (subSeq '() 1 "b")
-     Error :type 'type :datum "b" :expected 'Integer))
+     Error :type 'type :datum "b" :expected '(or #inert Integer)))
 
   (deftest listSubseq.6
     (signalsError?
@@ -2084,7 +2081,7 @@
   (deftest stringSubseq.5
     (signalsError?
      (subSeq "foo" 1 "b")
-     Error :type 'type :datum "b" :expected 'Integer))
+     Error :type 'type :datum "b" :expected '(or #inert Integer)))
 
   (deftest stringSubseq.6
     (signalsError?
@@ -2374,10 +2371,10 @@
   (deftest obj.1
     (begin
       (def obj (new Error :type 'type :datum 1 :expected 'String))
-      (assert (eq? (getSlot obj 'datum) 1))
-      (assert (eq? (getSlot obj :datum) 1))
-      (assert (eq? (getSlot obj 'expected) 'String))
-      (assert (eq? (getSlot obj :expected) 'String)))
+      (assert#t (eq? (getSlot obj 'datum) 1))
+      (assert#t (eq? (getSlot obj :datum) 1))
+      (assert#t (eq? (getSlot obj 'expected) 'String))
+      (assert#t (eq? (getSlot obj :expected) 'String)))
     #inert)
 
   (deftest obj.2
@@ -2388,37 +2385,37 @@
   (deftest obj.3
     (signalsError?
      (new 3)
-     Error :type 'type :datum '(3) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword String) Any) (1 + String (or Symbol Keyword String) Any)))) ))
+     Error :type 'type :datum '(3) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any) (1 + String (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any)))))) ))
 
   (deftest obj.4
     (signalsError?
      (new Object)
-     Error :type 'type :datum '(&java.lang.Object) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword String) Any) (1 + String (or Symbol Keyword String) Any)))) ))
+     Error :type 'type :datum '(&java.lang.Object) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any) (1 + String (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any)))))) ))
 
   (deftest obj.5
     (signalsError?
      (new Obj :x)
-     Error :type 'type :datum '(&Wat.Vm$Obj :x) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword String) Any) (1 + String (or Symbol Keyword String) Any)))) )) )
+     Error :type 'type :datum '(&Wat.Vm$Obj :x) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any) (1 + String (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any)))))) )) )
 
 (defsuite slots
 
   (deftest slots.1
     (begin
       (def obj (new Obj))
-      (assert (not (slotBound? obj 'x)))
-      (assert (not (slotBound? obj :x)))
-      (assert (signalsError? (getSlot obj 'x)
+      (assert#t (not (slotBound? obj 'x)))
+      (assert#t (not (slotBound? obj :x)))
+      (assert#t (signalsError? (getSlot obj 'x)
                              Error :type 'unboundField :object obj :field "x"))
-      (assert (signalsError? (getSlot obj :x)
+      (assert#t (signalsError? (getSlot obj :x)
                              Error :type 'unboundField :object obj :field "x"))
       (setSlot obj 'x 1)
-      (assert (slotBound? obj 'x))
-      (assert (slotBound? obj :x))
-      (assert (eq? (getSlot obj 'x) 1))
-      (assert (eq? (getSlot obj :x) 1))
+      (assert#t (slotBound? obj 'x))
+      (assert#t (slotBound? obj :x))
+      (assert#t (eq? (getSlot obj 'x) 1))
+      (assert#t (eq? (getSlot obj :x) 1))
       (setSlot obj 'x 2)
-      (assert (eq? (getSlot obj 'x) 2))
-      (assert (eq? (getSlot obj :x) 2)))
+      (assert#t (eq? (getSlot obj 'x) 2))
+      (assert#t (eq? (getSlot obj :x) 2)))
     #inert)
 
   (deftest getSlot.1
@@ -2613,12 +2610,13 @@
 
   (deftest labels.5
     (signalsError?
-     (labels #t)
-     Error :type 'type :datum #t :expected 'Cons))
+      (labels #t)
+      Error :type 'type :datum #t :expected 'Cons))
 
   (deftest labels.6
-    (labels ())
-    #inert))
+    (signalsError?
+      (labels ())
+      Error :type 'type :datum () :expected '(or Symbol Cons))))
 
 (defsuite letLoop
 
@@ -2943,9 +2941,9 @@
 
   (deftest classOf.1
     (begin
-      (assert (== (classOf "foo") String))
-      (assert (== (classOf 12) Integer))
-      (assert (== (classOf String) Class)))
+      (assert#t (== (classOf "foo") String))
+      (assert#t (== (classOf 12) Integer))
+      (assert#t (== (classOf String) Class)))
     #inert)
 
   (deftest classOf.2
@@ -3042,34 +3040,34 @@
 ;; Utility used by `%newClass' and `defClass' tests.
 
 (def\ classes-test (c d p q)
-  (assert (type? c StandardClass))
-  (assert (type? c Class))
-  (assert (type? c Object))
-  (assert (eq? (className c) 'Point2d))
-  (assert (subClass? c Obj))
-  (assert (subClass? c Object))
+  (assert#t (type? c StandardClass))
+  (assert#t (type? c Class))
+  (assert#t (type? c Object))
+  (assert#t (eq? (className c) 'Point2d))
+  (assert#t (subClass? c Obj))
+  (assert#t (subClass? c Object))
 
-  (assert (type? p c))
-  (assert (type? p Obj))
-  (assert (type? p Object))
-  (assert (eq? (getSlot p 'x) 1))
-  (assert (eq? (getSlot p 'y) 2))
+  (assert#t (type? p c))
+  (assert#t (type? p Obj))
+  (assert#t (type? p Object))
+  (assert#t (eq? (getSlot p 'x) 1))
+  (assert#t (eq? (getSlot p 'y) 2))
 
-  (assert (type? d StandardClass))
-  (assert (type? d Class))
-  (assert (type? d Object))
-  (assert (eq? (className d) 'Point3d))
-  (assert (subClass? d c))
-  (assert (subClass? d Obj))
-  (assert (subClass? d Object))
+  (assert#t (type? d StandardClass))
+  (assert#t (type? d Class))
+  (assert#t (type? d Object))
+  (assert#t (eq? (className d) 'Point3d))
+  (assert#t (subClass? d c))
+  (assert#t (subClass? d Obj))
+  (assert#t (subClass? d Object))
 
-  (assert (type? q d))
-  (assert (type? q c))
-  (assert (type? q Obj))
-  (assert (type? q Object))
-  (assert (eq? (getSlot q 'x) 1))
-  (assert (eq? (getSlot q 'y) 2))
-  (assert (eq? (getSlot q 'z) 3)))
+  (assert#t (type? q d))
+  (assert#t (type? q c))
+  (assert#t (type? q Obj))
+  (assert#t (type? q Object))
+  (assert#t (eq? (getSlot q 'x) 1))
+  (assert#t (eq? (getSlot q 'y) 2))
+  (assert#t (eq? (getSlot q 'z) 3)))
 
 (defsuite %newClass
 
@@ -3108,15 +3106,15 @@
            (c (%newClass 'C b))
            (d (%newClass 'D Obj))
            (e (%newClass 'E d)))
-      (assert (subClass? b a))
-      (assert (subClass? c a))
-      (assert (subClass? c b))
+      (assert#t (subClass? b a))
+      (assert#t (subClass? c a))
+      (assert#t (subClass? c b))
       (%reinitialize-standard-class b e)
-      (assert (subClass? b e))
-      (assert (subClass? b d))
-      (assert (subClass? c e))
-      (assert (subClass? c d))
-      (assert (subClass? c b)))))
+      (assert#t (subClass? b e))
+      (assert#t (subClass? b d))
+      (assert#t (subClass? c e))
+      (assert#t (subClass? c d))
+      (assert#t (subClass? c b)))))
 
 (defsuite defClass
 
@@ -3158,18 +3156,18 @@
     (defGeneric foo (x))
     (defMethod foo ((a A)) "foo")
     (def b (new B))
-    (assert (subClass? B A))
-    (assert (type? b B))
-    (assert (type? b A))
-    (assert (eq? "foo" (foo b)))
+    (assert#t (subClass? B A))
+    (assert#t (type? b B))
+    (assert#t (type? b A))
+    (assert#t (eq? "foo" (foo b)))
     (defClass C () ())
     (defMethod foo ((c C)) "bar")
     (defClass B (C) ())
-    (assert (subClass? B C))
-    (assert (== (classOf b) B))
-    (assert (type? b B))
-    (assert (type? b C))
-    (assert (eq? "bar" (foo b)))))
+    (assert#t (subClass? B C))
+    (assert#t (== (classOf b) B))
+    (assert#t (type? b B))
+    (assert#t (type? b C))
+    (assert#t (eq? "bar" (foo b)))))
 
 (defsuite generics
 
@@ -3181,59 +3179,59 @@
       (def bar (new Bar))
 
       (defGeneric g1 (new param))
-      (assert (type? g1 Function))
+      (assert#t (type? g1 Function))
 
-      (assert (signalsError?
+      (assert#t (signalsError?
                (g1 12 (+ 1 1))
                Error :type 'unboundExecutable :class Integer :executable 'g1))
-      (assert (signalsError?
+      (assert#t (signalsError?
                (g1 foo (+ 1 1))
                Error :type 'unboundExecutable :class Foo :executable 'g1))
-      (assert (signalsError?
+      (assert#t (signalsError?
                (g1 bar (+ 1 1))
                Error :type 'unboundExecutable :class Bar :executable 'g1))
 
       (defMethod g1 ((new Foo) param)
         (+ param 100))
 
-      (assert (signalsError?
+      (assert#t (signalsError?
                (g1 12 (+ 1 1))
                Error :type 'unboundExecutable :class Integer :executable 'g1))
-      (assert (eq? 102 (g1 foo (+ 1 1))))
-      (assert (eq? 102 (g1 bar (+ 1 1))))
+      (assert#t (eq? 102 (g1 foo (+ 1 1))))
+      (assert#t (eq? 102 (g1 bar (+ 1 1))))
 
       (defMethod g1 ((new Bar) param)
         (+ param 1000))
 
-      (assert (signalsError?
+      (assert#t (signalsError?
                (g1 12 (+ 1 1))
                Error :type 'unboundExecutable :class Integer :executable 'g1))
-      (assert (eq? 102 (g1 foo (+ 1 1))))
-      (assert (eq? 1002 (g1 bar (+ 1 1))))
+      (assert#t (eq? 102 (g1 foo (+ 1 1))))
+      (assert#t (eq? 1002 (g1 bar (+ 1 1))))
 
       (defMethod g1 ((new Integer) param)
         (+ param 10000))
 
-      (assert (eq? 10002 (g1 12 (+ 1 1))))
-      (assert (eq? 102 (g1 foo (+ 1 1))))
-      (assert (eq? 1002 (g1 bar (+ 1 1))))
+      (assert#t (eq? 10002 (g1 12 (+ 1 1))))
+      (assert#t (eq? 102 (g1 foo (+ 1 1))))
+      (assert#t (eq? 1002 (g1 bar (+ 1 1))))
 
       (defMethod g1 ((new Integer) param)
         (+ param 100000))
 
-      (assert (eq? 100002 (g1 12 (+ 1 1))))
-      (assert (eq? 102 (g1 foo (+ 1 1))))
-      (assert (eq? 1002 (g1 bar (+ 1 1))))
+      (assert#t (eq? 100002 (g1 12 (+ 1 1))))
+      (assert#t (eq? 102 (g1 foo (+ 1 1))))
+      (assert#t (eq? 1002 (g1 bar (+ 1 1))))
 
       (defMethod g1 ((new Object) param)
         (- param))
 
-      (assert (eq? 100002 (g1 12 (+ 1 1))))
-      (assert (eq? 102 (g1 foo (+ 1 1))))
-      (assert (eq? 1002 (g1 bar (+ 1 1))))
-      (assert (eq? -2 (g1 #t (+ 1 1))))
-      (assert (eq? -2 (g1 #inert (+ 1 1))))
-      (assert (eq? -2 (g1 "hello" (+ 1 1)))))
+      (assert#t (eq? 100002 (g1 12 (+ 1 1))))
+      (assert#t (eq? 102 (g1 foo (+ 1 1))))
+      (assert#t (eq? 1002 (g1 bar (+ 1 1))))
+      (assert#t (eq? -2 (g1 #t (+ 1 1))))
+      (assert#t (eq? -2 (g1 #inert (+ 1 1))))
+      (assert#t (eq? -2 (g1 "hello" (+ 1 1)))))
     #inert))
 
 (defsuite newBox
@@ -3251,7 +3249,7 @@
   (deftest newBox.3
     (let ((c (newBox (+ 1 1))))
       (c (+ 2 2))
-      (assert (eq? (c) 4))
+      (assert#t (eq? (c) 4))
       (c (+ 4 4))
       (c))
     8))

@@ -32,9 +32,9 @@
 
   (deftest test1
     (begin
-      (assert (not (promptSet? 'p)))
+      (assert#t (not (promptSet? 'p)))
       (pushPrompt 'p
-        (assert (promptSet? 'p))
+        (assert#t (promptSet? 'p))
         1))
     1)
 

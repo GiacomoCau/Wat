@@ -310,22 +310,22 @@
 
   (deftest js-array.1
     (let ((arr (js-array)))
-      (assert (eq? (to-js-number 0) (js-get arr "length")))
+      (assert#t (eq? (to-js-number 0) (js-get arr "length")))
       (array-push arr "a")
-      (assert (eq? (to-js-number 1) (js-get arr "length")))
+      (assert#t (eq? (to-js-number 1) (js-get arr "length")))
       (array-push arr "b")
-      (assert (eq? (to-js-number 2) (js-get arr "length")))
-      (assert (eq? "b" (array-pop arr)))
-      (assert (eq? (to-js-number 1) (js-get arr "length")))
-      (assert (eq? "a" (array-pop arr)))
-      (assert (eq? (to-js-number 0) (js-get arr "length")))
+      (assert#t (eq? (to-js-number 2) (js-get arr "length")))
+      (assert#t (eq? "b" (array-pop arr)))
+      (assert#t (eq? (to-js-number 1) (js-get arr "length")))
+      (assert#t (eq? "a" (array-pop arr)))
+      (assert#t (eq? (to-js-number 0) (js-get arr "length")))
       #t))
 
     (deftest js-array.2
       (let ((arr (js-array (+ 1 1) (+ 2 2))))
-        (assert (eq? (to-js-number 2) (js-get arr "length")))
-        (assert (eq? 4 (array-pop arr)))
-        (assert (eq? 2 (array-pop arr)))
+        (assert#t (eq? (to-js-number 2) (js-get arr "length")))
+        (assert#t (eq? 4 (array-pop arr)))
+        (assert#t (eq? 2 (array-pop arr)))
         #t))
 
     (deftest list-to-js-array.1
@@ -525,15 +525,15 @@
 
   (deftest await.1
     (begin
-      (assert (eq? 1 (await (resolve Promise 1))))
-      (assert (eq? 2 (await (resolve Promise 2))))
+      (assert#t (eq? 1 (await (resolve Promise 1))))
+      (assert#t (eq? 2 (await (resolve Promise 2))))
       3)
     3)
 
   (deftest await.2
     (signalsError?
      (begin
-       (assert (eq? 1 (await (resolve Promise 1))))
+       (assert#t (eq? 1 (await (resolve Promise 1))))
        (await (reject Promise (makeSimpleError "foo"))))
      simpleError :message "foo"))
 
@@ -574,15 +574,15 @@
 
   (deftest sync.3
     (begin
-      (assert (eq? 1 ((sync (\ () (resolve Promise 1))))))
-      (assert (eq? 2 ((sync (\ () (resolve Promise 2))))))
+      (assert#t (eq? 1 ((sync (\ () (resolve Promise 1))))))
+      (assert#t (eq? 2 ((sync (\ () (resolve Promise 2))))))
       3)
     3)
 
   (deftest sync.4
     (signalsError?
      (begin
-       (assert (eq? 1 ((sync (\ () (resolve Promise 1))))))
+       (assert#t (eq? 1 ((sync (\ () (resolve Promise 1))))))
        ((sync (\ () (reject Promise (makeSimpleError "foo"))))))
      simpleError :message "foo")))
 
@@ -608,8 +608,8 @@
     (begin
       (defGeneric foo (new))
       (defMethod foo ((new object)) 12)
-      (assert (eq? 12 (foo +js-null+)))
-      (assert (eq? 12 (foo (to-js-string "foo")))))
+      (assert#t (eq? 12 (foo +js-null+)))
+      (assert#t (eq? 12 (foo (to-js-string "foo")))))
     #inert)
 
   (deftest js-exception-becomes-condition

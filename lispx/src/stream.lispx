@@ -14,7 +14,7 @@
   "Evaluate FORMS with `*standard-input*' coming from STRING."
   (let ((s (eval string env)))
     (dlet ((*standard-input* (make-string-input-stream s)))
-      (eval (list* begin forms) env))))
+      (eval (cons 'begin forms) env))))
 
 ;;; String Output Streams
 
@@ -29,7 +29,7 @@
 (defVau with-standard-output-to-string forms env
   "Evaluate FORMS with `*standard-output*' being collected in a string."
   (dlet ((*standard-output* (make-string-output-stream)))
-    (eval (list* begin forms) env)
+    (eval (cons 'begin forms) env)
     (get-output-stream-string (dget *standard-output*))))
 
 ;;; Miscellaneous

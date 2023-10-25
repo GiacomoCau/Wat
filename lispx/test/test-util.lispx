@@ -25,7 +25,7 @@
        ;; Test and expected expressions are evaluated in fresh child
        ;; environments of the current environment, so that bindings
        ;; they create don't affect other tests.
-       (assert (eq? (eval expression (newEnv env))
+       (assert#t (eq? (eval expression (newEnv env))
                   (eval (opt? expected? #t) (newEnv env))))))))
 
 (defMacro deftest* (name . forms)
@@ -46,7 +46,7 @@
      ;; that tries to capture a continuation directly inside a suite
      ;; will get a "prompt not found" error (due to the barrier inside
      ;; `js-\').
-     (eval (list* begin forms) env))))
+     (eval (cons 'begin forms) env))))
 
 (def\ lispx::make-mocha-hook (mocha-hook-fun)
   "Metaprogramming utility to create Mocha hooks.  Hooks may capture."
@@ -54,7 +54,7 @@
     (mocha-hook-fun
      (js-\ ()
        (pushPrompt 'coroutinePrompt
-         (eval (list* begin forms) env))))))
+         (eval (cons 'begin forms) env))))))
 
 (def before (lispx::make-mocha-hook mocha:before))
 (def before-each (lispx::make-mocha-hook mocha:before-each))
@@ -62,7 +62,7 @@
 (def after-each (lispx::make-mocha-hook mocha:after-each))
 
 (defVau signalsError? (form conditionClass . slotSpecs) env
-  "Evaluate the FORM and assert that it signals a condition of the
+  "Evaluate the FORM and assert#t that it signals a condition of the
   |given CONDITION-CLASS.  Expected slots of the condition can be
   |specified by SLOT-SPECS (a plist) and will be compared against the
   |slots of the signalled condition."

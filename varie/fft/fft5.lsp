@@ -49,7 +49,7 @@
 
 (def\ (fftR . rs) (fft (map cx rs)))
 
-(%assert (fftR 1 1 1 1 0 0 0 0)
+(assert (fftR 1 1 1 1 0 0 0 0)
   ((:complex 4.0 0.0)
    (:complex 1.0 -2.414213562373095)
    (:complex 0.0 0.0)
