@@ -71,6 +71,7 @@
 
 (%def %zero? (%\ (v) (%== v 0)))
 (%def %inert? (%\ (v) (%== v #inert)))
+(%def %ignore? (%\ (v) (%== v #ignore)))
 
 (%def %nth (%\ (i l) (%the Integer i) (@car (%the Cons l) i)))
 (%def %nthCdr (%\ (i l) (%the Integer i) (%if (%zero? i) l (@cdr (%the Cons l) (%- i 1)))))

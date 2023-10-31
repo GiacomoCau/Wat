@@ -801,15 +801,15 @@ public class Vm {
 			// o = () | (x ...)
 			return o == null ? inert : tco(()-> begin(null, e, o));
 		}
-		Object begin(Resumption r, Env e, List list) {
+		Object begin(Resumption r, Env e, List lst) {
 			for (var first = true;;) { // only one resume for suspension
 				if (prTrc >= 3 && root && r == null) print("\n--------");
-				var car = list.car;
+				var car = lst.car;
 				if (prTrc == 2 && root && r == null) print("evaluate: ", car);
-				if (list.cdr() == null) { return evaluate(e, car); } 
+				if (lst.cdr() == null) { return evaluate(e, car); } 
 				var res = first && r != null && !(first = false) ? r.resume() : getTco(evaluate(e, car));
-				if (res instanceof Suspension s) { var l = list; return s.suspend(dbg(e, this, list.car), rr-> begin(rr, e, l)); }
-				list = list.cdr();
+				if (res instanceof Suspension s) { var l = lst; return s.suspend(dbg(e, this, lst.car), rr-> begin(rr, e, l)); }
+				lst = lst.cdr();
 			}
 		}
 		public String toString() { return "%Begin" + eIf(!root, "*"); }
@@ -903,30 +903,30 @@ public class Vm {
 		}
 		public String toString() { return "%ThrowTag"; }
 	}
-	class Finally implements Combinable {
+	class AtEnd implements Combinable {
 		public Object combine(Env e, List o) { return combine(null, e, o); }
 		public Object combine(Resumption r, Env e, List o) {
-			var chk = checkM(this, o, 1); // o = (x cln)
+			var chk = checkM(this, o, 2); // o = (cln . x)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
-			var x = o.car();
-			var cln = o.cdr();
+			var cln = o.car();
+			var x = o.cdr();
 			try {
-				var res = r != null ? r.resume() : pipe(dbg(e, this, o), ()-> getTco(evaluate(e, x)), v-> cleanup(cln, e, true, v));
+				var res = r != null ? r.resume() : pipe(dbg(e, this, o), ()-> getTco(begin.combine(e, x)), v-> cleanup(cln, e, true, v));
 				return res instanceof Suspension s ? s.suspend(dbg(e, this, o), rr-> combine(rr, e, o)) : res;
 			}
 			catch (Throwable thw) {
 				return cleanup(cln, e, false, thw);
 			}
 		}
-		Object cleanup(List cln, Env e, boolean success, Object res) {
-			return pipe(dbg(e, this, cln, success, res), ()-> getTco(begin.combine(e, cln)), $-> {
+		Object cleanup(Object cln, Env e, boolean success, Object res) {
+			return pipe(dbg(e, this, cln, success, res), ()-> getTco(evaluate(e, cln)), $-> {
 					if (success) return res;
 					throw res instanceof Value val ? val : res instanceof Error err ? err : new Error("cleanup error:", (Throwable) res);
 				}
 			);
 		}
-		public String toString() { return "%Finally"; }
+		public String toString() { return "%AtEnd"; }
 	}
 	
 	
@@ -1569,6 +1569,7 @@ public class Vm {
 				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, or(null, list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class, String.class), Any.class))), (l,o)-> l==0 ? env() : env(o.car(), array(o.cdr())) )),
 				"%wrap", wrap(new JFun("%Wrap", (Function) this::wrap)),
 				"%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap)),
+				"%bind", wrap(new JFun("%Bind", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> bind(true, 0, o.<Env>car(), o.car(1), o.car(2)) )),
 				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (InnerException ie) { return false; }} )),
 				"%apply", wrap(new JFun("%Apply", (n,o)-> checkR(n, o, 2, 3, Combinable.class, Any.class, Env.class), (l,o)-> combine(l == 2 ? env() : o.car(2), unwrap(o.car()), o.car(1)) )),
 				"%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(), unwrap(o.car()), o.cdr()) )),
@@ -1600,7 +1601,8 @@ public class Vm {
 				// First-Order Control
 				"%if", new If(),
 				"%loop", new Loop(),
-				"%finally", new Finally(),
+				"%atEnd", new AtEnd(),
+				//"%finally", new Finally(),
 				"%throwTag", apply(t-> !ctApv ? t : wrap(t), new ThrowTag()),
 				"%catchTagWth", apply(c-> !ctApv ? c : wrap(c), new CatchTagWth()),
 				// Delimited Control

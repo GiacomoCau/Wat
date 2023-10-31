@@ -95,6 +95,16 @@
   %apply**)
 
 (def array->list %array->list)
+
+(def atEnd
+  #|valuate the PROTECTED-FORM and return its result.  Regardless of
+   |whether the protected form returns normally, or via a nonlocal exit or
+   |panic, the CLEANUP-FORM are evaluated after the protected forms.
+   |$(fn (cleanupForm . protectedForms))
+   |$(type fexpr)
+   |#
+  %atEnd)
+
 (def begin
   #|Sequentially evaluate FORMS, returning the value of the last one, or void if there are no forms.
    |$(fn forms)
@@ -158,14 +168,6 @@
    |$(type function)
    |#
   %eval)
-
-(def finally
-  #|valuate the PROTECTED-FORM and return its result.  Regardless of
-   |whether the protected form returns normally, or via a nonlocal exit or
-   |panic, the CLEANUP-FORMS are evaluated after the protected form.
-   |$(fn (protectedForm . cleanupForms))
-   |#
-  %finally)
 
 (def if
   #|Evaluate the TEST which must yield a boolean.  Then evaluate either
@@ -498,6 +500,9 @@
 ;;; Wrap incomplete VM forms
 
 (def* (then else) begin begin)
+
+(defMacro (finally x . cnl)
+  (list 'atEnd (cons 'begin cnl) x) )  
 
 (defMacro (throw . val) (list* '%throwTag #_ val) )
 (def throwTag
@@ -1078,79 +1083,6 @@
   (opt? option? (simpleError "Option is nil")))
 
 
-;;; Loop
-
-(defVau block (blockName . forms) env
-  #|Establish a block named BLOCK-NAME and evaluate the FORMS as an
-   |implicit `begin' inside it.  The forms may use `returnFrom' to
-   |nonlocally exit from the block.
-   |Note that unlike in Common Lisp, there is no separate namespace for
-   |block names; a block is named in the normal variable namespace.
-   |#
-  (let* ( (tag (list #inert)) ; cons up a fresh object as tag
-          (escape (\ (value) (throwTag tag value))) )
-    (catchTag tag
-      (eval (list (list* '\ (list blockName) forms) escape) env) )))
-
-#|
-(defVau block (blockName . forms) env
-  (def tag (list #inert)) ; cons up a fresh object as tag
-  (def\ (escape value) (throwTag tag value))
-  (catchTag tag
-    (eval (list (list* '\ (list blockName) forms) escape)
-          env )))
-|#
-
-(def\ returnFrom (blockName . value?)
-  #|Abort evaluation and return the optional VALUE? (which lsts to
-   |void) from the block named BLOCK-NAME.  It is an error to return from
-   |a block whose dynamic extent has ended.
-   |$(fn (blockName . value?))
-   |#
-  (blockName (opt? value? #inert)) )
-
-(defVau while (testForm . forms) env
-  #|Evaluate FORMS while TEST-FORM evaluates to true.
-   |#
-  (let ((forms (cons 'begin forms)))
-    (block exit
-      (loop
-        (if (eval testForm env)
-            (eval forms env)
-            (returnFrom exit #inert))))))
-
-(defMacro until (testForm . forms)
-  #|Evaluate FORMS until TEST-FORM evaluates to true.
-   |#
-  (list* while (list '! testForm) forms) )
-
-(defMacro dotimes ((var countForm . resultForm?) . bodyForms)
-  #|Cf. Common Lisp's DOTIMES.
-   |#
-  (let\ ((dotimes (n body result)
-           (let ((i (newBox 0)))
-             (while (< (i) n)
-               (body (i))
-               (i (+ (i) 1)))
-             (result (i)))))
-    (list dotimes
-          countForm
-          (list* '\ (list var) bodyForms)
-          (list* '\ (list var) resultForm?))))
-
-(def\ (withEscape fun)
-  (let1 (fresh (list #null))
-    (catchWth
-      (\ (exc)
-        (if (and (cons? exc) (== (car exc) fresh))
-          (let1 ((#ignore opt?) exc) (if (cons? opt?) (car opt?)))
-          (throw exc)))
-      (fun (\ opt? (throw (list fresh (ifOpt? (val opt?) opt?) )))) )))
-
-(defMacro (label name . body)
-  (list 'withEscape (list* '\ (list name) body)))
-
-
 ;;; Type Checks
 
 (def\ makeTypeError (datum expected)
@@ -1275,12 +1207,159 @@
 (defMacro (check* o . cks)
     (list 'check o cks) )
 
-(defVau match? args env (catchWth #f (apply check args env) #t))
+(defVau check? args env (catchWth #f (apply check args env) #t))
 
 (defMacro (the+ ck obj) (list 'let1 (list 'obj obj) (list 'check 'obj ck) 'obj))
 
 ; TODO non è più così costosa la conversione, si può fare
 ; (def the the+)
+
+
+;;; Block Loop For While Until
+
+(defVau block (blockName . forms) env
+  #|Establish a block named BLOCK-NAME and evaluate the FORMS as an
+   |implicit `begin' inside it.  The forms may use `returnFrom' to
+   |nonlocally exit from the block.
+   |Note that unlike in Common Lisp, there is no separate namespace for
+   |block names; a block is named in the normal variable namespace.
+   |#
+  (let* ( (tag (list #inert)) ; cons up a fresh object as tag
+          (escape (\ (value) (throwTag tag value))) )
+    (catchTag tag
+      (eval (list (list* '\ (list blockName) forms) escape) env) )))
+
+#|
+(defVau block (blockName . forms) env
+  (def tag (list #inert)) ; cons up a fresh object as tag
+  (def\ (escape value) (throwTag tag value))
+  (catchTag tag
+    (eval (list (list* '\ (list blockName) forms) escape) env) ))
+|#
+
+(def\ returnFrom (blockName . value?)
+  #|Abort evaluation and return the optional VALUE? (which lsts to
+   |void) from the block named BLOCK-NAME.  It is an error to return from
+   |a block whose dynamic extent has ended.
+   |$(fn (blockName . value?))
+   |#
+  (blockName (opt? value? #inert)) )
+
+(defVau while (testForm . forms) env
+  #|Evaluate FORMS while TEST-FORM evaluates to true.
+   |#
+  (let ((forms (cons 'begin forms)))
+    (block exit
+      (loop
+        (if (eval testForm env)
+            (eval forms env)
+            (returnFrom exit #inert))))))
+
+(defVau while (testForm . forms) env
+  (let ((forms (list* 'begin forms))
+        (break (list #null))
+        (continue (list #null)) )
+    (def env (newEnv (newEnv env    
+      :break/v (\ v (throwTag break (if (! (null? v)) (if (null? (cdr v)) (car v) v))))
+      :continue (\ () (throwTag continue)) )))
+    (catchTag break
+      (loop
+        (catchTag continue
+          (if (eval testForm env)
+            (eval forms env)
+            (throwTag break) ))))))
+
+(def %loop
+  (let ( (%loop %loop)
+         (makeTag
+           (\ (i name %deep)
+             (if (&& (>= i (- 0 %deep)) (<= i 0))
+               (symbol ($ name (+ i %deep)))
+               (@typeError vm ($ "invalid " name " index, not {expected}: {datum}") i `(and (>= ,(- 0 %deep)) (=< 0))) ))) )
+    (let\ ( ((makeThrowTag\ name %deep)
+               (\ (#! (or () (1 Integer)) i)
+                 (throwTag (makeTag (opt? i 0) name %deep)) ))
+            ((makeThrowTagValue\ name %deep)
+               (\ o
+                 (if (== (check o (or (1) (2 Integer))) 1)
+                   (throwTag (makeTag 0 name %deep) (car o))
+                   (throwTag (makeTag (car o) name %deep) (cadr o)) ))) )
+      (vau forms env
+        (let1 (%deep (let1 (%deep (value :%deep env)) (if (null? %deep) 0 (+ %deep 1))))
+          (let ( (break (symbol ($ "break" %deep)))
+                 (continue (symbol ($ "continue" %deep))) )
+            (let1 (env (newEnv (newEnv env
+                    :%deep %deep
+                    :break (makeThrowTag\ "break" %deep)
+                    :continue (makeThrowTag\ "continue" %deep)
+                    :break/v (makeThrowTagValue\ "break" %deep)
+                    :until (\ (b) (if b (throwTag break)))
+                    :while (\ (b) (if (! b) (throwTag break))) ))) 
+              (if (check? forms (2 + 'for ((2 3)) )) ;loop for
+                (let ( (for (cadr forms))
+                       (forms (\01+ (cddr forms))) )
+                  (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (opt? incr init)) for)))
+                  (catchTag break
+                    (eval (list* 'def* (map car for) (map cadr for)) env)   
+                    (%loop
+                      (catchTag continue (eval forms env) )
+                      (eval increments env) )))
+                (if (check? forms (2 + 'for1 (2 3))) ;loop for1
+                  (let ( ((pt init . incr) (cadr forms))
+                         (forms (\01+ (cddr forms))) )
+                    (def increment (list 'def pt (opt? incr init)))
+                    (catchTag break
+                      (eval (list 'def pt init) env)
+                      (%loop
+                        (catchTag continue (eval forms env) )
+                        (eval increment env) )))
+                  (let1 (forms (\01+ forms)) ;loop
+                    (catchTag break
+                      (%loop
+                        (catchTag continue
+                          (eval forms env) )))) )))))) )))
+
+(def loop %loop)
+
+(defMacro (for ((#! Symbol var) init cond . incr) . body)
+  (list* 'loop 'for1 (list* var init incr)
+    (if (%ignore? cond) body
+      (cons (list 'while cond) body) )))
+
+(defMacro (while cond . body)
+  (list* 'loop (list 'while cond)
+    body ))
+
+(defMacro until (cond . forms)
+  #|Evaluate FORMS until TEST-FORM evaluates to true.
+   |#
+  (list* 'while (list '! cond) forms) )
+
+(defMacro dotimes ((var countForm . resultForm?) . bodyForms)
+  #|Cf. Common Lisp's DOTIMES.
+   |#
+  (let\ ((dotimes (n body result)
+           (let ((i (newBox 0)))
+             (while (< (i) n)
+               (body (i))
+               (i (+ (i) 1)))
+             (result (i)))))
+    (list dotimes
+          countForm
+          (list* '\ (list var) bodyForms)
+          (list* '\ (list var) resultForm?))))
+
+(def\ (withEscape fun)
+  (let1 (fresh (list #null))
+    (catchWth
+      (\ (exc)
+        (if (and (cons? exc) (== (car exc) fresh))
+          (let1 ((#ignore opt?) exc) (if (cons? opt?) (car opt?)))
+          (throw exc)))
+      (fun (\ opt? (throw (list fresh (ifOpt? (val opt?) opt?) )))) )))
+
+(defMacro (label name . body)
+  (list 'withEscape (list* '\ (list name) body)))
 
 
 ;;; Lists
@@ -1911,6 +1990,21 @@
     (def milli (- (currentTime #null) milli))
     (log ($ "time " exp ": " milli "ms"))
     result ))
+
+
+;;;; Java Try/Resource
+
+(defMacro (close1 binding . body)
+  (list 'let1 binding
+    (list* 'atEnd
+      (list '@close (car binding))
+      body )))
+
+(defMacro (close bindings . body)
+  (list 'let bindings
+    (list* 'atEnd
+      (list 'forEach @close (cons 'list (map car bindings)))
+      body )))
 
 
 ;;;; Error break routine, called by VM to print stacktrace and throw

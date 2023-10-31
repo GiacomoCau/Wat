@@ -292,6 +292,9 @@
 (assert (catchTag 'a (throwTag 'a)) #inert)
 (assert (catchTag 'a (throwTag 'a 2)) 2)
 
+(assert (atEnd (== 1 1)) Error :type 'match :operands# +1)
+(assert (atEnd () (== 1 1)) #t)
+
 (assert (finally (== 1 1)) #t)
 (assert (begin (+ (finally 1 2 3 (define x 10)) x)) 11)
 (assert (+ (catchTag 'a (finally (throwTag 'a 1) 2 3 (def x 10))) 10) 11)

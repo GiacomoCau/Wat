@@ -61,8 +61,13 @@
   %apply**)
 
 (def array->list %array->list)
+
+(def atEnd
+  %atEnd)
+
 (def begin
   %begin)
+
 (def bind? %bind?)
 (def bound?
   %bound?)
@@ -80,9 +85,6 @@
 (def eq? %eq?)
 (def eval
   %eval)
-
-(def finally
-  %finally)
 
 (def if
   %if)
@@ -115,7 +117,6 @@
 
 (def nthCdr
   %nthCdr)
-
 (def new
   %new)
 (def reverse
@@ -128,7 +129,6 @@
   %internName)
 (def subClass?
   %subClass?)
-
 (def the %the)
 (def type?
   %type?)
@@ -271,6 +271,9 @@
 ;;; Wrap incomplete VM forms
 
 (def* (then else) begin begin)
+
+(defMacro (finally x . cnl)
+  (list 'atEnd (cons 'begin cnl) x) )  
 
 (defMacro (throw . val) (list* '%throwTag #_ val) )
 (def throwTag
@@ -837,92 +840,6 @@
     (eval (list 'def pt exp) env) ))
 
 
-;;; Loop
-
-(defVau block (blockName . forms) env
-  (let* ( (tag (list #inert)) ; cons up a fresh object as tag
-          (escape (\ (value) (throwTag tag value))) )
-    (catchTag tag
-      (eval (list (list* '\ (list blockName) forms) escape) env) )))
-
-#|
-(defVau block (blockName . forms) env
-  (def tag (list #inert)) ; cons up a fresh object as tag
-  (def\ (escape value) (throwTag tag value))
-  (catchTag tag
-    (eval (list (list* '\ (list blockName) forms) escape)
-          env )))
-|#
-(assert (block exit (exit 7)) 7)
-(assert (block exit (def x 1) (loop (if (== x 4) (exit 7)) (def x (+ x 1)))) 7)
-
-(def\ returnFrom (blockName . value?)
-  (blockName (opt? value? #inert)) )
-
-(assert (block ciclo (def x 1) (loop (if (== x 4) (returnFrom ciclo 7)) (def x (+ x 1)))) 7)
-
-(defVau while (testForm . forms) env
-  (let ((forms (cons 'begin forms)))
-    (block exit
-      (loop
-        (if (eval testForm env)
-            (eval forms env)
-            (returnFrom exit #inert))))))
-
-(defVau while (testForm . forms) env
-  (let ((forms (list* 'begin forms))
-        (break (list #null))
-        (continue (list #null)) )
-    (eval (list 'def 'break (\ v (throwTag break (if (! (null? v)) (if (null? (cdr v)) (car v) v))))) env)
-    (eval (list 'def 'continue (\ () (throwTag continue))) env)
-    (catchTag break
-      (loop
-        (catchTag continue
-          (if (eval testForm env)
-            (eval forms env)
-            (throwTag break) ))))))
-
-(defMacro (-- n)
-  (list 'def n :rhs (list '- n 1)) )
-(defMacro (++ n)
-  (list 'def n :rhs (list '+ n 1)) )
-
-(assert (let1 (c 2) (while (> c 0) (-- c)) c) 0)
-(assert (let1 (c 2) (while #t (if (zero? c) (break (+ 5 5)) (-- c)))) 10)
-(assert (let ((c 10) (r #null)) (while #t (if (zero? c) (break r)) (if (zero? (% (-- c) 2)) (continue)) (def r (cons c r)) )) '(1 3 5 7 9))
-
-(defMacro until (testForm . forms)
-  (list* while (list '! testForm) forms) )
-
-(defMacro dotimes ((var countForm . resultForm?) . bodyForms)
-  (let\ ((dotimes (n body result)
-           (let ((i (newBox 0)))
-             (while (< (i) n)
-               (body (i))
-               (i (+ (i) 1)))
-             (result (i)))))
-    (list dotimes
-          countForm
-          (list* '\ (list var) bodyForms)
-          (list* '\ (list var) resultForm?))))
-
-(def\ (withEscape fun)
-  (let1 (fresh (list #null))
-    (catchWth
-      (\ (exc)
-        (if (and (cons? exc) (== (car exc) fresh))
-          (let1 ((#ignore opt?) exc) (if (cons? opt?) (car opt?)))
-          (throw exc)))
-      (fun (\ opt? (throw (list fresh (ifOpt? (val opt?) opt?) )))) )))
-
-(defMacro (label name . body)
-  (list 'withEscape (list* '\ (list name) body)))
-
-(assert (label return (return)) #inert)
-(assert (label return (return 3)) 3)
-(assert (label return (return 3 4)))
-
-
 ;;; Type Checks
 
 #| TODO sostituito dal seguente
@@ -1034,7 +951,7 @@
 (assert (check* '(a :prv 1)  2 3 Symbol (or (1) (2 (or () Inert :prv :rhs)))) 3)
 (assert (check* '(a 1)       2 3 Symbol (or (1) (2 (or () Inert :prv :rhs)))) 2)
 
-(defVau match? args env (catchWth #f (apply check args env) #t))
+(defVau check? args env (catchWth #f (apply check args env) #t))
 
 (defMacro (the+ ck obj) (list 'let1 (list 'obj obj) (list 'check 'obj ck) 'obj))
 
@@ -1046,6 +963,179 @@
 
 ; TODO non è più così costosa la conversione, si può fare
 ; (def the the+)
+
+
+;;; Block Loop For While Until
+
+(defVau block (blockName . forms) env
+  (let* ( (tag (list #inert)) ; cons up a fresh object as tag
+          (escape (\ (value) (throwTag tag value))) )
+    (catchTag tag
+      (eval (list (list* '\ (list blockName) forms) escape) env) )))
+
+#|
+(defVau block (blockName . forms) env
+  (def tag (list #inert)) ; cons up a fresh object as tag
+  (def\ (escape value) (throwTag tag value))
+  (catchTag tag
+    (eval (list (list* '\ (list blockName) forms) escape) env) ))
+|#
+
+(assert (block exit (exit 7)) 7)
+(assert (block exit (def x 1) (loop (if (== x 4) (exit 7)) (def x (+ x 1)))) 7)
+
+(def\ returnFrom (blockName . value?)
+  (blockName (opt? value? #inert)) )
+
+(assert (block ciclo (def x 1) (loop (if (== x 4) (returnFrom ciclo 7)) (def x (+ x 1)))) 7)
+
+(defVau while (testForm . forms) env
+  (let ((forms (cons 'begin forms)))
+    (block exit
+      (loop
+        (if (eval testForm env)
+            (eval forms env)
+            (returnFrom exit #inert))))))
+
+(defVau while (testForm . forms) env
+  (let ((forms (list* 'begin forms))
+        (break (list #null))
+        (continue (list #null)) )
+    (def env (newEnv (newEnv env    
+      :break/v (\ v (throwTag break (if (! (null? v)) (if (null? (cdr v)) (car v) v))))
+      :continue (\ () (throwTag continue)) )))
+    (catchTag break
+      (loop
+        (catchTag continue
+          (if (eval testForm env)
+            (eval forms env)
+            (throwTag break) ))))))
+
+(def %loop
+  (let ( (%loop %loop)
+         (makeTag
+           (\ (i name %deep)
+             (if (&& (>= i (- 0 %deep)) (<= i 0))
+               (symbol ($ name (+ i %deep)))
+               (@typeError vm ($ "invalid " name " index, not {expected}: {datum}") i `(and (>= ,(- 0 %deep)) (=< 0))) ))) )
+    (let\ ( ((makeThrowTag\ name %deep)
+               (\ (#! (or () (1 Integer)) i)
+                 (throwTag (makeTag (opt? i 0) name %deep)) ))
+            ((makeThrowTagValue\ name %deep)
+               (\ o
+                 (if (== (check o (or (1) (2 Integer))) 1)
+                   (throwTag (makeTag 0 name %deep) (car o))
+                   (throwTag (makeTag (car o) name %deep) (cadr o)) ))) )
+      (vau forms env
+        (let1 (%deep (let1 (%deep (value :%deep env)) (if (null? %deep) 0 (+ %deep 1))))
+          (let ( (break (symbol ($ "break" %deep)))
+                 (continue (symbol ($ "continue" %deep))) )
+            (let1 (env (newEnv (newEnv env
+                    :%deep %deep
+                    :break (makeThrowTag\ "break" %deep)
+                    :continue (makeThrowTag\ "continue" %deep)
+                    :break/v (makeThrowTagValue\ "break" %deep)
+                    :until (\ (b) (if b (throwTag break)))
+                    :while (\ (b) (if (! b) (throwTag break))) ))) 
+              (if (check? forms (2 + 'for ((2 3)) )) ;loop for
+                (let ( (for (cadr forms))
+                       (forms (\01+ (cddr forms))) )
+                  (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (opt? incr init)) for)))
+                  (catchTag break
+                    (eval (list* 'def* (map car for) (map cadr for)) env)   
+                    (%loop
+                      (catchTag continue (eval forms env) )
+                      (eval increments env) )))
+                (if (check? forms (2 + 'for1 (2 3))) ;loop for1
+                  (let ( ((pt init . incr) (cadr forms))
+                         (forms (\01+ (cddr forms))) )
+                    (def increment (list 'def pt (opt? incr init)))
+                    (catchTag break
+                      (eval (list 'def pt init) env)
+                      (%loop
+                        (catchTag continue (eval forms env) )
+                        (eval increment env) )))
+                  (let1 (forms (\01+ forms)) ;loop
+                    (catchTag break
+                      (%loop
+                        (catchTag continue
+                          (eval forms env) )))) )))))) )))
+
+(def loop %loop)
+
+#|
+(defMacro (-- n)
+  (list 'set! n :rhs (list '- n 1)) )
+(defMacro (++ n)
+  (list 'set! n :rhs (list '+ n 1)) )
+
+(loop (breakValue 3))
+(loop (loop (breakValue -1 3)))
+(loop for ((i 0 (++ i)) (y 0 (-- y))) (while (< i 3)) (log i y))
+(loop for ((i 0 (++ i))) (while (< i 3)) (log "x" i) (loop for ((y 0 (++ y))) (if (> y 3) (break)) (log "y" y) ))
+(loop for1 (i 0 (++ i)) (log i) (break) )
+(loop for1 (i 0 (++ i)) (while (< i 3)) (log i))
+(loop for1 (i 0 (++ i)) (while (< i 3)) (log "x" i) (loop for1 (y 0 (++ y)) (if (> y 3) (break)) (log "y" y) ))
+(loop for1 (i 0 (++ i)) (while (< i 3)) (log "x" i) (loop for1 (y 0 (++ y)) (if (> y 3) (break -1)) (log "y" y) ))
+|#
+
+(defMacro (for ((#! Symbol var) init cond . incr) . body)
+  (list* 'loop 'for1 (list* var init incr)
+    (if (%ignore? cond) body
+      (cons (list 'while cond) body) )))
+
+(defMacro (for ((#! Symbol var) init . incr) cond . body)
+  (list* 'loop 'for1 (list* var init incr)
+    (if (%ignore? cond) body
+      (cons (list 'while cond) body) )))
+
+;(for (i 0 (< i 3) (++ i)) (log "x" i) (for (y 0 #ignore (++ y)) (if (> y 3) (break -1)) (log "y" y)))
+
+(defMacro (while cond . body)
+  (list* 'loop (list 'while cond)
+    body ))
+
+;(let1 (i 0) (while (< i 3) (print i) (++ i)))
+
+(defMacro (-- n)
+  (list 'set! n :rhs (list '- n 1)) )
+(defMacro (++ n)
+  (list 'set! n :rhs (list '+ n 1)) )
+  
+(assert (let1 (c 2) (while (> c 0) (-- c)) c) 0)
+(assert (let1 (c 2) (while #t (if (zero? c) (break/v (+ 5 5)) (-- c)))) 10)
+(assert (let ((c 10) (r #null)) (while #t (if (zero? c) (break/v r)) (if (zero? (% (-- c) 2)) (continue)) (def r (cons c r)) )) '(1 3 5 7 9))
+
+(defMacro until (cond . forms)
+  (list* 'while (list '! cond) forms) )
+
+(defMacro dotimes ((var countForm . resultForm?) . bodyForms)
+  (let\ ((dotimes (n body result)
+           (let ((i (newBox 0)))
+             (while (< (i) n)
+               (body (i))
+               (i (+ (i) 1)))
+             (result (i)))))
+    (list dotimes
+          countForm
+          (list* '\ (list var) bodyForms)
+          (list* '\ (list var) resultForm?))))
+
+(def\ (withEscape fun)
+  (let1 (fresh (list #null))
+    (catchWth
+      (\ (exc)
+        (if (and (cons? exc) (== (car exc) fresh))
+          (let1 ((#ignore opt?) exc) (if (cons? opt?) (car opt?)))
+          (throw exc)))
+      (fun (\ opt? (throw (list fresh (ifOpt? (val opt?) opt?) )))) )))
+
+(defMacro (label name . body)
+  (list 'withEscape (list* '\ (list name) body)))
+
+(assert (label return (return)) #inert)
+(assert (label return (return 3)) 3)
+(assert (label return (return 3 4)))
 
 
 ;;; Lists
@@ -1678,6 +1768,21 @@
     (def milli (- (currentTime #null) milli))
     (log ($ "time " exp ": " milli "ms"))
     result ))
+
+
+;;;; Java Try/Resource
+
+(defMacro (close1 binding . body)
+  (list 'let1 binding
+    (list* 'atEnd
+      (list '@close (car binding))
+      body )))
+
+(defMacro (close bindings . body)
+  (list 'let bindings
+    (list* 'atEnd
+      (list 'forEach @close (cons 'list (map car bindings)))
+      body )))
 
 
 ;;;; Error break routine, called by VM to print stacktrace and throw
