@@ -842,6 +842,15 @@
 
 ;;; Type Checks
 
+(def\ assert#t (boolean)
+  (unless boolean (error (new Error "invalid assetion" :type 'assert :datum boolean :expected #t))))
+
+(def\ makeTypeError (datum expected)
+  (new Error "not a {expected}: {datum}" :type 'type :datum datum :expected expected) )
+
+(def\ typeError (datum expected)
+  (error (makeTypeError datum expected)) )
+
 #| TODO sostituito dal seguente
 (defMacro (the type obj)
   (list 'if (list 'type? obj type) obj (list 'error (list '$ obj " is not a: " type))) )
@@ -922,6 +931,7 @@
             ((or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck))
             (else (map (\ (ck) (ev ck)) ck)) ))
         (%check o (ev ck)) ))))
+|#
 
 (def %check
   (let1 (%check %check)
@@ -935,7 +945,6 @@
             (or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
             (map (\ (ck) (ev ck)) ck) ))
         (%check o (ev ck)) ))))
-|#
 
 (defVau (check o ck) env
   ((wrap %check) (eval o env) ck) )
@@ -1084,12 +1093,14 @@
     (if (%ignore? cond) body
       (cons (list 'while cond) body) )))
 
+;(for (i 0 (< i 3) (++ i)) (log "x" i) (for (y 0 #ignore (++ y)) (if (> y 3) (break -1)) (log "y" y)))
+
 (defMacro (for ((#! Symbol var) init . incr) cond . body)
   (list* 'loop 'for1 (list* var init incr)
     (if (%ignore? cond) body
       (cons (list 'while cond) body) )))
 
-;(for (i 0 (< i 3) (++ i)) (log "x" i) (for (y 0 #ignore (++ y)) (if (> y 3) (break -1)) (log "y" y)))
+;(for (i 0 (++ i)) (< i 3) (log "x" i) (for (y 0 (++ y)) #ignore (if (> y 3) (break -1)) (log "y" y)))
 
 (defMacro (while cond . body)
   (list* 'loop (list 'while cond)
@@ -1781,7 +1792,7 @@
 (defMacro (close bindings . body)
   (list 'let bindings
     (list* 'atEnd
-      (list 'forEach @close (cons 'list (map car bindings)))
+      (list 'forEach '@close (cons 'list (map car bindings)))
       body )))
 
 
@@ -1799,7 +1810,3 @@
 (def\ (userBreak err)
   (when (prStk) (log "-" (@getMessage err)) (printStacktrace))
   (throw err) )
-
-(def SimpleError Error)
-(def\ simpleError (message) (error (%apply* @new Error message :type 'simple #|:message message|#)))
-

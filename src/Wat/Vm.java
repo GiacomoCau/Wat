@@ -311,8 +311,8 @@ public class Vm {
 		}
 		public <T> T car() { return (T) car; }
 		public <T> T cdr() { return (T) cdr; }
-		public <T> T car(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? o.car() : typeError("cannot get car, not a {expected}: {datum}", o.cdr, symbol("Cons")); }
-		public <T> T cdr(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? o.cdr() : typeError("cannot get cdr, not a {expected}: {datum}", o.cdr, symbol("Cons")); }
+		public <T> T car(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? o.car() : error("cannot get car", "type", symbol("outOfBounds")); }
+		public <T> T cdr(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? o.cdr() : error("cannot get cdr", "type", symbol("outOfBounds")); }
 		<T extends Cons> T setCar(Object car) { this.car = car; return (T) this; }
 		<T extends Cons> T setCdr(Object cdr) { this.cdr = cdr; return (T) this; }
 	}
@@ -381,7 +381,7 @@ public class Vm {
 		};
 		int deep() { int i=0; for (var env=this; env != null; env=env.parent) i+=1; return i; }
 		public String toString() {
-			return "{" + (this==theEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" + (map.size() > 10 ? "[" + map.size() + "] ..." : Vm.this.toStringSet(map.reversed().entrySet())) + eIfnull(parent, ()-> " " + parent) + "}";
+			return "{" + (this==theEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" + (map.size() > 10 ? "[" + map.size() + "] ..." : toStringSet(map.reversed().entrySet())) + eIfnull(parent, ()-> " " + parent) + "}";
 		}
 		public boolean remove(Object obj) {
 			var key = toKey(obj);
@@ -488,7 +488,7 @@ public class Vm {
 			return "{&" + obj.getClass().getCanonicalName() // or .getSimpleName()?
 				+ eIfnull(obj.getMessage(), m-> " " + Vm.this.toString(true, m))
 				//+ eIfnull(getCause(), t-> " " + symbol(t.getClass().getSimpleName()))
-				+ (map.size() > 10 ? " [" + map.size() + "]" + " ..." : Vm.this.toStringSet(obj.map.entrySet()))
+				+ (map.size() > 10 ? " [" + map.size() + "]" + " ..." : toStringSet(obj.map.entrySet()))
 				+ "}";
 		}
 		@Override public Object apply(List o) {
@@ -910,9 +910,8 @@ public class Vm {
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			var cln = o.car();
-			var x = o.cdr();
 			try {
-				var res = r != null ? r.resume() : pipe(dbg(e, this, o), ()-> getTco(begin.combine(e, x)), v-> cleanup(cln, e, true, v));
+				var res = r != null ? r.resume() : pipe(dbg(e, this, o), ()-> getTco(begin.combine(e, o.cdr())), v-> cleanup(cln, e, true, v));
 				return res instanceof Suspension s ? s.suspend(dbg(e, this, o), rr-> combine(rr, e, o)) : res;
 			}
 			catch (Throwable thw) {
@@ -1212,7 +1211,7 @@ public class Vm {
 	}
 	
 	
-	// Check parameter tree
+	// Check parameters tree
 	class PTree {
 		private Object exp, pt, ep;
 		private Set syms = new HashSet();
@@ -1328,10 +1327,12 @@ public class Vm {
 	class Apv1 extends Apv { Apv1(Combinable cmb) { super(cmb); }}
 	public boolean checkC(Object obj, Class cl) {
 		return cl == Any.class
-		||  cl.isInstance(obj)
-		||  obj instanceof Class cl2 && cl.isAssignableFrom(cl2)
-		||  cl == Apv0.class && obj instanceof Apv apv && args(apv) == 0
-		||  cl == Apv1.class && obj instanceof Apv apv && args(apv) == 1;
+			|| cl.isInstance(obj)
+			|| obj instanceof Class cl2 && cl.isAssignableFrom(cl2)
+			|| cl == Apv0.class && obj instanceof Apv apv && args(apv) == 0
+			|| cl == Apv1.class && obj instanceof Apv apv && args(apv) == 1
+			|| cl == PTree.class && checkPt(obj, obj) == null
+		;
 	}
 	public Object check(Object op, Object o, Object chk) {
 		try {
@@ -1479,6 +1480,7 @@ public class Vm {
 					//if (!(Vm.this.equals(switch(l.car()) {case At at-> at.apply(list(obj)); case Dot dot-> dot.apply(list(obj)); case Object n-> obj.value(n); }, l.car(1)))) break chk;
 					//if (!(Vm.this.equals(switch(l.car()) {case ArgsList al-> al.apply(list(obj)); case Object n-> obj.value(n); }, l.car(1)))) break chk;
 					var car = l.car(); if (!(Vm.this.equals(car instanceof AtDot ad ? ad.apply(list(obj)) : obj.value(car), l.car(1)))) break chk;
+					//var car = l.car(); if (!(Vm.this.equals(car instanceof AtDot ad ? ad.apply(list(object)) : car instanceof Obj obj ? obj.value(car) : object, l.car(1)))) break chk;
 				}
 				return true;
 			}
@@ -1776,8 +1778,6 @@ public class Vm {
 				catch (Throwable thw) {
 					if (prStk)
 						thw.printStackTrace(out);
-					else if (thw instanceof ParseException pe)
-					    out.println("{&" + Utility.getMessage(pe) + "}"); 
 					else if (thw instanceof Value v) {
 						print(apply(c-> c != null ? c : v, v.getCause()));
 					}
@@ -1790,21 +1790,12 @@ public class Vm {
 		print("\nfinito");
 	}
 	private void print(Throwable thw) {
-		/*
-		if (thw instanceof Obj o) out.println(
-			o.getMessage()
-			//+ toStringSet(o.map.entrySet())
-		);
-		else do	out.println(thw instanceof Obj o 
-			? thw
-			: "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}"
-		);
-		while ((thw = thw.getCause()) != null);
-		*/
 		do out.println(
-			thw instanceof Obj o 
-			? o.getMessage() + Vm.this.toStringSet(o.map.entrySet())
-			: thw.getClass().getCanonicalName() + ": " + thw.getMessage()
+			thw instanceof ParseException pe
+			? "{&" + Utility.getMessage(pe) + "}"
+			: thw instanceof Obj o 
+			?  ifnull(o.getMessage(), "&" + o.getClass().getCanonicalName()) + toStringSet(o.map.entrySet())
+			: "&" + thw.getClass().getCanonicalName() + eIfnull(thw.getMessage(), msg-> ": " + msg)
 		);
 		while ((thw = thw.getCause()) != null);
 	}

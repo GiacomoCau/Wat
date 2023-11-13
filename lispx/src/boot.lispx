@@ -757,11 +757,6 @@
     (list 'def dt (list (unwrap eval) value env))
     (eval ep env)))
 
-(def\ assert#t (boolean)
-  #|Signal an error if the BOOLEAN is false.  Otherwise return void.
-   |#
-  (unless boolean (error (new Error :type 'assert :datum boolean :expected #t))))
-
 (defVau if* clauses env
   (if (null? clauses) #inert
     (if (null? (cdr clauses)) (eval (car clauses) env)
@@ -1085,10 +1080,15 @@
 
 ;;; Type Checks
 
+(def\ assert#t (boolean)
+  #|Signal an error if the BOOLEAN is false. Otherwise return void.
+   |#
+  (unless boolean (error (new Error "invalid assetion" :type 'assert :datum boolean :expected #t))))
+
 (def\ makeTypeError (datum expected)
   #|Create a `type-error' with the given DATUM and EXPECTED-TYPE.
    |#
-  (new Error :type 'type :datum datum :expected expected) )
+  (new Error "not a {expected}: {datum}" :type 'type :datum datum :expected expected) )
 
 (def\ typeError (datum expected)
   #|Signal a `type-error'
@@ -1186,6 +1186,7 @@
             ((or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck))
             (else (map (\ (ck) (ev ck)) ck)) ))
         (%check o (ev ck)) ))))
+|#
 
 (def %check
   (let1 (%check %check)
@@ -1199,7 +1200,6 @@
             (or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
             (map (\ (ck) (ev ck)) ck) ))
         (%check o (ev ck)) ))))
-|#
 
 (defVau (check o ck) env
   ((wrap %check) (eval o env) ck) )
@@ -2003,7 +2003,7 @@
 (defMacro (close bindings . body)
   (list 'let bindings
     (list* 'atEnd
-      (list 'forEach @close (cons 'list (map car bindings)))
+      (list 'forEach '@close (cons 'list (map car bindings)))
       body )))
 
 

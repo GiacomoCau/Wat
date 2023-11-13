@@ -23,7 +23,7 @@
 
   (deftest handlerBind.3
     (handlerBind ((SimpleError (\ (e) 'whatever))
-                   (TestError (\ (e) 'whatever)))
+                  (TestError (\ (e) 'whatever)))
       1 2 (+ 1 2))
     3)
 
@@ -106,14 +106,14 @@
   (deftest handlerBind.multiple.1
     (block b
       (handlerBind ((TestError (\ (e) (returnFrom b 'test)))
-                     (SimpleError (\ (e) (returnFrom b 'simple))))
+                    (SimpleError (\ (e) (returnFrom b 'simple))))
         (signal (makeSimpleError "foo"))))
     'simple)
 
   (deftest handlerBind.multiple.2
     (block b
       (handlerBind ((TestError (\ (e) (returnFrom b 'test)))
-                     (SimpleError (\ (e) (returnFrom b 'simple))))
+                    (SimpleError (\ (e) (returnFrom b 'simple))))
         (signal (new TestError))))
     'test)
 

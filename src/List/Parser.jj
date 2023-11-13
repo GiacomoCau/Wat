@@ -178,8 +178,8 @@ TOKEN:	// identifiers
 |	< # jvf: "$" | <letter> >
 |   < # jvn: "_" | <jvf> | <digit> >
 |   < Kwd: ":" (<Sym>)+ >
-|	< Sym: <first> ( "#" | "'" | "|" | "," | "`" | "\"" | <digit> | <first> )* >
-|	< # first: <letter> | <special> > 
+|	< Sym: <first> ( "#" | "'" | "|" | "," | "`" | "\"" | <first> )* >
+|	< # first: <letter> | <special> | <digit> > 
 |	< # special: "-" | "+" | "&" | "." | "@" | "!" | "=" | ">" | "<" | "%" | "?" | "/" | "*" | "$" | "_" | "~" | "^" | ":" | "\\" | "||" >
 |	< # letter: [ "A"-"Z", "a"-"z" ] >
 |	< # digit: [ "0"-"9" ] >
@@ -195,8 +195,8 @@ Object Elt() throws Exception: {
 	|	<True> 		 { return true; }    
 	|	<False> 	 { return false; }    
 	|	t=<Inert>	 { return t.image; }    
-	|	t=<SheBang>	 { return t.image; }    
 	|	t=<Ignore> 	 { return t.image; }    
+	|	t=<SheBang>	 { return t.image; }    
 	|	t=<Double>	 { return java.lang.Double.parseDouble(t.image); }
 	|	t=<Long>	 { return java.lang.Long.parseLong(t.image.substring(0,t.image.length()-1)); }
 	|	t=<Integer>	 { return java.lang.Integer.parseInt(t.image); }

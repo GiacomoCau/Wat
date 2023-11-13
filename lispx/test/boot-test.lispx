@@ -1829,7 +1829,7 @@
   (deftest nth.7
     (signalsError?
      (nth 2 '(1 2))
-     Error :type 'type :datum () :expected 'Cons)))
+     Error :type 'outOfBounds)))
 
 (defsuite reverse
 
@@ -1948,17 +1948,17 @@
   (deftest nthCdr.6
     (signalsError?
      (nthCdr 1 '())
-     OutOfBoundsError))
+     Error :type 'type :datum () :expected 'Cons))
 
   (deftest nthCdr.7
     (signalsError?
      (nthCdr 2 '(1))
-     OutOfBoundsError))
+     Error :type 'outOfBounds))
 
   (deftest nthCdr.8
     (signalsError?
      (nthCdr 3 '(1))
-     OutOfBoundsError))
+     Error :type 'outOfBounds))
 
   (deftest nthCdr.9
     (nthCdr 0 '(1 2 3))
@@ -1979,7 +1979,7 @@
   (deftest nthCdr.13
     (signalsError?
      (nthCdr 4 '(1 2 3))
-     OutOfBoundsError)))
+     Error :type 'outOfBounds)))
 
 (defsuite subSeq
 
@@ -2013,12 +2013,12 @@
   (deftest listSubseq.6
     (signalsError?
      (subSeq '() 1)
-     OutOfBoundsError))
+     Error :type 'type :datum () :expected 'Cons))
 
   (deftest listSubseq.7
     (signalsError?
      (subSeq '() 0 1)
-     OutOfBoundsError))
+     Error :type 'outOfBounds))
 
   (deftest listSubseq.8
     (subSeq '() 0)
@@ -2055,12 +2055,12 @@
   (deftest listSubseq.16
     (signalsError?
      (subSeq '(0 1 2 3 4 5) 0 7)
-     OutOfBoundsError))
+     Error :type 'outOfBounds))
 
   (deftest listSubseq.17
     (signalsError?
      (subSeq '(0 1 2 3 4 5) 7 10)
-     OutOfBoundsError))
+     Error :type 'outOfBounds))
 
   (deftest listSubseq.18
     (subSeq '(0 1 2 3 4 5) 6)
@@ -2086,12 +2086,12 @@
   (deftest stringSubseq.6
     (signalsError?
      (subSeq "" 1)
-     OutOfBoundsError))
+     Error :type 'outOfBounds))
 
   (deftest stringSubseq.7
     (signalsError?
      (subSeq "" 0 1)
-     OutOfBoundsError))
+     Error :type 'outOfBounds))
 
   (deftest stringSubseq.8
     (subSeq "" 0)
@@ -2108,7 +2108,7 @@
   (deftest stringSubseq.10.1
     (signalsError?
      (subSeq "" 1 #inert)
-     OutOfBoundsError))
+     Error :type 'outOfBounds))
 
   (deftest stringSubseq.11
     (subSeq "123" 0)
@@ -2133,12 +2133,12 @@
   (deftest stringSubseq.16
     (signalsError?
      (subSeq "012345" 0 7)
-     OutOfBoundsError))
+     Error :type 'outOfBounds))
 
   (deftest stringSubseq.17
     (signalsError?
      (subSeq "012345" 7 10)
-     OutOfBoundsError))
+     Error :type 'outOfBounds))
 
   (deftest stringSubseq.18
     (subSeq "012345" 6)
@@ -2179,7 +2179,7 @@
   (deftest list-elt.7
     (signalsError?
      (elt '(1 2) 2)
-     Error :type 'type :datum '() :expected 'Cons)))
+     Error :type 'outOfBounds)))
 
 (defsuite member
 

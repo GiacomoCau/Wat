@@ -254,8 +254,7 @@ public class Utility {
 			return Class.forName(name);
 		}
 		catch (ClassNotFoundException e) {
-			//return null;
-			throw new Error("not a class: &" + name, e);
+			throw new RuntimeException("not a java class: &" + name, e);
 		}
 	}
 	

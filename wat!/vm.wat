@@ -54,6 +54,7 @@
 (%def Utility &Wat.Utility)
 (%def Vm &Wat.Vm)
 (%def Parser &List.Parser)
+(%def PTree &Wat.Vm$PTree)
 
 (%def %zero? (%\ (v) (%== v 0)))
 (%def %inert? (%\ (v) (%== v #inert)))
@@ -65,13 +66,21 @@
 ;(%def %nth (%\ ([#! Integer i] [#! (or () Cons) l]) (@car l i)))
 ;(%def %nthCdr (%\ ([#! Integer i] [#! (or () Cons) l]) (%if (%zero? i) l (@cdr l (%- i 1)))))
 
-(%def %take (%\ (i l) (%if (%zero? i) #null (%cons (%car l) (%take (%- i 1) (%cdr l))))))
-(%def %subList (%\ (l s e) (%the Integer s) (%if (%! (%inert? e)) (%the Integer e)) (%def tail (%nthCdr s l)) (%if (%inert? e) tail (%take (%- e s) tail))))
-(%def %subString (%\ (seq start end) (%if (%inert? end) (@substring (%the String seq) (%the Integer start)) (@substring (%the String seq) (%the Integer start) (%the Integer end)))))
+(%def %take
+  (%\ (i l)
+    (%if (%zero? i) #null
+      (%if (%cons? l) (%cons (%car l) (%take (%- i 1) (%cdr l)))
+        (error (new Error "cannot take" :type 'outOfBounds)) ))))
 (%def %subList (%\ (l [#! Integer s] [#! (or #inert Integer) e]) (%def tail (%nthCdr s l)) (%if (%inert? e) tail (%take (%- e s) tail))))
-(%def %subString (%\ ([#! String seq] [#! Integer start] [#! (or #inert Integer) end]) (%if (%inert? end) (@substring seq start) (@substring seq start end))))
-
-;(catchWth (\ (thw) (error (if (&& (matchObj*? thw Error :type 'java)(type? (@getCause thw) &java.lang.StringIndexOutOfBoundsException)) (new Error (@getCause thw) :type 'outOfBoundsError) thw))) (@substring "abc" 1 4))
+(%def %subString
+  (%\ ([#! String str] [#! Integer start] [#! (or #inert Integer) end])
+    (%catchTagWth #ignore 
+      (%\ (thw)
+        (%error 
+          (%if (%type? (@getCause thw) &java.lang.StringIndexOutOfBoundsException)
+            (new Error "cannot subString" thw :type 'outOfBounds)
+            thw )))
+      (%if (%inert? end) (@substring str start) (@substring str start end)) )))      
 
 ;(%def %pushPrompt ((%\ (%pushPrompt) (%wrap %pushPrompt)) %pushPrompt))
 
@@ -98,7 +107,7 @@
       (%def evm (%\ (lst) (%if (%null? lst) #null (%cons (evl (%car lst)) (evm (%cdr lst))))))
       (check o (evl ck)) )))
     
-(%def %check (makeCheckEvl %check))
+;(%def %check (makeCheckEvl %check))
 (%def %checkO (makeCheckEvl %checkO))
 
 
@@ -106,8 +115,14 @@
 
 (load "wat!/boot.wat");
 
+(def SimpleError Error)
+(def\ simpleError (message)
+  (error message :type 'simple) )
+
 
 ;;;; Test
+
+(def signalsError? assert)
 
 (load "wat!/test.wat");
 

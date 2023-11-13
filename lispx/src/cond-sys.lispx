@@ -198,13 +198,11 @@
       ((block trampoline
          (eval (list handlerBindOperator
                      (map (\ ((name functionForm . properties))
-                               (list* name
-                                      (\ args
-                                        (returnFrom trampoline
-                                          (\ () (apply (eval functionForm env) args) )))
-                                      properties ))
+                             (list* name
+                                    (\ args (returnFrom trampoline (\ () (apply (eval functionForm env) args))))
+                                    properties ))
                           handlerSpecs)
-                     (list returnFrom exit (cons 'begin forms)))
+                     (list returnFrom exit (cons 'begin forms)) )
                env ))))))
 
 (def handlerCase
