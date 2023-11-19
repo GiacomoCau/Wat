@@ -144,7 +144,7 @@
 ;(load "lispx/test/test-util-test.lispx")
 
 (defMacro deftest (name expression . expected?)
-  (list %test name expression (opt? expected? #t)))
+  (list* '%test name expression (if (null? expected?) '(#t) expected?)))
 
 (defMacro deftest* (name . forms)
   (list deftest name (list* prog1 #t forms)) )

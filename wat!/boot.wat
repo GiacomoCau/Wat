@@ -735,8 +735,11 @@
    |#
   (list value))
 
-(def\ (\01+ forms)
-  (if (null? forms) #null (if (null? (cdr forms)) (car forms) (cons 'begin forms))) )
+(def\ (01+ forms)
+  (if (null? forms) #null (1+ forms)) )
+
+(def\ (1+ (#! List forms))
+  (if (null? (cdr forms)) (car forms) (cons 'begin forms)) )
 
 ;; (Idea from Taylor R. Campbell's blag. https://mumble.net/~campbell/blag.txt)
 (defVau (ifOpt? (pt opt?) then . else) env
@@ -747,10 +750,10 @@
   (let1 (opt? (eval opt? env))
     (if (null? opt?)
       (if (null? else) #null
-        (eval (\01+ else) env))
+        (eval (1+ else) env))
       (if (list? opt?)
         (eval (list* (list 'vau (list pt) #ignore then) opt?) env)
-        (error ($ "not (or () List): " opt?)) ))))
+        (typeError opt? '(or () List)) ))))
 
 (assert (ifOpt? (a ()) (+ a 1)) #null)
 (assert (ifOpt? (a '(2)) (+ a 1)) 3)
@@ -760,10 +763,10 @@
   (let1 (opt? (eval opt? env))
     (if (null? opt?)
       (if (null? else) #null
-        (eval (\01+ else) env))
+        (eval (1+ else) env))
       (if (list? opt?)
         (eval (list* (list 'vau pt #ignore then) opt?) env)
-        (error ($ "not (or () List): " opt?)) ))))
+        (typeError opt? '(or () List)) ))))
 
 (assert (ifOpt*? ((a) ()) (+ 1 a)) #null)
 (assert (ifOpt*? ((a) ()) (+ 1 a) 0) 0)
@@ -776,13 +779,13 @@
   #|Destructure the OPTION?.  If it's non-nil, evaluate the FORMS with
    |the NAME bound to the contents of the option.  If it's nil, return nil.
    |#
-  (list 'ifOpt? (list pt opt?) (\01+ forms)) )
+  (list 'ifOpt? (list pt opt?) (01+ forms)) )
 
 (defMacro unlessOpt? (opt? . forms)
   #|Destructure the OPTION?.  If it's nil, evaluate the FORMS.  If it's
    |non-nil, return nil.
    |#
-  (list* 'ifOpt? (list #ignore opt?) #null (\01+ forms)) )
+  (list* 'ifOpt? (list #ignore opt?) #null (01+ forms)) )
 
 (defVau (caseOpt? exp . clauses) env
   (let1 (exp (eval exp env))
@@ -832,7 +835,7 @@
 (def\ getOpt? (option?)
   #|Returns the contents of the OPTION? or signals an error if it is nil.
    |#
-  (opt? option? (error "Option is nil")))
+  (opt? option? (simpleError "Option is nil")))
 
 (defVau (defOpt? pt exp) env
   (def exp (eval exp env))
@@ -1048,7 +1051,7 @@
                     :while (\ (b) (if (! b) (throwTag break))) ))) 
               (if (check? forms (2 + 'for ((2 3)) )) ;loop for
                 (let ( (for (cadr forms))
-                       (forms (\01+ (cddr forms))) )
+                       (forms (01+ (cddr forms))) )
                   (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (opt? incr init)) for)))
                   (catchTag break
                     (eval (list* 'def* (map car for) (map cadr for)) env)   
@@ -1057,14 +1060,14 @@
                       (eval increments env) )))
                 (if (check? forms (2 + 'for1 (2 3))) ;loop for1
                   (let ( ((pt init . incr) (cadr forms))
-                         (forms (\01+ (cddr forms))) )
+                         (forms (01+ (cddr forms))) )
                     (def increment (list 'def pt (opt? incr init)))
                     (catchTag break
                       (eval (list 'def pt init) env)
                       (%loop
                         (catchTag continue (eval forms env) )
                         (eval increment env) )))
-                  (let1 (forms (\01+ forms)) ;loop
+                  (let1 (forms (01+ forms)) ;loop
                     (catchTag break
                       (%loop
                         (catchTag continue
@@ -1355,13 +1358,13 @@
    ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
   (dolist (slotSpec slotSpecs) (the Symbol slotSpec))
   (let1 (superclass (findClass (opt? superclass? 'Obj) env))
-    (eval (list def name (%newClass name superclass)) env)) )
+    (eval (list 'def name (%newClass name superclass)) env)) )
 
 #|
 (defVau defClass (name superclass? (#! (Symbol) slotSpecs) . properties) env
   ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
   (let1 (superclass (findClass (opt? superclass? 'Obj) env))
-    (eval (list def name (%newClass name superclass)) env)) )
+    (eval (list 'def name (%newClass name superclass)) env)) )
 |#
 
 ;;; Objects

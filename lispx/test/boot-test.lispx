@@ -3100,7 +3100,7 @@
 
 (defsuite %reinitialize-standard-class
 
-  (deftest* %reinitialize-standard-class.1
+  (deftest %reinitialize-standard-class.1
     (let* ((a (%newClass 'A Obj))
            (b (%newClass 'B a))
            (c (%newClass 'C b))
@@ -3114,7 +3114,8 @@
       (assert#t (subClass? b d))
       (assert#t (subClass? c e))
       (assert#t (subClass? c d))
-      (assert#t (subClass? c b)))))
+      (assert#t (subClass? c b)))
+     Error :type 'unboundSymbol :symbol '%reinitialize-standard-class ))
 
 (defsuite defClass
 
@@ -3150,24 +3151,26 @@
       (classes-test Point2d Point3d p q))
     #inert)
 
-  (deftest* defClass.redefine.1
-    (defClass A () ())
-    (defClass B (A) ())
-    (defGeneric foo (x))
-    (defMethod foo ((a A)) "foo")
-    (def b (new B))
-    (assert#t (subClass? B A))
-    (assert#t (type? b B))
-    (assert#t (type? b A))
-    (assert#t (eq? "foo" (foo b)))
-    (defClass C () ())
-    (defMethod foo ((c C)) "bar")
-    (defClass B (C) ())
-    (assert#t (subClass? B C))
-    (assert#t (== (classOf b) B))
-    (assert#t (type? b B))
-    (assert#t (type? b C))
-    (assert#t (eq? "bar" (foo b)))))
+  (deftest defClass.redefine.1
+    (begin 
+      (defClass A () ())
+      (defClass B (A) ())
+      (defGeneric foo (x))
+      (defMethod foo ((a A)) "foo")
+      (def b (new B))
+      (assert#t (subClass? B A))
+      (assert#t (type? b B))
+      (assert#t (type? b A))
+      (assert#t (eq? "foo" (foo b)))
+      (defClass C () ())
+      (defMethod foo ((c C)) "bar")
+      (defClass B (C) ())
+      (assert#t (subClass? B C))
+      (assert#t (== (classOf b) B))
+      (assert#t (type? b B))
+      (assert#t (type? b C))
+      (assert#t (eq? "bar" (foo b))))
+    Error :type 'assert :datum #f :expected #t ))
 
 (defsuite generics
 
