@@ -517,7 +517,7 @@
 (if (ctApv)
   (then
     (defMacro (catch . forms)
-      (list '%catchTagWth #_ () (list* '\ () forms)) )
+      (list '%catchTagWth #_ #_ (list* '\ () forms)) )
     (defMacro (catchWth hdl . forms)
       (list '%catchTagWth #_ hdl (list* '\ () forms)) )
     (defMacro (catchTag tag . forms)
@@ -525,12 +525,12 @@
        |The forms may use `throw' to nonlocally exit from the tag.
        |Usually, `block' should be preferred.
        |#
-      (list '%catchTagWth tag () (list* '\ () forms)) )
+      (list '%catchTagWth tag #_ (list* '\ () forms)) )
     (defMacro (catchTagWth tag hdl . forms)
       (list '%catchTagWth tag hdl (list* '\ () forms)) )
   )
   (defMacro (catch . forms)
-    (list* '%catchTagWth #_ () forms))
+    (list* '%catchTagWth #_ #_ forms))
   (defMacro (catchWth hdl . forms)
     (list* '%catchTagWth #_ hdl forms))
   (defMacro (catchTag tag . forms)
@@ -538,7 +538,7 @@
      |inside it.  The forms may use `throw' to nonlocally exit from the
      |tag.  Usually, `block' should be preferred.
      |#
-    (list* '%catchTagWth tag () forms) )
+    (list* '%catchTagWth tag #_ forms) )
   (def catchTagWth
     #|Establish a catch tag and evaluate FORMS as an implicit `begin' inside it.
      |The forms may use `throw' to nonlocally exit from the tag.

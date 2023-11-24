@@ -859,11 +859,11 @@ public class Vm {
 	}
 	class CatchTagWth implements Combinable {
 		public Object combine(Env e, List o) {
-			// (catch . forms)               -> (%catch #_   () . forms)
-			// (catchTag tag . forms)        -> (%catch tag  () . forms)
+			// (catch . forms)               -> (%catch #_   #_ . forms)
+			// (catchTag tag . forms)        -> (%catch tag  #_ . forms)
 			// (catchWth hdl . forms)        -> (%catch #_  hdl . forms)
 			// (catchTagWth tag hdl . forms) -> (%catch tag hdl . forms)
-			var chk = !ctApv ? checkM(this, o, 2) : checkN(this, o, 3, Any.class, hdlAny ? Any.class : or(null, Apv1.class), Apv0.class);
+			var chk = !ctApv ? checkM(this, o, 2) : checkN(this, o, 3, Any.class, hdlAny ? Any.class : or(ignore, Apv1.class), Apv0.class);
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			return pipe(dbg(e, this, o), ()-> ctApv ? o.car() : getTco(evaluate(e, o.car())), tag-> combine(null, e, tag, o.car(1), o.cdr(1)) ); 
@@ -875,7 +875,7 @@ public class Vm {
 			}
 			catch (Throwable thw) {
 				if (tag != ignore && thw instanceof Value val && val.tag != tag) throw thw; 
-				if (hdl != null) return combine2(null, e, tag, hdl, thw);
+				if (hdl != ignore) return combine2(null, e, tag, hdl, thw);
 				if (thw instanceof Value val) return val.value;
 				throw thw instanceof Error err ? err : new Error("catch error:", thw);
 			}
@@ -1440,55 +1440,56 @@ public class Vm {
 		public String toString() { return "%Assert"; }
 	};
 	Combinable test = new Combinable() {
-		public Object combine(Env env, List o) {
+		public Object combine(Env e, List o) {
 			if (!doAsrt) return true;
 			var chk = checkM(this, o, 2); // o = (name x . v)
 			if (!(chk instanceof Integer len)) return chk;
+			var env = env(e);
 			var name = eIfnull(o.car(), n-> "test "+ n + ": ");
 			var exp = o.car(1);
 			try {
-				env = env(env);
 				var val = pushSubcontBarrier(null, env, pushRootPrompt(exp));
-				if (len == 2) print(name, exp, " should throw but is ", val);
-				else if (val instanceof Obj obj) {
-					if (checkObjSlots(name, env, o, exp, obj)) return true;
-				}
-				else {
-					var expt = o.car(2);
-					if (Vm.this.equals(val, pushSubcontBarrier(null, env, pushRootPrompt(expt)))) return true;
-					print(name, exp, " should be ", expt, " but is ", val);
+				switch (len) {
+					case 2-> 
+						print(name, exp, " should throw but is ", val);
+					case 3-> {
+						var expt = o.car(2);
+						if (Vm.this.equals(val, pushSubcontBarrier(null, env, pushRootPrompt(expt)))) return true;
+						print(name, exp, " should be ", expt, " but is ", val);
+					}
+					default-> {
+						var expt = (List) map(x-> pushSubcontBarrier(null, env, pushRootPrompt(x)), o.cdr(1)); 
+						if (matchObj(val, expt)) return true;
+						print(name, exp, " should be ", expt, " but is ", val);
+					}
 				}
 			}
 			catch (Throwable thw) {
 				if (len == 2) return true;
-				if (thw instanceof Obj || thw instanceof Value v && v.value instanceof Obj) {
-					if (checkObjSlots(name, env, o, exp, (Obj) (thw instanceof Obj ? thw : ((Value) thw).value))) return true;
-				}
-				else { 
-					if (prStk) thw.printStackTrace(out);
-					else print(name, exp, " throw ", "{&" + thw.getClass().getSimpleName() + " " + thw.getMessage() + "}");
+				if (prStk)
+					thw.printStackTrace(out);
+				else {
+					var val = thw instanceof Value v ? v.value : thw;
+					var expt = (List) map(x-> pushSubcontBarrier(null, env, pushRootPrompt(x)), o.cdr(1));
+					if (matchObj(val, expt)) return true;
+					print(name, exp, " should be ", expt, " but is ", val);
 				}
 			}
-			return false;
-		}
-		private boolean checkObjSlots(String name, Env env, List o, Object exp, Obj obj) {
-			var env2 = env(env);
-			List expt = (List) map(x-> pushSubcontBarrier(null, env2, pushRootPrompt(x)), o.cdr(1));
-			chk: if (obj.getClass() == expt.car() /*|| expt.<Class>car().isAssignableFrom(obj.getClass())*/) {
-				for (var l=expt.cdr(); l != null; l = l.cdr(1)) {
-					//if (!(Vm.this.equals(obj.value(l.car()), l.car(1)))) break chk;
-					//if (!(Vm.this.equals(switch(l.car()) {case At at-> at.apply(list(obj)); case Dot dot-> dot.apply(list(obj)); case Object n-> obj.value(n); }, l.car(1)))) break chk;
-					//if (!(Vm.this.equals(switch(l.car()) {case ArgsList al-> al.apply(list(obj)); case Object n-> obj.value(n); }, l.car(1)))) break chk;
-					var car = l.car(); if (!(Vm.this.equals(car instanceof AtDot ad ? ad.apply(list(obj)) : obj.value(car), l.car(1)))) break chk;
-					//var car = l.car(); if (!(Vm.this.equals(car instanceof AtDot ad ? ad.apply(list(object)) : car instanceof Obj obj ? obj.value(car) : object, l.car(1)))) break chk;
-				}
-				return true;
-			}
-			print(name, exp, " should be ", expt, " but is ", obj);
 			return false;
 		}
 		public String toString() { return "%Test"; }
 	};
+	boolean isType(Object object, Class classe) {
+		return classe == null ? object == null : object != null && classe.isAssignableFrom(object.getClass());
+	}
+	private boolean matchObj(Object object, List expt) {
+   		if (!isType(object, expt.car())) return false;
+		for (var l=expt.cdr(); l != null; l = l.cdr(1)) {
+			var car = l.car();
+			if (!(Vm.this.equals(car instanceof AtDot ad ? ad.apply(list(object)) : ((Obj) object).value(car), l.car(1)))) return false;
+		}
+		return true;
+	}
 	
 	
 	// Bytecode parser
@@ -1584,8 +1585,8 @@ public class Vm {
 				"%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), ObjEnv.class), (l,o)-> o.<ObjEnv>car(1).isBound(o.car)) ),
 				"%remove!", wrap(new JFun("%remove!", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), ObjEnv.class), (l,o)-> o.<ObjEnv>car(1).remove(o.car)) ),				
 				// Values
-				"%car", wrap(new JFun("%Car", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().car() )),
-				"%cdr", wrap(new JFun("%Car", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().cdr() )),
+				"%car", wrap(new JFun("%Car", (n,o)-> checkR(n, o, 1, 2, Cons.class, Integer.class), (l,o)-> l == 1 ? o.<Cons>car().car() : o.<Cons>car().car(o.<Integer>car(1)) )),
+				"%cdr", wrap(new JFun("%Car", (n,o)-> checkR(n, o, 1, 2, Cons.class, Integer.class), (l,o)-> l == 1 ? o.<Cons>car().cdr() : o.<Cons>car().cdr(o.<Integer>car(1)) )),
 				"%cadr", wrap(new JFun("%Cadr", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().car(1) )),
 				"%cddr", wrap(new JFun("%Cddr", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().cdr(1) )),
 				"%cons", wrap(new JFun("%Cons", (BiFunction) (car,cdr)-> cons(car,cdr) )),
@@ -1604,7 +1605,6 @@ public class Vm {
 				"%if", new If(),
 				"%loop", new Loop(),
 				"%atEnd", new AtEnd(),
-				//"%finally", new Finally(),
 				"%throwTag", apply(t-> !ctApv ? t : wrap(t), new ThrowTag()),
 				"%catchTagWth", apply(c-> !ctApv ? c : wrap(c), new CatchTagWth()),
 				// Delimited Control
@@ -1637,7 +1637,7 @@ public class Vm {
 					(l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr())) )),
 				"%newClass", wrap(new JFun("%NewClass", (n,o)-> checkR(n, o, 1, 2, Symbol.class, or(Box.class, Obj.class)), (l,o)-> newClass(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr())) )),
 				"%subClass?", wrap(new JFun("%SubClass?", (n,o)-> checkN(n, o, 2, Class.class, Class.class), (l,o)-> o.<Class>car(1).isAssignableFrom(o.car()) )),
-				"%type?",  wrap(new JFun("%Type?", (n,o)-> checkN(n, o, 2, Any.class, or(null, Class.class)), (l,o)-> apply((o1, c)-> c == null ? o1 == null /*: o1 == null ? !c.isPrimitive()*/ : o1 != null && c.isAssignableFrom(o1.getClass()), o.car(), o.<Class>car(1)) )),
+				"%type?",  wrap(new JFun("%Type?", (n,o)-> checkN(n, o, 2, Any.class, or(null, Class.class)), (l,o)-> isType(o.car(), o.car(1)) )),
 				"%classOf", wrap(new JFun("%ClassOf", (n,o)-> checkN(n, o, 1), (l,o)-> apply(o1-> o1 == null ? null : o1.getClass(), o.car()) )),
 				"%addMethod", wrap(new JFun("%AddMethod", (n,o)-> checkN(n, o, 3, or(null, Class.class), Symbol.class, Apv.class), (l,o)-> addMethod(o.car(), o.car(1), o.car(2)) )),
 				"%getMethod", wrap(new JFun("%GetMethod", (n,o)-> checkN(n, o, 2, or(null, Class.class), Symbol.class), (l,o)-> getMethod(o.car(), o.car(1)) )),
@@ -1645,6 +1645,7 @@ public class Vm {
 				"%the+", wrap(new JFun("%The+", (n,o)-> checkN(n, o, 2), (l,o)-> check("the+", o.car(1), o.car) )),
 				"%check", wrap(new JFun("%Check", (n,o)-> checkN(n, o, 2), (l,o)-> check("check", o.car, o.car(1)) )),
 				"%checkO", wrap(new JFun("%CheckO", (n,o)-> checkN(n, o, 2), (l,o)-> checkO(o.car, o.car(1)) )),
+				"%matchObj*?", wrap(new JFun("%MatchObj*?", (n,o)-> checkM(n, o, 2), (l,o)-> matchObj(o.car, o.cdr()) )),
 				// List & Array
 				"%list", wrap(new JFun("%List", (ArgsList) o-> o)),
 				"%list*", wrap(new JFun("%List*", (ArgsList) this::listStar)),
@@ -1807,14 +1808,9 @@ public class Vm {
 	}
 	public void main() throws Exception {
 		var milli = currentTimeMillis();
-		loadText("testVm.lsp");
-		loadText("testJni.lsp");
-		//loadText("testCmt.lsp");
-		loadText("wat!/vm.wat");
-		//loadText("testChk.lsp");
-		loadText("lispx/vm.lispx");
+		loadText("boot.lsp");
 		print("start time: " + (currentTimeMillis() - milli));
-		print("(load \"wat!/vm.wat\")(load \"lispx/vm.lispx\")");
+		print("(load \"boot.lsp\")(load \"wat!/vm.wat\")(load \"lispx/vm.lispx\")");
 		repl();
 	}
 }
