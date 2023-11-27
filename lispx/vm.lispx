@@ -152,13 +152,12 @@
 (defVau defsuite (name . forms) env
   (eval (cons 'begin forms) env) )
 
-(defVau signalsError? (form class . slots) env
-  (let1 (class (findClass class env))
-    (block exit
-      (handlerCase
-        ( (Object (\ (object) (exit (apply* matchObj? object class (eval (cons 'list slots) env))) )) )
-        (eval form env) )
-      #f )))
+(defVau signalsError? (form . class&slots) env
+  (block exit
+    (handlerCase
+      ( (Object (\ (object) (exit (matchObj? object (eval (cons 'list class&slots) env))) )) )
+      (eval form env) )
+    #f ))
 
 (load "lispx/test/boot-test.lispx")
 (load "lispx/test/cond-sys-test.lispx")

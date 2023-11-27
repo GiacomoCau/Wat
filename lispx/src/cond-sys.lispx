@@ -373,7 +373,7 @@
    |#
   (let1 (conditionClass (getSlot handler 'conditionClass))
     (if (cons? conditionClass)
-      (matchObj? condition (car conditionClass) (cdr conditionClass))
+      (matchObj? condition conditionClass)
       (type? condition conditionClass) )))
 
 (defMethod lispx::handlerApplicable? ((handler RestartHandler) restartName condition?)

@@ -632,7 +632,7 @@
 (def\ (!member? key lst)
   (null? (member key lst)) )
 
-#|
+#| TODO per omogeneità con lispx, valutare
 (def\ (member key lst . keywords)
   (let ( (test (opt? (get? :test keywords) ==))
          (fkey (opt? (get? :fkey keywords) identity)) )
@@ -692,32 +692,16 @@
           (if (|| (== test 'else)
                   (let* ( (symbol? (symbol? test))
                           (class (eval (if symbol? test (car test)) env)) )
-                    (if symbol? (type? key class) (&& (type? key Obj) (matchObjSlots? key (eval (cons 'list (cdr test)) env)))) ))
+                    (if symbol? (type? key class) (matchObj? key (eval (cons 'list test) env))) ))
             (if (== (car forms) '=>)
               (let1 ((apv) (cdr forms)) ((eval apv env) key))
               (eval (cons 'begin forms) env) )
             (next clauses) ))))))
 
-#| TODO sostituito dal seguente, eliminare
-(def\ (matchObjSlots? obj slots)
-  (let1 next (slots slots)
-    (if (null? slots) #t
-      (let1 ((name value . slots) slots)
-        (if (&& (@isBound obj name) (eq? (obj name) value)) (next slots)
-          #f )))))
-|#
-(def\ (matchObjSlots? obj slots)
-  (let1 next (slots slots)
-    (if (null? slots) #t
-      (let1 ((name value . slots) slots)
-        (if (eq? (if (type? name AtDot) (name obj) (obj name)) value) (next slots)
-          #f )))))
+(def matchObj? %matchObj?)
 
-(def\ (matchObj? obj class slots)
-  (if (type? obj class) (matchObjSlots? obj slots) #f) )
-
-(def\ (matchObj*? obj class . slots)
-  (matchObj? obj class slots) )
+(def\ (matchObj*? obj . class&slots) 
+  (matchObj? obj class&slots) )
 
 (assert (caseType 2.0 (else 3)) 3)
 (assert (caseType (+ 2 2) (else => (\(v) v))) 4)
@@ -862,6 +846,7 @@
 (def the
   %the)
 
+#| TODO non più necessari, sostituiti da #!, eliminare
 (defMacro (the\ parms . body)
   (let1rec\
     ( (parms->names.checks ps)
@@ -906,6 +891,7 @@
 
 (assert (expand (the\ (((#! Integer b) . #_)(#! Integer a)) (+ a b))) '(\ ((b . #ignore) a) (begin (the Integer b) (the Integer a)) (+ a b)))
 ;(assert ((the\ (((#! Integer b) . #_)(#! (or 3 4) a)) (+ a b)) '(1 2) 3) 4)
+|#
 
 ; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (cons 'list xs) env)
 
@@ -1769,10 +1755,10 @@
 
 (def Array &java.lang.Object[])
 
-(define (arrayMap fun (arr Array))
+(def\ (arrayMap fun (#! Array arr))
   (list->array (map fun (array->list arr))) )
 
-(define (arrayFilter pred (arr Array))
+(def\ (arrayFilter pred (#! Array arr))
   (list->array (filter pred (array->list arr))) )
 
 (defVau (time exp) env

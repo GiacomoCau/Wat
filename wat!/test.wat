@@ -2,7 +2,7 @@
 
 ;;;; Utilities
 
-(define (exit v)
+(def\ (exit v)
   (takeSubcont %rootPrompt #ignore v) )
 
 ;;;;; Wat Test Suite
@@ -10,9 +10,9 @@
 (assert (\))
 (assert (\ 12 12))
 (assert (\ "foo" "bar"))
-(assert (define))
-(assert (define 12))
-(assert (define 12 12))
+(assert (def))
+(assert (def 12))
+(assert (def 12 12))
 
 (assert (begin) #inert)
 (assert (begin 1) 1)
@@ -23,9 +23,9 @@
 
 ;; adapted from 
 
-(define (newPrompt) (list #null))
+(def\ (newPrompt) (list #null))
 
-(define (abortPrompt p e)
+(def\ (abortPrompt p e)
   (takeSubcont p #ignore e))
 
 (test test1
@@ -88,7 +88,7 @@
        20) )
   35 )
 
-(define (shift p f) 
+(def\ (shift p f) 
   (takeSubcont p sk
     (pushPrompt p
       (f (\ (c)
@@ -108,7 +108,7 @@
                             (sk (\ () (+ 3 100))))))))
   115)
 
-(define (abortSubcont prompt value)
+(def\ (abortSubcont prompt value)
   (takeSubcont prompt #ignore value))
 
 (test test52
@@ -296,14 +296,14 @@
 (assert (atEnd () (== 1 1)) #t)
 
 (assert (finally (== 1 1)) #t)
-(assert (begin (+ (finally 1 2 3 (define x 10)) x)) 11)
+(assert (begin (+ (finally 1 2 3 (def x 10)) x)) 11)
 (assert (+ (catchTag 'a (finally (throwTag 'a 1) 2 3 (def x 10))) 10) 11)
 (assert (catchTag 'a (finally 1 2 3 (throwTag 'a 4))) 4)
 (assert (catchTag 'a (finally (throwTag 'a 1) 2 3 (throwTag 'a (+ 2 2)))) 4)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (combine cmb ops) (apply (wrap cmb) ops))
+(def\ (combine cmb ops) (apply (wrap cmb) ops))
 
 (assert (combine and (list (== 1 1) (== 2 2))) #t)
 (assert (combine and (list (!= 1 1) (== 2 2))) #f)
@@ -313,7 +313,7 @@
 (let1 (v (vau () #ignore))  (%assert (unwrap v) v))
 
 
-#|
+#| TODO da rivedere
 (let ((obj (object ("x" 1))))
   (set (.x obj) 2)
   (assertEqual 2 (.x obj))
@@ -355,7 +355,7 @@
 
 (exit "finito")
 
-#|
+#| TODO da rivedere
 (let ((x (cell 0)))
   (while (< (ref x) 10)
     (++ (ref x)))

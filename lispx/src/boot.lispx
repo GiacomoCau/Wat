@@ -962,33 +962,16 @@
           (if (|| (== test 'else)
                   (let* ( (symbol? (symbol? test))
                           (class (eval (if symbol? test (car test)) env)) )
-                    (if symbol? (type? key class) (&& (type? key Obj) (matchObjSlots? key (eval (cons 'list (cdr test)) env)))) ))
+                    (if symbol? (type? key class) (matchObj? key (eval (cons 'list test) env))) ))
             (if (== (car forms) '=>)
               (let1 ((apv) (cdr forms)) ((eval apv env) key))
               (eval (cons 'begin forms) env) )
             (next clauses) ))))))
 
-#| TODO sostituito dal seguente, eliminare
-(def\ (matchObjSlots? obj slots)
-  (let1 next (slots slots)
-    (if (null? slots) #t
-      (let1 ((name value . slots) slots)
-        (if (&& (@isBound obj name) (eq? (obj name) value)) (next slots)
-          #f )))))
-|#
-(def\ (matchObjSlots? obj slots)
-  (let1 next (slots slots)
-    (if (null? slots) #t
-      (let1 ((name value . slots) slots)
-        (if (eq? (if (type? name AtDot) (name obj) (obj name)) value) (next slots)
-          #f )))))
+(def matchObj? %matchObj?)
 
-(def\ (matchObj? obj class slots)
-  (if (type? obj class) (matchObjSlots? obj slots) #f) )
-
-(def\ (matchObj*? obj class . slots)
-  (matchObj? obj class slots) )
-
+(def\ (matchObj*? obj . class&slots) 
+  (matchObj? obj class&slots) )
 
 ;;; Options
 
@@ -1123,6 +1106,7 @@
    |#
   %the)
 
+#| TODO non più necessari, sostituiti da #!, eliminare
 (defMacro (the\ parms . body)
   (let1rec\
     ( (parms->names.checks ps)
@@ -1161,6 +1145,7 @@
         (cons pt ()) ) )
     (let1 ((pt . cks) (pt->pt.cks pt))
       (list* '\ pt (if (null? cks) body (list* (cons 'begin cks) body))) )))
+|#
 
 ; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (cons 'list xs) env)
 
@@ -1258,6 +1243,7 @@
             (eval forms env)
             (returnFrom exit #inert))))))
 
+#| TODO da rivedere crea problemi con il debugger in lispx
 (defVau while (testForm . forms) env
   (let ((forms (list* 'begin forms))
         (break (list #null))
@@ -1332,6 +1318,7 @@
 (defMacro (while cond . body)
   (list* 'loop (list 'while cond)
     body ))
+|#
 
 (defMacro until (cond . forms)
   #|Evaluate FORMS until TEST-FORM evaluates to true.
@@ -1980,10 +1967,10 @@
 
 (def Array &java.lang.Object[])
 
-(define (arrayMap fun (arr Array))
+(def\ (arrayMap fun (#! Array arr))
   (list->array (map fun (array->list arr))) )
 
-(define (arrayFilter pred (arr Array))
+(def\ (arrayFilter pred (#! Array arr))
   (list->array (filter pred (array->list arr))) )
 
 (defVau (time exp) env

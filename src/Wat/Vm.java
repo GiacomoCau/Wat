@@ -1300,6 +1300,14 @@ public class Vm {
 		}
 		else if (chk instanceof List chkl) {
 			if (chkl.car instanceof Object[] chks && chkl.cdr() == null) return checkO(o, chks);
+			/* TODO possibile estensione test per and (si perde il simbolo dell'operatore risolvendolo in anticipo)
+			if (chkl.car instanceof Apv apv) {
+				switch (getTco(combine(env(), apv, list(o, chkl.car(1))))) {
+					case Boolean b when b: return 0;
+					case Object obj: throw new TypeException("not a {expected}: {datum}", o, toChk(chkl));
+				}
+			}
+			*/
 			if (o != null && !(o instanceof List)) throw new TypeException("not a {expected}: {datum}", o, toChk(or(null, List.class)));
 			var ol = (List) o;
 			int min=0, max=more;
@@ -1459,7 +1467,7 @@ public class Vm {
 					}
 					default-> {
 						var expt = (List) map(x-> pushSubcontBarrier(null, env, pushRootPrompt(x)), o.cdr(1)); 
-						if (matchObj(val, expt)) return true;
+						if (expt.car instanceof Class && matchObj(val, expt)) return true;
 						print(name, exp, " should be ", expt, " but is ", val);
 					}
 				}
@@ -1471,7 +1479,7 @@ public class Vm {
 				else {
 					var val = thw instanceof Value v ? v.value : thw;
 					var expt = (List) map(x-> pushSubcontBarrier(null, env, pushRootPrompt(x)), o.cdr(1));
-					if (matchObj(val, expt)) return true;
+					if (expt.car instanceof Class && matchObj(val, expt)) return true;
 					print(name, exp, " should be ", expt, " but is ", val);
 				}
 			}
@@ -1483,10 +1491,19 @@ public class Vm {
 		return classe == null ? object == null : object != null && classe.isAssignableFrom(object.getClass());
 	}
 	private boolean matchObj(Object object, List expt) {
-   		if (!isType(object, expt.car())) return false;
+		//if (!(expt.car() instanceof Class cls && isType(object, cls))) return false;
+		if (!isType(object, expt.car())) return false;
 		for (var l=expt.cdr(); l != null; l = l.cdr(1)) {
 			var car = l.car();
-			if (!(Vm.this.equals(car instanceof AtDot ad ? ad.apply(list(object)) : ((Obj) object).value(car), l.car(1)))) return false;
+			if (car instanceof AtDot ad) {
+				if (!Vm.this.equals(ad.apply(list(object)), l.car(1))) return false;
+			}
+			else if (object instanceof Obj obj) {
+				if (!Vm.this.equals(obj.value(car), l.car(1))) return false;
+			}
+			else {
+				return false;
+			}
 		}
 		return true;
 	}
@@ -1645,7 +1662,7 @@ public class Vm {
 				"%the+", wrap(new JFun("%The+", (n,o)-> checkN(n, o, 2), (l,o)-> check("the+", o.car(1), o.car) )),
 				"%check", wrap(new JFun("%Check", (n,o)-> checkN(n, o, 2), (l,o)-> check("check", o.car, o.car(1)) )),
 				"%checkO", wrap(new JFun("%CheckO", (n,o)-> checkN(n, o, 2), (l,o)-> checkO(o.car, o.car(1)) )),
-				"%matchObj*?", wrap(new JFun("%MatchObj*?", (n,o)-> checkM(n, o, 2), (l,o)-> matchObj(o.car, o.cdr()) )),
+				"%matchObj?", wrap(new JFun("%MatchObj?", (n,o)-> checkN(n, o, 2, Any.class, list(1, more, Class.class, or(At.class, Dot.class, Symbol.class, Keyword.class, String.class), Any.class)), (l,o)-> matchObj(o.car, o.car(1)) )),
 				// List & Array
 				"%list", wrap(new JFun("%List", (ArgsList) o-> o)),
 				"%list*", wrap(new JFun("%List*", (ArgsList) this::listStar)),
@@ -1696,11 +1713,13 @@ public class Vm {
 				"%test", test,
 				"%assert", vmAssert,
 				"toString", wrap(new JFun("ToString", (Function<Object,String>) Vm.this::toString )),
+				// Input/Output
 				"log", wrap(new JFun("Log", (ArgsList) o-> log(array(o)) )),
 				"print", wrap(new JFun("Print", (ArgsList) o-> print(array(o)) )),
 				"write", wrap(new JFun("Write", (ArgsList) o-> write(array(o)) )),
 				"load", wrap(new JFun("Load", (Function<String, Object>) nf-> uncked(()-> loadText(nf)) )),
 				"read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> cons(begin, uncked(()-> toLispList(read(l == 0 ? 0 : o.<Integer>car())))) )),
+				// Config
 				"doTco", wrap(new JFun("DoTco", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doTco : inert(doTco=o.car()) )),
 				"doAsrt", wrap(new JFun("DoAsrt", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doAsrt : inert(doAsrt=o.car()) )),
 				"ctApv", wrap(new JFun("CtApv",
