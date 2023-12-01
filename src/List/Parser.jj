@@ -156,22 +156,25 @@ TOKEN:	// reserved words
 }
 
 TOKEN:	// literals
-{	< Long: < Integer > ( "l" | "L" ) >
-| 	< Integer: "0" | <sNat> >
-|	< # sNat: ("+"|"-")? <Nat> >
+{   < BInteger: <Int> ( "bi" | "BI") >
+|   < Long: <Int> ( "l" | "L" ) >
+| 	< Integer: <Int> >
+|	< # Int: "0" | ("+"|"-")? <Nat> >
 |	< # Nat: <d19> (<d09>)* >
 |	< # d19: ["1"-"9"] >
 |	< # d09: ["0"-"9"] >
-|	< Double: ((("+"|"-")? "0" | <sNat>) ( "d" | "D" | "." (<d09>)+) (<exp>)?) >
-|	< # exp: ["e","E"] <Integer> >
+|	< BDecimal: <Dec> ( "bd" | "BD" ) >
+|	< Double: <Dec> ( "d" | "D" )?  >
+|	< # Dec: (( "+" | "-" )? ("0" | <Nat>)) ( "." ( <d09> )+ )? (<exp>)?  >
+|	< # exp: ["e","E"] <Int> >
 //|	< String: "\"" ("\\" ["\\","\"","n","r","f","b","t"] | ~["\\","\"","\n","\r","\f","\b","\t"])* "\"" >
 |	< String: "\"" ( "\\\\" | "\\\"" | ~["\""] )* "\"" >
 |	< USym:	"|" ( "\\\\" | "\\|" | ~["|"] )+ "|" >
 }
 
 TOKEN:	// identifiers
-{ 	< Prim:   "&" ("boolean" | "byte" | "short" | "char" | "int" | "long" | "float" | "double") ("[]")* >
-|  	< ClsId:  "&" <jvid> ("." <jvid>)* ( ("[]")+ | ("$" <jvid> ("[]")* )+ )? >
+{ 	< Prim: "&" ("boolean" | "byte" | "short" | "char" | "int" | "long" | "float" | "double") ("[]")* >
+|  	< Cls: "&" <jvid> ("." <jvid>)* ( ("[]")+ | ("$" <jvid> ("[]")* )+ )? >
 |   < Dot: "." (<jvid>)+ >
 |   < At: "@" (<jvid>)+ > 
 |	< # jvid: ( <jvf> | "_" <jvn>) ( <jvn> )* >
@@ -190,22 +193,24 @@ Object Elt() throws Exception: {
 	Token t, t2=null;
 	Object o, o2=null;
   	List l = new ArrayList(); 
-}	{	<Nil> 		 { return $(); }
-	|	<Null>		 { return null; }
-	|	<True> 		 { return true; }    
-	|	<False> 	 { return false; }    
-	|	t=<Inert>	 { return t.image; }    
-	|	t=<Ignore> 	 { return t.image; }    
-	|	t=<SheBang>	 { return t.image; }    
-	|	t=<Double>	 { return java.lang.Double.parseDouble(t.image); }
-	|	t=<Long>	 { return java.lang.Long.parseLong(t.image.substring(0,t.image.length()-1)); }
-	|	t=<Integer>	 { return java.lang.Integer.parseInt(t.image); }
-	|	t=<String>	 { return $("wat-string", toStringTokenImage(t.image)); }
-	|	t=<USym>	 { return t.image.substring(1,t.image.length()-1).replaceAll("\\\\\\|", "|").replaceAll("\\\\\\\\", "\\\\"); }
-	|	t=<Prim>	 { return classForName(t.image.substring(1)); }	
-	|	t=<ClsId>	 { return classForName(t.image.substring(1)); }	
+}	{	<Nil>        { return $(); }
+	|	<Null>       { return null; }
+	|	<True>       { return true; }    
+	|	<False>      { return false; }    
+	|	t=<Inert>    { return t.image; }    
+	|	t=<Ignore>   { return t.image; }    
+	|	t=<SheBang>  { return t.image; }    
+	|	t=<BDecimal> { return new java.math.BigDecimal(t.image.substring(0,t.image.length()-2)); }
+	|	t=<Double>   { return java.lang.Double.parseDouble(t.image); }
+	|	t=<BInteger> { return new java.math.BigInteger(t.image.substring(0,t.image.length()-2)); }
+	|	t=<Long>     { return java.lang.Long.parseLong(t.image.substring(0,t.image.length()-1)); }
+	|	t=<Integer>  { return java.lang.Integer.parseInt(t.image); }
+	|	t=<String>   { return $("wat-string", toStringTokenImage(t.image)); }
+	|	t=<USym>     { return t.image.substring(1,t.image.length()-1).replaceAll("\\\\\\|", "|").replaceAll("\\\\\\\\", "\\\\"); }
+	|	t=<Prim>     { return classForName(t.image.substring(1)); }	
+	|	t=<Cls>      { return classForName(t.image.substring(1)); }	
 	|   t=<Dot>      { return $("%dot", $("wat-string", t.image.substring(1))); } 
-	|   t=<At>		 { return $("%at", $("wat-string", t.image.substring(1))); } 
+	|   t=<At>       { return $("%at", $("wat-string", t.image.substring(1))); } 
 	|	t=<Kwd>      { return t.image; }
 	|	t=<Sym>      { return t.image; }  	
 	//|	t=<Sym> ["::" t2=<Sym>] {	return t2 == null ? t.image : $("%eval", $("%'", t2.image), t.image); }  	

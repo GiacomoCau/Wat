@@ -1033,14 +1033,12 @@
     #t)
 
   (deftest <.4
-    (signalsError?
-     (< #t #t #f)
-     Error))
+    (< #t #t #f)
+    #f)
 
   (deftest <.5
-    (signalsError?
-     (< "foo" "foo" "foo")
-     Error))
+    (< "foo" "foo" "foo")
+    #f)
 
   (deftest <.6
     (signalsError?
@@ -1064,7 +1062,7 @@
   (deftest <.different-types
     (signalsError?
      (< 1 2 3 "foo")
-     Error :type 'type :datum "foo" :expected 'Number)))
+     Error :type 'java :member '%< :args '(3 "foo"))) )
 
 (defsuite >
 
@@ -1081,14 +1079,12 @@
     #t)
 
   (deftest >.4
-    (signalsError?
-     (> #t #t #f)
-     Error))
+    (> #t #t #f)
+    #f)
 
   (deftest >.5
-    (signalsError?
-     (> "foo" "foo" "foo")
-     Error))
+    (> "foo" "foo" "foo")
+    #f)
 
   (deftest >.6
     (signalsError?
@@ -1112,7 +1108,7 @@
   (deftest >.different-types
     (signalsError?
      (> 3 2 1 "foo")
-     Error :type 'type :datum "foo" :expected 'Number)))
+     Error :type 'java :member '%> :args '(1 "foo"))))
 
 (defsuite <=
 
@@ -1129,14 +1125,12 @@
     #t)
 
   (deftest <=.4
-    (signalsError?
-     (<= #t #t #f)
-     Error))
+    (<= #t #t #f)
+    #f)
 
   (deftest <=.5
-    (signalsError?
      (<= "foo" "foo" "foo")
-     Error))
+     #t)
 
   (deftest <=.6
     (signalsError?
@@ -1164,7 +1158,7 @@
   (deftest <=.different-types
     (signalsError?
      (<= 1 1 3 "foo")
-     Error :type 'type :datum "foo" :expected 'Number)))
+     Error :type 'java :member '%<= :args '(3 "foo"))))
 
 (defsuite >=
 
@@ -1181,14 +1175,12 @@
     #t)
 
   (deftest >=.4
-    (signalsError?
-     (>= #t #t #f)
-    Error))
+    (>= #t #t #f)
+    #t)
 
   (deftest >=.5
-    (signalsError?
-     (>= "foo" "foo" "foo")
-     Error))
+    (>= "foo" "foo" "foo")
+    #t)
 
   (deftest >=.6
     (signalsError?
@@ -1216,7 +1208,7 @@
   (deftest >=.different-types
     (signalsError?
      (>= 3 3 2 "foo")
-     Error :type 'type :datum "foo" :expected 'Number)))
+     Error :type 'java :member '%>= :args '(2 "foo"))))
 
 (defsuite +
 
@@ -2738,7 +2730,7 @@
   (deftest dotimes.8
     (signalsError?
      (dotimes (x "foo") 1 2 3)
-     Error :type 'type :datum "foo" :expected 'Number))
+     Error :type 'java :member '%< :args '(0 "foo")))
 
   (deftest dotimes.9
     (begin

@@ -19,21 +19,17 @@ import static Wat.Utility.read;
 import static Wat.Utility.reorg;
 import static Wat.Utility.stackDeep;
 import static Wat.Utility.uncked;
-import static Wat.Utility.Binop.And;
-import static Wat.Utility.Binop.Dvd;
-import static Wat.Utility.Binop.Ge;
-import static Wat.Utility.Binop.Gt;
-import static Wat.Utility.Binop.Le;
-import static Wat.Utility.Binop.Ls;
-import static Wat.Utility.Binop.Mns;
-import static Wat.Utility.Binop.Or;
-import static Wat.Utility.Binop.Pls;
-import static Wat.Utility.Binop.Pwr;
-import static Wat.Utility.Binop.Rst;
-import static Wat.Utility.Binop.Sl;
-import static Wat.Utility.Binop.Sr;
-import static Wat.Utility.Binop.Sr0;
-import static Wat.Utility.Binop.Xor;
+import static Wat.Utility.BinOp.And;
+import static Wat.Utility.BinOp.Dvd;
+import static Wat.Utility.BinOp.Mns;
+import static Wat.Utility.BinOp.Or;
+import static Wat.Utility.BinOp.Pls;
+import static Wat.Utility.BinOp.Pwr;
+import static Wat.Utility.BinOp.Rst;
+import static Wat.Utility.BinOp.Sl;
+import static Wat.Utility.BinOp.Sr;
+import static Wat.Utility.BinOp.Sr0;
+import static Wat.Utility.BinOp.Xor;
 import static java.lang.Runtime.version;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.System.out;
@@ -1585,15 +1581,16 @@ public class Vm {
 				"%def", new Def(true),
 				"%set!", new Def(false),
 				"%eval", wrap(new Eval()),
-				"%newVmEnv", wrap(new JFun("%NewVmEnv", (n,o)-> checkN(n, o, 0), (l,o)-> vmEnv() )),
-				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, or(null, list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class, String.class), Any.class))), (l,o)-> l==0 ? env() : env(o.car(), array(o.cdr())) )),
 				"%wrap", wrap(new JFun("%Wrap", (Function) this::wrap)),
 				"%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap)),
-				"%bind", wrap(new JFun("%Bind", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> bind(true, 0, o.<Env>car(), o.car(1), o.car(2)) )),
-				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (InnerException ie) { return false; }} )),
 				"%apply", wrap(new JFun("%Apply", (n,o)-> checkR(n, o, 2, 3, Combinable.class, Any.class, Env.class), (l,o)-> combine(l == 2 ? env() : o.car(2), unwrap(o.car()), o.car(1)) )),
 				"%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(), unwrap(o.car()), o.cdr()) )),
 				"%apply**", wrap(new JFun("%Apply**", (ArgsList) o-> combine(env(), unwrap(o.car()), (List) listStar(o.cdr())) )),
+				// Env
+				"%newVmEnv", wrap(new JFun("%NewVmEnv", (n,o)-> checkN(n, o, 0), (l,o)-> vmEnv() )),
+				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, or(null, list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class, String.class), Any.class))), (l,o)-> l==0 ? env() : env(o.car(), array(o.cdr())) )),
+				"%bind", wrap(new JFun("%Bind", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> bind(true, 0, o.<Env>car(), o.car(1), o.car(2)) )),
+ 				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (InnerException ie) { return false; }} )),
 				"%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } )),
 				"%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnv = env(theEnv))),
 				"%popEnv", wrap(new JFun("%PopEnv", (Supplier) ()-> theEnv = theEnv.parent)),
@@ -1629,8 +1626,9 @@ public class Vm {
 				"%pushPrompt", new PushPrompt(),
 				"%pushDelimSubcont", wrap(new PushDelimSubcont()),
 				"%pushSubcontBarrier", wrap(new JFun("%PushSubcontBarrier", (n,o)-> checkM(n, o, 2, Env.class), (l,o)-> pushSubcontBarrier(null, o.car(), cons(begin, o.cdr())) )),
-				// Dynamically-Scoped Variables
+				// Box
 				"%newBox", wrap(new JFun("%NewBox", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new Box(l == 0 ? boxDft : o.car))),
+				// Dynamically-Scoped Variables
 				"%newDVar", wrap(new JFun("%NewDVar", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new DVar(l == 0 ? boxDft : o.car))),
 				"%dVal", wrap(new JFun("%DVal", (n,o)-> checkR(n, o, 1, 2, DVar.class), (l,o)-> apply(dv-> l == 1 ? dv.value : (dv.value=o.car(1)), o.<DVar>car()) )),
 				"%d\\", new DLambda(),
@@ -1682,13 +1680,14 @@ public class Vm {
 				"%-", wrap(new JFun("%-", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Mns, o.car(), o.car(1)) )),
 				"%/", wrap(new JFun("%/", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Dvd, o.car(), o.car(1)) )),
 				"%%", wrap(new JFun("%%", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Rst, o.car(), o.car(1)) )),
-				// Comparator
+				// Not
 				"%!", wrap(new JFun("%!", (Function) a-> switch (istrue(a)) { case Suspension s-> s; case Boolean b-> !b; case Object obj-> typeError("not a {expected}: {datum}", obj, symbol("Boolean")); } )),
 				"%!!", wrap(new JFun("%!!", (Function) a-> switch (istrue(a)) { case Suspension s-> s; case Boolean b-> b; case Object obj-> typeError("not a {expected}: {datum}", obj, symbol("Boolean")); } )),
-				"%<", wrap(new JFun("%<", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Ls, o.car(), o.car(1)) )),
-				"%>", wrap(new JFun("%>", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Gt, o.car(), o.car(1)) )),
-				"%<=", wrap(new JFun("%<=", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Le, o.car(), o.car(1)) )),
-				"%>=", wrap(new JFun("%>=", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(Ge, o.car(), o.car(1)) )),
+				// Comparator
+				"%<", wrap(new JFun("%<", (n,o)-> checkN(n, o, 2, Comparable.class, Comparable.class), (l,o)-> o.<Comparable>car().compareTo(o.car(1)) < 0 )),
+				"%>", wrap(new JFun("%>", (n,o)-> checkN(n, o, 2, Comparable.class, Comparable.class), (l,o)-> o.<Comparable>car().compareTo(o.car(1)) > 0 )),
+				"%<=", wrap(new JFun("%<=", (n,o)-> checkN(n, o, 2, Comparable.class, Comparable.class), (l,o)-> o.<Comparable>car().compareTo(o.car(1)) <= 0 )),
+				"%>=", wrap(new JFun("%>=", (n,o)-> checkN(n, o, 2, Comparable.class, Comparable.class), (l,o)-> o.<Comparable>car().compareTo(o.car(1)) >= 0 )),
 				// Bit
 				"%~", wrap(new JFun("%~", (n,o)-> checkN(n, o, 1, Integer.class), (l,o)-> ~o.<Integer>car() )),
 				"%&", wrap(new JFun("%&", (n,o)-> checkN(n, o, 2, Number.class, Number.class), (l,o)-> binOp(And, o.car(), o.car(1)) )),

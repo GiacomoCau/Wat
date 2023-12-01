@@ -895,7 +895,7 @@
 
 ; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (cons 'list xs) env)
 
-#| TODO definito in vm, eliminare
+#| TODO sostituiti dal seguente, eliminare
 (def %check
   (let1 (%check %check)
     (vau (o ck) env

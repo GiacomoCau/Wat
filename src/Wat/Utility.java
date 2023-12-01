@@ -18,6 +18,8 @@ import java.io.InputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -158,46 +160,46 @@ public class Utility {
 		return s;
 	}
 	
-	enum Binop {
-		Pls((a, b)-> a+b,   (a, b)-> a+b,   (a, b)-> a+b),
-		Mns((a, b)-> a-b,   (a, b)-> a-b,   (a, b)-> a-b),
-		Pwr((a, b)-> a*b,   (a, b)-> a*b,   (a, b)-> a*b),
-		Dvd((a, b)-> a/b,   (a, b)-> a/b,   (a, b)-> a/b),
-		Rst((a, b)-> a%b,   (a, b)-> a%b,   (a, b)-> a%b),
-		 Ls((a, b)-> a<b,   (a, b)-> a<b,   (a, b)-> a<b),
-		 Gt((a, b)-> a>b,   (a, b)-> a>b,   (a, b)-> a>b),
-		 Le((a, b)-> a<=b,  (a, b)-> a<=b,  (a, b)-> a<=b),
-		 Ge((a, b)-> a>=b,  (a, b)-> a>=b,  (a, b)-> a>=b),
-		And((a, b)-> a&b,   (a, b)-> a&b,   null),
-		 Or((a, b)-> a|b,   (a, b)-> a|b,   null),
-		Xor((a, b)-> a^b,   (a, b)-> a^b,   null),
-		 Sl((a, b)-> a<<b,  (a, b)-> a<<b,  null),
-		 Sr((a, b)-> a>>b,  (a, b)-> a>>b,  null),
-		Sr0((a, b)-> a>>>b, (a, b)-> a>>>b, null);
+	enum BinOp {
+		Pls((a, b)-> a+b,   (a, b)-> a+b,   (a, b)-> a.add(b),                   (a, b)-> a+b,            (a, b)-> a.add(b)            ),
+		Mns((a, b)-> a-b,   (a, b)-> a-b,   (a, b)-> a.subtract(b),              (a, b)-> a-b,            (a, b)-> a.subtract(b)       ),
+		Pwr((a, b)-> a*b,   (a, b)-> a*b,   (a, b)-> a.multiply(b),              (a, b)-> a*b,            (a, b)-> a.multiply(b)       ),
+		Dvd((a, b)-> a/b,   (a, b)-> a/b,   (a, b)-> a.divide(b),                (a, b)-> a/b,            (a, b)-> a.divide(b)         ),
+		Rst((a, b)-> a%b,   (a, b)-> a%b,   (a, b)-> a.mod(b),                   (a, b)-> a%b,            null                         ),
+		And((a, b)-> a&b,   (a, b)-> a&b,   (a, b)-> a.and(b),                   null,                    null                         ),
+		 Or((a, b)-> a|b,   (a, b)-> a|b,   (a, b)-> a.or(b),                    null,                    null                         ),
+		Xor((a, b)-> a^b,   (a, b)-> a^b,   (a, b)-> a.pow(b.intValue()),        (a, b)-> Math.pow(a, b), (a, b)-> a.pow(b.intValue()) ),
+		 Sl((a, b)-> a<<b,  (a, b)-> a<<b,  (a, b)-> a.shiftLeft(b.intValue()),  null,                    null                         ),
+		 Sr((a, b)-> a>>b,  (a, b)-> a>>b,  (a, b)-> a.shiftRight(b.intValue()), null,                    null                         ),
+		Sr0((a, b)-> a>>>b, (a, b)-> a>>>b, null,                                null,                    null                         );                  
 		
+		BiFunction<BigDecimal, BigDecimal, Object> bd;
+		BiFunction<BigInteger, BigInteger, Object> bi;
 		BiFunction<Integer, Integer, Object> i;
 		BiFunction<Double, Double, Object> d;
 		BiFunction<Long, Long, Object> l;
-		Binop(BiFunction<Integer, Integer, Object> i, BiFunction<Long, Long, Object> l, BiFunction<Double, Double, Object> d) {
-			this.i = i; this.l = l; this.d = d;		
+		BinOp(
+			BiFunction<Integer, Integer, Object> i,
+			BiFunction<Long, Long, Object> l,
+			BiFunction<BigInteger, BigInteger, Object> bi,
+			BiFunction<Double, Double, Object> d,
+			BiFunction<BigDecimal, BigDecimal, Object> bd
+		) {
+			this.i = i; this.l = l; this.bi=bi; this.d = d; this.bd = bd;		
 		};
 	}
-	static Object binOp(Binop op, Number a, Number b) {
+	static Object binOp(BinOp op, Number a, Number b) {
 		if (op == null) throw new RuntimeException("no operator for this operands");
-		return a instanceof Integer i1 && b instanceof Integer i2
-			? op.i.apply(i1, i2)
-			: a instanceof Long l1 && b instanceof Long l2
-			? op.l.apply(l1, l2)
-			: op.d.apply(a.doubleValue(), b.doubleValue())
+		return a instanceof BigDecimal || b instanceof BigDecimal
+			? op.bd.apply(new BigDecimal(""+a), new BigDecimal(""+b))
+			: a instanceof Double || b instanceof Double
+			? op.d.apply(a.doubleValue(), b.doubleValue())
+			: a instanceof BigInteger || b instanceof BigInteger
+			? op.bi.apply(new BigInteger(""+a), new BigInteger(""+b))
+			: a instanceof Long || b instanceof Long
+			? op.l.apply(a.longValue(), b.longValue())
+			: op.i.apply(a.intValue(), b.intValue())
 		;
-		/*
-		return switch (a) {
-			case Double d-> op.d.apply(d, b.doubleValue());
-			case Long l-> op.l.apply(l, b.longValue());
-			case Integer i-> op.i.apply(i, b.intValue());
-			default-> throw new RuntimeException("unknow type");
-		};
-		//*/
 	}	
 	
 	public static boolean isInstance(Object o, Class ... cs) {
