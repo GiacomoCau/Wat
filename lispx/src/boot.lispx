@@ -1195,7 +1195,16 @@
 (defMacro (check* o . cks)
     (list 'check o cks) )
 
-(defVau check? args env (catchWth #f (apply check args env) #t))
+(defVau check? args env
+  (catchTagWth 'check? #f
+    (handlerBind ((Error (\ (#ignore) (throwTag 'check?))))
+      (apply check args env)
+      #t )))
+
+(defVau check? args env
+  (handlerCase ((Error (\ (#ignore) #f)))
+    (apply check args env)
+    #t ))
 
 (defMacro (the+ ck obj) (list 'let1 (list 'obj obj) (list 'check 'obj ck) 'obj))
 
@@ -1243,7 +1252,7 @@
             (eval forms env)
             (returnFrom exit #inert))))))
 
-#| TODO da rivedere crea problemi con il debugger in lispx
+#| TODO sostituito dal seguente, eliminare
 (defVau while (testForm . forms) env
   (let ((forms (list* 'begin forms))
         (break (list #null))
@@ -1257,6 +1266,7 @@
           (if (eval testForm env)
             (eval forms env)
             (throwTag break) ))))))
+|#
 
 (def %loop
   (let ( (%loop %loop)
@@ -1318,7 +1328,6 @@
 (defMacro (while cond . body)
   (list* 'loop (list 'while cond)
     body ))
-|#
 
 (defMacro until (cond . forms)
   #|Evaluate FORMS until TEST-FORM evaluates to true.
@@ -1549,7 +1558,7 @@
    ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
   (dolist (slotSpec slotSpecs) (the Symbol slotSpec))
   (let1 (superclass (findClass (opt? superclass? 'Obj) env))
-    (eval (list def name (%newClass name superclass)) env)) )
+    (eval (list 'def name (%newClass name superclass)) env)) )
 
 
 ;;; Objects

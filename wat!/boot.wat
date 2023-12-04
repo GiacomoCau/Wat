@@ -949,7 +949,8 @@
 (assert (check* '(a :prv 1)  2 3 Symbol (or (1) (2 (or () Inert :prv :rhs)))) 3)
 (assert (check* '(a 1)       2 3 Symbol (or (1) (2 (or () Inert :prv :rhs)))) 2)
 
-(defVau check? args env (catchWth #f (apply check args env) #t))
+(defVau check? args env
+  (catchWth #f (apply check args env) #t) )
 
 (defMacro (the+ ck obj) (list 'let1 (list 'obj obj) (list 'check 'obj ck) 'obj))
 
@@ -995,6 +996,7 @@
             (eval forms env)
             (returnFrom exit #inert))))))
 
+#| TODO sostituito dal seguente, eliminare
 (defVau while (testForm . forms) env
   (let ((forms (list* 'begin forms))
         (break (list #null))
@@ -1008,6 +1010,7 @@
           (if (eval testForm env)
             (eval forms env)
             (throwTag break) ))))))
+|#
 
 (def %loop
   (let ( (%loop %loop)
@@ -1067,8 +1070,8 @@
 (defMacro (++ n)
   (list 'set! n :rhs (list '+ n 1)) )
 
-(loop (breakValue 3))
-(loop (loop (breakValue -1 3)))
+(loop (break/v 3))
+(loop (loop (break/v -1 3)))
 (loop for ((i 0 (++ i)) (y 0 (-- y))) (while (< i 3)) (log i y))
 (loop for ((i 0 (++ i))) (while (< i 3)) (log "x" i) (loop for ((y 0 (++ y))) (if (> y 3) (break)) (log "y" y) ))
 (loop for1 (i 0 (++ i)) (log i) (break) )
