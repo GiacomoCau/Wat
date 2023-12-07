@@ -1296,14 +1296,23 @@ public class Vm {
 		}
 		else if (chk instanceof List chkl) {
 			if (chkl.car instanceof Object[] chks && chkl.cdr() == null) return checkO(o, chks);
-			/* TODO possibile estensione test per and (si perde il simbolo dell'operatore risolvendolo in anticipo)
-			if (chkl.car instanceof Apv apv) {
-				switch (getTco(combine(env(), apv, list(o, chkl.car(1))))) {
+			if (Utility.equals(chkl.car, comparators)) {
+				switch (getTco(combine(env(), chkl.car(1), list(o, chkl.car(2))))) {
 					case Boolean b when b: return 0;
 					case Object obj: throw new TypeException("not a {expected}: {datum}", o, toChk(chkl));
 				}
 			}
-			*/
+			if (Utility.equals(chkl.car, symbol("and"))) {
+				for (var chka = chkl.cdr(); chka != null; chka = chka.cdr()) {
+					try {
+						checkO(o, chka.car());
+					}
+					catch (Throwable thw) {
+						throw new TypeException("not a {expected}: {datum}", o, toChk(chkl));
+					}
+				}
+				return 0;
+			}
 			if (o != null && !(o instanceof List)) throw new TypeException("not a {expected}: {datum}", o, toChk(or(null, List.class)));
 			var ol = (List) o;
 			int min=0, max=more;
@@ -1323,7 +1332,7 @@ public class Vm {
 		return chk instanceof Class cl ? symbol(cl.getSimpleName())
 			 : chk instanceof Integer i && i == more ? symbol("+")
 			 : chk instanceof Object[] a ? cons(symbol("or"), list(stream(a).map(o-> toChk(o)).toArray()))
-			 : chk instanceof List l ? map(o-> toChk(o), l) 
+			 : chk instanceof List l ? map(o-> toChk(o), Utility.equals(l.car, comparators) ? cons(l.car, l.cdr(1)) : l )
 			 : chk
 		;
 	}
@@ -1510,6 +1519,7 @@ public class Vm {
 	<T extends Intern> T intern(String name) {
 		return (T) interns.computeIfAbsent(name, n-> n.startsWith(":") && n.length() > 1 ? new Keyword(n.substring(1)) : new Symbol(n));
 	}
+	Object[] comparators = $(symbol("<"), symbol("<="), symbol(">="), symbol(">"));
 	
 	Object toLispExpr(Object o) {
 		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore", "#_"-> ignore; case "#!"-> sheBang; default-> intern(intStr ? s.intern() : s); };

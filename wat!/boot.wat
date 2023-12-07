@@ -632,7 +632,7 @@
 (def\ (!member? key lst)
   (null? (member key lst)) )
 
-#| TODO per omogeneità con lispx, valutare
+#| TODO per omogeneitï¿½ con lispx, valutare
 (def\ (member key lst . keywords)
   (let ( (test (opt? (get? :test keywords) ==))
          (fkey (opt? (get? :fkey keywords) identity)) )
@@ -700,8 +700,8 @@
 
 (def matchObj? %matchObj?)
 
-(def\ (matchObj*? obj . class&slots) 
-  (matchObj? obj class&slots) )
+(def\ (matchObj*? obj class . slots) 
+  (matchObj? obj (cons class slots)) )
 
 (assert (caseType 2.0 (else 3)) 3)
 (assert (caseType (+ 2 2) (else => (\(v) v))) 4)
@@ -846,7 +846,7 @@
 (def the
   %the)
 
-#| TODO non più necessari, sostituiti da #!, eliminare
+#| TODO non piï¿½ necessari, sostituiti da #!, eliminare
 (defMacro (the\ parms . body)
   (let1rec\
     ( (parms->names.checks ps)
@@ -895,7 +895,7 @@
 
 ; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (cons 'list xs) env)
 
-#| TODO sostituiti dal seguente, eliminare
+#| TODO definito in vm, eliminare
 (def %check
   (let1 (%check %check)
     (vau (o ck) env
@@ -920,7 +920,6 @@
             ((or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck))
             (else (map (\ (ck) (ev ck)) ck)) ))
         (%check o (ev ck)) ))))
-|#
 
 (def %check
   (let1 (%check %check)
@@ -934,6 +933,7 @@
             (or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
             (map (\ (ck) (ev ck)) ck) ))
         (%check o (ev ck)) ))))
+|#
 
 (defVau (check o ck) env
   ((wrap %check) (eval o env) ck) )
@@ -960,7 +960,7 @@
 (assert (the+ (or 1 2) 2) 2)
 (assert (the+ (or 1 2) 3) Error :type 'type :datum 3 :expected '(or 1 2))
 
-; TODO non è più così costosa la conversione, si può fare
+; TODO non ï¿½ piï¿½ cosï¿½ costosa la conversione, si puï¿½ fare
 ; (def the the+)
 
 
@@ -1266,7 +1266,7 @@
 
 ;;; Dynamic Binding
 
-#| TODO primitiva non più necessaria, eliminare
+#| TODO primitiva non piï¿½ necessaria, eliminare
 (def %d\
   (vau (var* . body) #ignore
     (wrau val* env
@@ -1552,20 +1552,20 @@
 (defMethod elt ((seq List) index)
   (nth index seq))
 
-(defGeneric subSeq (sequence start . end?)
+(defGeneric subSeq (sequence start . end)
   #|Create a sequence that is a copy of the subsequence
    |of the SEQUENCE bounded by START and optional END?.  If END?  is not
    |supplied or void, the subsequence stretches until the end of the list
    |#)
 
-(defMethod subSeq ((seq List) start . end?)
-  (%subList seq start (opt? end? #inert)))
+(defMethod subSeq ((seq List) start . end)
+  (apply** %subList seq start end))
 
-(defMethod subSeq ((seq Null) start . end?)
-  (%subList seq start (opt? end? #inert)))
+(defMethod subSeq ((seq Null) start . end)
+  (apply** %subList seq start end))
 
-(defMethod subSeq ((seq String) start . end?)
-  (%subString seq start (opt? end? #inert)))
+(defMethod subSeq ((seq String) start . end)
+  (apply** %subString seq start end))
 
 
 ;;; Coroutines
@@ -1626,7 +1626,7 @@
 (defMacro fiber body
   (list* pushPrompt 'fiberPrompt body))
 
-#| TODO non più necessarie, eliminare
+#| TODO non piï¿½ necessarie, eliminare
 (def\ runFiber (thunk)
   (let1 run (result (fiber (thunk)))
     (if (type? result YieldRecord)

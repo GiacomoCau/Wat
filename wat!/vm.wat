@@ -60,27 +60,35 @@
 (%def %inert? (%\ (v) (%== v #inert)))
 (%def %ignore? (%\ (v) (%== v #ignore)))
 
-(%def %nth (%\ (i l) (%the Integer i) (@car (%the Cons l) i)))
-(%def %nthCdr (%\ (i l) (%the Integer i) (%if (%zero? i) l (@cdr (%the Cons l) (%- i 1)))))
-;le seguenti controllano prima i tipi e poi la lunghezza!
-;(%def %nth (%\ ([#! Integer i] [#! (or () Cons) l]) (@car l i)))
-;(%def %nthCdr (%\ ([#! Integer i] [#! (or () Cons) l]) (%if (%zero? i) l (@cdr l (%- i 1)))))
-
+(%def %nth
+  (%\ ([#! (and Integer (>= 0)) i] [#! (or () Cons) lst])
+    (%if (%!null? lst) (@car lst i)
+      (error (%new Error "cannot get car" :type 'outOfBounds))) ))
+(%def %nthCdr
+  (%\ ([#! (and Integer (>= 0)) i] [#! (or () Cons) lst])
+    (%if (%zero? i) lst
+      (%if (%!null? lst) (@cdr lst (%- i 1))
+        (error (%new Error "cannot get cdr" :type 'outOfBounds)) ))))
 (%def %take
-  (%\ (i l)
+  (%\ ([#! (and Integer (>= 0)) i] [#! (or () Cons) lst])
     (%if (%zero? i) #null
-      (%if (%cons? l) (%cons (%car l) (%take (%- i 1) (%cdr l)))
-        (error (new Error "cannot take" :type 'outOfBounds)) ))))
-(%def %subList (%\ (l [#! Integer s] [#! (or #inert Integer) e]) (%def tail (%nthCdr s l)) (%if (%inert? e) tail (%take (%- e s) tail))))
+      (%if (%cons? lst) (%cons (%car lst) (%take (%- i 1) (%cdr lst)))
+        (error (%new Error "cannot take" :type 'outOfBounds)) ))))
+(%def %subList
+  (%\ ([#! (or () Cons) lst] [#! (and Integer (>= 0)) start] . [#! (or () (1 (and Integer (>= 0)))) end])
+    (%def tail (%nthCdr start lst))
+    (%if (%null? end) tail
+      (%take (%- (car end) start) tail) )))    
 (%def %subString
-  (%\ ([#! String str] [#! Integer start] [#! (or #inert Integer) end])
+  (%\ ([#! String str] [#! (and Integer (>= 0)) start] . [#! (or () (1 (and Integer (>= 0)))) end])
     (%catchTagWth #ignore 
       (%\ (thw)
         (%error 
           (%if (%type? (@getCause thw) &java.lang.StringIndexOutOfBoundsException)
-            (new Error "cannot subString" thw :type 'outOfBounds)
+            (%new Error "cannot subString" thw :type 'outOfBounds)
             thw )))
-      (%if (%inert? end) (@substring str start) (@substring str start end)) )))      
+      (apply** @substring str start end)  )))
+
 
 ;(%def %pushPrompt ((%\ (%pushPrompt) (%wrap %pushPrompt)) %pushPrompt))
 
@@ -91,8 +99,12 @@
 (%def %setSlot (%\ (obj slot value) ((%the Obj obj) (%the Intern slot) value) ))
 (%def %slotBound? (%\ (obj slot) (@isBound (%the Obj obj) (%the Intern slot)) ))
 
-(%def makeCheckEvl
+(%def %makeCheckEvl
   (%\ (check)
+    (%def %=*
+      (%vau (key . lst) env
+        (%def key (%eval key env))
+        ((%def loop :rhs (%\ (lst) (%if (%null? lst) #f (%if (%== (%car lst) key) #t (loop (%cdr lst)))))) lst)) )
     (%vau (o ck) env
       (%def evl
         (%\ (ck)
@@ -100,15 +112,16 @@
             (%if (%! (%cons? ck)) (%eval ck env)
             ( (%\ (ckcar)
                 (%if (%== ckcar 'or) (%list->array (evl (%cdr ck)))
-                  (%if (%== ckcar '%') (cadr ck)
-                    (%if (%== ckcar 'quote) (%cadr ck)
-                      (evm ck) ))))
+                  (%if (%=* ckcar %' quote) (%cadr ck)
+                    (%if (%=* ckcar < <= >= >) (%cons ckcar (%cons (%eval ckcar env) (evl (%cdr ck))))
+                      (%if (%== ckcar 'and) (cons 'and (evl (%cdr ck)))
+                        (evm ck) )))))
               (%car ck) ) ))))
       (%def evm (%\ (lst) (%if (%null? lst) #null (%cons (evl (%car lst)) (evm (%cdr lst))))))
       (check o (evl ck)) )))
-    
-;(%def %check (makeCheckEvl %check))
-(%def %checkO (makeCheckEvl %checkO))
+
+(%def %check (%makeCheckEvl %check))
+(%def %checkO (%makeCheckEvl %checkO))
 
 
 ;;; Boot

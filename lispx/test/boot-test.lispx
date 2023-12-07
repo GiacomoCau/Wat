@@ -1793,22 +1793,22 @@
   (deftest nth.2
     (signalsError?
      (nth '())
-     Error :type 'match :operands# +1))
+     Error :type 'type :datum () :expected '(and Integer (>= 0))))
 
   (deftest nth.3
     (signalsError?
      (nth #t '(1 2))
-     Error :type 'type :datum #t :expected 'Integer))
+     Error :type 'type :datum #t :expected '(and Integer (>= 0))))
 
   (deftest nth.3a
     (signalsError?
      (nth 1 '())
-     Error :type 'type :datum '() :expected 'Cons))
+     Error :type 'outOfBounds))
 
   (deftest nth.4
     (signalsError?
      (nth 0 "foo")
-     Error :type 'type :datum "foo" :expected 'Cons))
+     Error :type 'type :datum "foo" :expected '(or () Cons)))
 
   (deftest nth.5
     (nth 0 '(1 2))
@@ -1926,12 +1926,12 @@
   (deftest nthCdr.3
     (signalsError?
      (nthCdr "foo" '())
-     Error :type 'type :datum "foo" :expected 'Integer))
+     Error :type 'type :datum "foo" :expected '(and Integer (>= 0))))
 
   (deftest nthCdr.4
     (signalsError?
      (nthCdr 12 "foo")
-     Error :type 'type :datum "foo" :expected 'Cons))
+     Error :type 'type :datum "foo" :expected '(or () Cons)))
 
   (deftest nthCdr.5
     (nthCdr 0 '())
@@ -1940,7 +1940,7 @@
   (deftest nthCdr.6
     (signalsError?
      (nthCdr 1 '())
-     Error :type 'type :datum () :expected 'Cons))
+     Error :type 'outOfBounds))
 
   (deftest nthCdr.7
     (signalsError?
@@ -1995,17 +1995,17 @@
   (deftest listSubseq.4
     (signalsError?
      (subSeq '() "a" 2)
-     Error :type 'type :datum "a" :expected 'Integer))
+     Error :type 'type :datum "a" :expected '(and Integer (>= 0))))
 
   (deftest listSubseq.5
     (signalsError?
      (subSeq '() 1 "b")
-     Error :type 'type :datum "b" :expected '(or #inert Integer)))
+     Error :type 'type :datum '("b") :expected '(or () (1 (and Integer (>= 0))))))
 
   (deftest listSubseq.6
     (signalsError?
      (subSeq '() 1)
-     Error :type 'type :datum () :expected 'Cons))
+     Error :type 'outOfBounds))
 
   (deftest listSubseq.7
     (signalsError?
@@ -2021,7 +2021,7 @@
     '())
 
   (deftest listSubseq.10
-    (subSeq '() 0 #inert)
+    (subSeq '() 0)
     '())
 
   (deftest listSubseq.11
@@ -2029,7 +2029,7 @@
     '(1 2 3))
 
   (deftest listSubseq.12
-    (subSeq '(1 2 3) 0 #inert)
+    (subSeq '(1 2 3) 0)
     '(1 2 3))
 
   (deftest listSubseq.13
@@ -2068,12 +2068,12 @@
   (deftest stringSubseq.4
     (signalsError?
      (subSeq "" "a" 2)
-     Error :type 'type :datum "a" :expected 'Integer))
+     Error :type 'type :datum "a" :expected '(and Integer (>= 0))))
 
   (deftest stringSubseq.5
     (signalsError?
      (subSeq "foo" 1 "b")
-     Error :type 'type :datum "b" :expected '(or #inert Integer)))
+     Error :type 'type :datum '("b") :expected '(or () (1 (and Integer (>= 0))))))
 
   (deftest stringSubseq.6
     (signalsError?
@@ -2094,12 +2094,12 @@
     "")
 
   (deftest stringSubseq.10
-    (subSeq "" 0 #inert)
+    (subSeq "" 0)
     "")
 
   (deftest stringSubseq.10.1
     (signalsError?
-     (subSeq "" 1 #inert)
+     (subSeq "" 1)
      Error :type 'outOfBounds))
 
   (deftest stringSubseq.11
@@ -2107,7 +2107,7 @@
     "123")
 
   (deftest stringSubseq.12
-    (subSeq "123" 0 #inert)
+    (subSeq "123" 0)
     "123")
 
   (deftest stringSubseq.13
