@@ -1391,7 +1391,7 @@
   (deftest newEnv.3
     (signalsError?
      (newEnv 12)
-     Error :type 'type :datum (12) :expected '(or () (1 + (or () Env) (or Symbol Keyword String) Any)))))
+     Error :type 'type :datum (12) :expected '(or () (2 (or () Env) Obj) (1 + (or () Env) (or Symbol Keyword String) Any)))))
 
 (defsuite cxxr
 

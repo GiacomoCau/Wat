@@ -336,6 +336,10 @@ public class Vm {
 	}
 	class Env implements ArgsList, ObjEnv {
 		Env parent; LinkedHashMap<String,Object> map = new LinkedHashMap();
+		Env(Env parent, Obj obj) {
+			this.parent = parent;
+			map = obj.map;
+		}
 		Env(Env parent, Object ... objs) {
 			this.parent = parent;
 			if (objs == null) return;
@@ -420,6 +424,7 @@ public class Vm {
 		}
 	}
 	Env env() { return env(null); }
+	Env env(Env env, Obj obj) { return new Env(env, obj); }
 	Env env(Env env, Object ... objs) { return new Env(env, objs); }
 	
 	
@@ -450,7 +455,7 @@ public class Vm {
 	}
 	public class Obj extends RuntimeException implements ArgsList, ObjEnv {
 		private static final long serialVersionUID = 1L;
-		Map<String,Object> map = new LinkedHashMap();
+		LinkedHashMap<String,Object> map = new LinkedHashMap();
 		public Obj(Object ... objs) { puts(objs); }
 		public Obj(String msg, Object ... objs) { super(msg); puts(objs); }
 		public Obj(Throwable t, Object ... objs) { super(t); puts(objs); }
@@ -1597,8 +1602,8 @@ public class Vm {
 				"%apply*", wrap(new JFun("%Apply*", (ArgsList) o-> combine(env(), unwrap(o.car()), o.cdr()) )),
 				"%apply**", wrap(new JFun("%Apply**", (ArgsList) o-> combine(env(), unwrap(o.car()), (List) listStar(o.cdr())) )),
 				// Env
-				"%newVmEnv", wrap(new JFun("%NewVmEnv", (n,o)-> checkN(n, o, 0), (l,o)-> vmEnv() )),
-				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, or(null, list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class, String.class), Any.class))), (l,o)-> l==0 ? env() : env(o.car(), array(o.cdr())) )),
+				"%vmEnv", wrap(new JFun("%VmEnv", (n,o)-> checkN(n, o, 0), (l,o)-> vmEnv() )),
+				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, or(null, list(2, or(null, Env.class), Obj.class), list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class, String.class), Any.class))), (l,o)-> l==0 ? env() : l==2 ? env(o.car(), o.<Obj>car(1)) : env(o.car(), array(o.cdr())) )),
 				"%bind", wrap(new JFun("%Bind", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> bind(true, 0, o.<Env>car(), o.car(1), o.car(2)) )),
  				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (InnerException ie) { return false; }} )),
 				"%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } )),

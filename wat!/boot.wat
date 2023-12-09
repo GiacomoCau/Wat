@@ -1373,14 +1373,14 @@
   (if (cons? (car args))
     (def ((name receiver . parameters) . properties) args)
     (def (name (receiver . parameters) . properties) args) )
-  (def\ generic args (apply (%getMethod (classOf (car args)) name) args))
-  (eval (list 'def name generic) env) )
+  (let1\ (generic args ((%getMethod (classOf (car args)) name) args))
+    (eval (list 'def name generic) env) ))
 
 (defVau (defMethod . args) env
   (if (cons? (car args))
     (def ((name (receiver class) . parameters) . forms) args)
     (def (name ((receiver class) . parameters) . forms) args) )
-  (def method (eval (list* '\ (cons receiver parameters) forms) env))
+  (def method (\ (args) (apply (eval (list* '\ (cons receiver parameters) forms) (let1 (receiver (car args)) (if (type? receiver Obj) (newEnv env receiver) env)) ) args)))  
   (def prv (%addMethod (eval class env) name method))
   (case (bndRes) ((#inert) #inert) ((:rhs) method) ((:prv) prv)) )
 
@@ -1403,7 +1403,10 @@
     (assert (g1 bar 2) 7)
     (assert (g1 bar (* 2 (bar :b))) 15)
     (assert (bar :prv :b 6) 5)
-    (assert (bar :b) 6) )
+    (assert (bar :b) 6)
+
+	(defMethod (g1 (bar Bar) p) (+ p (+ a b)))
+	(assert (g1 bar 3) 10) )
   #t )
 
 

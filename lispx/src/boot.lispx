@@ -1604,7 +1604,7 @@
   (if (cons? (car args))
     (def ((name receiver . parameters) . properties) args)
     (def (name (receiver . parameters) . properties) args) )
-  (let1\ (generic args (apply (%getMethod (classOf (car args)) name) args))
+  (let1\ (generic args ((%getMethod (classOf (car args)) name) args))
     (eval (list 'def name generic) env) ))
 
 (defVau (defMethod . args) env
@@ -1614,9 +1614,9 @@
   (if (cons? (car args))
     (def ((name (receiver class) . parameters) . forms) args)
     (def (name ((receiver class) . parameters) . forms) args) )
-  (let1 (method (eval (list* '\ (cons receiver parameters) forms) env))
-    (def prv (%addMethod (findClass class env) name method))
-    (case (bndRes) ((#inert) #inert) ((:rhs) method) ((:prv) prv)) ))
+  (def method (\ (args) (apply (eval (list* '\ (cons receiver parameters) forms) (let1 (receiver (car args)) (if (type? receiver Obj) (newEnv env receiver) env)) ) args)))  
+  (def prv (%addMethod (eval class env) name method))
+  (case (bndRes) ((#inert) #inert) ((:rhs) method) ((:prv) prv)) )
 
 
 ;;; Modules
