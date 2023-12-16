@@ -140,19 +140,23 @@ public class Vm {
 	int prTrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
 	int typeT = 0; // type true: 0:true, 1:!false, 2:!(or false null), 3:!(or false null inert), 4:!(or false null inert zero)
 	int prEnv = 3; // print environment
-	int bndRes = 0; // bind result: 0:inert 1:rhs 2:prev
-	private Object bndRes(Object o) {
-		return switch (o) {
-			case null-> bndRes;
-			case Inert i-> 0; 
-			case Keyword k-> switch (k.name) {
-				case "rhs"-> 1;
-				case "prv"-> 2;
-				case "obj"-> 3;
-				default-> typeError("cannot determine bndRes, not {expected}: {datum}", k, toChk(or(keyword(":rhs"), keyword(":prv"), keyword(":obj"))));
+	int bndRes = 0; // bind result: 0:inert 1:rhs 2:prv
+	private Object bndRes(Object o, boolean obj) {
+		switch (o) {
+			case Inert i: return 0; 
+			case Ignore i: return bndRes;
+			case Keyword k: switch (k.name) {
+				case "rhs": return 1;
+				case "prv": return 2;
+				case "obj": if (obj) return 3;
 			};
-			default-> typeError("cannot determine bndRes, not {expected}: {datum}", o, toChk(or(null, inert, keyword(":rhs"), keyword(":prv"), keyword(":obj"))));
-		};
+			default: return typeError("cannot determine bndRes, not {expected}: {datum}", o,
+				toChk(obj
+					? or(inert, ignore, keyword(":rhs"), keyword(":prv"), keyword(":obj"))
+					: or(inert, ignore, keyword(":rhs"), keyword(":prv"))
+				)
+			);
+		}
 	}
 	
 	
@@ -405,10 +409,10 @@ public class Vm {
 				default-> {
 					BiFunction f =	o.car == keyword(":def") ? (k,v)-> def(k,v) : o.car == keyword(":set") ? (k,v)-> set(k,v) : null;
 					if (f == null) f = (BiFunction) (k,v)-> def(k,v); else { len-=1; o=o.cdr();  }
-					var bndRes = len % 2 == 0 ? null : first(o.car(), len-=1, o=o.cdr());
+					var bndRes = len % 2 == 0 ? ignore : first(o.car(), len-=1, o=o.cdr());
 					for (; len>2; len-=2, o=o.cdr(1)) f.apply(toKey(o.car()), o.car(1));
 					var key = toKey(o.car());
-					yield switch (bndRes(bndRes)) {
+					yield switch (bndRes(bndRes, true)) {
 						case Suspension s-> s;
 						case Integer i-> switch(i) {
 							case 0-> inert(f.apply(key, o.car(1)));
@@ -438,7 +442,7 @@ public class Vm {
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			return switch (len) {
 				case 0-> value;
-				default-> switch (bndRes(len != 2 ? null : o.car())) {
+				default-> switch (bndRes(len != 2 ? ignore : o.car(), true)) {
 					case Suspension s-> s;
 					case Integer i-> switch(i) {
 						case 0-> inert(value = o.car(len-1));
@@ -496,10 +500,10 @@ public class Vm {
 			var len = len(o);
 			if (len == 0) return this;
 			if (len == 1) return get(o.car);
-			var bndRes = len % 2 == 0 ? null : first(o.car(), len-=1, o=o.cdr());
+			var bndRes = len % 2 == 0 ? ignore : first(o.car(), len-=1, o=o.cdr());
 			for (; len>2; len-=2, o=o.cdr(1)) map.put(toKey(o.car()), o.car(1));
 			var key = toKey(o.car());
-			return switch (bndRes(bndRes)) {
+			return switch (bndRes(bndRes, true)) {
 				case Suspension s-> s;
 				case Integer i-> switch(i) {
 					case 0-> inert(map.put(key, o.car(1)));
@@ -772,7 +776,7 @@ public class Vm {
 			if (pt instanceof Cons) { var msg = checkPt(cons(this, o), pt); if (msg != null) return msg; }
 			var dbg = dbg(e, this, o);
 			return pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> 
-				switch (bndRes(len != 3 ? null : o.car(1))) {
+				switch (bndRes(len != 3 ? ignore : o.car(1), false)) {
 					case Suspension s-> s;
 					case Integer i-> i >= 0 && i <= 2
 						? bind(dbg, def, i, e, pt, res)
@@ -933,7 +937,7 @@ public class Vm {
 	// Delimited Control
 	class TakeSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkM(this, o, 2, Any.class, or(ignore, Symbol.class)); // o = (prp (or ignore symbol) . body)
+			var chk = checkM(this, o, 2, Any.class, or(ignore, Symbol.class)); // o = (prp (or ignore symbol)) . body)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, o.car())),
@@ -1841,9 +1845,9 @@ public class Vm {
 	}
 	public void main() throws Exception {
 		var milli = currentTimeMillis();
-		loadText("boot.lsp");
+		var res = loadText("boot.lsp");
 		print("start time: " + (currentTimeMillis() - milli));
-		print("(load \"boot.lsp\")(load \"wat!/vm.wat\")(load \"lispx/vm.lispx\")");
+		if (res != ignore) print(res);
 		repl();
 	}
 }
