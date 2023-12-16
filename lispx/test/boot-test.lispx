@@ -114,31 +114,6 @@
             (continue (\ (value) (* value 2)))))))
     120000))
 
-(defsuite assertType
-
-  (deftest assertType.1
-    (assertType #t Boolean))
-
-  (deftest assertType.2
-    (signalsError?
-     (assertType #t String)
-    Error :type 'type :datum #t :expected 'String))
-
-  (deftest assertType.3
-    (signalsError?
-     (assertType #t #f)
-     Error :type 'type :datum #f :expected '(or () Class)))
-
-  (deftest assertType.4
-    (signalsError?
-     (assertType)
-     Error :type 'match))
-
-  (deftest assertType.5
-    (signalsError?
-     (assertType #t)
-     Error :type 'match)))
-
 (defsuite the
 
   (deftest the.1

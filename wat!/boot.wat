@@ -77,6 +77,10 @@
   %cons)
 (def cons?
   %cons?)
+
+(def className
+  %className)
+
 (def classOf
   %classOf)
 
@@ -632,7 +636,7 @@
 (def\ (!member? key lst)
   (null? (member key lst)) )
 
-#| TODO per omogeneit� con lispx, valutare
+#| TODO per omogeneità con lispx, da valutare
 (def\ (member key lst . keywords)
   (let ( (test (opt? (get? :test keywords) ==))
          (fkey (opt? (get? :fkey keywords) identity)) )
@@ -788,10 +792,6 @@
 (assert (caseOpt? '(1 2 3) ((a) 1) ((a b) (+ a b))) #null)
 
 (defMacro (opt? exp . dft)
-  #|Return the contents of the OPTION?, or the DEFAULT? if the option
-   |is nil.  The default itself defaults to void.  The DEFAULT? is
-   |evaluated lazily, only when the OPTION? is nil.
-   |#
   (list* ifOpt? (list 'exp exp) 'exp dft))
 
 (assert (opt? () 10) 10)
@@ -799,10 +799,6 @@
 (assert (opt? '(2 3) 10))
 
 (defVau opt*? (lst . dft) env
-  #|Similar to `opt', but provides DEFAULTS for any number of
-   |elements of LIST.  This is useful for implementing functions that take
-   |multiple opt? arguments.  Each default is evaluated lazily, only when needed.
-   |#
   (let loop ((lst (eval lst env)) (dft dft))
     (if (null? lst)
       (if (null? dft) #null
@@ -817,14 +813,7 @@
 (assert (opt*? '(1 () 3) 1 2 3 4) '(1 2 3 4))
 
 (def\ getOpt? (option?)
-  #|Returns the contents of the OPTION? or signals an error if it is nil.
-   |#
   (opt? option? (simpleError "Option is nil")))
-
-(defVau (defOpt? pt exp) env
-  (def exp (eval exp env))
-  (unless (null? exp)
-    (eval (list 'def pt exp) env) ))
 
 
 ;;; Type Checks
@@ -838,15 +827,10 @@
 (def\ typeError (datum expected)
   (error (makeTypeError datum expected)) )
 
-#| TODO sostituito dal seguente
-(defMacro (the type obj)
-  (list 'if (list 'type? obj type) obj (list 'error (list '$ obj " is not a: " type))) )
-|#
-
 (def the
   %the)
 
-#| TODO non pi� necessari, sostituiti da #!, eliminare
+#| TODO non più necessari, sostituiti da #!, eliminare
 (defMacro (the\ parms . body)
   (let1rec\
     ( (parms->names.checks ps)
@@ -960,7 +944,7 @@
 (assert (the+ (or 1 2) 2) 2)
 (assert (the+ (or 1 2) 3) Error :type 'type :datum 3 :expected '(or 1 2))
 
-; TODO non � pi� cos� costosa la conversione, si pu� fare
+; TODO non è più così costosa la conversione, si può fare
 ; (def the the+)
 
 
@@ -1266,7 +1250,7 @@
 
 ;;; Dynamic Binding
 
-#| TODO primitiva non pi� necessaria, eliminare
+#| TODO primitiva non più necessaria, eliminare
 (def %d\
   (vau (var* . body) #ignore
     (wrau val* env
@@ -1340,26 +1324,25 @@
 (def\ findClass (name env)
   (eval (the Symbol name) env))
 
-(defMacro defClass (name . superClass #|slotSpecs . properties|#)
-  (list 'def name (list* '%newClass (list 'quote name) superClass?)))
-
-(defVau defClass (name superclass? slotSpecs . properties) env
-   ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
-  (dolist (slotSpec slotSpecs) (the Symbol slotSpec))
-  (let1 (superclass (findClass (opt? superclass? 'Obj) env))
-    (eval (list 'def name (%newClass name superclass)) env)) )
-
-#|
-(defVau defClass (name superclass? (#! (Symbol) slotSpecs) . properties) env
+(defVau defClass (name (#! (or () (1 Symbol)) superClass?) (#! (Symbol) slotSpecs) . properties) env
   ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
-  (let1 (superclass (findClass (opt? superclass? 'Obj) env))
-    (eval (list 'def name (%newClass name superclass)) env)) )
-|#
+  (let1 (superClass (findClass (opt? superClass? 'Obj) env))
+    (eval (list 'def name (%newClass name superClass)) env)) )
+
 
 ;;; Objects
 
 (def new
   %new)
+
+(def\ getSlot (object slotName)
+  (%getSlot object slotName))
+
+(def\ setSlot (object slotName value)
+  (%setSlot object slotName value))
+
+(def\ slotBound? (object slotName)
+  (%slotBound? object slotName))
 
 (defMacro (defObj name class . attr)
   (list 'def name (list* 'new class attr)) )
@@ -1405,8 +1388,8 @@
     (assert (bar :prv :b 6) 5)
     (assert (bar :b) 6)
 
-	(defMethod (g1 (bar Bar) p) (+ p (+ a b)))
-	(assert (g1 bar 3) 10) )
+	(defMethod (g1 (bar Bar) p) (* p (+ a b)))
+	(assert (g1 bar 3) 21) )
   #t )
 
 
@@ -1541,7 +1524,7 @@
 ;;; Sequences
 
 (defGeneric length (sequence)
-  #|Return the number of elements in a sequence.|#)
+  )
 
 (defMethod length ((seq List))
   (%len seq))
@@ -1550,16 +1533,13 @@
   (%len seq))
 
 (defGeneric elt (sequence index)
-  #|Return the sequence element at the specified index.|#)
+  )
 
 (defMethod elt ((seq List) index)
   (nth index seq))
 
 (defGeneric subSeq (sequence start . end)
-  #|Create a sequence that is a copy of the subsequence
-   |of the SEQUENCE bounded by START and optional END?.  If END?  is not
-   |supplied or void, the subsequence stretches until the end of the list
-   |#)
+  )
 
 (defMethod subSeq ((seq List) start . end)
   (apply** %subList seq start end))
@@ -1574,27 +1554,15 @@
 ;;; Coroutines
 
 (defConstant coroutinePrompt
-  #|This prompt is used for general coroutine-like use of continuations.
-   |#
   'coroutine-prompt)
 
 (defMacro coroutine forms
-  #|Evaluate the FORMS in a context in which `yield' can be used to pause execution.
-   |#
   (list* 'pushPrompt 'coroutinePrompt forms))
 
 (defMacro yield (name . forms)
-  #|Pause the current coroutine.  In the place where the enclosing
-   |`coroutine' (or `resume') was called, evaluate the FORMS with NAME
-   |bound to the paused coroutine.  `resume' can later be used to restart
-   |execution inside the coroutine.
-   |#
   (list* 'takeSubcont 'coroutinePrompt name forms))
 
 (defMacro resume (k . forms)
-  #|Resume the paused coroutine K and evaluate FORMS in the place where
-   |`yield' was called in the coroutine.
-   |#
   (list* 'pushDelimSubcont 'coroutinePrompt k forms))
 
 
@@ -1629,21 +1597,6 @@
 (defMacro fiber body
   (list* pushPrompt 'fiberPrompt body))
 
-#| TODO non pi� necessarie, eliminare
-(def\ runFiber (thunk)
-  (let1 run (result (fiber (thunk)))
-    (if (type? result YieldRecord)
-        (cons (result 'value) (run (fiberResume result)))
-        (list result))))
-
-(def\ runFiberWithValues (thunk values)
-  (let run ((result (fiber (thunk))) (values values))
-    (if (type? result YieldRecord)
-        (cons (result 'value)
-              (run (fiberResume result (car values)) (cdr values)))
-        (list result))))
-|#
-
 (def\ runFiber* (thunk . values)
   (let run ((result (fiber (thunk))) (values values))
     (if (type? result YieldRecord)
@@ -1669,45 +1622,7 @@
 (assert (runFiberWithValues (\ () (fiberYield 1) (fiberYield 2)) '(#inert 3)) (1 2 3))
 (assert (runFiberWithValues (\ () (fiberYield 1) (fiberYield 2)) (#inert 3)) (1 2 3))
 
-(def runFiber runFiber*) 
-
-
-#| TODO da rivedere
-(defVau (object . pairs) env
-  (let ((obj (%jsMakeObject)))
-    (map (\ ((name value))
-                (set ((jsGetter (eval name env)) obj) (eval value env)))
-              pairs)
-    obj))
-
-(def\ (elt object key)
-  ((jsGetter key) object))
-
-(defMacro (set (getter . args) new-val)
-  (list* (list 'setter getter) new-val args))
-
-(set (setter elt)
-  (the\ (newVal object key)
-    (set ((jsGetter key) object) newVal) ))
-
-(def\ (jsCallback fun)
-  (%jsFunction (\ args (pushPrompt rootPrompt (apply fun args)))) )
-
-(defMacro (jsLambda parms . body)
-  (list 'jsCallback (list* 'the\ parms body)))
-
-(def\ (log x . xs)
-  (apply @log (list* &console x xs))
-  x)
-
-(defPrototype Cell Object (value))
-
-(define (cell value) (new Cell value))
-
-(define (ref (c Cell)) (.value c))
-
-(set (setter ref) (the\ (newVal (c Cell)) (set (.value c) newVal)))
-|#
+(def runFiber runFiber*)
 
 
 ;;;; Auto Increment/Decrement and Assignement Operator

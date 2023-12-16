@@ -973,6 +973,7 @@
 (def\ (matchObj*? obj class . slots) 
   (matchObj? obj (cons class slots)) )
 
+
 ;;; Options
 
 ;; An option is either nil ("none"), or a one-element list ("some").
@@ -1081,24 +1082,6 @@
    |#
   (error (makeTypeError datum expected)) )
 
-;; TODO non pi� necessario se non per i test, eliminare
-(def\ assertType (object class)
-  #|Signal a `type-error' if the OBJECT is not an instance of the CLASS.
-   |#
-  (if (type? object class) object
-    (typeError object (className class)) ))
-
-#| TODO sostituito dal seguente
-(defVau the (className object) env
-  #|Shorthand for `assertType'.  Signal a `type-error' if the OBJECT
-   |is not an instance of the class named by CLASS-NAME.
-   |#
-  (assertType (eval object env) (eval (%the Symbol className) env)))
-
-(def\ the (class object)
-  (assertType object class) )
-|#
-
 (def the
   #|Signal a `type-error' if the OBJECT is not an instance of the CLASS, else return object.
    |$(fn (class object)
@@ -1106,7 +1089,7 @@
    |#
   %the)
 
-#| TODO non pi� necessari, sostituiti da #!, eliminare
+#| TODO non più necessari, sostituiti da #!, eliminare
 (defMacro (the\ parms . body)
   (let1rec\
     ( (parms->names.checks ps)
@@ -1195,22 +1178,15 @@
 (defMacro (check* o . cks)
     (list 'check o cks) )
 
-
 (defVau check? args env
   (catchTagWth 'check? #f
     (handlerBind ((Error (\ (#ignore) (throwTag 'check?))))
       (apply check args env)
       #t )))
 
-(defVau check? args env
-  (handlerCase ((Error (\ (#ignore) #f)))
-    (apply check args env)
-    #t ))
-
 (defMacro (the+ ck obj) (list 'let1 (list 'obj obj) (list 'check 'obj ck) 'obj))
 
-
-; TODO non � pi� cos� costosa la conversione, si pu� fare
+; TODO non è più così costosa la conversione, si può fare
 ; (def the the+)
 
 
@@ -1323,6 +1299,11 @@
 (def loop %loop)
 
 (defMacro (for ((#! Symbol var) init cond . incr) . body)
+  (list* 'loop 'for1 (list* var init incr)
+    (if (%ignore? cond) body
+      (cons (list 'while cond) body) )))
+
+(defMacro (for ((#! Symbol var) init . incr) cond . body)
   (list* 'loop 'for1 (list* var init incr)
     (if (%ignore? cond) body
       (cons (list 'while cond) body) )))
@@ -1463,7 +1444,7 @@
 
 ;;; Dynamic Binding
 
-#| TODO primitiva non pi� necessaria, eliminare
+#| TODO primitiva non più necessaria, eliminare
 (def %d\
   (vau (var* . body) #ignore
     (wrau val* env
@@ -1549,18 +1530,16 @@
    |#
   (eval (the Symbol name) env))
 
-(defVau defClass (name superclass? slotSpecs . properties) env
-  #|Define a new `StandardClass' with the given NAME, optional
-   |SUPERCLASS?, and SLOT-SPECS.  The superclass defaults to
-   |`standard-object'.  The SLOT-SPECS and PROPERTIES are currently
-   |ignored.
+(defVau defClass (name (#! (or () (1 Symbol)) superClass?) (#! (Symbol) slotSpecs) . properties) env
+  #|Define a new `StandardClass' with the given NAME, optional SUPERCLASS?, and SLOT-SPECS.
+   |The superclass defaults to `standard-object'.
+   |The SLOT-SPECS and PROPERTIES are currently ignored.
    |$(syntax slotSpec symbol)
    |$(syntax property (:documentation docstring))
    |#
-   ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
-  (dolist (slotSpec slotSpecs) (the Symbol slotSpec))
-  (let1 (superclass (findClass (opt? superclass? 'Obj) env))
-    (eval (list 'def name (%newClass name superclass)) env)) )
+  ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
+  (let1 (superClass (findClass (opt? superClass? 'Obj) env))
+    (eval (list 'def name (%newClass name superClass)) env)) )
 
 
 ;;; Objects
@@ -1786,7 +1765,9 @@
 ;;; Sequences
 
 (defGeneric length (sequence)
-  #|Return the number of elements in a sequence.|#)
+  #|Return the number of elements in a sequence.
+   |#
+  )
 
 (defMethod length ((seq List))
   (%len seq))
@@ -1795,7 +1776,9 @@
   (%len seq))
 
 (defGeneric elt (sequence index)
-  #|Return the sequence element at the specified index.|#)
+  #|Return the sequence element at the specified index.
+   |#
+  )
 
 (defMethod elt ((seq List) index)
   (nth index seq))
@@ -1804,7 +1787,8 @@
   #|Create a sequence that is a copy of the subsequence
    |of the SEQUENCE bounded by START and optional END?.  If END?  is not
    |supplied or void, the subsequence stretches until the end of the list
-   |#)
+   |#
+  )
 
 (defMethod subSeq ((seq List) start . end)
   (apply** %subList seq start end))
@@ -1886,28 +1870,10 @@
    |#
   (list* pushPrompt 'fiberPrompt body))
 
-#| TODO non pi� necessarie, eliminare
-(def\ runFiber (thunk)
-  #|Get all values yielded by a fiber, and its final result, and
-   |collect them in a list.
-   |#
-  (let1 run (result (fiber (thunk)))
-    (if (type? result YieldRecord)
-        (cons (result 'value) (run (fiberResume result)))
-        (list result))))
-
-(def\ runFiberWithValues (thunk values)
-  #|Like `runFiber' but uses a list of values that are sent to the
-   |fiber with `fiberResume'.
-   |#
-  (let run ((result (fiber (thunk))) (values values))
-    (if (type? result YieldRecord)
-        (cons (result 'value)
-              (run (fiberResume result (car values)) (cdr values)))
-        (list result))))
-|#
-
 (def\ runFiber* (thunk . values)
+  #|Get all values yielded by a fiber, and its final result, and collect them in a list.
+   |Uses the optional list of values to sent to the fiber with `fiberResume'.
+   |#
   (let run ((result (fiber (thunk))) (values values))
     (if (type? result YieldRecord)
       (cons (result 'value)
@@ -1916,23 +1882,11 @@
           (run (fiberResume result (car values)) (cdr values)) ))
       (list result) )))
 
-(assert (runFiber* (\ () (fiberYield 1) (fiberYield 2) 3)) '(1 2 3))
-
-(assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #t) '(1 2 #inert))
-(assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #t #_) '(1 2 #ignore))
-(assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #t 4) '(1 2 4))
-(assert (runFiber* (\ () (if (fiberYield 1) (fiberYield 2) 3)) #f) '(1 3))
-
-(assert (runFiber* (\ () ((\ (a b) (+ a b)) (fiberYield 1) (fiberYield 2)) ) 3 4) '(1 2 7))
-
 (defMacro (runFiberWithValues f args) (list 'eval (list 'list* 'runFiber* f args))) 
 (defMacro (runFiberWithValues f args) (list 'apply 'runFiber* (list 'list* f args))) 
 (defMacro (runFiberWithValues f args) (list 'apply** 'runFiber* f args)) 
 
-(assert (runFiberWithValues (\ () (fiberYield 1) (fiberYield 2)) '(#inert 3)) (1 2 3))
-(assert (runFiberWithValues (\ () (fiberYield 1) (fiberYield 2)) (#inert 3)) (1 2 3))
-
-(def runFiber runFiber*) 
+(def runFiber runFiber*)
 
 
 ;;;; Auto Increment/Decrement and Assignement Operator

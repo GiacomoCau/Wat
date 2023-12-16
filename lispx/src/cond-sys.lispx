@@ -182,16 +182,13 @@
 
 
 (def\ lispx::makeHandlerCaseOperator (handlerBindOperator)
-  #|Metaprogramming utility to create `handlerCase' / `restartCase'
-   |from `handlerBind' / `restartBind'.  The `*-case' operators unwind
-   |the stack before a handler is called.  We do this with an outer exit
-   |and an inner trampoline, both wrapped around the original `*-bind'
-   |operator.  The original form's handler functions are replaced with
-   |functions that use the trampoline.  If a condition is signalled / a
-   |restart is invoked during the evaluation of the body forms, they
-   |unwind the stack by jumping into the trampoline, and call the original
-   |handler function there.  If no condition is signalled / no restart is
-   |invoked, we return from the outer exit, ignoring the trampoline.
+  #|Metaprogramming utility to create `handlerCase' / `restartCase' from `handlerBind' / `restartBind'.
+   |The `*-case' operators unwind the stack before a handler is called.
+   |We do this with an outer exit and an inner trampoline, both wrapped around the original `*-bind' operator.
+   |The original form's handler functions are replaced with functions that use the trampoline.
+   |If a condition is signalled / a restart is invoked during the evaluation of the body forms,
+   |they unwind the stack by jumping into the trampoline, and call the original handler function there.
+   |If no condition is signalled / no restart is invoked, we return from the outer exit, ignoring the trampoline.
    |#
   (vau (handlerSpecs . forms) env
     (block exit
