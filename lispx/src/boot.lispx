@@ -555,14 +555,11 @@
 ;; These operators follow the API put forth in the delimcc library
 ;; at URL `http://okmij.org/ftp/continuations/implementations.html'.
 
-(defMacro (pushPrompt prompt . forms)
+(def pushPrompt
   #|Push the PROMPT and evaluate the FORMS inside the prompt.  This
    |delimits the continuation.
    |#
-  (list '%pushPrompt prompt (list* '\ () forms)))
-
-(defVau (pushPrompt prompt . forms) env
-  (eval (list '%pushPrompt (eval prompt env) (cons 'begin forms)) env) )
+  %pushPrompt)
 
 (def takeSubcont
   #|Abort outwards to the PROMPT.  When the prompt is reached, evaluate
@@ -572,20 +569,17 @@
    |#
   %takeSubcont)
 
-(defMacro (pushDelimSubcont prompt continuation . forms)
+(def pushDelimSubcont
   #|Push the PROMPT and compose the previously captured CONTINUATION
    |inside it.  The FORMS are then evaluated inside the new continuation.
    |#
-  (list '%pushDelimSubcont prompt continuation (list* '\ () forms)) )
+  %pushDelimSubcont)
 
 (defMacro (pushSubcont continuation . forms)
-  (list* 'pushDelimSubcont #ignore continuation forms) )
-
-(defMacro (pushSubcont continuation . forms)
-  #|We don't have `pushSubcont' but for these tests we can emulate itz
+  #|We don't have `pushSubcont' but for these tests we can emulate it
    |with a `pushDelimSubcont' that pushes an unused prompt.
    |#
-  (list '%pushDelimSubcont #ignore continuation (list* '\ () forms)) )
+  (list* '%pushDelimSubcont #ignore continuation forms) )
 
 (defMacro pushSubcontBarrier forms
   #|Push a continuation barrier that prevents the FORMS from capturing

@@ -318,20 +318,17 @@
 ;; These operators follow the API put forth in the delimcc library
 ;; at URL `http://okmij.org/ftp/continuations/implementations.html'.
 
-(defVau (pushPrompt prompt . forms) env
-  (eval (list '%pushPrompt (eval prompt env) (cons 'begin forms)) env) )
+(def pushPrompt
+  %pushPrompt)
 
 (def takeSubcont
   %takeSubcont)
 
-(defMacro (pushDelimSubcont prompt continuation . forms)
-  (list '%pushDelimSubcont prompt continuation (list* '\ () forms)) )
+(def pushDelimSubcont
+  %pushDelimSubcont)
 
 (defMacro (pushSubcont continuation . forms)
-  (list* 'pushDelimSubcont #ignore continuation forms) )
-
-(defMacro (pushSubcont continuation . forms)
-  (list '%pushDelimSubcont #ignore continuation (list* '\ () forms)) )
+  (list* '%pushDelimSubcont #ignore continuation forms) )
 
 (defMacro pushSubcontBarrier forms
   (list* '%pushSubcontBarrier (%newEnv) forms))

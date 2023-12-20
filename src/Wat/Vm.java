@@ -167,7 +167,7 @@ public class Vm {
 			this.f = f; this.nxt = next; this.dbg = dbg;
 		}
 		public String toString() { return "{Continuation %s}".formatted(dbg); }
-		Object apply(Env e, Apv apv0) { return apply(()-> combine(e, apv0, null)); }
+		Object apply(Env e, List lst) { return apply(()-> getTco(begin.combine(e, lst))); }
 		Object apply(Supplier s) { return f.apply(new Resumption(nxt, s));}
 	}
 	class Resumption {
@@ -949,24 +949,32 @@ public class Vm {
 	}
 	class PushPrompt implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkN(this, o, 2); // o = (prp apv0) | (prp x) | (prp (begin ...))
+			var chk = checkM(this, o, 1); // o = (prp . body)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
-			var prp = o.car();
-			var x = o.car(1);
-			return pushPrompt(null, e, dbg(e, this, o), prp, ()-> x instanceof Apv apv && args(apv) == 0 ? Vm.this.combine(e, apv, null) : evaluate(e, x));
+			var dbg = dbg(e, this, o);
+			return pipe(dbg, ()-> getTco(evaluate(e, o.car)), prp-> pushPrompt(null, e, dbg, prp, ()-> getTco(begin.combine(e, o.cdr()))));
 		}
 		public String toString() { return "%PushPrompt"; }
 	}
 	class PushDelimSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkN(this, o, 3, Any.class, Continuation.class, Apv0.class); // o = (prp k apv0)
+			var chk = checkM(this, o, 2); // o = (prp k . body )
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
-			var prp = o.car();
-			var k = o.<Continuation>car(1); 
-			var apv = o.<Apv>car(2);
-			return pushPrompt(null, e, dbg(e, this, o), prp, ()-> k.apply(e, apv));
+			var dbg = dbg(e, this, o);
+			return pipe(dbg,
+				()-> getTco(evaluate(e, o.car)),
+				prp-> cons(prp, getTco(evaluate(e, o.car(1)))),
+				a-> apply(
+						c->	pushPrompt(null, e, dbg, c.car,
+								()-> c.cdr() instanceof Continuation cont
+									? cont.apply(e, o.<List>cdr(1))
+									: typeError("cannot apply continuation, not a {expected}: {datum}", c.cdr(), Continuation.class)
+							),
+						(Cons) a
+					)
+				);
 		}
 		public String toString() { return "%PushDelimSubcont"; }
 	}
@@ -1643,7 +1651,7 @@ public class Vm {
 				// Delimited Control
 				"%takeSubcont", new TakeSubcont(),
 				"%pushPrompt", new PushPrompt(),
-				"%pushDelimSubcont", wrap(new PushDelimSubcont()),
+				"%pushDelimSubcont", new PushDelimSubcont(),
 				"%pushSubcontBarrier", wrap(new JFun("%PushSubcontBarrier", (n,o)-> checkM(n, o, 2, Env.class), (l,o)-> pushSubcontBarrier(null, o.car(), cons(begin, o.cdr())) )),
 				// Box
 				"%newBox", wrap(new JFun("%NewBox", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new Box(l == 0 ? boxDft : o.car))),
