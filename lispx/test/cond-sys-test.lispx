@@ -706,7 +706,7 @@
                (handlerCase ((UnboundVariable (\ (c) (list 'inner c))))
                  ;; Signal an arbitrary error:
                  (simpleError "Not an UNBOUND-VARIABLE error."))))))
-      (assert#t (and (== (car result) 'outer)
+      (assert#t (&& (== (car result) 'outer)
                    (type? (cadr result) UnboundVariable)
                    (== (getSlot (cadr result) 'name) 'fred)))))
 
@@ -717,6 +717,6 @@
                                      (error (new UnboundVariable :name 'fred)))))
                (handlerCase ((UnboundVariable (\ (c) (list 'inner c))))
                  (error (new UnboundVariable :name 'marvin)))))))
-      (assert#t (and (== (car result) 'inner)
+      (assert#t (&& (== (car result) 'inner)
                    (type? (cadr result) UnboundVariable)
                    (== (getSlot (cadr result) 'name) 'marvin))))))

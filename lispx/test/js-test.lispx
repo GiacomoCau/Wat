@@ -3,7 +3,7 @@
 (defsuite js-==
 
   (deftest js-==.1
-    (and (js-== +js-true+ +js-true+)
+    (&& (js-== +js-true+ +js-true+)
          (js-== +js-false+ +js-false+)
          (not (js-== +js-true+ +js-false+))
          (js-== (to-js-number 1) (to-js-number 1))
@@ -24,8 +24,8 @@
 (defsuite null-and-undefined
 
   (deftest null-and-undefined-exist
-    (and (== (classOf +js-null+) Object)
-         (== (classOf +js-undefined+) Object)))
+    (&& (== (classOf +js-null+) Object)
+        (== (classOf +js-undefined+) Object)))
 
   (deftest null-and-undefined-distinguishable
     (not (js-== +js-null+ +js-undefined+))))
@@ -33,20 +33,20 @@
 (defsuite js-booleans
 
   (deftest js-booleans-exist
-    (and
+    (&&
      (== (classOf +js-true+) Object)
      (== (classOf +js-false+) Object)))
 
   (deftest js-booleans-identity
-    (and (not (== +js-true+ +js-false+))
-         (== +js-true+ +js-true+)
-         (== +js-false+ +js-false+)
-         (not (== +js-true+ #t))
-         (not (== +js-false+ #f))))
+    (&& (not (== +js-true+ +js-false+))
+        (== +js-true+ +js-true+)
+        (== +js-false+ +js-false+)
+        (not (== +js-true+ #t))
+        (not (== +js-false+ #f))))
 
   (deftest to-lisp-boolean.1
-    (and (to-lisp-boolean +js-true+)
-         (not (to-lisp-boolean +js-false+))))
+    (&& (to-lisp-boolean +js-true+)
+        (not (to-lisp-boolean +js-false+))))
 
   (deftest to-lisp-boolean.2
     (signalsError?
@@ -59,8 +59,8 @@
      match-error))
 
   (deftest to-js-boolean.1
-    (and (to-lisp-boolean (to-js-boolean #t))
-         (not (to-lisp-boolean (to-js-boolean #f)))))
+    (&& (to-lisp-boolean (to-js-boolean #t))
+        (not (to-lisp-boolean (to-js-boolean #f)))))
 
   (deftest to-js-boolean.2
     (signalsError?
@@ -75,7 +75,7 @@
 (defsuite js-numbers
 
   (deftest to-lisp-number.1
-    (and
+    (&&
      (eq? -1 (to-lisp-number (to-js-number -1)))
      (eq? 0 (to-lisp-number (to-js-number 0)))
      (eq? 1 (to-lisp-number (to-js-number 1)))))
@@ -95,7 +95,7 @@
         Object))
 
   (deftest to-js-number.1a
-    (and (js-== (to-js-number 1)
+    (&& (js-== (to-js-number 1)
                 (to-js-number 1))
          (not (js-== (to-js-number 1)
                      (to-js-number 2)))))
@@ -130,7 +130,7 @@
         Object))
 
   (deftest to-js-string.1a
-    (and (js-== (to-js-string "1")
+    (&& (js-== (to-js-string "1")
                 (to-js-string "1"))
          (not (js-== (to-js-string "1")
                      (to-js-string "2")))))
@@ -268,7 +268,7 @@
 
   (deftest js-new.1
     (let ((re (js-new (js-global "RegExp") (to-js-string "abc"))))
-      (and (to-lisp-boolean (call-js-method re "test" (to-js-string "abcdef")))
+      (&& (to-lisp-boolean (call-js-method re "test" (to-js-string "abcdef")))
            (not (to-lisp-boolean (call-js-method re "test" (to-js-string "uvwxyz")))))))
 
   (deftest js-new.2
@@ -474,7 +474,7 @@
     (begin
       (define-js-method regexp-test "test")
       (let ((re (js-new (js-global "RegExp") (to-js-string "abc"))))
-        (and (to-lisp-boolean (regexp-test re (to-js-string "abcdef")))
+        (&& (to-lisp-boolean (regexp-test re (to-js-string "abcdef")))
              (not (to-lisp-boolean (regexp-test re (to-js-string "uvwxyz"))))))))
 
   (deftest define-js-method.3

@@ -14,7 +14,7 @@
 (@clear (.methods vm))
 (ctApv #f)
 (prTrc 0)
-(bndRes 0)
+(bndRes #inert)
 (boxDft #inert)
 (aQuote #t)
 (typeT 0)
@@ -121,7 +121,7 @@
     (%vau (o ck) env
       (%def evl
         (%\ (ck)
-          (%if (%== ck '+) (.MAX_VALUE Integer)
+          (%if (%== ck 'oo) (.MAX_VALUE Integer)
             (%if (%! (%cons? ck)) (%eval ck env)
             ( (%\ (ckcar)
                 (%if (%== ckcar 'or) (%list->array (evl (%cdr ck)))

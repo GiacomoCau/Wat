@@ -7,7 +7,7 @@
 (@clear (.methods vm))
 (ctApv #f)
 (prTrc 0)
-(bndRes 0)
+(bndRes #inert)
 (boxDft #null)
 (aQuote #t)
 (typeT 1)
@@ -108,7 +108,7 @@
     (%vau (o ck) env
       (%def evl
         (%\ (ck)
-          (%if (%== ck '+) (.MAX_VALUE Integer)
+          (%if (%== ck 'oo) (.MAX_VALUE &java.lang.Integer)
             (%if (%! (%cons? ck)) (%eval ck env)
             ( (%\ (ckcar)
                 (%if (%== ckcar 'or) (%list->array (evl (%cdr ck)))

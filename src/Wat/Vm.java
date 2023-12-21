@@ -18,6 +18,7 @@ import static Wat.Utility.or;
 import static Wat.Utility.read;
 import static Wat.Utility.reorg;
 import static Wat.Utility.stackDeep;
+import static Wat.Utility.toSource;
 import static Wat.Utility.uncked;
 import static Wat.Utility.BinOp.And;
 import static Wat.Utility.BinOp.Dvd;
@@ -77,7 +78,7 @@ import List.ParseException;
 
 /* Abbreviations:
 	c: cons
-	x, exp, expt, cln: expression, expexted, cleaner
+	x, exp, expt, cln: expression, expected, cleaner
 	xs: expressions
 	op: operator
 	o, os: operands
@@ -120,18 +121,18 @@ import List.ParseException;
  */
 
 public class Vm {
-
+	
 	static {
-	    for (File file: new File("bin/Ext").listFiles()) file.delete();
+		for (File file: new File("bin/Ext").listFiles()) file.delete();
 	}
-
+	
 	boolean doTco = true; // do tco
 	boolean doAsrt = true; // do assert
 	boolean ctApv = false; // applicative catch & throw
 	boolean intStr = false; // intern string
 	boolean prStk = false; // print stack
 	boolean prWrn = false; // print warning
-	boolean aQuote = false; // auto quote list
+	boolean aQuote = true; // auto quote list
 	boolean else1 = false; // else multiple expressions
 	boolean hdlAny = true; // any value for catch hadler
 	
@@ -238,9 +239,6 @@ public class Vm {
 	public SheBang sheBang = new SheBang();
 	
 	// Tail Call Optimization
-	//interface Tco extends Supplier {};
-	//Object tco(Tco tco) { return doTco ? tco : tco.get(); }
-	// la classe è più utile per debug, print Tco
 	class Tco implements Supplier {
 		Supplier tco;
 		Tco(Supplier tco) { this.tco = tco; }
@@ -251,7 +249,7 @@ public class Vm {
 	<T> T getTco(Object o) { while (o instanceof Tco tco) o = tco.get(); return (T) o; }
 	
 	
-	// Trace Log
+	// Trace Logging
 	int level=0, start=0; String indent = "|  ";
 	String indent() { return indent.repeat(level-start) + "|" + stackDeep() + ":  " ; }
 	
@@ -274,6 +272,7 @@ public class Vm {
 		return (T) v;
 	}
 	
+	// Basic Object
 	abstract class Intern {
 		String name;
 		Intern(String name) { this.name = name; }
@@ -407,7 +406,7 @@ public class Vm {
 				case 0-> this;
 				case 1-> get(o.car);
 				default-> {
-					BiFunction f =	o.car == keyword(":def") ? (k,v)-> def(k,v) : o.car == keyword(":set") ? (k,v)-> set(k,v) : null;
+					BiFunction f =	o.car == keyword(":def") ? (k,v)-> def(k,v) : o.car == keyword(":set!") ? (k,v)-> set(k,v) : null;
 					if (f == null) f = (BiFunction) (k,v)-> def(k,v); else { len-=1; o=o.cdr();  }
 					var bndRes = len % 2 == 0 ? ignore : first(o.car(), len-=1, o=o.cdr());
 					for (; len>2; len-=2, o=o.cdr(1)) f.apply(toKey(o.car()), o.car(1));
@@ -419,10 +418,10 @@ public class Vm {
 							case 1-> { var v = o.car(1); f.apply(key, v); yield v; }
 							case 2-> f.apply(key, o.car(1));
 							case 3-> { f.apply(key, o.car(1)); yield this; }
-							default-> typeError("cannot set env, invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
+							default-> typeError("cannot def/set! env, invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
 						};
 						case Object obj-> resumeError(obj, symbol("Integer"));
-				    };
+					};
 				}
 			};
 		}
@@ -437,7 +436,7 @@ public class Vm {
 		Object value;
 		public Box (Object val) { this.value = val; }
 		@Override public Object apply(List o) { // () | (value) | (:key value)
- 			var chk = checkR(this, o, 0, 2);
+			var chk = checkR(this, o, 0, 2);
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			return switch (len) {
@@ -452,7 +451,7 @@ public class Vm {
 						default-> typeError("cannot set box, invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
 					};
 					case Object obj-> resumeError(obj, symbol("Integer"));
-			    }; 
+				}; 
 			};
 		}
 		public String toString() { return "{&" + getClass().getSimpleName() + " " + Vm.this.toString(value) + "}"; }
@@ -494,7 +493,8 @@ public class Vm {
 				+ eIfnull(obj.getMessage(), m-> " " + Vm.this.toString(true, m))
 				//+ eIfnull(getCause(), t-> " " + symbol(t.getClass().getSimpleName()))
 				+ (map.size() > 10 ? " [" + map.size() + "]" + " ..." : toStringSet(obj.map.entrySet()))
-				+ "}";
+				+ "}"
+			;
 		}
 		@Override public Object apply(List o) {
 			var len = len(o);
@@ -513,7 +513,7 @@ public class Vm {
 					default-> typeError("cannot set obj, invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
 				};
 				case Object obj-> resumeError(obj, symbol("Integer"));
-		    };
+			};
 		}
 		private static final Pattern keyword = Pattern.compile("\\{(.+?)\\}");
 		@Override public String getMessage() {
@@ -558,32 +558,32 @@ public class Vm {
 		catch (ClassNotFoundException e) {
 			try {
 				class JavaStringFile extends SimpleJavaFileObject {
-				    final String code;
-				    JavaStringFile(String name, String code) {
-				        super(URI.create("string:///" + name.replace('.','/') + Kind.SOURCE.extension), Kind.SOURCE); this.code = code;
-				    }
-				    @Override public CharSequence getCharContent(boolean ignoreEncodingErrors) { return code; }
+					final String code;
+					JavaStringFile(String name, String code) {
+						super(URI.create("string:///" + name.replace('.','/') + Kind.SOURCE.extension), Kind.SOURCE); this.code = code;
+					}
+					@Override public CharSequence getCharContent(boolean ignoreEncodingErrors) { return code; }
 				}
-			    var diagnostics = new DiagnosticCollector<JavaFileObject>();
-			    var isObj = superClass == null || superClass == Obj.class;
-			    var isBox = superClass != null && Box.class.isAssignableFrom(superClass);
-			    var task = getSystemJavaCompiler().getTask(
-			    	null, null, diagnostics,
-			    	java.util.List.of("-d", "bin", "--enable-preview", "-source", ""+version().feature(), "-Xlint:unchecked" ),
-			    	null,
-			    	java.util.List.of(
-				    	new JavaStringFile("Ext." + className, ( """
+				var diagnostics = new DiagnosticCollector<JavaFileObject>();
+				var isObj = superClass == null || superClass == Obj.class;
+				var isBox = superClass != null && Box.class.isAssignableFrom(superClass);
+				var task = getSystemJavaCompiler().getTask(
+					null, null, diagnostics,
+					java.util.List.of("-d", "bin", "--enable-preview", "-source", ""+version().feature(), "-Xlint:unchecked" ),
+					null,
+					java.util.List.of(
+						new JavaStringFile("Ext." + className, ( """
 							package Ext;
 							import Wat.Vm;
 							public class %s extends %s {
 							"""
 							+  eIf(isBox, """
 								public %1$s(Vm vm, String s, %3$s o) { %4$ss, o); }
-				    			public %1$s(Vm vm, Throwable t, %3$s o) { %4$st, o); }
-				    			public %1$s(Vm vm, String s, Throwable t, %3$s o) {	%4$ss, t, o); }
+								public %1$s(Vm vm, Throwable t, %3$s o) { %4$st, o); }
+								public %1$s(Vm vm, String s, Throwable t, %3$s o) {	%4$ss, t, o); }
 							""" )
 							+ """
-				    	 	 	 public %1$s(Vm vm, %3$s o) { %4$so); }
+								public %1$s(Vm vm, %3$s o) { %4$so); }
 							}
 							""").formatted(
 								className,
@@ -592,12 +592,12 @@ public class Vm {
 								isObj || Utility.equals(superClass, Condition.class, Error.class, Box.class) ? "vm.super(" : "super(vm, "
 							)
 						)
-			    	)
-			    );
-			    if (!task.call()) {
-			    	System.out.println(diagnostics.getDiagnostics());
-			    	return javaError("error defining class {member}", null, className, null, null);
-			    }
+					)
+				);
+				if (!task.call()) {
+					System.out.println(diagnostics.getDiagnostics());
+					return javaError("error defining class {member}", null, className, null, null);
+				}
 				new File("bin/Ext/" + className + ".class").deleteOnExit();
 				return Class.forName("Ext." + className);
 			}
@@ -646,18 +646,18 @@ public class Vm {
 		return bind(null, dbg, def, bndRes, e, lhs, rhs); 
 	}
 	Object bind(Resumption r, Dbg dbg, boolean def, int bndRes, Env e, Object lhs, Object rhs) {
-			try {
-				var res = bind(def, bndRes, e, lhs, rhs);
-				return bndRes == 0 ? inert : res;
-			}
-			catch (InnerException ie) {
-				return error(
-					(def ? "bind" : "sett") + "ing: " + toString(lhs)
-					+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, dbg.os[0])))
-					+ " with: " + rhs,
-					ie
-				);
-			}
+		try {
+			var res = bind(def, bndRes, e, lhs, rhs);
+			return bndRes == 0 ? inert : res;
+		}
+		catch (InnerException ie) {
+			return error(
+				(def ? "bind" : "sett") + "ing: " + toString(lhs)
+				+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, dbg.os[0])))
+				+ " with: " + rhs,
+				ie
+			);
+		}
 	}
 	Object bind(boolean def, int bndRes, Env e, Object lhs, Object rhs) {
 		return switch (lhs) {
@@ -709,7 +709,8 @@ public class Vm {
 	
 	class Opv implements Combinable  {
 		Env e; Object pt, ep; List x;
-		Opv(Env e, Object pt, Object ep, List x) { this.e = e; this.pt = pt; this.ep = ep;
+		Opv(Env e, Object pt, Object ep, List x) {
+			this.e = e; this.pt = pt; this.ep = ep;
 			this.x = x != null && x.cdr() != null && x.car instanceof String ? x.cdr() : x;
 		}
 		public Object combine(Env e, List o) {
@@ -742,8 +743,8 @@ public class Vm {
 	}
 	Object unwrap(Object arg) {
 		return arg instanceof Apv apv ? apv.cmb
-		: arg instanceof Opv opv ? opv
 		: isjFun(arg) ? new JFun(arg)
+		: arg instanceof Combinable ? arg
 		: typeError("cannot unwrap, not a {expected}: {datum}", arg, symbol("Apv"));
 	}
 	Opv opv(Env e, Object pt, Object pe, List body) { return new Opv(e, pt, pe, body); } 
@@ -755,7 +756,7 @@ public class Vm {
 	// Built-in Combiners
 	class Vau implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkM(this, o, 2); // o = (pt ep) | (pt ep x ...)
+			var chk = checkM(this, o, 2); // o = (pt ep . forms)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			var pt = o.car();
@@ -769,7 +770,7 @@ public class Vm {
 		boolean def;
 		Def(boolean def) { this.def = def; }
 		public Object combine(Env e, List o) {
-			var chk = checkR(this, o, 2, 3, or(/*null, #inert,*/ Symbol.class, Cons.class));  // o = (pt arg) | (pt key arg)
+			var chk = checkR(this, o, 2, 3, or(/*null, #inert,*/ Symbol.class, Cons.class));  // o = (pt arg) | (pt (or #ignore #inert :rhs :prv) arg)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			var pt = o.car();
@@ -789,7 +790,7 @@ public class Vm {
 	};
 	class Eval implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkR(this, o, 1, 2, Any.class, Env.class); // o = (x . eo)
+			var chk = checkR(this, o, 1, 2, Any.class, Env.class); // o = (x) | (x eo)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			return evaluate(len == 1 ? e : o.car(1), o.car());
@@ -798,22 +799,22 @@ public class Vm {
 	}
 	
 	
-	// First-order Control
+	// First-Order Control
 	class Begin implements Combinable  {
 		boolean root;
 		Begin() {}; Begin(boolean root) { this.root = root; } 
 		public Object combine(Env e, List o) {
-			// o = () | (x ...)
-			return o == null ? inert : tco(()-> begin(null, e, o));
+			// o = () | (form . forms)
+			return o == null ? inert : tco(()-> combine(null, e, o));
 		}
-		Object begin(Resumption r, Env e, List lst) {
+		Object combine(Resumption r, Env e, List lst) {
 			for (var first = true;;) { // only one resume for suspension
 				if (prTrc >= 3 && root && r == null) print("\n--------");
 				var car = lst.car;
 				if (prTrc == 2 && root && r == null) print("evaluate: ", car);
 				if (lst.cdr() == null) { return evaluate(e, car); } 
 				var res = first && r != null && !(first = false) ? r.resume() : getTco(evaluate(e, car));
-				if (res instanceof Suspension s) { var l = lst; return s.suspend(dbg(e, this, lst.car), rr-> begin(rr, e, l)); }
+				if (res instanceof Suspension s) { var l = lst; return s.suspend(dbg(e, this, lst.car), rr-> combine(rr, e, l)); }
 				lst = lst.cdr();
 			}
 		}
@@ -822,7 +823,7 @@ public class Vm {
 	Begin begin = new Begin();
 	class If implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkR(this, o, 2, else1 ? 3 : more); // o = (test then) | (test then else) | (test then else ...)
+			var chk = checkR(this, o, 2, else1 ? 3 : more); // o = (test then . else) 
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			var test = o.car();
@@ -847,9 +848,34 @@ public class Vm {
 			default-> res instanceof Boolean b ? b : typeError("not a {expected}: {datum}", res, symbol("Boolean")); // Kernel, Wat, Lispx
 		};
 	}
+	/* TODO tentare implementzione, elimiare altrimenti
+	class ifStar implements Combinable  {
+		public Object combine(Env e, List o) {
+			return combine(null, e, o);
+		}
+		Object combine(Resumption r, Env e, List o) {
+			for (var first = true;; o = o.cdr(2)) { // only one resume for suspension
+				if (o == null) return inert;
+				var car = o.car;
+				if (o.cdr() == null) return evaluate(e, car); 
+				//var test = first && r != null && !(first = false) ? r.resume() : getTco(evaluate(e, car));
+				//if (test instanceof Suspension s) { var oo = o; return s.suspend(dbg(e, this, o.car), rr-> combine(rr, e, oo)); }
+				return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, car)), test->
+					switch (istrue(test)) {
+						case Suspension s-> s;
+						case Boolean b-> b ? evaluate(e, o.car(1))
+							: o.cdr(1) == null ? inert : else1 ? evaluate(e, o.car(2)) : begin.combine(e, o.cdr(1));
+						case Object obj-> resumeError(obj, symbol("Boolean"));
+					}
+				);
+			}
+		}
+		public String toString() { return "%If*"; }
+	}
+	//*/
 	class Loop implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkM(this, o, 1); // o = (x ...)
+			var chk = checkM(this, o, 1); // o = (form . forms)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			return combine(null, e, o);
@@ -911,7 +937,7 @@ public class Vm {
 	class AtEnd implements Combinable {
 		public Object combine(Env e, List o) { return combine(null, e, o); }
 		public Object combine(Resumption r, Env e, List o) {
-			var chk = checkM(this, o, 2); // o = (cln . x)
+			var chk = checkM(this, o, 2); // o = (cln form . forms)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			var cln = o.car();
@@ -937,7 +963,7 @@ public class Vm {
 	// Delimited Control
 	class TakeSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkM(this, o, 2, Any.class, or(ignore, Symbol.class)); // o = (prp (or ignore symbol)) . body)
+			var chk = checkM(this, o, 2, Any.class, or(ignore, Symbol.class)); // o = (prp (or #ignore symbol)) . forms)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, o.car())),
@@ -949,7 +975,7 @@ public class Vm {
 	}
 	class PushPrompt implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkM(this, o, 1); // o = (prp . body)
+			var chk = checkM(this, o, 1); // o = (prp . forms)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			var dbg = dbg(e, this, o);
@@ -959,7 +985,7 @@ public class Vm {
 	}
 	class PushDelimSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkM(this, o, 2); // o = (prp k . body )
+			var chk = checkM(this, o, 2); // o = (prp k . forms)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			var dbg = dbg(e, this, o);
@@ -967,14 +993,14 @@ public class Vm {
 				()-> getTco(evaluate(e, o.car)),
 				prp-> cons(prp, getTco(evaluate(e, o.car(1)))),
 				a-> apply(
-						c->	pushPrompt(null, e, dbg, c.car,
-								()-> c.cdr() instanceof Continuation cont
-									? cont.apply(e, o.<List>cdr(1))
-									: typeError("cannot apply continuation, not a {expected}: {datum}", c.cdr(), Continuation.class)
-							),
-						(Cons) a
-					)
-				);
+					c->	pushPrompt(null, e, dbg, c.car,
+						()-> c.cdr() instanceof Continuation cont
+						? cont.apply(e, o.<List>cdr(1))
+						: typeError("cannot apply continuation, not a {expected}: {datum}", c.cdr(), Continuation.class)
+					),
+					(Cons) a
+				)
+			);
 		}
 		public String toString() { return "%PushDelimSubcont"; }
 	}
@@ -998,7 +1024,7 @@ public class Vm {
 	class DLambda implements Combinable {
 		public Object combine(Env e, List o) { return combine(null, e, o); }
 		public Object combine(Resumption r, Env e, List o) {
-			var chk = checkM(this, o, 1, list(Symbol.class)); // o = ((var ...) x ...)
+			var chk = checkM(this, o, 1, list(Symbol.class)); // o = ((symbol . symbols) . forms)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer)) return resumeError(chk, symbol("Integer"));
 			var vars = array(o.car());
@@ -1178,7 +1204,8 @@ public class Vm {
 				catch (Throwable thw) {
 					return len==1
 						? javaError("error getting field {member} of: {object}", thw, symbol(name), null, o0)
-						: javaError("error setting field {member} of: {object} with: {args}", thw, symbol(name), o.cdr(), o0);
+						: javaError("error setting field {member} of: {object} with: {args}", thw, symbol(name), o.cdr(), o0)
+					;
 				}
 			}
 			@Override public String toString() { return "." + name; }
@@ -1186,7 +1213,7 @@ public class Vm {
 	}
 	
 	
-	// Error handling
+	// Error Handling
 	Object rootPrompt = new Object() { public String toString() { return "%RootPrompt"; }};
 	Object pushRootPrompt(Object x) { return list(new PushPrompt(), rootPrompt, x); }
 	<T> T error(Error err) {
@@ -1224,7 +1251,7 @@ public class Vm {
 	}
 	
 	
-	// Check parameters tree
+	// Check Parameters Tree
 	class PTree {
 		private Object exp, pt, ep;
 		private Set syms = new HashSet();
@@ -1259,7 +1286,7 @@ public class Vm {
 	}
 	
 	
-	// Check parameters value
+	// Check Parameters Value
 	class Any {}
 	Object checkN(Object op, List o, int expt, Object ... chks) {
 		return checkR(op, o, expt, expt, chks);
@@ -1347,10 +1374,10 @@ public class Vm {
 	}
 	public Object toChk(Object chk) {
 		return chk instanceof Class cl ? symbol(cl.getSimpleName())
-			 : chk instanceof Integer i && i == more ? symbol("+")
-			 : chk instanceof Object[] a ? cons(symbol("or"), list(stream(a).map(o-> toChk(o)).toArray()))
-			 : chk instanceof List l ? map(o-> toChk(o), Utility.equals(l.car, comparators) ? cons(l.car, l.cdr(1)) : l )
-			 : chk
+			: chk instanceof Integer i && i == more ? symbol("oo")
+			: chk instanceof Object[] a ? cons(symbol("or"), list(stream(a).map(o-> toChk(o)).toArray()))
+			: chk instanceof List l ? map(o-> toChk(o), Utility.equals(l.car, comparators) ? cons(l.car, l.cdr(1)) : l )
+			: chk
 		;
 	}
 	class Apv0 extends Apv { Apv0(Combinable cmb) { super(cmb); }}
@@ -1531,7 +1558,7 @@ public class Vm {
 	}
 	
 	
-	// Bytecode parser
+	// Bytecode Parser
 	Map<String,Intern> interns = new LinkedHashMap<>();
 	<T extends Intern> T intern(String name) {
 		return (T) interns.computeIfAbsent(name, n-> n.startsWith(":") && n.length() > 1 ? new Keyword(n.substring(1)) : new Symbol(n));
@@ -1549,7 +1576,7 @@ public class Vm {
 	}
 	<T extends Cons> T toLispList(Object ... objs) {
 		int i = objs.length - 1;
-		Object tail = null; 
+		Object tail = null;
 		if (i > 1 && objs[i-1] != null && objs[i-1].equals(".")) { tail = toLispExpr(objs[i]); i-=2; }
 		for (; i>=0; i-=1) {
 			var obj = objs[i];
@@ -1564,14 +1591,14 @@ public class Vm {
 	
 	
 	// Stringification
-	public String toString() { return "Vm"; }	
+	public String toString() { return "Vm"; }
 	String toString(Object o) { return toString(false, o); }
 	String toString(boolean t, Object o) {
 		return switch (o) {
 			case null-> "#null"; // () in cons altrove #null
 			case Boolean b-> b ? "#t" : "#f";
-			case Class cl-> "&" + Utility.toSource(cl);
-			case String s-> !t ? s : '"' + Utility.toSource(s) + '"';
+			case Class cl-> "&" + toSource(cl);
+			case String s-> !t ? s : '"' + toSource(s) + '"';
 			case Object[] a-> {
 				var s = new StringBuilder();
 				for (var e: a) s.append(eIf(s.isEmpty(), ", ") + toString(true, e));
@@ -1617,7 +1644,7 @@ public class Vm {
 				"%vmEnv", wrap(new JFun("%VmEnv", (n,o)-> checkN(n, o, 0), (l,o)-> vmEnv() )),
 				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, or(null, list(2, or(null, Env.class), Obj.class), list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class, String.class), Any.class))), (l,o)-> l==0 ? env() : l==2 ? env(o.car(), o.<Obj>car(1)) : env(o.car(), array(o.cdr())) )),
 				"%bind", wrap(new JFun("%Bind", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> bind(true, 0, o.<Env>car(), o.car(1), o.car(2)) )),
- 				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (InnerException ie) { return false; }} )),
+				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (InnerException ie) { return false; }} )),
 				"%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } )),
 				"%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnv = env(theEnv))),
 				"%popEnv", wrap(new JFun("%PopEnv", (Supplier) ()-> theEnv = theEnv.parent)),
@@ -1626,8 +1653,8 @@ public class Vm {
 				"%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), ObjEnv.class), (l,o)-> o.<ObjEnv>car(1).isBound(o.car)) ),
 				"%remove!", wrap(new JFun("%remove!", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), ObjEnv.class), (l,o)-> o.<ObjEnv>car(1).remove(o.car)) ),				
 				// Values
-				"%car", wrap(new JFun("%Car", (n,o)-> checkR(n, o, 1, 2, Cons.class, Integer.class), (l,o)-> l == 1 ? o.<Cons>car().car() : o.<Cons>car().car(o.<Integer>car(1)) )),
-				"%cdr", wrap(new JFun("%Car", (n,o)-> checkR(n, o, 1, 2, Cons.class, Integer.class), (l,o)-> l == 1 ? o.<Cons>car().cdr() : o.<Cons>car().cdr(o.<Integer>car(1)) )),
+				"%car", wrap(new JFun("%Car", (n,o)-> checkR(n, o, 1, 2, Cons.class, Integer.class), (l,o)-> apply(c-> l == 1 ? c.car() : c.car(o.<Integer>car(1)), o.<Cons>car()) )),
+				"%cdr", wrap(new JFun("%Car", (n,o)-> checkR(n, o, 1, 2, Cons.class, Integer.class), (l,o)-> apply(c-> l == 1 ? c.cdr() : c.cdr(o.<Integer>car(1)), o.<Cons>car()) )),
 				"%cadr", wrap(new JFun("%Cadr", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().car(1) )),
 				"%cddr", wrap(new JFun("%Cddr", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().cdr(1) )),
 				"%cons", wrap(new JFun("%Cons", (BiFunction) (car,cdr)-> cons(car,cdr) )),
@@ -1668,14 +1695,15 @@ public class Vm {
 				"%dot", wrap(new JFun("%Dot", (Function<String,Object>) this::dot)),
 				"%instanceOf?", wrap(new JFun("%InstanceOf?", (n,o)-> checkN(n, o, 2, Any.class, Class.class), (l,o)-> o.<Class>car(1).isInstance(o.car()) )),
 				// Object System
-				"%new", wrap(new JFun("%New", (n,o)-> checkM(n, o, 1,
-					or( list(2, Box.class),
-						list(1, more, Obj.class,
-							or( list(or(Symbol.class, Keyword.class, String.class), Any.class),
-								list(1, more, Throwable.class, or(Symbol.class, Keyword.class, String.class), Any.class),
-								list(1, more, String.class,
-									or(	list(or(Symbol.class, Keyword.class, String.class), Any.class),
-									    list(1, more, Throwable.class, or(Symbol.class, Keyword.class, String.class), Any.class) )))))),
+				"%new", wrap(new JFun("%New",
+					(n,o)-> checkM(n, o, 1,
+						or( list(2, Box.class),
+							list(1, more, Obj.class,
+								or( list(or(Symbol.class, Keyword.class, String.class), Any.class),
+									list(1, more, Throwable.class, or(Symbol.class, Keyword.class, String.class), Any.class),
+									list(1, more, String.class,
+										or(	list(or(Symbol.class, Keyword.class, String.class), Any.class),
+											list(1, more, Throwable.class, or(Symbol.class, Keyword.class, String.class), Any.class) )))))),
 					(l,o)-> ((ArgsList) at("new")).apply(listStar(o.car(), Vm.this, o.cdr())) )),
 				"%newClass", wrap(new JFun("%NewClass", (n,o)-> checkR(n, o, 1, 2, Symbol.class, or(Box.class, Obj.class)), (l,o)-> newClass(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr())) )),
 				"%subClass?", wrap(new JFun("%SubClass?", (n,o)-> checkN(n, o, 2, Class.class, Class.class), (l,o)-> o.<Class>car(1).isAssignableFrom(o.car()) )),
@@ -1731,9 +1759,9 @@ public class Vm {
 				"%theEnv", opv(vmEnv, null, symbol("env"), list(symbol("env"))),
 				"%'", opv(vmEnv, list(symbol("arg")), ignore, list(symbol("arg"))),
 				"%\\", opv(vmEnv,
-						cons(symbol("formals"), symbol("body")),
-						symbol("env"),
-						uncked(()-> toLispList("(%wrap (%eval (%list* %vau formals #ignore body) env))")) ),
+					cons(symbol("formals"), symbol("body")),
+					symbol("env"),
+					uncked(()-> toLispList("(%wrap (%eval (%list* %vau formals #ignore body) env))")) ),
 				// Extra
 				"vm", this,
 				"%test", test,
@@ -1749,16 +1777,20 @@ public class Vm {
 				"doTco", wrap(new JFun("DoTco", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doTco : inert(doTco=o.car()) )),
 				"doAsrt", wrap(new JFun("DoAsrt", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doAsrt : inert(doAsrt=o.car()) )),
 				"ctApv", wrap(new JFun("CtApv",
-							(n,o)-> checkR(n, o, 0, 1, Boolean.class),
-							(l,o)-> l == 0 ? ctApv
-									: inert(ctApv = o.car(),
-										bind(null, theEnv,
-											list(symbol("%catch"), symbol("%throw")),
-											list((Object) apply(c-> !ctApv ? c : wrap(c), new CatchTagWth()),
-												 (Object) apply(t-> !ctApv ? t : wrap(t), new ThrowTag())))) )),
+					(n,o)-> checkR(n, o, 0, 1, Boolean.class),
+					(l,o)-> l == 0 ? ctApv
+						: inert(ctApv = o.car(),
+							bind(null, theEnv,
+								list(symbol("%catch"), symbol("%throw")),
+								list((Object) apply(c-> !ctApv ? c : wrap(c), new CatchTagWth()),
+									(Object) apply(t-> !ctApv ? t : wrap(t), new ThrowTag())))) )),
 				"prTrc", wrap(new JFun("PrTrc", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4, 5, 6)), (l,o)-> l == 0 ? prTrc : inert(start=level-(doTco ? 0 : 3), prTrc=o.car()) )),
 				"typeT", wrap(new JFun("TypeT", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4)), (l,o)-> l == 0 ? typeT : inert(typeT=o.car()) )),
-				"bndRes", wrap(new JFun("BndRes", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2)), (l,o)-> l == 0 ? bndRes : inert(bndRes=o.car()) )),
+				"bndRes", wrap(new JFun("BndRes",
+					(n,o)-> checkR(n, o, 0, 1, or(inert, keyword("rhs"), keyword("prv"))),
+					(l,o)-> l == 0
+						? switch (bndRes) {case 1-> keyword("rhs"); case 2-> keyword("prv"); default-> inert; }
+						: inert(bndRes=(int) bndRes(o.car(), false)) )),
 				"prEnv", wrap(new JFun("PrEnv", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? prEnv : inert(prEnv=o.car()) )),
 				"else1", wrap(new JFun("Else1", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? else1 : inert(else1=o.car()) )),
 				"boxDft", wrap(new JFun("BoxDft", (n,o)-> checkR(n, o, 0, 1), (l,o)-> l == 0 ? boxDft : inert(boxDft=o.car()) )),
@@ -1824,11 +1856,8 @@ public class Vm {
 				catch (Throwable thw) {
 					if (prStk)
 						thw.printStackTrace(out);
-					else if (thw instanceof Value v) {
-						print(apply(c-> c != null ? c : v, v.getCause()));
-					}
 					else {
-						print(thw);
+						print(thw instanceof Value v ? ifnull(v.getCause(), thw) : thw);
 					}
 				}
 			}
@@ -1849,13 +1878,15 @@ public class Vm {
 	
 	// Test
 	public static void main(String[] args) throws Exception {
-		new Vm().main();
+		new Vm().main("boot.lsp");
 	}
-	public void main() throws Exception {
-		var milli = currentTimeMillis();
-		var res = loadText("boot.lsp");
-		print("start time: " + (currentTimeMillis() - milli));
-		if (res != ignore) print(res);
+	public void main(String file) throws Exception {
+		if (new File(file).exists()) {
+			var milli = currentTimeMillis();
+			var res = loadText(file);
+			print("start time: " + (currentTimeMillis() - milli));
+			if (res != ignore) print(res);
+		}
 		repl();
 	}
 }

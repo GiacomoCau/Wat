@@ -305,26 +305,12 @@
 
 (def\ (combine cmb ops) (apply (wrap cmb) ops))
 
-(assert (combine and (list (== 1 1) (== 2 2))) #t)
-(assert (combine and (list (!= 1 1) (== 2 2))) #f)
+(assert (combine && (list (== 1 1) (== 2 2))) #t)
+(assert (combine && (list (!= 1 1) (== 2 2))) #f)
 
 (assert (apply (\ (x) x) (list 2)) 2)
 
 (let1 (v (vau () #ignore))  (%assert (unwrap v) v))
-
-
-#| TODO da rivedere
-(let ((obj (object ("x" 1))))
-  (set (.x obj) 2)
-  (assertEqual 2 (.x obj))
-  ;(set (@ obj "x") 3) ; give not a combiner: [object Undefined] in: (3 obj "x")
-  (set (.x obj) 3)
-  (assertEqual 3 (.x obj)) )
-
-(assertEqual &x #undefined)
-(set &x 2)
-(assertEqual &x 2)
-|#
 
 (assert (* 1 2 3 4) 24)
 (assert (*) 1)
@@ -342,10 +328,10 @@
 
 (assert (log "logging" 1 2 3) "logging")
 
-(assert (and (== 1 1) (== 4 4) (== 5 5)) #t)
-(assert (and (== 1 1) (== 4 4) (== 5 10)) #f)
-(assert (or (== 1 1) (== 4 10) (== 5 5)) #t)
-(assert (or (== 1 10) (== 4 10) (== 5 5)) #t)
+(assert (&& (== 1 1) (== 4 4) (== 5 5)) #t)
+(assert (&& (== 1 1) (== 4 4) (== 5 10)) #f)
+(assert (|| (== 1 1) (== 4 10) (== 5 5)) #t)
+(assert (|| (== 1 10) (== 4 10) (== 5 5)) #t)
 
 (assert (== 4 (+ 2 2) (- 6 2)) #t)
 (assert (< 1 2 3 4 5) #t)
@@ -355,9 +341,6 @@
 
 (exit "finito")
 
-#| TODO da rivedere
-(let ((x (cell 0)))
-  (while (< (ref x) 10)
-    (++ (ref x)))
-  (assertEqual 10 (ref x)) )
-|#
+(let1 (x (newBox 0))
+  (while (< (x) 10) (++ x))
+  (assert (x) 10) )

@@ -3,14 +3,14 @@
 (defsuite *print-escape*
 
   (deftest *print-escape*.defined
-    (and (type? *print-escape* DVar)
-         (type? (dget *print-escape*) Boolean))))
+    (&& (type? *print-escape* DVar)
+        (type? (dget *print-escape*) Boolean))))
 
 (defsuite *print-level?*
 
   (deftest *print-level?*.defined
-    (and (type? *print-level?* DVar)
-         (type? (dget *print-level?*) List)))
+    (&& (type? *print-level?* DVar)
+        (type? (dget *print-level?*) List)))
 
   (def\ write-with-level (object level)
     (dlet ((*print-level?* (some level)))
@@ -62,8 +62,8 @@
           (s2 (make-string-output-stream)))
       (write 1 :stream s1)
       (write 2 :stream s2)
-      (and (eq? "1" (get-output-stream-string s1))
-           (eq? "2" (get-output-stream-string s2)))))
+      (&& (eq? "1" (get-output-stream-string s1))
+          (eq? "2" (get-output-stream-string s2)))))
 
   (deftest write.4a
     (signalsError?

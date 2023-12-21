@@ -3,8 +3,8 @@
 (defsuite stream-tests
 
   (deftest standard-streams-defined
-    (and (type? *standard-input* DVar)
-         (type? *standard-output* DVar))))
+    (&& (type? *standard-input* DVar)
+        (type? *standard-output* DVar))))
 
 (defsuite string-input-streams
 

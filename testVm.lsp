@@ -17,16 +17,20 @@
 (%assert (%list- 1 2 '(3 4)) '(1 2 (3 4)))
 
 (%assert (%def) &Wat.Vm$Error :type 'match :operands# +2)
+(%assert (%def 1) &Wat.Vm$Error :type 'type :datum 1 :expected '(or Symbol Cons))
 (%assert (%def a) &Wat.Vm$Error :type 'match :operands# +1) 
-(%assert (%def a 1) #inert) ; a=1
-(%assert (%def 1 1) &Wat.Vm$Error :type 'type :datum 1 :expected '(or Symbol Cons))
-(%assert (%def "a" 1) &Wat.Vm$Error :type 'type :datum "a" :expected '(or Symbol Cons))
+(%assert (%def a 1) #inert)
 (%assert (%def a 1 2) &Wat.Vm$Error :type 'type :datum 1 :expected '(or #inert #ignore :rhs :prv))
+(%assert (%def a #inert 1) #inert)
+(%assert (%def a #ignore 1) (%if (%== (bndRes) #inert) #inert (%if (%== (bndRes) :rhs) 1 #null)))
+(%assert (%def a :prv 1) #null)
+(%assert (%def a :rhs 1) 1)
+(%assert (%def a :rhs 1 2) &Wat.Vm$Error :type 'match :operands# -1)
  
-(%assert (%begin (%def (a) (%list 1)) a)         1)
-(%assert (%begin (%def (a b) (%list 1 2)) b)     2)
-(%assert (%begin (%def (a . b) (%list 1 2)) b)   '(2))
-(%assert (%begin (%def (a . b) (%list 1 2 3)) b) '(2 3))
+(%assert (%begin (%def (a) (1)) a)         1)
+(%assert (%begin (%def (a b) (1 2)) b)     2)
+(%assert (%begin (%def (a . b) (1 2)) b)   (2))
+(%assert (%begin (%def (a . b) (1 2 3)) b) (2 3))
 
 (%assert (%def (a))           ) ; throw
 (%assert (%def (a) 1)         ) ; throw

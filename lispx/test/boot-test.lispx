@@ -443,7 +443,7 @@
 
   (deftest def.4
     (def x 1)
-    (if (== (bndRes) 1) 1 #inert))
+    (if (== (bndRes) :rhs) 1 #inert))
 
   (deftest def.5
     (signalsError?
@@ -496,7 +496,7 @@
 
   (deftest defConstant.5
     (defConstant x 1)
-    (if (== (bndRes) 1) 1 #inert)))
+    (if (== (bndRes) :rhs) 1 #inert)))
 
 (defsuite \
 
@@ -549,7 +549,7 @@
      Error :type 'type :datum #t :expected '(or Symbol Cons)))
 
   (deftest def\.6
-    (type? (def\ foo ()) (if (== (bndRes) 1) Function Inert))))
+    (type? (def\ foo ()) (if (== (bndRes) :rhs) Function Inert))))
 
 (defsuite begin
 
@@ -1254,7 +1254,7 @@
 (defsuite type?
 
   (deftest type?.1
-    (and
+    (&&
      (type? #t Boolean)
      (type? #f Boolean)
      (type? 12 Integer)
@@ -1263,7 +1263,7 @@
      (type? Object Class)))
 
   (deftest type?.2
-    (and
+    (&&
      (type? Condition StandardClass)
      (type? Condition Class)
      (type? Condition Object)))
@@ -1366,7 +1366,7 @@
   (deftest newEnv.3
     (signalsError?
      (newEnv 12)
-     Error :type 'type :datum (12) :expected '(or () (2 (or () Env) Obj) (1 + (or () Env) (or Symbol Keyword String) Any)))))
+     Error :type 'type :datum (12) :expected '(or () (2 (or () Env) Obj) (1 oo (or () Env) (or Symbol Keyword String) Any)))))
 
 (defsuite cxxr
 
@@ -2278,58 +2278,58 @@
 (defsuite and
 
   (deftest and.1
-    (and)
+    (&&)
     #t)
 
   (deftest and.2
-    (and #t #f)
+    (&& #t #f)
     #f)
 
   (deftest and.3
-    (and #t (eq? 1 1) #t)
+    (&& #t (eq? 1 1) #t)
     #t)
 
   (deftest and.4
     (signalsError?
-     (and #t #t 1)
+     (&& #t #t 1)
      Error :type 'type :datum 1 :expected 'Boolean))
 
   (deftest and.5
     (begin
       (def x 1)
       (def env (theEnv))
-      (and #f (set env x 2))
+      (&& #f (set env x 2))
       x)
     1))
 
 (defsuite or
 
-  (deftest or.1
-    (or)
+  (deftest ||.1
+    (||)
     #f)
 
   (deftest or.2
-    (or #t #f)
+    (|| #t #f)
     #t)
 
   (deftest or.3
-    (or #t #t #t)
+    (|| #t #t #t)
     #t)
 
   (deftest or.4
-    (or #f #f #f)
+    (|| #f #f #f)
     #f)
 
   (deftest or.5
     (signalsError?
-     (or #f #f 1)
+     (|| #f #f 1)
      Error :type 'type :datum 1 :expected 'Boolean))
 
   (deftest or.6
     (begin
       (def x 1)
       (def env (theEnv))
-      (or #t (set env x 2))
+      (|| #t (set env x 2))
       x)
     1))
 
@@ -2352,17 +2352,17 @@
   (deftest obj.3
     (signalsError?
      (new 3)
-     Error :type 'type :datum '(3) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any) (1 + String (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any)))))) ))
+     Error :type 'type :datum '(3) :expected '(or (2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) ))
 
   (deftest obj.4
     (signalsError?
      (new Object)
-     Error :type 'type :datum '(&java.lang.Object) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any) (1 + String (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any)))))) ))
+     Error :type 'type :datum '(&java.lang.Object) :expected '(or (2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) ))
 
   (deftest obj.5
     (signalsError?
      (new Obj :x)
-     Error :type 'type :datum '(&Wat.Vm$Obj :x) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any) (1 + String (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any)))))) )) )
+     Error :type 'type :datum '(&Wat.Vm$Obj :x) :expected '(or (2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) )) )
 
 (defsuite slots
 
@@ -2998,10 +2998,10 @@
      Error :type 'type :datum "foo" :expected 'Class))
 
   (deftest subClass?.5
-    (and (subClass? Object Object)
-         (subClass? Class Object)
-         (subClass? StandardClass Class)
-         (subClass? StandardClass Object))
+    (&& (subClass? Object Object)
+        (subClass? Class Object)
+        (subClass? StandardClass Class)
+        (subClass? StandardClass Object))
     #t))
 
 ;; Utility used by `%newClass' and `defClass' tests.
@@ -3107,7 +3107,7 @@
      Error :type 'match :operands# +1))
 
   (deftest defClass.5
-    (type? (defClass C () ()) (if (== (bndRes) 1) StandardClass Inert)))
+    (type? (defClass C () ()) (if (== (bndRes) :rhs) StandardClass Inert)))
 
   (deftest defClass.6
     (begin

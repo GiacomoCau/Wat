@@ -509,20 +509,16 @@
 
 ;;; And Or
 
-(defVau and ops env
+(defVau && ops env
   (if (null? ops) #t
     (if (eval (car ops) env)
-      (apply and (cdr ops) env)
+      (apply && (cdr ops) env)
       #f )))
 
-(def && and)
-
-(defVau or ops env
+(defVau || ops env
   (if (null? ops) #f
     (if (eval (car ops) env) #t
-      (apply or (cdr ops) env) )))
-
-(def || or)
+      (apply || (cdr ops) env) )))
 
 
 ;;;; Bind? IfBind? CaseVau Case\ Match
@@ -676,7 +672,7 @@
     (let1 next (clauses clauses)
       (if (null? clauses) #inert
         (let1 (((values . forms) . clauses) clauses)
-          (if (or (== values 'else) (== value values) (and (cons? values) (cons? (member value values))))
+          (if (|| (== values 'else) (== value values) (&& (cons? values) (cons? (member value values))))
             (if (== (car forms) '=>)
               (let1 ((apv) (cdr forms)) ((eval apv env) value))
               (eval (cons 'begin forms) env) )
@@ -779,7 +775,7 @@
         (if (null? clauses) #null
           (let ((env+ (newEnv env))
                 (((bindings . forms) . clauses) clauses) )
-            (if (or (== bindings 'else) (bind? env+ bindings exp))
+            (if (|| (== bindings 'else) (bind? env+ bindings exp))
               (eval (cons 'begin forms) env+)
               (loop clauses) )))))))
 
@@ -882,10 +878,10 @@
     (vau (o ck) env
       (let1rec\
         (ev (ck)
-          (if (== ck '+) (.MAX_VALUE Integer)
+          (if (== ck 'oo) (.MAX_VALUE Integer)
             (if (! (cons? ck)) (eval ck env)
               (if (== (car ck) 'or) (list->array (ev (cdr ck)))
-                (if (or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
+                (if (|| (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
                   (map (\ (ck) (ev ck)) ck) )))))
         (%check o (ev ck)) ))))
 
@@ -895,10 +891,10 @@
       (let1rec\
         (ev (ck)
           (cond
-            ((== ck '+) (.MAX_VALUE Integer))
+            ((== ck 'oo) (.MAX_VALUE Integer))
             ((! (cons? ck)) (eval ck env))
             ((== (car ck) 'or) (list->array (ev (cdr ck))))
-            ((or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck))
+            ((|| (== (car ck) '%') (== (car ck) 'quote)) (cadr ck))
             (else (map (\ (ck) (ev ck)) ck)) ))
         (%check o (ev ck)) ))))
 
@@ -908,10 +904,10 @@
       (let1rec\
         (ev (ck)
           (if*
-            (== ck '+) (.MAX_VALUE Integer)
+            (== ck 'oo) (.MAX_VALUE Integer)
             (! (cons? ck)) (eval ck env)
             (== (car ck) 'or) (list->array (ev (cdr ck)))
-            (or (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
+            (|| (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
             (map (\ (ck) (ev ck)) ck) ))
         (%check o (ev ck)) ))))
 |#
@@ -922,7 +918,7 @@
 (defMacro (check* o . cks)
     (list 'check o cks) )
 
-(assert (check* '(1 (:a 1 :b 2) c 3) 1 + Integer (Keyword Integer) Symbol (or 3 4)) 4)
+(assert (check* '(1 (:a 1 :b 2) c 3) 1 oo Integer (Keyword Integer) Symbol (or 3 4)) 4)
 (assert (check* '(a 1 2) 'a 1 2) 3)
 (assert (check* '(a) (or '(b) '(a))) 1)
 (assert (check* '(a 1 2) (or '(b 3) '(a 1 2))) 3)
@@ -953,14 +949,6 @@
     (catchTag tag
       (eval (list (list* '\ (list blockName) forms) escape) env) )))
 
-#|
-(defVau block (blockName . forms) env
-  (def tag (list #inert)) ; cons up a fresh object as tag
-  (def\ (escape value) (throwTag tag value))
-  (catchTag tag
-    (eval (list (list* '\ (list blockName) forms) escape) env) ))
-|#
-
 (assert (block exit (exit 7)) 7)
 (assert (block exit (def x 1) (loop (if (== x 4) (exit 7)) (def x (+ x 1)))) 7)
 
@@ -976,22 +964,6 @@
         (if (eval testForm env)
             (eval forms env)
             (returnFrom exit #inert))))))
-
-#| TODO sostituito dal seguente, eliminare
-(defVau while (testForm . forms) env
-  (let ((forms (list* 'begin forms))
-        (break (list #null))
-        (continue (list #null)) )
-    (def env (newEnv (newEnv env    
-      :break/v (\ v (throwTag break (if (! (null? v)) (if (null? (cdr v)) (car v) v))))
-      :continue (\ () (throwTag continue)) )))
-    (catchTag break
-      (loop
-        (catchTag continue
-          (if (eval testForm env)
-            (eval forms env)
-            (throwTag break) ))))))
-|#
 
 (def %loop
   (let ( (%loop %loop)
@@ -1019,7 +991,7 @@
                     :break/v (makeThrowTagValue\ "break" %deep)
                     :until (\ (b) (if b (throwTag break)))
                     :while (\ (b) (if (! b) (throwTag break))) ))) 
-              (if (check? forms (2 + 'for ((2 3)) )) ;loop for
+              (if (check? forms (2 oo 'for ((2 3)) )) ;loop for
                 (let ( (for (cadr forms))
                        (forms (01+ (cddr forms))) )
                   (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (opt? incr init)) for)))
@@ -1028,7 +1000,7 @@
                     (%loop
                       (catchTag continue (eval forms env) )
                       (eval increments env) )))
-                (if (check? forms (2 + 'for1 (2 3))) ;loop for1
+                (if (check? forms (2 oo 'for1 (2 3))) ;loop for1
                   (let ( ((pt init . incr) (cadr forms))
                          (forms (01+ (cddr forms))) )
                     (def increment (list 'def pt (opt? incr init)))
@@ -1109,7 +1081,7 @@
   (let1 (fresh (list #null))
     (catchWth
       (\ (exc)
-        (if (and (cons? exc) (== (car exc) fresh))
+        (if (&& (cons? exc) (== (car exc) fresh))
           (let1 ((#ignore opt?) exc) (if (cons? opt?) (car opt?)))
           (throw exc)))
       (fun (\ opt? (throw (list fresh (ifOpt? (val opt?) opt?) )))) )))
@@ -1254,9 +1226,9 @@
         (def\ (ckdvar var)
             (def lkp (@get env var))
             (def ndv (.value lkp))
-            ;(if (or (and (null? body) (null? ndv)) (instanceOf? ndv DVar)) ndv
+            ;(if (|| (&& (null? body) (null? ndv)) (instanceOf? ndv DVar)) ndv
             ;  (error ($ "not " (if (null? body) "null or " "") "a dynamic value: " var)) )
-            (if (or (and (null? body) (! (.isBound lkp))) (instanceOf? ndv DVar)) ndv
+            (if (|| (&& (null? body) (! (.isBound lkp))) (instanceOf? ndv DVar)) ndv
               (error ($ "not " (if (null? body) "unbound or " "") "a dynamic value: " var)) ))
         (def ndv* (map ckdvar var*))
         (unless (null? body) (def old* (map (\ (ndv) (if (null? ndv) ndv (ndv))) ndv*)))
@@ -1510,7 +1482,7 @@
 
 (def\ (lcm a b . more)
   (if (null? more)
-    (if (or (zero? a) (zero? b)) 0
+    (if (|| (zero? a) (zero? b)) 0
       (abs (* b (/ a (gcd a b)))) )
     (lcm a (apply lcm (cons b more))) ))
 

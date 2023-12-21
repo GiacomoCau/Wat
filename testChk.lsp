@@ -34,8 +34,8 @@ check(List o, List chk)
 
 (load "wat!/vm.wat")(load "testChk.lsp")
 
-(let1 (xx '(Error @getMessage "foo")) (eval (list 'the+ '(or Class (1 + Class (or Symbol Keyword At) Any)) (map (\ (x) (eval x)) xx))))
-(eval (list 'the+ '(or Class (1 + Class (or Symbol Keyword At) Any)) (list Error @getMessage "foo")) (theEnv))
+(let1 (xx '(Error @getMessage "foo")) (eval (list 'the+ '(or Class (1 oo Class (or Symbol Keyword At) Any)) (map (\ (x) (eval x)) xx))))
+(eval (list 'the+ '(or Class (1 oo Class (or Symbol Keyword At) Any)) (list Error @getMessage "foo")) (theEnv))
 (eval (list 'the+ '(Class At String) '(Error @getMessage "foo")) (theEnv))
 (the+ (Class At String) (Error @getMessage "foo"))
 (the+ At @getMessage) ; ok
@@ -102,9 +102,9 @@ check(List o, List chk)
 
 ;#| test new
 (assert (new)             Error :type 'match :operands# +1)
-(assert (new Box)         Error :type 'type :datum (&Wat.Vm$Box) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any) (1 + String (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any)))))))
-(assert (new Obj :a)      Error :type 'type :datum (&Wat.Vm$Obj :a) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any) (1 + String (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any)))))))
-(assert (new Obj :a 1 :b) Error :type 'type :datum (&Wat.Vm$Obj :a 1 :b) :expected '(or (2 Box) (1 + Obj (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any) (1 + String (or ((or Symbol Keyword String) Any) (1 + Throwable (or Symbol Keyword String) Any)))))))
+(assert (new Box)         Error :type 'type :datum (&Wat.Vm$Box) :expected '(or (2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))))
+(assert (new Obj :a)      Error :type 'type :datum (&Wat.Vm$Obj :a) :expected '(or (2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))))
+(assert (new Obj :a 1 :b) Error :type 'type :datum (&Wat.Vm$Obj :a 1 :b) :expected '(or (2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))))
 
 (new Obj) ;-> ok {&Wat.Vm.Obj}
 (new Box 1) ;-> ok {&Box 1}
@@ -112,20 +112,20 @@ check(List o, List chk)
 (new Obj :a 1 :b 2) ;-> ok {&Wat.Vm.Obj :a=1 :b=2}
 
 
-(assert (check* '(Obj)                   1 + (or (2 'Box) (1 + 'Obj (or Symbol Keyword) Any))) 1)
-(assert (check* '(Box 1)                 1 + (or (2 'Box) (1 + 'Obj (or Symbol Keyword) Any))) 2)
-(assert (check* '(Obj :a 1)              1 + (or (2 'Box) (1 + 'Obj (or Symbol Keyword) Any))) 3)
-(assert (check* '(Obj :a 1 :b 3)         1 + (or (2 'Box) (1 + 'Obj (or Symbol Keyword) Any))) 5)
+(assert (check* '(Obj)                   1 oo (or (2 'Box) (1 oo 'Obj (or Symbol Keyword) Any))) 1)
+(assert (check* '(Box 1)                 1 oo (or (2 'Box) (1 oo 'Obj (or Symbol Keyword) Any))) 2)
+(assert (check* '(Obj :a 1)              1 oo (or (2 'Box) (1 oo 'Obj (or Symbol Keyword) Any))) 3)
+(assert (check* '(Obj :a 1 :b 3)         1 oo (or (2 'Box) (1 oo 'Obj (or Symbol Keyword) Any))) 5)
 
-(assert (check* '(&Wat.Vm$Obj)           1 + (or (2  Box) (1 +  Obj (or Symbol Keyword) Any))) 1)
-(assert (check* '(&Wat.Vm$Box 1)         1 + (or (2  Box) (1 +  Obj (or Symbol Keyword) Any))) 2)
-(assert (check* '(&Wat.Vm$Obj :a 1)      1 + (or (2  Box) (1 +  Obj (or Symbol Keyword) Any))) 3)
-(assert (check* '(&Wat.Vm$Obj :a 1 :b 2) 1 + (or (2  Box) (1 +  Obj (or Symbol Keyword) Any))) 5)
+(assert (check* '(&Wat.Vm$Obj)           1 oo (or (2  Box) (1 oo  Obj (or Symbol Keyword) Any))) 1)
+(assert (check* '(&Wat.Vm$Box 1)         1 oo (or (2  Box) (1 oo  Obj (or Symbol Keyword) Any))) 2)
+(assert (check* '(&Wat.Vm$Obj :a 1)      1 oo (or (2  Box) (1 oo  Obj (or Symbol Keyword) Any))) 3)
+(assert (check* '(&Wat.Vm$Obj :a 1 :b 2) 1 oo (or (2  Box) (1 oo  Obj (or Symbol Keyword) Any))) 5)
 
-(assert (check* ('&Wat.Vm$Obj)           1 + (or (2  Box) (1 +  Obj (or Symbol Keyword) Any))) 1)
-(assert (check* ('&Wat.Vm$Box 1)         1 + (or (2  Box) (1 +  Obj (or Symbol Keyword) Any))) 2)
-(assert (check* ('&Wat.Vm$Obj :a 1)      1 + (or (2  Box) (1 +  Obj (or Symbol Keyword) Any))) 3)
-(assert (check* ('&Wat.Vm$Obj :a 1 :b 2) 1 + (or (2  Box) (1 +  Obj (or Symbol Keyword) Any))) 5)
+(assert (check* ('&Wat.Vm$Obj)           1 oo (or (2  Box) (1 oo  Obj (or Symbol Keyword) Any))) 1)
+(assert (check* ('&Wat.Vm$Box 1)         1 oo (or (2  Box) (1 oo  Obj (or Symbol Keyword) Any))) 2)
+(assert (check* ('&Wat.Vm$Obj :a 1)      1 oo (or (2  Box) (1 oo  Obj (or Symbol Keyword) Any))) 3)
+(assert (check* ('&Wat.Vm$Obj :a 1 :b 2) 1 oo (or (2  Box) (1 oo  Obj (or Symbol Keyword) Any))) 5)
 
 
 ;test #! the+
