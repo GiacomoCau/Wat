@@ -140,7 +140,7 @@
 ;;; Boot
 
 (load "lispx/src/boot.lispx")
-(load "lispx/src/cond-sys.lispx") ; define error!
+(load "lispx/src/condSys.lispx") ; define error!
 
 (def userBreak error)
 
@@ -153,8 +153,8 @@
 ;;;; Test
 
 ; lasciare commentati, bastano le successive definizioni
-;(load "lispx/test/test-util.lispx")
-;(load "lispx/test/test-util-test.lispx")
+;(load "lispx/test/testUtil.lispx")
+;(load "lispx/test/testUtilTest.lispx")
 
 (defMacro deftest (name expression . expected?)
   (list* '%test name expression (if (null? expected?) '(#t) expected?)))
@@ -172,16 +172,16 @@
       (eval form env) )
     #f ))
 
-(load "lispx/test/boot-test.lispx")
-(load "lispx/test/cond-sys-test.lispx")
-(load "lispx/test/delimcc-test.lispx")
-(load "lispx/test/control-test.lispx")
+(load "lispx/test/bootTest.lispx")
+(load "lispx/test/condSysTest.lispx")
+(load "lispx/test/delimccTest.lispx")
+(load "lispx/test/controlTest.lispx")
 
-;(load "lispx/test/stream-test.lispx")
-;(load "lispx/test/read-test.lispx")
-;(load "lispx/test/print-test.lispx")
-;(load "lispx/test/js-test.lispx")
-;(load "lispx/test/hierarchy-test.lispx")
+;(load "lispx/test/streamTest.lispx")
+;(load "lispx/test/readTest.lispx")
+;(load "lispx/test/printTest.lispx")
+;(load "lispx/test/jsTest.lispx")
+;(load "lispx/test/hierarchyTest.lispx")
 
 
 #|
