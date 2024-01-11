@@ -15,6 +15,7 @@ import static Wat.Utility.ifnull;
 import static Wat.Utility.isInstance;
 import static Wat.Utility.more;
 import static Wat.Utility.or;
+import static Wat.Utility.orEquals;
 import static Wat.Utility.read;
 import static Wat.Utility.reorg;
 import static Wat.Utility.stackDeep;
@@ -90,6 +91,7 @@ import List.ParseException;
 	apv1, hdl: 1 arg applicative combiner, handler
 	p: parameter
 	pt: parameters tree
+	dt: definiens tree
 	arg: argument
 	args: arguments
 	e: environment
@@ -589,7 +591,7 @@ public class Vm {
 								className,
 								isObj ? "Vm.Obj" : superClass.getCanonicalName(),
 								isBox ? "Object" : "Object ... ", 
-								isObj || Utility.equals(superClass, Condition.class, Error.class, Box.class) ? "vm.super(" : "super(vm, "
+								isObj || orEquals(superClass, Condition.class, Error.class, Box.class) ? "vm.super(" : "super(vm, "
 							)
 						)
 					)
@@ -672,7 +674,7 @@ public class Vm {
 				throw new MatchException("expected {operands#,%+d} operands, found: {datum}", rhs, -len(rhs));
 			}
 			case Cons lc-> {
-				if (lc.car instanceof Symbol sym && Utility.equals(sym.name, "%'", "quote")) {
+				if (lc.car instanceof Symbol sym && orEquals(sym.name, "%'", "quote")) {
 					if (equals(lc.<Object>car(1), rhs)) yield null; // or rhs?
 					throw new TypeException("expected literal: {expected}, found: {datum}", rhs, lc.car(1));
 				}
@@ -770,17 +772,17 @@ public class Vm {
 		boolean def;
 		Def(boolean def) { this.def = def; }
 		public Object combine(Env e, List o) {
-			var chk = checkR(this, o, 2, 3, or(/*null, #inert,*/ Symbol.class, Cons.class));  // o = (pt arg) | (pt (or #ignore #inert :rhs :prv) arg)
+			var chk = checkR(this, o, 2, 3); // o = (dt val) | (dt (or #ignore #inert :rhs :prv) val)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
-			var pt = o.car;
-			if (pt instanceof Cons) { var msg = checkPt(cons(this, o), pt); if (msg != null) return msg; }
+			var dt = o.car;
+			var msg = checkDt(cons(this, o), dt); if (msg != null) return msg;
 			var dbg = dbg(e, this, o);
 			return pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> 
 				switch (bndRes(len != 3 ? ignore : o.car(1), false)) {
 					case Suspension s-> s;
 					case Integer i-> i >= 0 && i <= 2
-						? bind(dbg, def, i, e, pt, res)
+						? bind(dbg, def, i, e, dt, res)
 						: typeError("cannot " + (def ? "def" : "set!") + ", invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2)));
 					case Object obj-> resumeError(chk, symbol("Integer"));
 				}
@@ -841,10 +843,10 @@ public class Vm {
 	Object istrue(Object res) {
 		return switch (typeT) {
 			case 0-> res instanceof Boolean b ? b : typeError("not a {expected}: {datum}", res, symbol("Boolean")); // Kernel, Wat, Lispx
-			case 1-> !Utility.equals(res, false); // Scheme, Guile, Racket
-			case 2-> !Utility.equals(res, false, null); // Clojure
-			case 3-> !Utility.equals(res, false, null, ignore);
-			case 4-> !Utility.equals(res, false, null, ignore, 0); // Javascript
+			case 1-> !orEquals(res, false); // Scheme, Guile, Racket
+			case 2-> !orEquals(res, false, null); // Clojure
+			case 3-> !orEquals(res, false, null, ignore);
+			case 4-> !orEquals(res, false, null, ignore, 0); // Javascript
 			default-> res instanceof Boolean b ? b : typeError("not a {expected}: {datum}", res, symbol("Boolean")); // Kernel, Wat, Lispx
 		};
 	}
@@ -1251,31 +1253,31 @@ public class Vm {
 	}
 	
 	
-	// Check Parameters Tree
+	// Check Definitions/Parameters Tree
 	class PTree {
-		private Object exp, pt, ep;
+		private Object exp, pt, ep; // ep == null per Def ovvero %def || %set!, ep == (or #ignore Symbol) per Vau 
 		private Set syms = new HashSet();
 		PTree(Object exp, Object pt, Object ep) { this.exp=exp; this.pt = pt; this.ep = ep; }
 		Object check() { 
-			if (!((pt == null || pt == ignore || pt instanceof Symbol) && syms.add(pt))) {
-				if (!(pt instanceof Cons)) return typeError("invalid parameter tree, not {expected}: {datum} of: {expr}", pt, toChk(or(null, ignore, Symbol.class, Cons.class)), exp );
+			if (!((pt instanceof Symbol || (pt == null || pt == ignore) && ep != null) && syms.add(pt))) {
+				if (!(pt instanceof Cons)) return typeError("invalid parameter tree, not {expected}: {datum} of: {expr}", pt, toChk(ep == null ? or(Symbol.class, Cons.class) : or(null, ignore, Symbol.class, Cons.class)), exp );
 				var msg = check(pt); if (msg != null) return msg;
 			}
-			if (ep == null /* %def && %set! */ || ep == ignore) return syms.size() > 0 ? null : typeError("invalid parameter tree syntax, not one {expected} in: {datum} of: {expr}", pt, toChk(or(null, ignore, Symbol.class)), exp);
+			if (ep == null || ep == ignore) return syms.size() > 0 ? null : typeError("invalid parameter tree syntax, not one {expected} in: {datum} of: {expr}", pt, toChk(ep == null ? Symbol.class : or(null, ignore, Symbol.class)), exp);
 			if (!(ep instanceof Symbol sym)) return typeError("invalid parameter tree, not {expected}: {datum} of: {expr}", ep, toChk(or(ignore, Symbol.class)), exp);
 			return !syms.contains(sym) ? null : syntaxError("invalid parameter tree syntax, not a unique symbol: {datum} in: {expr}", ep, exp);
 		}
 		private Object check(Object p) {
-			if (p == null || p == ignore) syms.add(p);
+			if (p == null || p == ignore) { if (ep != null) syms.add(p); return null; }
 			if (p instanceof Symbol) { return syms.add(p) ? null : syntaxError("invalid parameter tree syntax, not a unique symbol: {datum} in: " + pt + " of: {expr}", p, exp); }
 			if (!(p instanceof Cons c)) return null;
-			if (c.car instanceof Symbol sym && Utility.equals(sym.name, "%'", "quote")) return len(c) == 2 ? null : syntaxError("invalid parameter tree #' syntax: {datum} in: {expr}", c, exp);
+			if (c.car instanceof Symbol sym && orEquals(sym.name, "%'", "quote")) return len(c) == 2 ? null : syntaxError("invalid parameter tree #' syntax: {datum} in: {expr}", c, exp);
 			if (c.car == sheBang) return len(c) == 3 && c.car(2) instanceof Symbol? check(c.car(2)) : syntaxError("invalid parameter tree #! syntax: {datum} in: {expr}", c, exp);
 			var msg = check(c.car); if (msg != null) return msg;
 			return c.cdr() == null ? null : check(c.cdr());
 		}
 	}
-	Object checkPt(Object exp, Object pt) { return checkPt(exp, pt, null); }
+	Object checkDt(Object exp, Object dt) { return checkPt(exp, dt, null); }
 	Object checkPt(Object exp, Object pt, Object ep) { return new PTree(exp, pt, ep).check(); }
 	int args(Apv apv) {
 		return switch(apv.cmb) {
@@ -1340,13 +1342,13 @@ public class Vm {
 		}
 		else if (chk instanceof List chkl) {
 			if (chkl.car instanceof Object[] chks && chkl.cdr() == null) return checkO(o, chks);
-			if (Utility.equals(chkl.car, comparators)) {
+			if (orEquals(chkl.car, comparators)) {
 				switch (getTco(combine(env(), chkl.car(1), list(o, chkl.car(2))))) {
 					case Boolean b when b: return 0;
 					case Object obj: throw new TypeException("not a {expected}: {datum}", o, toChk(chkl));
 				}
 			}
-			if (Utility.equals(chkl.car, symbol("and"))) {
+			if (orEquals(chkl.car, symbol("and"))) {
 				for (var chka = chkl.cdr(); chka != null; chka = chka.cdr()) {
 					try {
 						checkO(o, chka.car);
@@ -1367,7 +1369,7 @@ public class Vm {
 		else if (chk instanceof Class chkc) {
 			if (checkC(o, chkc)) return 0;
 		}
-		else if (Utility.equals(o, chk))  {
+		else if (orEquals(o, chk))  {
 			return 0;
 		}
 		throw new TypeException("not a {expected}: {datum}", o, toChk(chk));
@@ -1376,7 +1378,7 @@ public class Vm {
 		return chk instanceof Class cl ? symbol(cl.getSimpleName())
 			: chk instanceof Integer i && i == more ? symbol("oo")
 			: chk instanceof Object[] a ? cons(symbol("or"), list(stream(a).map(o-> toChk(o)).toArray()))
-			: chk instanceof List l ? map(o-> toChk(o), Utility.equals(l.car, comparators) ? cons(l.car, l.cdr(1)) : l )
+			: chk instanceof List l ? map(o-> toChk(o), orEquals(l.car, comparators) ? cons(l.car, l.cdr(1)) : l )
 			: chk
 		;
 	}
@@ -1388,7 +1390,9 @@ public class Vm {
 			|| obj instanceof Class cl2 && cl.isAssignableFrom(cl2)
 			|| cl == Apv0.class && obj instanceof Apv apv && args(apv) == 0
 			|| cl == Apv1.class && obj instanceof Apv apv && args(apv) == 1
-			|| cl == PTree.class && checkPt(obj, obj) == null
+			// TODO valutare
+			//|| cl == DTree.class && checkDt(obj, obj) == null
+			//|| cl == PTree.class && checkPt(obj, obj, obj) == null
 		;
 	}
 	public Object check(Object op, Object o, Object chk) {
@@ -1400,7 +1404,7 @@ public class Vm {
 		}
 	}
 	private Object innerError(InnerException ie, Object op, Object o, Object chk) {
-		return !Utility.equals(op, "check", "the+")
+		return !orEquals(op, "check", "the+")
 			? error("combining {operator} with {operands}", ie, "operator", op, "operands", o)
 			: ie.objs[1] != o /*&& ie.objs[3].equals(toChk(chk))*/
 			? error("checking {operands} with {check}", ie, "operands", o, "check", toChk(chk))
@@ -1856,8 +1860,17 @@ public class Vm {
 				catch (Throwable thw) {
 					if (prStk)
 						thw.printStackTrace(out);
+					/* TODO sostituito dal seguente, eliminare
 					else {
 						print(thw instanceof Value v ? ifnull(v.getCause(), thw) : thw);
+					}
+					*/
+					else if (thw instanceof Value v)  {
+						print("uncatched throw tag: " + v.tag);
+						print(ifnull(v.getCause(), thw));
+					}
+					else {
+						print(thw);
 					}
 				}
 			}

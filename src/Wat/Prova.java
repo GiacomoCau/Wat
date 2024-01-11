@@ -1,5 +1,6 @@
 package Wat;
 
+import static Wat.Utility.orEquals;
 import static java.lang.System.out;
 import static java.nio.charset.Charset.forName;
 import static java.nio.file.Files.readString;
@@ -43,6 +44,10 @@ import Wat.Vm.Symbol;
 public class Prova {
 	
 	public static void main(String[] args) throws FileNotFoundException, IOException {
+		out.println(Long.parseLong("1_2L"));
+	}
+
+	public static void readPrint() throws IOException, FileNotFoundException {
 		try (var x = new BufferedReader(new FileReader("testFile.txt")); ) {
 			for (String l=null; (l = x.readLine()) != null; ) {
 				out.println(l);
@@ -71,7 +76,7 @@ public class Prova {
 		out.println(Boolean.FALSE == true);
 		//out.println(new Object() == true);
 		//Object obj = null; out.println(obj == true);
-		out.println(Utility.equals(0, null, false, 0));
+		out.println(orEquals(0, null, false, 0));
 	} 
 
 	//class $ {}

@@ -52,7 +52,7 @@ public class Utility {
 		return objs[objs.length-1];
 	}
 	
-	public static <T> boolean equals(T v, T ... a) {
+	public static <T> boolean orEquals(T v, T ... a) {
 		for (T e: a) if (v == null ? e == null : v.equals(e)) return true;
 		return false;
 	}
@@ -341,7 +341,7 @@ public class Utility {
 		List<Executable> executables = new ArrayList<>();
 		do addExecutable(executables, classe, publicMember, constructors, name, argumentsClass);
 		while (!constructors && !publicMember && (classe = classe.getSuperclass()) != null);
-		if (!constructors && obj instanceof Class && !equals(obj, Class.class, Object.class)) {
+		if (!constructors && obj instanceof Class && !orEquals(obj, Class.class, Object.class)) {
 			classe = (Class) obj;
 			do addExecutable(executables, classe, publicMember, constructors, name, argumentsClass);
 			while (!publicMember && (classe = classe.getSuperclass()) != Object.class && classe != null);

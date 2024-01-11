@@ -17,8 +17,8 @@
 (%assert (%list- 1 2 '(3 4)) '(1 2 (3 4)))
 
 (%assert (%def) &Wat.Vm$Error :type 'match :operands# +2)
-(%assert (%def 1) &Wat.Vm$Error :type 'type :datum 1 :expected '(or Symbol Cons))
-(%assert (%def a) &Wat.Vm$Error :type 'match :operands# +1) 
+(%assert (%def 1) &Wat.Vm$Error :type 'match :operands# +1) 
+(%assert (%def 1 1) &Wat.Vm$Error :type 'type :datum 1 :expected '(or Symbol Cons))
 (%assert (%def a 1) #inert)
 (%assert (%def a 1 2) &Wat.Vm$Error :type 'type :datum 1 :expected '(or #inert #ignore :rhs :prv))
 (%assert (%def a #inert 1) #inert)

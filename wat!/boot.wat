@@ -658,7 +658,7 @@
   (let1 loop (lst lst)
     (if (null? lst) #null
       (let1 ((k v . lst) lst)
-        (if (== k key) (list v)
+        (if (== k key) (cons v)
           (loop lst)) ))))
 
 (assert (get? :b '(:a 1 :b 2 :c 3)) '(2))
@@ -714,7 +714,7 @@
 (def\ some (value)
   #|Create a one-element list from the VALUE.
    |#
-  (list value))
+  (cons value))
 
 (def\ (01+ forms)
   (if (null? forms) #null (1+ forms)) )

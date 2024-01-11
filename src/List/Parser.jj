@@ -162,7 +162,7 @@ TOKEN:	// literals
 |	< # Int: "0" | ("+"|"-")? <Nat> >
 |	< # Nat: <d19> (<d09>)* >
 |	< # d19: ["1"-"9"] >
-|	< # d09: ["0"-"9"] >
+|	< # d09: ["0"-"9","_"] >
 |	< BDecimal: <Dec> ( "bd" | "BD" ) >
 |	< Double: <Dec> ( "d" | "D" )?  >
 |	< # Dec: (( "+" | "-" )? ("0" | <Nat>)) ( "." ( <d09> )+ )? (<exp>)?  >
@@ -200,11 +200,11 @@ Object Elt() throws Exception: {
 	|	t=<Inert>    { return t.image; }    
 	|	t=<Ignore>   { return t.image; }    
 	|	t=<SheBang>  { return t.image; }    
-	|	t=<BDecimal> { return new java.math.BigDecimal(t.image.substring(0,t.image.length()-2)); }
-	|	t=<Double>   { return java.lang.Double.parseDouble(t.image); }
-	|	t=<BInteger> { return new java.math.BigInteger(t.image.substring(0,t.image.length()-2)); }
-	|	t=<Long>     { return java.lang.Long.parseLong(t.image.substring(0,t.image.length()-1)); }
-	|	t=<Integer>  { return java.lang.Integer.parseInt(t.image); }
+	|	t=<BDecimal> { return new java.math.BigDecimal(t.image.substring(0,t.image.length()-2).replaceAll("_","")); }
+	|	t=<Double>   { return java.lang.Double.parseDouble(t.image.replaceAll("_","")); }
+	|	t=<BInteger> { return new java.math.BigInteger(t.image.substring(0,t.image.length()-2).replaceAll("_","")); }
+	|	t=<Long>     { return java.lang.Long.parseLong(t.image.substring(0,t.image.length()-1).replaceAll("_","")); }
+	|	t=<Integer>  { return java.lang.Integer.parseInt(t.image.replaceAll("_","")); }
 	|	t=<String>   { return $("wat-string", toStringTokenImage(t.image)); }
 	|	t=<USym>     { return t.image.substring(1,t.image.length()-1).replaceAll("\\\\\\|", "|").replaceAll("\\\\\\\\", "\\\\"); }
 	|	t=<Prim>     { return classForName(t.image.substring(1)); }	
