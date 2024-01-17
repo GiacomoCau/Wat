@@ -128,16 +128,44 @@
 
 (load "wat!/boot.wat");
 
-(def SimpleError Error)
-(def\ simpleError (message)
-  (error message :type 'simple) )
+;;;; Error break routine, called by VM to print stacktrace and throw
+
+(def\ (printFrames k)
+  (let1 (k (.nxt k))
+    (unless (null? k) (printFrames k)) )
+  (log "v" k) )
+
+(def\ (printStacktrace)
+  (takeSubcont rootPrompt k
+  	(printFrames k) (pushPrompt rootPrompt (pushSubcont k)) ))
+
+(def\ (userBreak err)
+  (when (prStk) (log "-" (@getMessage err)) (printStacktrace))
+  (throw err) )
 
 
 ;;;; Test
 
+(load "wat!/test.wat");
+
+
+; for minimal lispx test compatibility
+
+(defMacro deftest (name expression . expected?)
+  (list* '%test name expression (if (null? expected?) '(#t) expected?)))
+
+(defMacro deftest* (name . forms)
+  (list deftest name (list* prog1 #t forms)) )
+
+(defVau defsuite (name . forms) env
+  (eval (cons 'begin forms) env) )
+
 (def signalsError? assert)
 
-(load "wat!/test.wat");
+(def SimpleError Error)
+(def\ simpleError (message)
+  (error message :type 'simple) )
+
 
 (%def milli (%- (@currentTimeMillis &java.lang.System) milli))
 (%$ "vm started in " (%$ milli "ms"))

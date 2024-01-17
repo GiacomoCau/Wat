@@ -121,7 +121,7 @@
     (%vau (o ck) env
       (%def evl
         (%\ (ck)
-          (%if (%== ck 'oo) (.MAX_VALUE Integer)
+          (%if (%== ck 'oo) (.MAX_VALUE &java.lang.Integer)
             (%if (%! (%cons? ck)) (%eval ck env)
             ( (%\ (ckcar)
                 (%if (%== ckcar 'or) (%list->array (evl (%cdr ck)))
@@ -140,8 +140,37 @@
 ;;; Boot
 
 (load "lispx/src/boot.lispx")
-(load "lispx/src/condSys.lispx") ; define error!
+(load "lispx/src/condSys.lispx") ; define error, SimpleError & simpleError!
 
+;;;; Error break routine, called by VM to print stacktrace and throw
+
+(def\ (printFrames k)
+  (let1 (k (.nxt k))
+    (unless (null? k) (printFrames k)) )
+  (log "v" k) )
+
+(def\ invokeDebugger (condition)
+  #|Invoke the debugger, which as a default just prints a stack trace
+   |and panics, thereby throwing an exception to JS.  When running in the
+   |REPL, this function gets replaced with a different one that runs a
+   |nested debug loop.
+   |#
+  (takeSubcont rootPrompt k
+    (pushDelimSubcont rootPrompt k
+      (if (prStk) (printFrames k))
+      (panic condition))))
+
+(def\ panic (e)
+  #|Mostly for internal use.  Signal the ERROR in such a way that it is
+   |hard to handle and will usually escape the VM as a host language
+   |exception.  In particular, signal handlers will not be invoked.
+   |However, intervening `finally' cleanup expressions and `progv'
+   |expressions are still triggered, so Lisp invariants are maintained.
+   |$(fn (error))
+   |$(type function)
+   |#
+  (throw e) )
+  
 (def userBreak error)
 
 ;(load "lispx/src/stream.lispx")
@@ -153,7 +182,7 @@
 ;;;; Test
 
 ; lasciare commentati, bastano le successive definizioni
-;(load "lispx/test/testUtil.lispx")
+;(load "lispx/test/testUtil.lispx") ;
 ;(load "lispx/test/testUtilTest.lispx")
 
 (defMacro deftest (name expression . expected?)

@@ -196,6 +196,9 @@
 (def identity
   (\ (x) x))
 
+(def 1+
+  (\ (n) (+ n 1)))
+
 
 ;;; Macro
 
@@ -361,6 +364,8 @@
 (assert (map cdr  '((a 1)(b 2))) '((1) (2)))
 (assert (map cadr '((a 1)(b 2))) '(1 2))
 (assert (map (\ (a b) (+ a b)) '(1 2) '(3 4)) '(4 6))
+
+; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (cons 'list xs) env)
 
 (defMacro (def*\ lhs* . rhs*)
   (list* 'def*
@@ -716,10 +721,10 @@
    |#
   (cons value))
 
-(def\ (01+ forms)
-  (if (null? forms) #null (1+ forms)) )
+(def\ (01->+ forms)
+  (if (null? forms) #null (1->+ forms)) )
 
-(def\ (1+ (#! List forms))
+(def\ (1->+ (#! List forms))
   (if (null? (cdr forms)) (car forms) (cons 'begin forms)) )
 
 ;; (Idea from Taylor R. Campbell's blag. https://mumble.net/~campbell/blag.txt)
@@ -731,7 +736,7 @@
   (let1 (opt? (eval opt? env))
     (if (null? opt?)
       (if (null? else) #null
-        (eval (1+ else) env))
+        (eval (1->+ else) env))
       (if (list? opt?)
         (eval (list* (list 'vau (list pt) #ignore then) opt?) env)
         (typeError opt? '(or () List)) ))))
@@ -744,7 +749,7 @@
   (let1 (opt? (eval opt? env))
     (if (null? opt?)
       (if (null? else) #null
-        (eval (1+ else) env))
+        (eval (1->+ else) env))
       (if (list? opt?)
         (eval (list* (list 'vau pt #ignore then) opt?) env)
         (typeError opt? '(or () List)) ))))
@@ -760,13 +765,13 @@
   #|Destructure the OPTION?.  If it's non-nil, evaluate the FORMS with
    |the NAME bound to the contents of the option.  If it's nil, return nil.
    |#
-  (list 'ifOpt? (list pt opt?) (01+ forms)) )
+  (list 'ifOpt? (list pt opt?) (01->+ forms)) )
 
 (defMacro unlessOpt? (opt? . forms)
   #|Destructure the OPTION?.  If it's nil, evaluate the FORMS.  If it's
    |non-nil, return nil.
    |#
-  (list* 'ifOpt? (list #ignore opt?) #null (01+ forms)) )
+  (list* 'ifOpt? (list #ignore opt?) #null (01->+ forms)) )
 
 (defVau (caseOpt? exp . clauses) env
   (let1 (exp (eval exp env))
@@ -823,95 +828,6 @@
 (def the
   %the)
 
-#| TODO non più necessari, sostituiti da #!, eliminare
-(defMacro (the\ parms . body)
-  (let1rec\
-    ( (parms->names.checks ps)
-      (if (cons? ps)
-        (let* ( ((p . ps) ps)
-                ((names . checks) (parms->names.checks ps)) )
-          (if (cons? p)
-            (let* ( ((name type) p)
-                    (check (list 'the type name)) )
-              (cons (cons name names) (cons check checks)) )
-                    (cons (cons p names) checks) ))
-        (cons ps ()) ))
-    (let1 ((names . checks) (parms->names.checks parms))
-      (list* '\ names (if (null? checks) body (list* (cons 'begin checks) body))) )))
-
-(assert (expand (the\ (a) (+ a 1))) '(\ (a) (+ a 1)))
-(assert (expand (the\ ((a Integer)) (+ a 1))) '(\ (a) (begin (the Integer a)) (+ a 1)))
-
-(defMacro (define lhs . rhs)
-  (if (cons? lhs)
-    (list 'def (car lhs) (list* 'the\ (cdr lhs) rhs))
-    (list 'def lhs (car rhs)) ))
-
-(defMacro (the\ pt . body)
-  (let1rec\
-    ( (pt->pt.cks pt)
-      (if (cons? pt)
-        (let* ( ((lhs . rhs) pt)
-                ((ptRhs . cksRhs) (pt->pt.cks rhs)) )
-          (if (cons? lhs)
-            (if (== (car lhs) #!)  
-              (let* ( ((#_ type name) lhs)
-                      (check (list 'the type name)) )
-                (cons (cons name ptRhs) (cons check cksRhs)) )
-              (let1 ((ptLhs . cksLhs) (pt->pt.cks lhs))
-                (cons (cons ptLhs ptRhs) (append cksLhs cksRhs)) ) )
-            (let1 ((ptRhs . cksRhs) (pt->pt.cks rhs))
-              (cons (cons lhs ptRhs) cksRhs)) ))
-        (cons pt ()) ) )
-    (let1 ((pt . cks) (pt->pt.cks pt))
-      (list* '\ pt (if (null? cks) body (list* (cons 'begin cks) body))) )))
-
-(assert (expand (the\ (((#! Integer b) . #_)(#! Integer a)) (+ a b))) '(\ ((b . #ignore) a) (begin (the Integer b) (the Integer a)) (+ a b)))
-;(assert ((the\ (((#! Integer b) . #_)(#! (or 3 4) a)) (+ a b)) '(1 2) 3) 4)
-|#
-
-; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (cons 'list xs) env)
-
-#| TODO definito in vm, eliminare
-(def %check
-  (let1 (%check %check)
-    (vau (o ck) env
-      (let1rec\
-        (ev (ck)
-          (if (== ck 'oo) (.MAX_VALUE Integer)
-            (if (! (cons? ck)) (eval ck env)
-              (if (== (car ck) 'or) (list->array (ev (cdr ck)))
-                (if (|| (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
-                  (map (\ (ck) (ev ck)) ck) )))))
-        (%check o (ev ck)) ))))
-
-(def %check
-  (let1 (%check %check)
-    (vau (o ck) env  
-      (let1rec\
-        (ev (ck)
-          (cond
-            ((== ck 'oo) (.MAX_VALUE Integer))
-            ((! (cons? ck)) (eval ck env))
-            ((== (car ck) 'or) (list->array (ev (cdr ck))))
-            ((|| (== (car ck) '%') (== (car ck) 'quote)) (cadr ck))
-            (else (map (\ (ck) (ev ck)) ck)) ))
-        (%check o (ev ck)) ))))
-
-(def %check
-  (let1 (%check %check)
-    (vau (o ck) env
-      (let1rec\
-        (ev (ck)
-          (if*
-            (== ck 'oo) (.MAX_VALUE Integer)
-            (! (cons? ck)) (eval ck env)
-            (== (car ck) 'or) (list->array (ev (cdr ck)))
-            (|| (== (car ck) '%') (== (car ck) 'quote)) (cadr ck)
-            (map (\ (ck) (ev ck)) ck) ))
-        (%check o (ev ck)) ))))
-|#
-
 (defVau (check o ck) env
   ((wrap %check) (eval o env) ck) )
 
@@ -927,7 +843,9 @@
 (assert (check* '(a 1)       2 3 Symbol (or (1) (2 (or () Inert :prv :rhs)))) 2)
 
 (defVau check? args env
-  (catchWth #f (apply check args env) #t) )
+  (catchWth #f
+    (apply check args env)
+    #t ))
 
 (defMacro (the+ ck obj) (list 'let1 (list 'obj obj) (list 'check 'obj ck) 'obj))
 
@@ -993,7 +911,7 @@
                     :while (\ (b) (if (! b) (throwTag break))) ))) 
               (if (check? forms (2 oo 'for ((2 3)) )) ;loop for
                 (let ( (for (cadr forms))
-                       (forms (01+ (cddr forms))) )
+                       (forms (01->+ (cddr forms))) )
                   (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (opt? incr init)) for)))
                   (catchTag break
                     (eval (list* 'def* (map car for) (map cadr for)) env)   
@@ -1002,14 +920,14 @@
                       (eval increments env) )))
                 (if (check? forms (2 oo 'for1 (2 3))) ;loop for1
                   (let ( ((pt init . incr) (cadr forms))
-                         (forms (01+ (cddr forms))) )
+                         (forms (01->+ (cddr forms))) )
                     (def increment (list 'def pt (opt? incr init)))
                     (catchTag break
                       (eval (list 'def pt init) env)
                       (%loop
                         (catchTag continue (eval forms env) )
                         (eval increment env) )))
-                  (let1 (forms (01+ forms)) ;loop
+                  (let1 (forms (01->+ forms)) ;loop
                     (catchTag break
                       (%loop
                         (catchTag continue
@@ -1218,29 +1136,6 @@
 
 
 ;;; Dynamic Binding
-
-#| TODO primitiva non più necessaria, eliminare
-(def %d\
-  (vau (var* . body) #ignore
-    (wrau val* env
-        (def\ (ckdvar var)
-            (def lkp (@get env var))
-            (def ndv (.value lkp))
-            ;(if (|| (&& (null? body) (null? ndv)) (instanceOf? ndv DVar)) ndv
-            ;  (error ($ "not " (if (null? body) "null or " "") "a dynamic value: " var)) )
-            (if (|| (&& (null? body) (! (.isBound lkp))) (instanceOf? ndv DVar)) ndv
-              (error ($ "not " (if (null? body) "unbound or " "") "a dynamic value: " var)) ))
-        (def ndv* (map ckdvar var*))
-        (unless (null? body) (def old* (map (\ (ndv) (if (null? ndv) ndv (ndv))) ndv*)))
-        (forEach (\ (ndv var val) (if (instanceOf? ndv DVar) (ndv val) (@def env var (newDVar val)) )) ndv* var* (if (null? val*) (map (\ (var) #null) var*) val*))
-        (unless (null? body)
-          (finally
-            (eval (cons 'begin body) env)
-            (forEach (\ (ndv old) (ndv old)) ndv* old*) )))))
-
-;((d\ (d e) (print e)) 4 5)
-;((d\ (d e)) 6 7)
-|#
 
 (defMacro (ddef var . val?)
   (list* (list '%d\ (list var)) val?) )
@@ -1643,13 +1538,46 @@
 
 (def\ (array . args) (list->array args))
 
-(def Array &java.lang.Object[])
+(def Object[] &java.lang.Object[])
 
-(def\ (arrayMap fun (#! Array arr))
-  (list->array (map fun (array->list arr))) )
+(def\ (arrayMap fun (#! Object[] arr))
+  (list->array (map fun (array->list #t arr))) )
 
-(def\ (arrayFilter pred (#! Array arr))
-  (list->array (filter pred (array->list arr))) )
+(assert (arrayMap 1+ (array 1 2 3)) (array 2 3 4))
+
+(def\ (arrayFilter pred (#! Object[] arr))
+  (list->array (filter pred (array->list #t arr))) )
+
+(assert (arrayFilter odd? (array 1 2 3)) (array 1 3))
+
+(def\ (newInstance class dim . dims)
+  (apply** @newInstance &java.lang.reflect.Array class dim dims))
+
+(def\ (arrayGet array index)
+  (if (cons? index)
+    (apply** arrayGet* array index)
+    (@get &java.lang.reflect.Array array index) ))
+
+(def\ (arrayGet* array . indexes)
+  (let loop ((array array) (indexes indexes))
+    (if (null? indexes) array
+      (loop (arrayGet array (car indexes)) (cdr indexes)) )))  
+
+(def\ (arraySet array index value)
+  (if (cons? index)
+    (apply** arraySet* array value index)
+    (@set &java.lang.reflect.Array array index value)
+    array ))
+
+(def\ (arraySet* array0 value . indexes)
+  (if (null? indexes) array
+    (let loop ((array array0) (indexes indexes))
+       (if (null? (cdr indexes))
+         (begin (arraySet array (car indexes) value) array0)
+         (loop (arrayGet array (car indexes)) (cdr indexes)) ))))  
+
+(assert (arrayGet (arraySet (newInstance &int 2 2) (1 1) 3) (1 1)) 3)
+(assert (arrayGet* (arraySet* (newInstance &int 2 2) 3 1 1) 1 1) 3)
 
 (defVau (time exp) env
   (let1 (currentTime (@getMethod System "currentTimeMillis"))
@@ -1674,18 +1602,3 @@
       (list 'forEach '@close (cons 'list (map car bindings)))
       body )))
 
-
-;;;; Error break routine, called by VM to print stacktrace and throw
-
-(def\ (printFrames k)
-  (let1 (k (.nxt k))
-    (unless (null? k) (printFrames k)) )
-  (log "v" k) )
-
-(def\ (printStacktrace)
-  (takeSubcont rootPrompt k
-  	(printFrames k) (pushPrompt rootPrompt (pushSubcont k)) ))
-
-(def\ (userBreak err)
-  (when (prStk) (log "-" (@getMessage err)) (printStacktrace))
-  (throw err) )

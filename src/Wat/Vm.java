@@ -326,6 +326,7 @@ public class Vm {
 	public int len(List o) { int i=0; for (; o != null; i+=1, o=o.cdr()); return i; }
 	public int len(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return i; }
 	//public Object argn(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return o == null ? i : cons(i, symbol("+")) ; }
+	<T extends Cons> T cons(Object car) { return (T) new List(car, null); }
 	<T extends Cons> T cons(Object car, Object cdr) {
 		return (T)(cdr == null || cdr instanceof List ? new List(car, (List) cdr) : new Cons(car, cdr));
 	}
@@ -1049,6 +1050,8 @@ public class Vm {
 						for (int i=0; i<len; i+=1) {
 							var lookup = de.lookup(vars[i]);
 							if (body == null && !lookup.isBound) continue;
+							// TODO in alternativa al precedente
+							//if (body == null && lookup.value == null) continue;
 							if ((ndvs[i] = lookup.value) instanceof DVar dvar) { olds[i] = dvar.value; continue; }
 							return typeError("cannot get value, not a {expected}: {datum}", vars[i], symbol("DVar"));
 						}
@@ -1725,8 +1728,8 @@ public class Vm {
 				"%list*", wrap(new JFun("%List*", (ArgsList) this::listStar)),
 				"%list-", wrap(new JFun("%List-", (ArgsList) this::listMinus)),
 				"%len", wrap(new JFun("%Len", (n,o)-> checkM(n, o, 1, or(null, List.class)), (l,o)-> len(o.car()) )),
-				"%list->array", wrap(new JFun("%List->array", (n,o)-> checkM(n, o, 1, List.class), (l,o)-> array(o.car()) )),
-				"%array->list", wrap(new JFun("%Array->list", (n,o)-> checkM(n, o, 1, Boolean.class, Object[].class), (l,o)-> list(o.car, o.car(1)) )),
+				"%list->array", wrap(new JFun("%List->Array", (n,o)-> checkM(n, o, 1, List.class), (l,o)-> array(o.car()) )),
+				"%array->list", wrap(new JFun("%Array->List", (n,o)-> checkM(n, o, 2, Boolean.class, Object[].class), (l,o)-> list(o.<Boolean>car(), o.<Object[]>car(1)) )),
 				"%reverse", wrap(new JFun("%Reverse", (n,o)-> checkM(n, o, 1, or(null, List.class)), (l,o)-> reverse(o.car()) )),
 				"%append", wrap(new JFun("%Append", (n,o)-> checkM(n, o, 2, or(null, List.class)), (l,o)-> append(o.car(),o.car(1)) )),
 				// String
@@ -1866,7 +1869,7 @@ public class Vm {
 					}
 					*/
 					else if (thw instanceof Value v)  {
-						print("uncatched throw tag: " + v.tag);
+						if (v.tag != ignore) print("uncatched throw tag: " + v.tag);
 						print(ifnull(v.getCause(), thw));
 					}
 					else {
