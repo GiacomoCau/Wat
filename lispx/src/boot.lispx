@@ -558,37 +558,46 @@
 ;; These operators follow the API put forth in the delimcc library
 ;; at URL `http://okmij.org/ftp/continuations/implementations.html'.
 
-(def pushPrompt
-  #|Push the PROMPT and evaluate the FORMS inside the prompt.  This
-   |delimits the continuation.
-   |#
-  %pushPrompt)
-
 (def takeSubcont
   #|Abort outwards to the PROMPT.  When the prompt is reached, evaluate
    |the FORMS with NAME bound to the captured continuation (which does not
    |include the prompt).
-   |$(fn (prompt name . forms))
+   |$(fn (prompt symbol . forms))
+   |$(type operatore)
    |#
   %takeSubcont)
+
+(def pushPrompt
+  #|Push the PROMPT and evaluate the FORMS inside the prompt.  This
+   |delimits the continuation.
+   |$(fn (prompt . forms))
+   |$(type operatore)
+   |#
+  %pushPrompt)
 
 (def pushDelimSubcont
   #|Push the PROMPT and compose the previously captured CONTINUATION
    |inside it.  The FORMS are then evaluated inside the new continuation.
+   |$(fn (prompt continuation . forms))
+   |$(type operatore)
    |#
   %pushDelimSubcont)
 
-(defMacro (pushSubcont continuation . forms)
+(defMacro pushSubcont (continuation . forms)
   #|We don't have `pushSubcont' but for these tests we can emulate it
    |with a `pushDelimSubcont' that pushes an unused prompt.
+   |$(fn (continuation . forms))
+   |$(type macro)
    |#
   (list* '%pushDelimSubcont #ignore continuation forms) )
 
-(defMacro pushSubcontBarrier forms
+(def pushSubcontBarrier
   #|Push a continuation barrier that prevents the FORMS from capturing
    |any continuations to the outside.
+   |$(fn forms)
+   |$(type operatore)
    |#
-  (list '%pushSubcontBarrier (list '%newEnv) (list* '\ () forms)))
+  %pushSubcontBarrier)
 
 
 ;;; Basic macros and functions
@@ -967,8 +976,8 @@
               (eval (cons 'begin forms) env) )
             (next clauses) ))))))
 
-(defMacro (caseType\ (#! (1 Symbol) arg) . clauses)
-  (list '\ arg (list* 'caseType (car arg) clauses) ))   
+(defMacro (caseType\ (#! Symbol key) . clauses)
+  (list '\ (cons key) (list* 'caseType key clauses) ))   
 
 (def matchObj? %matchObj?)
 

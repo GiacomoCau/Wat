@@ -81,7 +81,7 @@ Queste le differenze rispetto a Wat/lispX
 * __catchTagWth__ e __throwTag__ possono essere indifferentemente operatori (`Opv`) o funzioni (`Apv`) in dipendenza di `(ctApv (or #t #f))`
 * l'handler di __catchTagWth__ può essere oltre che una funzione di un argomento (`Apv1`) anche un qualunque valore che verrà tornato in caso un `Error` venga catched 
 * l'operatore __finally__ è derivato come macro dall'operatore __atEnd__ `(atEnd (#! Apv0 cleaner) form . forms)`
-* __takeSubcont__ __pushPrompt__ e __pushDelimSubcont__ sono operatori e non necessitano di completamento
+* __takeSubcont__ __pushPrompt__ __pushDelimSubcont__ e __pushSubcontDelim__ sono operatori e non necessitano di completamento
 * `Supplier` `Function` `BiFunction` `Executable` e `Field`, genericamente java function, sono implicitamente considerate funzioni `Apv`
 * __wrap__ non wrappa gli `Apv` e le java function ma wrappa i restanti `Combinator`
 * __unwrap__ unwrappa gli `Apv`, wrappa le java function in una `JFun` e non unwrappa i restanti `Combinator`

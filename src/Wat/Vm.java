@@ -966,7 +966,7 @@ public class Vm {
 	// Delimited Control
 	class TakeSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkM(this, o, 2, Any.class, or(ignore, Symbol.class)); // o = (prp (or #ignore symbol)) . forms)
+			var chk = checkM(this, o, 2, Any.class, or(ignore, Symbol.class)); // o = (prp (or #ignore symbol) . forms)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, o.car)),
@@ -1015,11 +1015,17 @@ public class Vm {
 			: combine(e, s.hdl, cons(s.k, null))
 		;
 	}
-	Object pushSubcontBarrier(Resumption r, Env e, Object x) {
-		var res = r != null ? r.resume() : getTco(evaluate(e, x));
-		if (!(res instanceof Suspension s)) return res;
-		return s.suspend(dbg(e, "pushSubcontBarrier", x), rr-> pushSubcontBarrier(rr, e, x)).k.apply(()-> unboundPromptError("prompt not found: {prompt}", s.prp));
-	}
+	Combinable pushSubcontBarrier = new Combinable() {
+		public Object combine(Env e, List o) {
+			return combine(null, e, o);
+		}
+		Object combine(Resumption r, Env e, List o) {
+			var res = r != null ? r.resume() : getTco(begin.combine(e, o));
+			if (!(res instanceof Suspension s)) return res;
+			return s.suspend(dbg(e, "pushSubcontBarrier", o), rr-> combine(rr, e, o)).k.apply(()-> unboundPromptError("prompt not found: {prompt}", s.prp));
+		}
+		public String toString() { return "%PushSubcontBarrier"; }
+	};
 	
 	
 	// Dynamic Variables
@@ -1220,7 +1226,7 @@ public class Vm {
 	
 	// Error Handling
 	Object rootPrompt = new Object() { public String toString() { return "%RootPrompt"; }};
-	Object pushRootPrompt(Object x) { return list(new PushPrompt(), rootPrompt, x); }
+	List pushRootPrompt(List lst) { return cons(listStar(new PushPrompt(), rootPrompt, lst)); }
 	<T> T error(Error err) {
 		var userBreak = theEnv.lookup(symbol("userBreak")).value;
 		if (userBreak == null) throw err; // TODO or new Value(ignore, err) come eventualmente la userBreak?
@@ -1512,17 +1518,17 @@ public class Vm {
 			var name = eIfnull(o.car, n-> "test "+ n + ": ");
 			var exp = o.car(1);
 			try {
-				var val = pushSubcontBarrier(null, env, pushRootPrompt(exp));
+				var val = pushSubcontBarrier.combine(env, pushRootPrompt(cons(exp)));
 				switch (len) {
 					case 2-> 
 						print(name, exp, " should throw but is ", val);
 					case 3-> {
-						var expt = o.car(2);
-						if (Vm.this.equals(val, pushSubcontBarrier(null, env, pushRootPrompt(expt)))) return true;
-						print(name, exp, " should be ", expt, " but is ", val);
+						var expt = o.<List>cdr(1);
+						if (Vm.this.equals(val, pushSubcontBarrier.combine(env, pushRootPrompt(expt)))) return true;
+						print(name, exp, " should be ", o.car(2), " but is ", val);
 					}
 					default-> {
-						var expt = (List) map(x-> pushSubcontBarrier(null, env, pushRootPrompt(x)), o.cdr(1)); 
+						var expt = (List) map(x-> pushSubcontBarrier.combine(env, pushRootPrompt(cons(x))), o.cdr(1)); 
 						if (expt.car instanceof Class && matchObj(val, expt)) return true;
 						print(name, exp, " should be ", expt, " but is ", val);
 					}
@@ -1534,7 +1540,7 @@ public class Vm {
 					thw.printStackTrace(out);
 				else {
 					var val = thw instanceof Value v ? v.value : thw;
-					var expt = (List) map(x-> pushSubcontBarrier(null, env, pushRootPrompt(x)), o.cdr(1));
+					var expt = (List) map(x-> pushSubcontBarrier.combine(env, pushRootPrompt(cons(x))), o.cdr(1));
 					if (expt.car instanceof Class && matchObj(val, expt)) return true;
 					print(name, exp, " should be ", expt, " but is ", val);
 				}
@@ -1686,7 +1692,7 @@ public class Vm {
 				"%takeSubcont", new TakeSubcont(),
 				"%pushPrompt", new PushPrompt(),
 				"%pushDelimSubcont", new PushDelimSubcont(),
-				"%pushSubcontBarrier", wrap(new JFun("%PushSubcontBarrier", (n,o)-> checkM(n, o, 2, Env.class, Apv0.class), (l,o)-> pushSubcontBarrier(null, o.car(), o.cdr()) )),
+				"%pushSubcontBarrier", pushSubcontBarrier,
 				// Box
 				"%newBox", wrap(new JFun("%NewBox", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new Box(l == 0 ? boxDft : o.car))),
 				// Dynamically-Scoped Variables
@@ -1812,8 +1818,7 @@ public class Vm {
 	
 	// API
 	public Object exec(Object bytecode) {
-		var wrapped = pushRootPrompt(cons(new Begin(true), toLispExpr(bytecode)));
-		return pushSubcontBarrier(null, theEnv, wrapped);
+		return pushSubcontBarrier.combine(theEnv, pushRootPrompt(cons(cons(new Begin(true), toLispExpr(bytecode)))));
 	}
 	public Object call(String funName, Object ... args) {
 		return exec($(funName, ".", $(args)));

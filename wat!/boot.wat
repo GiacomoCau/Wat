@@ -321,20 +321,20 @@
 ;; These operators follow the API put forth in the delimcc library
 ;; at URL `http://okmij.org/ftp/continuations/implementations.html'.
 
-(def pushPrompt
-  %pushPrompt)
-
 (def takeSubcont
   %takeSubcont)
+
+(def pushPrompt
+  %pushPrompt)
 
 (def pushDelimSubcont
   %pushDelimSubcont)
 
-(defMacro (pushSubcont continuation . forms)
+(defMacro pushSubcont (continuation . forms)
   (list* '%pushDelimSubcont #ignore continuation forms) )
 
-(defMacro pushSubcontBarrier forms
-  (list '%pushSubcontBarrier (list '%newEnv) (list* '\ () forms)))
+(def pushSubcontBarrier
+  %pushSubcontBarrier)
 
 
 ;;; Basic macros and functions
@@ -700,8 +700,8 @@
               (eval (cons 'begin forms) env) )
             (next clauses) ))))))
 
-(defMacro (caseType\ (#! (1 Symbol) arg) . clauses)
-  (list '\ arg (list* 'caseType (car arg) clauses) ))   
+(defMacro (caseType\ (#! Symbol key) . clauses)
+  (list '\ (cons key) (list* 'caseType key clauses) ))   
 
 (def matchObj? %matchObj?)
 
