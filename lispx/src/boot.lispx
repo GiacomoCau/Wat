@@ -588,7 +588,7 @@
   #|Push a continuation barrier that prevents the FORMS from capturing
    |any continuations to the outside.
    |#
-  (list* '%pushSubcontBarrier (%newEnv) forms))
+  (list '%pushSubcontBarrier (list '%newEnv) (list* '\ () forms)))
 
 
 ;;; Basic macros and functions
@@ -966,6 +966,9 @@
               (let1 ((apv) (cdr forms)) ((eval apv env) key))
               (eval (cons 'begin forms) env) )
             (next clauses) ))))))
+
+(defMacro (caseType\ (#! (1 Symbol) arg) . clauses)
+  (list '\ arg (list* 'caseType (car arg) clauses) ))   
 
 (def matchObj? %matchObj?)
 

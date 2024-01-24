@@ -334,7 +334,7 @@
   (list* '%pushDelimSubcont #ignore continuation forms) )
 
 (defMacro pushSubcontBarrier forms
-  (list* '%pushSubcontBarrier (%newEnv) forms))
+  (list '%pushSubcontBarrier (list '%newEnv) (list* '\ () forms)))
 
 
 ;;; Basic macros and functions
@@ -634,7 +634,7 @@
 (def\ (!member? key lst)
   (null? (member key lst)) )
 
-#| TODO per omogeneit√† con lispx, da valutare
+#| TODO per omogeneit‡ con lispx, da valutare
 (def\ (member key lst . keywords)
   (let ( (test (opt? (get? :test keywords) ==))
          (fkey (opt? (get? :fkey keywords) identity)) )
@@ -699,6 +699,9 @@
               (let1 ((apv) (cdr forms)) ((eval apv env) key))
               (eval (cons 'begin forms) env) )
             (next clauses) ))))))
+
+(defMacro (caseType\ (#! (1 Symbol) arg) . clauses)
+  (list '\ arg (list* 'caseType (car arg) clauses) ))   
 
 (def matchObj? %matchObj?)
 

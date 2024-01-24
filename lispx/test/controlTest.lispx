@@ -455,8 +455,7 @@
      (pushPrompt 'p1
        (pushSubcontBarrier
          (takeSubcont 'p1 sk)))
-     Error :type 'unboundPrompt :prompt 'p1)
-    #f))
+     Error :type 'unboundPrompt :prompt 'p1)))
 
 (defsuite dynamics
 

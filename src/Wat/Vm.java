@@ -1686,7 +1686,7 @@ public class Vm {
 				"%takeSubcont", new TakeSubcont(),
 				"%pushPrompt", new PushPrompt(),
 				"%pushDelimSubcont", new PushDelimSubcont(),
-				"%pushSubcontBarrier", wrap(new JFun("%PushSubcontBarrier", (n,o)-> checkM(n, o, 2, Env.class), (l,o)-> pushSubcontBarrier(null, o.car(), cons(begin, o.cdr())) )),
+				"%pushSubcontBarrier", wrap(new JFun("%PushSubcontBarrier", (n,o)-> checkM(n, o, 2, Env.class, Apv0.class), (l,o)-> pushSubcontBarrier(null, o.car(), o.cdr()) )),
 				// Box
 				"%newBox", wrap(new JFun("%NewBox", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new Box(l == 0 ? boxDft : o.car))),
 				// Dynamically-Scoped Variables

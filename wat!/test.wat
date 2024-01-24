@@ -25,8 +25,18 @@
 
 (def\ (newPrompt) (list #null))
 
-(def\ (abortPrompt p e)
-  (takeSubcont p #ignore e))
+(def\ (abortSubcont prompt value)
+  (takeSubcont prompt #ignore value))
+
+(def\ (shift p f) 
+  (takeSubcont p sk
+    (pushPrompt p
+      (f (\ (c)
+           (pushDelimSubcont p sk (c)) )))))
+
+(def\ promptSet? (prompt)
+  (catchWth (caseType\ (e) ((Error :type 'unboundPrompt) #f) (else (throw e)))
+    (takeSubcont prompt k (pushDelimSubcont prompt k #t))))
 
 (test test1
   (let ((p (newPrompt)))
@@ -41,44 +51,42 @@
   
 (test test3
   (let ((p (newPrompt)))
-    (+ (pushPrompt p (+ (abortPrompt p 5) 6))
+    (+ (pushPrompt p (+ (abortSubcont p 5) 6))
       4))
   9)
 
 (test test31
   (let ((p (newPrompt)))
-    (+ (pushPrompt p (pushPrompt p (+ (abortPrompt p 5) 6)))
+    (+ (pushPrompt p (pushPrompt p (+ (abortSubcont p 5) 6)))
       4))
   9)
 
 (test test32
   (let ((p (newPrompt)))
     (let ((v (pushPrompt p
-	       (let* ((v1 (pushPrompt p (+ (abortPrompt p 5) 6)))
-                  (v1 (abortPrompt p 7)))
+	       (let* ((v1 (pushPrompt p (+ (abortSubcont p 5) 6)))
+                  (v1 (abortSubcont p 7)))
              (+ v1 10) ))))
       (+ v 20) ))
   27)
 
 (test test33
-  (let ((p (newPrompt)))
-    (let ((v (pushPrompt p
-           (let* ((v1 (pushPrompt p (+ 6 (abortPrompt p 5))))
-                  (v1 (abortPrompt p 7)) )
-             (+ v1 10) ))))
-      (abortPrompt p 9)
-      (+ v 20) ))
-  )
-; gives prompt not found: (#null)
+  (let1 (p (newPrompt))
+    (let1 (v (pushPrompt p
+                (let* ((v1 (pushPrompt p (+ 6 (abortSubcont p 5))))
+                       (v1 (abortSubcont p 7)) )
+                  (+ v1 10) )))
+      (abortSubcont p 9)
+      (+ v 20) )))
 
-;; (testCheck test331
-;;   (let ((p (newPrompt)))
-;;     (let ((v (pushPrompt p
-;; 	       (let* ((v1 (pushPrompt p (+ (abortPrompt p 5) 6)))
-;;            (v1 (abortPrompt p 7)))
-;;       (+ v1 10)))))
-;;       (promptSet? p))) ; give unbound: promptSet?
-;;   #f)
+(test test331
+  (let1 (p (newPrompt))
+    (let1 (v (pushPrompt p
+               (let* ((v1 (pushPrompt p (+ (abortSubcont p 5) 6)))
+                      (v1 (abortSubcont p 7)) )
+                 (+ v1 10) )))
+      (promptSet? p) ))
+  #f)
 
 (test test4
   (let ((p (newPrompt)))
@@ -87,12 +95,6 @@
 	        10) )
        20) )
   35 )
-
-(def\ (shift p f) 
-  (takeSubcont p sk
-    (pushPrompt p
-      (f (\ (c)
-           (pushDelimSubcont p sk (c)) )))))
 
 (test test5
   (+ (pushPrompt 'p0
@@ -107,9 +109,6 @@
           (+ 2 (shift 'p0 (\ (sk)
                             (sk (\ () (+ 3 100))))))))
   115)
-
-(def\ (abortSubcont prompt value)
-  (takeSubcont prompt #ignore value))
 
 (test test52
   (+ (pushPrompt 'p0
