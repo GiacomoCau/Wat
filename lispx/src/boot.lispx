@@ -359,6 +359,11 @@
    |#
   %car)
 
+(def car!
+  #|Return the contents of the address part of the register if decrement part of the register is null, else error.
+   |#
+  (\ ((car)) car))
+
 (def cadr
   #|Return the `car' of the `cdr' of the CONS.
    |$(derivation (car (cdr cons)))
@@ -366,6 +371,11 @@
    |$(derivation (\ ((#_ cadr . #_)) cadr))
    |#
   %cadr)
+
+(def cadr!
+  #|Return the `car' of the `cdr' of the CONS if 'cddr' is null, else error.
+   |#
+  (\ ((#_ cadr)) cadr))
 
 (def cdr
   #|Return the contents of the decrement part of the register.
@@ -423,7 +433,7 @@
       (vau operands env
         (def !evalMacro (! (evalMacro)))
         (if !evalMacro (evalMacro #t))
-        (def exp (eval (cons expander operands) (newEnv)))
+        (def exp (apply expander operands (newEnv)))
         (if !evalMacro exp (eval exp env)) ))))
 
 (def macro
@@ -617,7 +627,9 @@
     ((rec\ (map lst) (if (null? lst) #null (cons (f (car lst)) (map (cdr lst))) )) lst)
     ((rec\ (map* lst*) (if (null? (car lst*)) #null (cons (apply f (map car lst*)) (map* (map cdr lst*))) )) (cons lst lst*)) ))
 
-; evlis: (map (\ (x) (eval x env)) xs) <=> (eval (cons 'list xs) env)
+; evlis: (map (\ (x) (eval x env)) x*) <=> (eval (cons 'list x*) env)
+; apply: (eval (cons opv args) env) <=> (apply opv args env)
+; apply: (eval (cons apv args) env) <=> (apply apv (evlis env args) env)
 
 (defMacro (def*\ lhs* . rhs*)
   (list* 'def*
@@ -631,9 +643,31 @@
 (def\ (->begin binding) ((\ ((#_ cadr . cddr)) (if (null? cddr) cadr (list* 'begin cadr cddr))) binding))
 (def\ (->name+#inert (lhs . #_)) (list (if (cons? lhs) (car lhs) lhs) #inert))
 (def\ (->name+lambda (lhs . rhs)) (if (cons? lhs) (list (car lhs) (list* '\ (cdr lhs) rhs)) (list lhs (cons '\ rhs)) ))
-;(def\ (->name+lambda (lhs . rhs)) (list (if (cons? lhs) (car lhs) lhs) (list* '\ (if (cons? lhs) (cons (cdr lhs) rhs) rhs))))
-;(def\ (->name+lambda (lhs . rhs)) (def t (cons? lhs)) (list (if t (car lhs) lhs) (list* '\ (if t (cons (cdr lhs) rhs) rhs))))
-;(def\ (->name+lambda (lhs . rhs)) (list (if (def t :rhs (cons? lhs)) (car lhs) lhs) (list* '\ (if t (cons (cdr lhs) rhs) rhs))))
+;(def\ (->name+lambda (lhs . rhs)) (list (if (cons? lhs) (car lhs) lhs) (cons '\ (if (cons? lhs) (cons (cdr lhs) rhs) rhs))))
+;(def\ (->name+lambda (lhs . rhs)) (def t (cons? lhs)) (list (if t (car lhs) lhs) (cons '\ (if t (cons (cdr lhs) rhs) rhs))))
+;(def\ (->name+lambda (lhs . rhs)) (list (if (def t :rhs (cons? lhs)) (car lhs) lhs) (cons '\ (if t (cons (cdr lhs) rhs) rhs))))
+
+
+(defMacro (wth1 dt value . forms)
+  (list (list* '\ (cons dt) forms) value))
+
+(defMacro (wth* bindings . forms)
+  ( (rec\ loop (bindings)
+      (if (null? bindings)
+        (cons (list* '\ () forms))
+        (wth1 (dt value . bindings) bindings
+          (list* 'wth1 dt value (cons (loop bindings)))))) 
+    bindings ))
+
+(defMacro (wth bindings . forms)
+  (wth1 (dt* . value*)
+    ( (rec\ loop (bindings)
+        (if (null? bindings) (())
+          (wth* ( (dt value . bindings) bindings
+                  (dt* . value*) (loop bindings) )
+              (cons (cons dt dt*) (cons value value*)))))
+      bindings )
+    (cons (list* '\ dt* forms) value*) ))
 
 
 (defMacro (let1Loop lhs . rhs)
@@ -641,8 +675,15 @@
     (def* ((name . binding) body) lhs rhs)
     (def* (name (binding . body)) lhs rhs) )
   (list
-    (list* 'rec\ name (list (car binding)) body)
+    (list* 'rec\ name (cons (car binding)) body)
     (->begin binding) ))
+
+#| TODO da valutare
+(defMacro (let1 lhs . rhs)
+  (if (symbol? lhs)
+    (list* 'let1Loop lhs rhs)
+    (list* 'wth1 (car lhs) (->begin lhs) rhs)))
+|#
 
 (defMacro (let1 lhs . rhs)
   (if (symbol? lhs)
@@ -664,6 +705,19 @@
     (cons 'def\ binding)
     body ))
 
+
+(defMacro (let* bindings . body)
+  #|Establish BINDINGS serially during the evaluation of FORMS, so that
+   |every binding can refer to previous ones.
+   |$(syntax bindings ((definiendTree value) . bindings))
+   |#
+  ( (rec\ loop (bindings)
+      (if (null? bindings)
+        (cons (list* '\ () body))
+        (list* 'let1 (car bindings) (cons (loop (cdr bindings)))) ))
+    bindings ))
+
+
 (defMacro (letLoop lhs . rhs)
   #|Labelled recursive loop, analogous to Scheme's named `let'.
    |Lexically bind a function named NAME with one PARAMETER for every
@@ -678,7 +732,7 @@
   (if (cons? lhs)
     (def* ((name . bindings) body) lhs rhs)
     (def* (name (bindings . body)) lhs rhs) )
-  (list*
+  (cons
     (list* 'rec\ name (map car bindings) body)
     (map ->begin bindings) ))
 
@@ -691,7 +745,7 @@
    |#
   (if (symbol? lhs)
     (list* 'letLoop lhs rhs)
-    (list* (list* '\ (map car lhs) rhs)
+    (cons (list* '\ (map car lhs) rhs)
       (map ->begin lhs) )))
 
 (defMacro (let\ bindings . body)
@@ -722,17 +776,6 @@
    |#
   letrec\)
 
-(defMacro (let* bindings . body)
-  #|Establish BINDINGS serially during the evaluation of FORMS, so that
-   |every binding can refer to previous ones.
-   |$(syntax bindings ((definiendTree value) . bindings))
-   |#
-  (if (null? bindings)
-      (list* 'let () body)
-      (list 'let
-        (list (car bindings))
-        (list* 'let* (cdr bindings) body) )))
-
 
 ;;;; Simple Control
 
@@ -740,7 +783,7 @@
   #|Evaluate FORM and any additional FORMS, and return the result of FORM.
    |#
   (let1 (result (eval form env))
-    (eval (cons 'begin forms) env)
+    (apply begin forms env)
     result))
 
 (defMacro (when test . forms)
@@ -806,7 +849,7 @@
     (if (bind? env+ pt (eval exp env))
       (eval then env+)
       (unless (null? else)
-        (eval (let1 ((exp) else) exp) env) ))))
+        (eval (car! else) env) ))))
 
 (defVau (caseVau . clauses) env
   (vau values #ignore
@@ -815,11 +858,11 @@
         (let1 (((bindings . forms) . clauses) clauses)
           (if (== bindings 'else)
             (if (== (car forms) '=>)
-              (let1 ((apv) (cdr forms)) ((eval apv env) values))
-              (eval (cons 'begin forms) env) )
+              ((eval (cadr! forms) env) values)
+              (apply begin forms env) )
             (let1 (env+ (newEnv env)) 
               (if (bind? env+ bindings values)
-                (eval (cons 'begin forms) env+)
+                (apply begin forms env+)
                 (loop clauses) ))))))))
 
 (defMacro (defCaseVau sym . clauses)
@@ -860,6 +903,7 @@
    |If it yields false, go to the next clause,
    |or return void if there are no more clauses.
    |$(syntax clauses (clause . clauses))
+   |$(syntax clause (else . forms))
    |$(syntax clause (test->bool . forms))
    |$(syntax clause (test))
    |$(syntax clause (test => apv1))
@@ -868,32 +912,33 @@
   (unless (null? clauses)
     (let1 (((test . body) . clauses) clauses)
       (if (== test 'else)
-        (apply (wrap begin) body env)
+        (apply begin body env)
         (let1 (test (eval test env))
           (if (instanceOf? test Boolean)
             (if test
-              (apply (wrap begin) body env)
-              (apply (wrap cond) clauses env) )
+              (apply begin body env)
+              (apply cond clauses env) )
             (match body
               (() test)
               (('=> apv1) ((eval apv1 env) test))
               ((guard '=> apv1)
                  (if ((eval guard env) test)
                    ((eval apv1 env) test)
-                   (apply (wrap cond) clauses env) ))
-              (else (apply (wrap cond) clauses env)) )))))))
+                   (apply cond clauses env) ))
+              (else (apply cond clauses env)) )))))))
 
 
 ;;;; Member Assoc Get
 
 (def\ (member key lst)
   (let1 loop (lst lst)
-     (if (null? lst) #null
+     (if (cons? lst)
        (if (== key (car lst)) lst
-         (loop (cdr lst)) ))))
+         (loop (cdr lst)) )
+       #null )))
 
 (def\ (member? key lst)
-  (!null? (member key lst)) )
+  (cons? (member key lst)) )
   
 (def\ (!member? key lst)
   (null? (member key lst)) )
@@ -908,22 +953,24 @@
   (let ( (test (opt? (get? :test keywords) ==))
          (fkey (opt? (get? :fkey keywords) identity)) )
     (let1 loop (lst lst)
-      (if (null? lst) #null
+      (if (cons? lst)
         (if (test (fkey (car lst)) key) lst
-          (loop (cdr lst)))))))
+          (loop (cdr lst)) )
+        #null ))))
 
 (def\ (member? key lst . keywords)
-  (!null? (apply** member key lst keywords)) )
+  (cons? (apply** member key lst keywords)) )
   
 (def\ (!member? key lst . keywords)
   (null? (apply** member key lst keywords)) )
 
 (def\ (assoc key lst)
   (let1 loop (lst lst)
-     (if (null? lst) #null
+     (if (cons? lst)
        (let1 ((kv . lst) lst)
          (if (== (car kv) key) kv
-           (loop lst) )))))
+           (loop lst) ))
+        #null )))
 
 (def\ (get? key lst)
   #|Search for the KEYWORD in the property list LST
@@ -931,10 +978,11 @@
    |and return the found value as an option.
    |#
   (let1 loop (lst lst)
-    (if (null? lst) #null
+    (if (cons? lst)
       (let1 ((k v . lst) lst)
         (if (== k key) (cons v)
-          (loop lst)) ))))
+          (loop lst)) )
+      #null )))
 
 
 ;;; Case CaseType
@@ -944,11 +992,16 @@
     (let1 next (clauses clauses)
       (if (null? clauses) #inert
         (let1 (((values . forms) . clauses) clauses)
-          (if (|| (== values 'else) (== value values) (&& (cons? values) (cons? (member value values))))
+          (if (|| (== values 'else) (== value values) (member? value values))
             (if (== (car forms) '=>)
-              (let1 ((apv) (cdr forms)) ((eval apv env) value))
-              (eval (cons 'begin forms) env) )
+              ((eval (cadr! forms) env) value)
+              (apply begin forms env) )
             (next clauses) ))))))
+
+(def matchObj? %matchObj?)
+
+(def\ (matchObj*? obj class . slots) 
+  (matchObj? obj (cons class slots)) )
 
 ; vedi signalsError? in vm.lispx (o test-util.lispx) per codice simile
 (defVau (caseType key . clauses) env
@@ -972,17 +1025,15 @@
                           (class (eval (if symbol? test (car test)) env)) )
                     (if symbol? (type? key class) (matchObj? key (eval (cons 'list test) env))) ))
             (if (== (car forms) '=>)
-              (let1 ((apv) (cdr forms)) ((eval apv env) key))
-              (eval (cons 'begin forms) env) )
+              ((eval (cadr! forms) env) key)
+              (apply begin forms env) )
             (next clauses) ))))))
 
 (defMacro (caseType\ (#! Symbol key) . clauses)
   (list '\ (cons key) (list* 'caseType key clauses) ))   
 
-(def matchObj? %matchObj?)
-
-(def\ (matchObj*? obj class . slots) 
-  (matchObj? obj (cons class slots)) )
+(defMacro (caseType\ (#! (1 Symbol) key) . clauses)
+  (list '\ key (list* 'caseType (car key) clauses) ))   
 
 
 ;;; Options
@@ -1041,10 +1092,10 @@
     (if (null? exp) #null
       (let1 loop (clauses clauses)
         (if (null? clauses) #null
-          (let ((env+ (newEnv env))
-                (((bindings . forms) . clauses) clauses) )
+          (let ( (env+ (newEnv env))
+                 (((bindings . forms) . clauses) clauses) )
             (if (|| (== bindings 'else) (bind? env+ bindings exp))
-              (eval (cons 'begin forms) env+)
+              (apply begin forms env+)
               (loop clauses) )))))))
 
 (defMacro (opt? exp . dft)
@@ -1128,7 +1179,7 @@
    |block names; a block is named in the normal variable namespace.
    |#
   (let* ( (tag (list #inert)) ; cons up a fresh object as tag
-          (escape (\ (value) (throwTag tag value))) )
+          (escape (\ value (throwTag tag (if (cons? value) (car! value))))) )
     (catchTag tag
       (eval (list (list* '\ (list blockName) forms) escape) env) )))
 
@@ -1234,18 +1285,6 @@
           countForm
           (list* '\ (list var) bodyForms)
           (list* '\ (list var) resultForm?))))
-
-(def\ (withEscape fun)
-  (let1 (fresh (list #null))
-    (catchWth
-      (\ (exc)
-        (if (&& (cons? exc) (== (car exc) fresh))
-          (let1 ((#ignore opt?) exc) (if (cons? opt?) (car opt?)))
-          (throw exc)))
-      (fun (\ opt? (throw (list fresh (ifOpt? (val opt?) opt?) )))) )))
-
-(defMacro (label name . body)
-  (list 'withEscape (list* '\ (list name) body)))
 
 
 ;;; Lists
@@ -1375,14 +1414,14 @@
    |as per `let'.
    |$(syntax binding (dynamicVariable value))
    |#
-  (list* (list* '%d\ (map car bindings) exp exps) (map cadr bindings)) )
+  (cons (list* '%d\ (map car bindings) exp exps) (map cadr bindings)) )
 
 (defMacro (progv var* val* exp . exps)
   #|Evaluate the FORMS with the list of DYNAMIC-VARIABLES temporarily
    |bound to new VALUES.  The DYNAMIC-VARIABLES and VALUES lists must have
    |the same length.
    |#
-  (list* (list* '%d\ var* exp exps) val*) )
+  (cons (list* '%d\ var* exp exps) val*) )
 
 (defMacro (dlet* bindings . forms)
   #|Evaluate the FORMS with the dynamic variables specified by BINDINGS
@@ -1764,7 +1803,7 @@
       (list result) )))
 
 (defMacro (runFiberWithValues f args) (list 'eval (list 'list* 'runFiber* f args))) 
-(defMacro (runFiberWithValues f args) (list 'apply 'runFiber* (list 'list* f args))) 
+(defMacro (runFiberWithValues f args) (list 'apply 'runFiber* (list 'cons f args))) 
 (defMacro (runFiberWithValues f args) (list 'apply** 'runFiber* f args)) 
 
 (def runFiber runFiber*)

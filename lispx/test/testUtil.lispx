@@ -46,7 +46,7 @@
      ;; that tries to capture a continuation directly inside a suite
      ;; will get a "prompt not found" error (due to the barrier inside
      ;; `js-\').
-     (eval (cons 'begin forms) env))))
+     (apply begin forms env))))
 
 (def\ lispx::make-mocha-hook (mocha-hook-fun)
   "Metaprogramming utility to create Mocha hooks.  Hooks may capture."
@@ -54,7 +54,7 @@
     (mocha-hook-fun
      (js-\ ()
        (pushPrompt 'coroutinePrompt
-         (eval (cons 'begin forms) env))))))
+         (apply begin forms env))))))
 
 (def before (lispx::make-mocha-hook mocha:before))
 (def before-each (lispx::make-mocha-hook mocha:before-each))

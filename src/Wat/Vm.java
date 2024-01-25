@@ -109,6 +109,7 @@ import List.ParseException;
 	id: identifier
 	num: number
 	str: string
+	lst: list
 	stx: syntax
 	sym: symbol
 	key: keyword
@@ -893,10 +894,10 @@ public class Vm {
 	}
 	class CatchTagWth implements Combinable {
 		public Object combine(Env e, List o) {
-			// (catch . forms)               -> (%catch #_   #_ . forms)
-			// (catchTag tag . forms)        -> (%catch tag  #_ . forms)
-			// (catchWth hdl . forms)        -> (%catch #_  hdl . forms)
-			// (catchTagWth tag hdl . forms) -> (%catch tag hdl . forms)
+			// (catch . forms)               -> (%CatchTagWth #_   #_ . forms)
+			// (catchTag tag . forms)        -> (%CatchTagWth tag  #_ . forms)
+			// (catchWth hdl . forms)        -> (%CatchTagWth #_  hdl . forms)
+			// (catchTagWth tag hdl . forms) -> (%CatchTagWth tag hdl . forms)
 			var chk = !ctApv ? checkM(this, o, 2) : checkN(this, o, 3, Any.class, hdlAny ? Any.class : or(ignore, Apv1.class), Apv0.class);
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
@@ -911,7 +912,7 @@ public class Vm {
 				if (tag != ignore && thw instanceof Value val && val.tag != tag) throw thw; 
 				if (hdl != ignore) return combine2(null, e, tag, hdl, thw);
 				if (thw instanceof Value val) return val.value;
-				throw thw instanceof Error err ? err : new Error("catch error:", thw);
+				throw thw instanceof Error err ? err : new Error("catch error!", thw);
 			}
 		}
 		public Object combine2(Resumption r, Env e, Object tag, Object hdl, Throwable thw) {
@@ -955,7 +956,7 @@ public class Vm {
 		Object cleanup(Object cln, Env e, boolean success, Object res) {
 			return pipe(dbg(e, this, cln, success, res), ()-> getTco(evaluate(e, cln)), $-> {
 					if (success) return res;
-					throw res instanceof Value val ? val : res instanceof Error err ? err : new Error("cleanup error:", (Throwable) res);
+					throw res instanceof Value val ? val : res instanceof Error err ? err : new Error("cleanup error!", (Throwable) res);
 				}
 			);
 		}
@@ -1701,7 +1702,7 @@ public class Vm {
 				"%d\\", new DLambda(),
 				// Errors
 				"%rootPrompt", rootPrompt,
-				"%error", wrap(new JFun("%Error", (ArgsList) o-> ((ArgsList) at("error")).apply(listStar(this, o)))),
+				"%error", wrap(new JFun("%Error", (ArgsList) o-> ((ArgsList) at("error")).apply(cons(this, o)))),
 				// Java Interface
 				"%jFun?", wrap(new JFun("%JFun?", (Function<Object,Boolean>) this::isjFun)),
 				"%at", wrap(new JFun("%At", (Function<String,Object>) this::at)),

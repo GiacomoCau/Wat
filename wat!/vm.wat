@@ -158,7 +158,7 @@
   (list deftest name (list* prog1 #t forms)) )
 
 (defVau defsuite (name . forms) env
-  (eval (cons 'begin forms) env) )
+  (apply begin forms env) )
 
 (def signalsError? assert)
 

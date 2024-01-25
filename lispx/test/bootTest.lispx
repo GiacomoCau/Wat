@@ -395,6 +395,13 @@
       (mybegin 1 2 3))
     3)
 
+  (deftest defVau.1'
+    (begin
+      (defVau mybegin body env
+        (apply begin body env))
+      (mybegin 1 2 3))
+    3)
+
   (deftest defVau.2
     (signalsError?
      (defVau)
@@ -2270,9 +2277,8 @@
      Error :type 'match :operands# +1))
 
   (deftest get?.7
-    (signalsError?
-     (get? :quux 12)
-     Error :type 'match :operands# +2)))
+    (get? :quux 12)
+    #null))
 
 (defsuite and
 

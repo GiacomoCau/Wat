@@ -48,13 +48,13 @@
        4)
     9)
 
-  (deftest |test3'|
+  (deftest test3'
     (+ (pushPrompt 'p
          (pushPrompt 'p (+ 6 (abortSubcont 'p 5))))
        4)
     9)
 
-  (deftest |test3''|
+  (deftest test3''
     (+ (pushPrompt 'p
          (pushPrompt 'p (+ 6 (abortSubcont 'p 5)))
          (+ (abortSubcont 'p 7)
@@ -62,7 +62,7 @@
        20)
     27)
 
-  (deftest |test3'''|
+  (deftest test3'''
     (signalsError?
      (begin
        (pushPrompt 'p
@@ -89,13 +89,13 @@
        10)
     117)
 
-  (deftest |test5'|
+  (deftest test5'
     (+ 10 (pushPrompt 'p0
             (+ 2 (shift 'p0 (\ (sk)
                               (sk (\ () (+ 3 100))))))))
     115)
 
-  (deftest |test5''|
+  (deftest test5''
     (+ (pushPrompt 'p0
          (+ (shift 'p0 (\ (sk)
                          (+ (sk (\ ()
@@ -106,7 +106,7 @@
        10)
     115)
 
-  (deftest |test5'''|
+  (deftest test5'''
     (+ (pushPrompt 'p0
          (let ((v (shift 'p0 (\ (sk)
                                (+ (sk (\ ()
@@ -156,7 +156,7 @@
        100)
     135)
 
-  (deftest |test7'|
+  (deftest test7'
     (+ (let\ ((push-twice (sk)
                 (sk (\ ()
                       (sk (\ ()

@@ -141,7 +141,7 @@
           :parentFrame?
              (dget handlerFrameDynamic) ))
       (progv (handlerFrameDynamic) ((some handlerFrame))
-        (eval (cons 'begin forms) env) ))))
+        (apply begin forms env) ))))
 
 (def handlerBind
   #|Establish condition handlers specified by HANDLER-SPECS around FORMS.
@@ -197,6 +197,8 @@
                      (map (\ ((name functionForm . properties))
                              (list* name
                                     (\ args (returnFrom trampoline (\ () (apply (eval functionForm env) args))))
+                                    ; permetterebbe functionForm arbitrarie che verrebbero restituite come valore dell'handler senza però definire l'handler
+                                    ;(\ args (returnFrom trampoline (\ () (let1 (f (eval functionForm env)) (if (type? f Combinable) (apply f args env) f)) )))
                                     properties ))
                           handlerSpecs)
                      (list returnFrom exit (cons 'begin forms)) )

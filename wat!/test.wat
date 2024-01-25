@@ -35,7 +35,7 @@
            (pushDelimSubcont p sk (c)) )))))
 
 (def\ promptSet? (prompt)
-  (catchWth (caseType\ e ((Error :type 'unboundPrompt) #f) (else (throw e)))
+  (catchWth (caseType\ (e) ((Error :type 'unboundPrompt) #f) (else (throw e)))
     (takeSubcont prompt k (pushDelimSubcont prompt k #t))))
 
 (test test1
