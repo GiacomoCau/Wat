@@ -1,73 +1,73 @@
 ;;; Stream Tests
 
-(defsuite stream-tests
+(defSuite stream-tests
 
-  (deftest standard-streams-defined
+  (defTest standard-streams-defined
     (&& (type? *standard-input* DVar)
         (type? *standard-output* DVar))))
 
-(defsuite string-input-streams
+(defSuite string-input-streams
 
-  (deftest make-string-input-stream.1
+  (defTest make-string-input-stream.1
     (type? (make-string-input-stream "foo") StringInputStream))
 
-  (deftest make-string-input-stream.2
+  (defTest make-string-input-stream.2
     (signalsError?
      (make-string-input-stream)
      match-error))
 
-  (deftest make-string-input-stream.3
+  (defTest make-string-input-stream.3
     (signalsError?
      (make-string-input-stream 12)
      type-error :datum 12 :expected 'String))
 
-  (deftest with-standard-input-from-string.1
+  (defTest with-standard-input-from-string.1
     (with-standard-input-from-string "foo")
     #inert)
 
-  (deftest with-standard-input-from-string.2
+  (defTest with-standard-input-from-string.2
     (with-standard-input-from-string "12" (read))
     12)
 
-  (deftest with-standard-input-from-string.2
+  (defTest with-standard-input-from-string.2
     (with-standard-input-from-string "12 #t" (list (read) (read)))
     (list 12 #t)))
 
-(defsuite string-output-streams
+(defSuite string-output-streams
 
-  (deftest make-string-output-stream.1
+  (defTest make-string-output-stream.1
     (type? (make-string-output-stream) StringOutputStream))
 
-  (deftest with-standard-output-to-string.1
+  (defTest with-standard-output-to-string.1
     (with-standard-output-to-string (print "foo") (print "bar"))
     "\n\"foo\"\n\"bar\"")
 
-  (deftest with-standard-output-to-string.2
+  (defTest with-standard-output-to-string.2
     (with-standard-output-to-string)
     "")
 
-  (deftest get-output-stream-string.1
+  (defTest get-output-stream-string.1
     (let ((s (make-string-output-stream)))
       (get-output-stream-string s))
     "")
 
-  (deftest get-output-stream-string.2
+  (defTest get-output-stream-string.2
     (signalsError?
      (get-output-stream-string)
      match-error))
 
-  (deftest get-output-stream-string.3
+  (defTest get-output-stream-string.3
     (signalsError?
      (get-output-stream-string 1)
      type-error :datum 1 :expected 'StringOutputStream)))
 
-(defsuite fresh-line
+(defSuite fresh-line
 
-  (deftest fresh-line.1
+  (defTest fresh-line.1
     (with-standard-output-to-string (fresh-line) (uprint1 "a") (fresh-line))
     "\na\n")
 
-  (deftest fresh-line.2
+  (defTest fresh-line.2
     (let ((sos (make-string-output-stream)))
       (with-standard-output-to-string
        (fresh-line) (uprint1 "a") (fresh-line)

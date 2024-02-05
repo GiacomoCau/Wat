@@ -1,8 +1,8 @@
 ;;; JavaScript Interface Tests
 
-(defsuite js-==
+(defSuite js-==
 
-  (deftest js-==.1
+  (defTest js-==.1
     (&& (js-== +js-true+ +js-true+)
          (js-== +js-false+ +js-false+)
          (not (js-== +js-true+ +js-false+))
@@ -11,304 +11,304 @@
          (js-== (to-js-string "1") (to-js-string "1"))
          (not (js-== (to-js-string "1") (to-js-string "2")))))
 
-  (deftest js-==.2
+  (defTest js-==.2
     (signalsError?
      (js-== 1)
      match-error))
 
-  (deftest js-==.3
+  (defTest js-==.3
     (signalsError?
      (js-==)
      match-error)))
 
-(defsuite null-and-undefined
+(defSuite null-and-undefined
 
-  (deftest null-and-undefined-exist
+  (defTest null-and-undefined-exist
     (&& (== (classOf +js-null+) Object)
         (== (classOf +js-undefined+) Object)))
 
-  (deftest null-and-undefined-distinguishable
+  (defTest null-and-undefined-distinguishable
     (not (js-== +js-null+ +js-undefined+))))
 
-(defsuite js-booleans
+(defSuite js-booleans
 
-  (deftest js-booleans-exist
+  (defTest js-booleans-exist
     (&&
      (== (classOf +js-true+) Object)
      (== (classOf +js-false+) Object)))
 
-  (deftest js-booleans-identity
+  (defTest js-booleans-identity
     (&& (not (== +js-true+ +js-false+))
         (== +js-true+ +js-true+)
         (== +js-false+ +js-false+)
         (not (== +js-true+ #t))
         (not (== +js-false+ #f))))
 
-  (deftest to-lisp-boolean.1
+  (defTest to-lisp-boolean.1
     (&& (to-lisp-boolean +js-true+)
         (not (to-lisp-boolean +js-false+))))
 
-  (deftest to-lisp-boolean.2
+  (defTest to-lisp-boolean.2
     (signalsError?
      (to-lisp-boolean 12)
      type-error :datum 12 :expected "boolean"))
 
-  (deftest to-lisp-boolean.3
+  (defTest to-lisp-boolean.3
     (signalsError?
      (to-lisp-boolean)
      match-error))
 
-  (deftest to-js-boolean.1
+  (defTest to-js-boolean.1
     (&& (to-lisp-boolean (to-js-boolean #t))
         (not (to-lisp-boolean (to-js-boolean #f)))))
 
-  (deftest to-js-boolean.2
+  (defTest to-js-boolean.2
     (signalsError?
      (to-js-boolean 12)
      type-error :datum 12 :expected 'Boolean))
 
-  (deftest to-js-boolean.3
+  (defTest to-js-boolean.3
     (signalsError?
      (to-js-boolean)
      match-error)))
 
-(defsuite js-numbers
+(defSuite js-numbers
 
-  (deftest to-lisp-number.1
+  (defTest to-lisp-number.1
     (&&
      (eq? -1 (to-lisp-number (to-js-number -1)))
      (eq? 0 (to-lisp-number (to-js-number 0)))
      (eq? 1 (to-lisp-number (to-js-number 1)))))
 
-  (deftest to-lisp-number.2
+  (defTest to-lisp-number.2
     (signalsError?
      (to-lisp-number #t)
      type-error :datum #t :expected "number"))
 
-  (deftest to-lisp-number.3
+  (defTest to-lisp-number.3
     (signalsError?
      (to-lisp-number)
      match-error))
 
-  (deftest to-js-number.1
+  (defTest to-js-number.1
     (== (classOf (to-js-number 1))
         Object))
 
-  (deftest to-js-number.1a
+  (defTest to-js-number.1a
     (&& (js-== (to-js-number 1)
                 (to-js-number 1))
          (not (js-== (to-js-number 1)
                      (to-js-number 2)))))
 
-  (deftest to-js-number.2
+  (defTest to-js-number.2
     (signalsError?
      (to-js-number #t)
      type-error :datum #t :expected 'Number))
 
-  (deftest to-js-number.3
+  (defTest to-js-number.3
     (signalsError?
      (to-js-number)
      match-error)))
 
-(defsuite js-strings
+(defSuite js-strings
 
-  (deftest to-lisp-string.1
+  (defTest to-lisp-string.1
     (eq? "a" (to-lisp-string (to-js-string "a"))))
 
-  (deftest to-lisp-string.2
+  (defTest to-lisp-string.2
     (signalsError?
      (to-lisp-string #t)
      type-error :datum #t :expected "string"))
 
-  (deftest to-lisp-string.3
+  (defTest to-lisp-string.3
     (signalsError?
      (to-lisp-string)
      match-error))
 
-  (deftest to-js-string.1
+  (defTest to-js-string.1
     (== (classOf (to-js-string "1"))
         Object))
 
-  (deftest to-js-string.1a
+  (defTest to-js-string.1a
     (&& (js-== (to-js-string "1")
                 (to-js-string "1"))
          (not (js-== (to-js-string "1")
                      (to-js-string "2")))))
 
-  (deftest to-js-string.2
+  (defTest to-js-string.2
     (signalsError?
      (to-js-string #t)
      type-error :datum #t :expected 'String))
 
-  (deftest to-js-string.3
+  (defTest to-js-string.3
     (signalsError?
      (to-js-string)
      match-error)))
 
-(defsuite to-lisp-function
+(defSuite to-lisp-function
 
-  (deftest to-lisp-function.1
+  (defTest to-lisp-function.1
     (let ((parseInt (to-lisp-function (js-global "parseInt"))))
       (js-== (parseInt (to-js-string "123")) (to-js-number 123))))
 
-  (deftest to-lisp-function.1a
+  (defTest to-lisp-function.1a
     (let* ((parseInt (to-lisp-function (js-global "parseInt")))
            (result (parseInt)))
       (to-lisp-boolean (call-js-function (js-global "isNaN") result))))
 
-  (deftest to-lisp-function.2
+  (defTest to-lisp-function.2
     (signalsError?
      (to-lisp-function 12)
      type-error :datum 12 :expected "function")))
 
-(defsuite to-js-function
+(defSuite to-js-function
 
-  (deftest to-js-function.1
+  (defTest to-js-function.1
     (let ((x 0))
       (def env (theEnv))
       (let\ ((fun (v1 v2) (set env x (+ v1 v2))))
         (call-js-function (to-js-function fun) 1 2))
       (eq? x 3)))
 
-  (deftest to-js-function.2
+  (defTest to-js-function.2
     (signalsError?
      (to-js-function 12)
      type-error :datum 12 :expected 'Operator)))
 
-(defsuite apply-js-function
+(defSuite apply-js-function
 
-  (deftest apply-js-function.1
+  (defTest apply-js-function.1
     (js-== (apply-js-function (js-global "parseInt") (list (to-js-string "12")))
            (to-js-number 12)))
 
-  (deftest apply-js-function.2
+  (defTest apply-js-function.2
     (signalsError?
      (apply-js-function 12 (list))
      type-error :datum 12 :expected "function"))
 
-  (deftest apply-js-function.3
+  (defTest apply-js-function.3
     (signalsError?
      (apply-js-function (js-global "parseInt"))
      match-error))
 
-  (deftest apply-js-function.4
+  (defTest apply-js-function.4
     (signalsError?
      (apply-js-function)
      match-error)))
 
-(defsuite call-js-function
+(defSuite call-js-function
 
-  (deftest call-js-function.1
+  (defTest call-js-function.1
     (js-== (call-js-function (js-global "parseInt") (to-js-string "12"))
            (to-js-number 12)))
 
-  (deftest call-js-function.2
+  (defTest call-js-function.2
     (signalsError?
      (call-js-function 12)
      type-error :datum 12 :expected "function"))
 
-  (deftest call-js-function.3
+  (defTest call-js-function.3
     (signalsError?
      (call-js-function)
      match-error)))
 
-(defsuite js-\
+(defSuite js-\
 
-  (deftest js-\.1
+  (defTest js-\.1
     (let ((x 0))
       (def env (theEnv))
       (let ((fun (js-\ (v1 v2) (set env x (+ v1 v2)))))
         (call-js-function fun 1 2))
       (eq? x 3)))
 
-  (deftest js-\.2
+  (defTest js-\.2
     (signalsError?
      (js-\)
      match-error))
 
-  (deftest js-\.3
+  (defTest js-\.3
     (signalsError?
      (js-\ 12)
      type-error :datum 12 :expected '(or Symbol Ignore List)))
 
-  (deftest js-\.4
+  (defTest js-\.4
     (call-js-function (js-\ ()))
     #inert)
 
-  (deftest js-\.rootPrompt-is-set
+  (defTest js-\.rootPrompt-is-set
     (call-js-function (js-\ () (takeSubcont rootPrompt #ignore)))
     #inert)
 
-  (deftest js-\.barrier
+  (defTest js-\.barrier
     (signalsError?
      (pushPrompt 'foo
        (call-js-function (js-\ () (takeSubcont 'foo k))))
      Error :type 'unboundPrompt :prompt 'foo)))
 
-(defsuite js-global
+(defSuite js-global
 
-  (deftest js-global.1
+  (defTest js-global.1
     (let ((Math (js-global "Math")))
       (eq? 4 (to-lisp-number (call-js-method Math "round" (to-js-number 4.1))))))
 
-  (deftest js-global.2
+  (defTest js-global.2
     (signalsError?
      (js-global)
      match-error))
 
-  (deftest js-global.3
+  (defTest js-global.3
     (js-== +js-undefined+ (js-global "ThisGlobalDoesNotExist")))
 
-  (deftest js-global.4
+  (defTest js-global.4
     (signalsError?
      (js-global 12)
      type-error :datum 12 :expected 'String)))
 
-(defsuite js-new
+(defSuite js-new
 
-  (deftest js-new.1
+  (defTest js-new.1
     (let ((re (js-new (js-global "RegExp") (to-js-string "abc"))))
       (&& (to-lisp-boolean (call-js-method re "test" (to-js-string "abcdef")))
            (not (to-lisp-boolean (call-js-method re "test" (to-js-string "uvwxyz")))))))
 
-  (deftest js-new.2
+  (defTest js-new.2
     (signalsError?
      (js-new)
      match-error))
 
-  (deftest js-new.3
+  (defTest js-new.3
     (signalsError?
      (js-new "foo")
      type-error :datum "foo" :expected "function")))
 
-(defsuite js-get
+(defSuite js-get
 
-  (deftest js-get.1
+  (defTest js-get.1
     (let ((Math (js-global "Math")))
       (to-lisp-string (call-js-method (js-get Math "PI") "toString")))
     "3.141592653589793")
 
-  (deftest js-get.2
+  (defTest js-get.2
     (signalsError?
      (js-get)
      match-error))
 
-  (deftest js-get.3
+  (defTest js-get.3
     (signalsError?
      (js-get 12)
      match-error))
 
-  (deftest js-get.4
+  (defTest js-get.4
     (signalsError?
      (js-get 12 'bar)
      type-error :datum 'bar :expected 'String)))
 
-(defsuite js-arrays
+(defSuite js-arrays
 
   (define-js-method array-push "push")
   (define-js-method array-pop "pop")
 
-  (deftest js-array.1
+  (defTest js-array.1
     (let ((arr (js-array)))
       (assert#t (eq? (to-js-number 0) (js-get arr "length")))
       (array-push arr "a")
@@ -321,250 +321,250 @@
       (assert#t (eq? (to-js-number 0) (js-get arr "length")))
       #t))
 
-    (deftest js-array.2
+    (defTest js-array.2
       (let ((arr (js-array (+ 1 1) (+ 2 2))))
         (assert#t (eq? (to-js-number 2) (js-get arr "length")))
         (assert#t (eq? 4 (array-pop arr)))
         (assert#t (eq? 2 (array-pop arr)))
         #t))
 
-    (deftest list-to-js-array.1
+    (defTest list-to-js-array.1
       (js-array-to-list (list-to-js-array '(1 2 3)))
       '(1 2 3))
 
-    (deftest list-to-js-array.2
+    (defTest list-to-js-array.2
       (signalsError?
        (list-to-js-array)
        match-error))
 
-    (deftest list-to-js-array.3
+    (defTest list-to-js-array.3
       (signalsError?
        (list-to-js-array 12)
        type-error :datum 12 :expected 'List))
 
-    (deftest js-array-to-list.1
+    (defTest js-array-to-list.1
       (signalsError?
        (js-array-to-list)
        match-error))
 
-    (deftest js-array-to-list.2
+    (defTest js-array-to-list.2
       (signalsError?
        (js-array-to-list 12)
        assertion-error))
 
-    (deftest js-array-to-list.3
+    (defTest js-array-to-list.3
       (js-array-to-list (js-array 1 2 3))
       '(1 2 3))
 
-    (deftest js-array-elt.1
+    (defTest js-array-elt.1
       (elt (js-array 1 2 3) 0)
       1)
 
-    (deftest js-array-elt.2
+    (defTest js-array-elt.2
       (elt (js-array 1 2 3) 1)
       2)
 
-    (deftest js-array-elt.3
+    (defTest js-array-elt.3
       (signalsError?
        (elt (js-array 1 2 3) 10)
        out-of-bounds-error))
 
-    (deftest js-array-elt.4
+    (defTest js-array-elt.4
       (signalsError?
        (elt (js-array 1 2 3) -1)
        out-of-bounds-error))
 
-    (deftest js-array-length.1
+    (defTest js-array-length.1
       (length (js-array))
       0)
 
-    (deftest js-array-length.2
+    (defTest js-array-length.2
       (length (js-array 1 2 3))
       3))
 
-(defsuite apply-js-method
+(defSuite apply-js-method
 
-  (deftest apply-js-method.1
+  (defTest apply-js-method.1
     (js-==
      (apply-js-method (to-js-number 9.656) "toFixed" (list (to-js-number 2)))
      (to-js-string "9.66")))
 
-  (deftest apply-js-method.2
+  (defTest apply-js-method.2
     (js-==
      (apply-js-method (to-js-number 9) "toString" (list))
      (to-js-string "9")))
 
-  (deftest apply-js-method.3
+  (defTest apply-js-method.3
     (signalsError?
      (apply-js-method)
      match-error))
 
-  (deftest apply-js-method.4
+  (defTest apply-js-method.4
     (signalsError?
      (apply-js-method "foo")
      match-error))
 
-  (deftest apply-js-method.4a
+  (defTest apply-js-method.4a
     (signalsError?
      (apply-js-method "foo" "bar")
      match-error))
 
-  (deftest apply-js-method.5
+  (defTest apply-js-method.5
     (signalsError?
      (apply-js-method "foo" "methodDoesNotExist" (list))
      type-error :expected "function"))
 
-  (deftest apply-js-method.6
+  (defTest apply-js-method.6
     (signalsError?
      (apply-js-method "foo" 12 (list))
      type-error :datum 12 :expected 'String)))
 
-(defsuite call-js-method
+(defSuite call-js-method
 
-  (deftest call-js-method.1
+  (defTest call-js-method.1
     (js-==
      (call-js-method (to-js-number 9.656) "toFixed" (to-js-number 2))
      (to-js-string "9.66")))
 
-  (deftest call-js-method.2
+  (defTest call-js-method.2
     (js-==
      (call-js-method (to-js-number 9) "toString")
      (to-js-string "9")))
 
-  (deftest call-js-method.3
+  (defTest call-js-method.3
     (signalsError?
      (call-js-method)
      match-error))
 
-  (deftest call-js-method.4
+  (defTest call-js-method.4
     (signalsError?
      (call-js-method "foo")
      match-error))
 
-  (deftest call-js-method.5
+  (defTest call-js-method.5
     (signalsError?
      (call-js-method "foo" "methodDoesNotExist")
      type-error :expected "function"))
 
-  (deftest call-js-method.6
+  (defTest call-js-method.6
     (signalsError?
      (call-js-method "foo" 12)
      type-error :datum 12 :expected 'String)))
 
-(defsuite js-method
+(defSuite js-method
 
-  (deftest js-method.1
+  (defTest js-method.1
     (begin
       (def to-string (js-method "toString"))
       (js-== (to-string (to-js-number 12)) (to-js-string "12"))))
 
-  (deftest js-method.2
+  (defTest js-method.2
     (signalsError?
      (js-method)
      match-error)))
 
-(defsuite define-js-method
+(defSuite define-js-method
 
-  (deftest define-js-method.1
+  (defTest define-js-method.1
     (begin
       (define-js-method to-string "toString")
       (js-== (to-string (to-js-number 12)) (to-js-string "12"))))
 
-  (deftest define-js-method.2
+  (defTest define-js-method.2
     (begin
       (define-js-method regexp-test "test")
       (let ((re (js-new (js-global "RegExp") (to-js-string "abc"))))
         (&& (to-lisp-boolean (regexp-test re (to-js-string "abcdef")))
              (not (to-lisp-boolean (regexp-test re (to-js-string "uvwxyz"))))))))
 
-  (deftest define-js-method.3
+  (defTest define-js-method.3
     (signalsError?
      (define-js-method)
      match-error))
 
-  (deftest define-js-method.4
+  (defTest define-js-method.4
     (signalsError?
      (define-js-method symbol)
      match-error)))
 
-(defsuite js-undefined-option
+(defSuite js-undefined-option
 
-  (deftest js-undefined-option.1
+  (defTest js-undefined-option.1
     (js-undefined-option (+ 12 12))
     (some 24))
 
-  (deftest js-undefined-option.2
+  (defTest js-undefined-option.2
     (js-undefined-option +js-undefined+)
     #null)
 
-  (deftest js-undefined-option.3
+  (defTest js-undefined-option.3
     (signalsError?
      (js-undefined-option)
      match-error)))
 
-(defsuite js-null-option
+(defSuite js-null-option
 
-  (deftest js-null-option.1
+  (defTest js-null-option.1
     (js-null-option (+ 12 12))
     (some 24))
 
-  (deftest js-null-option.2
+  (defTest js-null-option.2
     (js-null-option +js-null+)
     #null)
 
-  (deftest js-null-option.3
+  (defTest js-null-option.3
     (signalsError?
      (js-null-option)
      match-error)))
 
-(defsuite await
+(defSuite await
 
   (def Promise (js-global "Promise"))
   (define-js-method resolve "resolve")
   (define-js-method reject "reject")
 
-  (deftest await.1
+  (defTest await.1
     (begin
       (assert#t (eq? 1 (await (resolve Promise 1))))
       (assert#t (eq? 2 (await (resolve Promise 2))))
       3)
     3)
 
-  (deftest await.2
+  (defTest await.2
     (signalsError?
      (begin
        (assert#t (eq? 1 (await (resolve Promise 1))))
        (await (reject Promise (makeSimpleError "foo"))))
      simpleError :message "foo"))
 
-  (deftest await.3
+  (defTest await.3
     (signalsError?
      (await)
      match-error)))
 
-(defsuite sleep
+(defSuite sleep
 
-  (deftest sleep.1
+  (defTest sleep.1
     (begin (sleep 1) #t))
 
-  (deftest sleep.2
+  (defTest sleep.2
     (signalsError?
      (sleep)
      match-error))
 
-  (deftest sleep.3
+  (defTest sleep.3
     (signalsError?
      (sleep "foo")
      type-error :datum "foo" :expected 'Number)))
 
-(defsuite sync
+(defSuite sync
 
-  (deftest sync.1
+  (defTest sync.1
     (signalsError?
      (sync)
      match-error))
 
-  (deftest sync.2
+  (defTest sync.2
     (prog1 #t
       ((sync %sleep) 1)))
 
@@ -572,39 +572,39 @@
   (define-js-method resolve "resolve")
   (define-js-method reject "reject")
 
-  (deftest sync.3
+  (defTest sync.3
     (begin
       (assert#t (eq? 1 ((sync (\ () (resolve Promise 1))))))
       (assert#t (eq? 2 ((sync (\ () (resolve Promise 2))))))
       3)
     3)
 
-  (deftest sync.4
+  (defTest sync.4
     (signalsError?
      (begin
        (assert#t (eq? 1 ((sync (\ () (resolve Promise 1))))))
        ((sync (\ () (reject Promise (makeSimpleError "foo"))))))
      simpleError :message "foo")))
 
-(defsuite define-js-method/sync
+(defSuite define-js-method/sync
 
   (def Promise (js-global "Promise"))
 
-  (deftest define-js-method/sync.1
+  (defTest define-js-method/sync.1
     (begin
       (define-js-method/sync resolve-sync "resolve")
       (eq? (resolve-sync Promise 12) 12)))
 
-  (deftest define-js-method/sync.2
+  (defTest define-js-method/sync.2
     (begin
       (define-js-method/sync reject-sync "reject")
       (signalsError?
        (reject-sync Promise (makeSimpleError "foo"))
        simpleError :message "foo"))))
 
-(defsuite js-misc
+(defSuite js-misc
 
-  (deftest can-define-lisp-methods-on-js-objects
+  (defTest can-define-lisp-methods-on-js-objects
     (begin
       (defGeneric foo (new))
       (defMethod foo ((new object)) 12)
@@ -612,7 +612,7 @@
       (assert#t (eq? 12 (foo (to-js-string "foo")))))
     #inert)
 
-  (deftest js-exception-becomes-condition
+  (defTest js-exception-becomes-condition
     (block exit
       (handlerBind ((Object (\ (c)
                                (when (js-== (call-js-method c "toString")

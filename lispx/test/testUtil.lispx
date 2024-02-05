@@ -8,7 +8,7 @@
 (def mocha:after (to-lisp-function (js-global "after")))
 (def mocha:after-each (to-lisp-function (js-global "afterEach")))
 
-(defVau deftest (name expression . expected?) env
+(defVau defTest (name expression . expected?) env
   "Run the EXPRESSION as a test identified by NAME and compare its
   |result to an EXPECTED value (which defaults to true).  Tests may
   |capture a continuation to the default prompt."
@@ -28,14 +28,14 @@
        (assert#t (eq? (eval expression (newEnv env))
                   (eval (opt? expected? #t) (newEnv env))))))))
 
-(defMacro deftest* (name . forms)
-  "Run the FORMS as a test identified by NAME, but unlike `deftest',
+(defMacro defTest* (name . forms)
+  "Run the FORMS as a test identified by NAME, but unlike `defTest',
   |simply ignore their result.  The test only fails when the forms signal
-  |an error.  Use this instead of `deftest' if you just want to run some
+  |an error.  Use this instead of `defTest' if you just want to run some
   |forms, and don't need to compare their result to an expected value."
-  (list deftest name (list* prog1 #t forms)))
+  (list defTest name (list* prog1 #t forms)))
 
-(defVau defsuite (name . forms) env
+(defVau defSuite (name . forms) env
   "Evaluate FORMS as a group of tests identified by NAME.  The forms
   |must not capure any continuations."
   (mocha:describe

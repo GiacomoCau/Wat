@@ -620,6 +620,8 @@
     (list 'rec (car lhs) (list* '\ (cdr lhs) rhs))
     (list 'rec lhs (cons '\ rhs)) ))
 
+(def label rec\)
+
 (def\ (map f lst . lst*)
   #|Create a new list by applying the FUNCTION to every element of the LIST.
    |#
@@ -736,6 +738,19 @@
     (list* 'rec\ name (map car bindings) body)
     (map ->begin bindings) ))
 
+#| TODO sostituito dal seguente, eliminare
+(defMacro (let lhs . rhs)
+  (if (symbol? lhs)
+    (list* 'letLoop lhs rhs)
+    (let1 ((dt* . form*)
+      ( (rec\ loop (lhs)
+          (if (null? lhs) (())
+            (let* ( (((dt . form) . lhs) lhs)
+                    ((dt* . form*) (loop lhs)) )
+              (cons (cons dt dt*) (cons (01->+ form) form*))) ))
+        lhs ))
+      (cons (list* '\ dt* rhs) form*) )))
+|#
 (defMacro (let lhs . rhs)
   #|Establish BINDINGS parallelly during the evaluation of FORMS, so
    |that no binding can refer to the other ones.
@@ -1165,11 +1180,11 @@
 
 (defMacro (the+ ck obj) (list 'let1 (list 'obj obj) (list 'check 'obj ck) 'obj))
 
-; TODO non Ã¨ piÃ¹ cosÃ¬ costosa la conversione, si puÃ² fare
+; TODO non è più così costosa la conversione, si può fare
 ; (def the the+)
 
 
-;;; Block Loop For While Until
+;;; Block Loop For While Until DoTimes Repeat
 
 (defVau block (blockName . forms) env
   #|Establish a block named BLOCK-NAME and evaluate the FORMS as an
@@ -1209,7 +1224,7 @@
                (symbol ($ name (+ i %deep)))
                (@typeError vm ($ "invalid " name " index, not {expected}: {datum}") i `(and (>= ,(- 0 %deep)) (=< 0))) ))) )
     (let\ ( ((makeThrowTag\ name %deep)
-               (\ (#! (or () (1 Integer)) i)
+               (\ (#! (0 1 Integer) i)
                  (throwTag (makeTag (opt? i 0) name %deep)) ))
             ((makeThrowTagValue\ name %deep)
                (\ o
@@ -1272,19 +1287,24 @@
    |#
   (list* 'while (list '! cond) forms) )
 
-(defMacro dotimes ((var countForm . resultForm?) . bodyForms)
+(defMacro doTimes ((var countForm . resultForm?) . bodyForms)
   #|Cf. Common Lisp's DOTIMES.
    |#
-  (let\ ((dotimes (n body result)
-           (let ((i (newBox 0)))
-             (while (< (i) n)
-               (body (i))
-               (i (+ (i) 1)))
-             (result (i)))))
-    (list dotimes
-          countForm
-          (list* '\ (list var) bodyForms)
-          (list* '\ (list var) resultForm?))))
+  (let1\
+    (doTimes (n body result)
+      (let1 (i (newBox 0))
+        (while (< (i) n)
+          (body (i))
+          (i (+ (i) 1)) )
+        (result (i)) ))
+    (list doTimes
+      countForm
+      (list* '\ (list var) bodyForms)
+      (list* '\ (list var) resultForm?) )))
+
+(defVau (repeat n . forms) env
+  (let1 ((#! (and Integer (> 0)) n) (eval n env))
+   (loop (eval (list* 'begin forms) env) (until (zero? (-- n))) )))
 
 
 ;;; Lists
@@ -1450,7 +1470,7 @@
    |#
   (eval (the Symbol name) env))
 
-(defVau defClass (name (#! (or () (1 Symbol)) superClass?) (#! (Symbol) slotSpecs) . properties) env
+(defVau defClass (name (#! (0 1 Symbol) superClass?) (#! (Symbol) slotSpecs) . properties) env
   #|Define a new `StandardClass' with the given NAME, optional SUPERCLASS?, and SLOT-SPECS.
    |The superclass defaults to `standard-object'.
    |The SLOT-SPECS and PROPERTIES are currently ignored.
@@ -1885,11 +1905,11 @@
          (loop (arrayGet array (car indexes)) (cdr indexes)) ))))  
 
 (defVau (time exp) env
-  (let1 (currentTime (@getMethod System "currentTimeMillis"))
-    (def milli (currentTime #null))
-    (def result (eval exp env))
-    (def milli (- (currentTime #null) milli))
-    (log ($ "time " exp ": " milli "ms"))
+  (let* ( (currentTime (@getMethod System "currentTimeMillis"))
+          (milli (currentTime #null))
+          (result (eval exp env))
+          (milli (- (currentTime #null) milli)) )
+    (print "time " exp ": " milli "ms")
     result ))
 
 

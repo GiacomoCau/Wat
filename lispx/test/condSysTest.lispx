@@ -1,55 +1,55 @@
-(defsuite handlerBind
+(defSuite handlerBind
 
   (defClass TestError (Error) ())
 
-  (deftest handlerBind.0
+  (defTest handlerBind.0
     (signalsError?
      (handlerBind)
      Error :type 'match :operands# +1))
 
-  (deftest handlerBind.0b
+  (defTest handlerBind.0b
     (handlerBind ())
     #inert)
 
-  (deftest handlerBind.1
+  (defTest handlerBind.1
     (handlerBind ()
       1 2 (+ 1 2))
     3)
 
-  (deftest handlerBind.2
+  (defTest handlerBind.2
     (handlerBind ((SimpleError (\ (e) 'whatever)))
       1 2 (+ 1 2))
     3)
 
-  (deftest handlerBind.3
+  (defTest handlerBind.3
     (handlerBind ((SimpleError (\ (e) 'whatever))
                   (TestError (\ (e) 'whatever)))
       1 2 (+ 1 2))
     3)
 
-  (deftest handlerBind.no-handler
+  (defTest handlerBind.no-handler
     (handlerBind ((TestError (\ (e) 'whatever)))
       (signal (makeSimpleError "foo")))
     #inert)
 
-  (deftest handlerBind.unhandled
+  (defTest handlerBind.unhandled
     (handlerBind ((SimpleError (\ (e) 'whatever)))
       (signal (makeSimpleError "foo")))
     #inert)
 
-  (deftest handlerBind.unhandled'
+  (defTest handlerBind.unhandled'
     (handlerBind (((Error :type 'simple @getMessage "foo") (\ (e) 'whatever)))
       (signal (new Error "foo" :type 'simple)))
     #inert)
 
-  (deftest handlerBind.decline
+  (defTest handlerBind.decline
     (block b
       (handlerBind ((SimpleError (\ (e) (returnFrom b 1))))
         (handlerBind ((SimpleError (\ (e) 'decline)))
           (signal (makeSimpleError "foo")))))
     1)
 
-  (deftest handlerBind.handled
+  (defTest handlerBind.handled
     (block b
       (handlerBind
         ((SimpleError
@@ -57,7 +57,7 @@
         (signal (makeSimpleError "foo"))))
     1)
 
-  (deftest handlerBind.handled'
+  (defTest handlerBind.handled'
     (block b
       (handlerBind
         (((Error :type 'simple)
@@ -65,21 +65,21 @@
         (signal (new Error "foo" :type 'simple))))
     1)
 
-  (deftest handlerBind.nested
+  (defTest handlerBind.nested
     (block b
       (handlerBind ((SimpleError (\ (e) (returnFrom b 'outer))))
         (handlerBind ((SimpleError (\ (e) (returnFrom b 'inner))))
           (signal (makeSimpleError "foo")))))
     'inner)
 
-  (deftest handlerBind.resignal
+  (defTest handlerBind.resignal
     (block b
       (handlerBind ((SimpleError (\ (e) (returnFrom b 'outer))))
         (handlerBind ((SimpleError (\ (e) (signal e))))
           (signal (makeSimpleError "foo")))))
     'outer)
 
-  (deftest handlerBind.firewall
+  (defTest handlerBind.firewall
     (block b
       (handlerBind ((TestError (\ (e) (returnFrom b 'outer))))
         (handlerBind ((SimpleError (\ (e) (signal (new TestError)))))
@@ -87,7 +87,7 @@
             (signal (makeSimpleError "foo"))))))
     'outer)
 
-  (deftest handlerBind.firewall'
+  (defTest handlerBind.firewall'
     (block b
       (handlerBind ((TestError (\ (e) (returnFrom b 'outer))))
         (handlerBind (((Error :type 'simple) (\ (e) (signal (new TestError)))))
@@ -95,7 +95,7 @@
             (signal (new Error "foo" :type 'simple))))))
     'outer)
 
-  (deftest handlerBind.firewall''
+  (defTest handlerBind.firewall''
     (block b
       (handlerBind (((Error :type 'test) (\ (e) (returnFrom b 'outer))))
         (handlerBind (((Error :type 'simple) (\ (e) (signal (new Error :type 'test)))))
@@ -103,158 +103,158 @@
             (signal (new Error "foo" :type 'simple))))))
     'outer)
 
-  (deftest handlerBind.multiple.1
+  (defTest handlerBind.multiple.1
     (block b
       (handlerBind ((TestError (\ (e) (returnFrom b 'test)))
                     (SimpleError (\ (e) (returnFrom b 'simple))))
         (signal (makeSimpleError "foo"))))
     'simple)
 
-  (deftest handlerBind.multiple.2
+  (defTest handlerBind.multiple.2
     (block b
       (handlerBind ((TestError (\ (e) (returnFrom b 'test)))
                     (SimpleError (\ (e) (returnFrom b 'simple))))
         (signal (new TestError))))
     'test)
 
-  (deftest handlerBind.anything
+  (defTest handlerBind.anything
     (block b
       (handlerBind ((Object (\ (e) (returnFrom b e))))
         (signal "foo")))
     "foo"))
 
-(defsuite handlerCase
+(defSuite handlerCase
 
   (defClass TestError (Error) ())
 
-  (deftest handlerCase.0
+  (defTest handlerCase.0
     (signalsError?
      (handlerCase)
      Error :type 'match :operands# +1))
 
-  (deftest handlerCase.0b
+  (defTest handlerCase.0b
     (handlerCase ())
     #inert)
 
-  (deftest handlerCase.1
+  (defTest handlerCase.1
     (handlerCase ()
       1 2 (+ 1 2))
     3)
 
-  (deftest handlerCase.2
+  (defTest handlerCase.2
     (handlerCase ((SimpleError (\ (e) 'whatever)))
       1 2 (+ 1 2))
     3)
 
-  (deftest handlerCase.3
+  (defTest handlerCase.3
     (handlerCase ((SimpleError (\ (e) 'whatever))
                    (TestError (\ (e) 'whatever)))
       1 2 (+ 1 2))
     3)
 
-  (deftest handlerCase.no-handler
+  (defTest handlerCase.no-handler
     (handlerCase ((TestError (\ (e) 'whatever)))
       (signal (makeSimpleError "foo")))
     #inert)
 
-  (deftest handlerCase.handled
+  (defTest handlerCase.handled
     (handlerCase ((SimpleError (\ (e)
                                    (assert#t (eq? "foo" (@getMessage e)))
                                    'whatever)))
       (signal (makeSimpleError "foo")))
     'whatever)
 
-  (deftest handlerCase.nested
+  (defTest handlerCase.nested
     (handlerCase ((SimpleError (\ (e) 'outer)))
       (handlerCase ((SimpleError (\ (e) 'inner)))
         (signal (makeSimpleError "foo"))))
     'inner)
 
-  (deftest handlerCase.resignal
+  (defTest handlerCase.resignal
     (handlerCase ((SimpleError (\ (e) 'outer)))
       (handlerCase ((SimpleError (\ (e) (signal e))))
         (signal (makeSimpleError "foo"))))
     'outer)
 
-  (deftest handlerCase.multiple.1
+  (defTest handlerCase.multiple.1
     (handlerCase ((TestError (\ (e) 'test))
                    (SimpleError (\ (e) 'simple)))
       (signal (makeSimpleError "foo")))
     'simple)
 
-  (deftest handlerCase.multiple.2
+  (defTest handlerCase.multiple.2
     (handlerCase ((TestError (\ (e) 'test))
                    (SimpleError (\ (e) 'simple)))
       (signal (new TestError)))
     'test)
 
-  (deftest handlerCase.anything
+  (defTest handlerCase.anything
     (handlerCase ((Object (\ (e) e)))
       (signal "foo"))
     "foo"))
 
-(defsuite restartBind
+(defSuite restartBind
 
-  (deftest restartBind.0
+  (defTest restartBind.0
     (signalsError?
      (restartBind)
      Error :type 'match :operands# +1))
 
-  (deftest restartBind.0b
+  (defTest restartBind.0b
     (restartBind ())
     #inert)
 
-  (deftest restartBind.1
+  (defTest restartBind.1
     (restartBind ()
       1 2 (+ 1 2))
     3)
 
-  (deftest restartBind.2
+  (defTest restartBind.2
     (restartBind ((continue (\ () 'whatever)))
       1 2 (+ 1 2))
     3)
 
-  (deftest restartBind.3
+  (defTest restartBind.3
     (restartBind ((continue (\ () 'whatever))
                    (abort (\ () 'whatever)))
       1 2 (+ 1 2))
     3)
 
-  (deftest restartBind.no-handler.1
+  (defTest restartBind.no-handler.1
     (signalsError?
      (invokeRestart 'continue)
      RestartError :restartName 'continue))
 
-  (deftest restartBind.no-handler.2
+  (defTest restartBind.no-handler.2
     (signalsError?
      (restartBind ((continue (\ () 'whatever)))
        (invokeRestart 'abort))
      RestartError :restartName 'abort))
 
-  (deftest restartBind.no-handler.1a
+  (defTest restartBind.no-handler.1a
     (signalsError?
      (invokeRestartInteractively 'continue)
      RestartError :restartName 'continue))
 
-  (deftest restartBind.no-handler.2a
+  (defTest restartBind.no-handler.2a
     (signalsError?
      (restartBind ((continue (\ () 'whatever)))
        (invokeRestartInteractively 'abort))
      RestartError :restartName 'abort))
 
-  (deftest restartBind.no-exit.1
+  (defTest restartBind.no-exit.1
     (restartBind ((continue (\ () 'whatever)))
       (invokeRestart 'continue))
     'whatever)
 
-  (deftest restartBind.no-exit.2
+  (defTest restartBind.no-exit.2
     (restartBind ((continue (\ () 'whatever)))
       (ifOpt? (restartHandler (findRestart? 'continue))
         (invokeRestart restartHandler)
         (assert#t #f)))
     'whatever)
 
-  (deftest restartBind.handled
+  (defTest restartBind.handled
     (block b
       (restartBind ((abort (\ (arg1 arg2)
                               (assert#t (eq? 1 arg1))
@@ -263,21 +263,21 @@
         (invokeRestart 'abort (+ 0 1) (+ 1 1))))
     3)
 
-  (deftest restartBind.nested
+  (defTest restartBind.nested
     (block b
       (restartBind ((continue (\ () (returnFrom b 'outer))))
         (restartBind ((continue (\ () (returnFrom b 'inner))))
           (invokeRestart 'continue))))
     'inner)
 
-  (deftest restartBind.reinvoke
+  (defTest restartBind.reinvoke
     (block b
       (restartBind ((y (\ (val) (returnFrom b (+ val 1)))))
         (restartBind ((x (\ (val) (invokeRestart 'y (+ val 1)))))
           (invokeRestart 'x 1))))
     3)
 
-  (deftest restartBind.no-firewall
+  (defTest restartBind.no-firewall
     (block b
       (restartBind ((r1 (\ () (returnFrom b 'outer))))
         (restartBind ((r2 (\ () (invokeRestart 'r1))))
@@ -285,71 +285,71 @@
             (invokeRestart 'r2)))))
     'inner)
 
-  (deftest restartBind.multiple.1
+  (defTest restartBind.multiple.1
     (block b
       (restartBind ((r1 (\ (arg) (returnFrom b (- 100 arg))))
                      (r2 (\ (arg) (returnFrom b (+ 100 arg)))))
         (invokeRestart 'r2 1)))
     101)
 
-  (deftest restartBind.multiple.2
+  (defTest restartBind.multiple.2
     (block b
       (restartBind ((r1 (\ (arg) (returnFrom b (- 100 arg))))
                      (r2 (\ (arg) (returnFrom b (+ 100 arg)))))
         (invokeRestart 'r1 1)))
     99))
 
-(defsuite restartCase
+(defSuite restartCase
 
-  (deftest restartCase.0
+  (defTest restartCase.0
     (signalsError?
      (restartCase)
      Error :type 'match :operands# +1))
 
-  (deftest restartCase.0b
+  (defTest restartCase.0b
     (restartCase ())
     #inert)
 
-  (deftest restartCase.1
+  (defTest restartCase.1
     (restartCase ()
       1 2 (+ 1 2))
     3)
 
-  (deftest restartCase.2
+  (defTest restartCase.2
     (restartCase ((continue (\ () 'whatever)))
       1 2 (+ 1 2))
     3)
 
-  (deftest restartCase.3
+  (defTest restartCase.3
     (restartCase ((continue (\ () 'whatever))
                    (abort (\ () 'whatever)))
       1 2 (+ 1 2))
     3)
 
-  (deftest restartCase.no-handler.1
+  (defTest restartCase.no-handler.1
     (signalsError?
      (invokeRestart 'continue)
      RestartError :restartName 'continue))
 
-  (deftest restartCase.no-handler.2
+  (defTest restartCase.no-handler.2
     (signalsError?
      (restartCase ((continue (\ () 'whatever)))
        (invokeRestart 'abort))
      RestartError :restartName 'abort))
 
-  (deftest restartCase.no-exit.1
+  (defTest restartCase.no-exit.1
     (restartCase ((continue (\ () 'whatever)))
       (invokeRestart 'continue))
     'whatever)
 
-  (deftest restartCase.no-exit.2
+  (defTest restartCase.no-exit.2
     (restartCase ((continue (\ () 'whatever)))
       (ifOpt? (restartHandler (findRestart? 'continue))
         (invokeRestart restartHandler)
         (assert#t #f)))
     'whatever)
 
-  (deftest restartCase.handled
+  (defTest restartCase.handled
     (restartCase ((abort (\ (arg1 arg2)
                             (assert#t (eq? 1 arg1))
                             (assert#t (eq? 2 arg2))
@@ -357,72 +357,72 @@
       (invokeRestart 'abort (+ 0 1) (+ 1 1)))
     3)
 
-  (deftest restartCase.nested
+  (defTest restartCase.nested
     (restartCase ((continue (\ () 'outer)))
       (restartCase ((continue (\ () 'inner)))
         (invokeRestart 'continue)))
     'inner)
 
-  (deftest restartCase.nested2
+  (defTest restartCase.nested2
     (restartCase ((r1 (\ () 'outer)))
       (restartCase ((r1 (\ ()  (invokeRestart 'r1)))
                      (r2 (\ ())))
         (invokeRestart 'r1)))
     'outer)
 
-  (deftest restartCase.reinvoke
+  (defTest restartCase.reinvoke
     (restartCase ((y (\ (val) (+ val 1))))
       (restartCase ((x (\ (val) (invokeRestart 'y (+ val 1)))))
         (invokeRestart 'x 1)))
     3)
 
-  (deftest restartCase.no-firewall
+  (defTest restartCase.no-firewall
     (restartCase ((r1 (\ () 'outer)))
       (restartCase ((r2 (\ () (invokeRestart 'r1))))
         (restartCase ((r1 (\ () 'inner)))
           (invokeRestart 'r2))))
     'outer)
 
-  (deftest restartCase.parallel
+  (defTest restartCase.parallel
     (restartCase ((r1 (\ () 'outer)))
       (restartCase ((r1 (\ () 'inner))
                      (r2 (\ () (invokeRestart 'r1))))
         (invokeRestart 'r2)))
     'outer)
 
-  (deftest restartCase.multiple.1
+  (defTest restartCase.multiple.1
     (restartCase ((r1 (\ (arg) (- 100 arg)))
                    (r2 (\ (arg) (+ 100 arg))))
       (invokeRestart 'r2 1))
     101)
 
-  (deftest restartCase.multiple.2
+  (defTest restartCase.multiple.2
     (restartCase ((r1 (\ (arg) (- 100 arg)))
                    (r2 (\ (arg) (+ 100 arg))))
       (invokeRestart 'r1 1))
     99))
 
-(defsuite findRestart?
+(defSuite findRestart?
 
-  (deftest findRestart?.0
+  (defTest findRestart?.0
     (signalsError?
      (findRestart?)
      Error :type 'match :operands# +1))
 
-  (deftest findRestart?.1
+  (defTest findRestart?.1
     (findRestart? 'foo)
     #null)
 
-  (deftest findRestart?.1b
+  (defTest findRestart?.1b
     (restartBind ((bar (\ ())))
       (findRestart? 'foo))
     #null)
 
-  (deftest findRestart?.2
+  (defTest findRestart?.2
     (findRestart? 'foo (makeSimpleError "foo"))
     #null)
 
-  (deftest findRestart?.3
+  (defTest findRestart?.3
     (block exit
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg)))))
         (ifOpt? (r (findRestart? 'x))
@@ -433,7 +433,7 @@
           (assert#t #f))))
     1001)
 
-  (deftest findRestart?.3b
+  (defTest findRestart?.3b
     (restartCase ((x (\ (arg) (+ 1000 arg))))
       (ifOpt? (r (findRestart? 'x))
         (begin
@@ -443,7 +443,7 @@
         (assert#t #f)))
     1001)
 
-  (deftest findRestart?.4
+  (defTest findRestart?.4
     (block exit
       (def c (makeSimpleError "foo"))
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg)))
@@ -456,7 +456,7 @@
           (assert#t #f))))
     1001)
 
-  (deftest findRestart?.4b
+  (defTest findRestart?.4b
     (begin
       (def c (makeSimpleError "foo"))
       (restartBind ((x (\ (arg) (+ 1000 arg))
@@ -469,7 +469,7 @@
           (assert#t #f))))
     1001)
 
-  (deftest findRestart?.5
+  (defTest findRestart?.5
     (block exit
       (def c (makeSimpleError "foo"))
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg)))
@@ -480,7 +480,7 @@
             (assert#t #f)))))
     999)
 
-  (deftest findRestart?.5b
+  (defTest findRestart?.5b
     (begin
       (def c (makeSimpleError "foo"))
       (restartCase ((x (\ (arg) (+ 1000 arg))
@@ -491,7 +491,7 @@
             (assert#t #f)))))
     999)
 
-  (deftest findRestart?.6
+  (defTest findRestart?.6
     (block exit
       (def c (makeSimpleError "foo"))
       (def d (makeSimpleError "bar"))
@@ -504,7 +504,7 @@
             (assert#t #f)))))
     1001)
 
-  (deftest findRestart?.6b
+  (defTest findRestart?.6b
     (begin
       (def c (makeSimpleError "foo"))
       (def d (makeSimpleError "bar"))
@@ -517,9 +517,9 @@
             (assert#t #f)))))
     1001))
 
-(defsuite computeRestarts
+(defSuite computeRestarts
 
-  (deftest computeRestarts.1
+  (defTest computeRestarts.1
     (computeRestarts)
     '())
 
@@ -529,7 +529,7 @@
                 (getSlot restart 'restartName))
               restarts)))
 
-  (deftest computeRestarts.1
+  (defTest computeRestarts.1
     (restartCase ((outer1 (\ ()))
                    (outer2 (\ ())))
       (restartCase ((middle1 (\ ()))
@@ -545,7 +545,7 @@
                        outer2)))
           #t))))
 
-  (deftest computeRestarts.2
+  (defTest computeRestarts.2
     (begin
       (def c (makeSimpleError "foo"))
       (def d (makeSimpleError "bar"))
@@ -576,23 +576,23 @@
                          outer1)))
             #t))))))
 
-(defsuite signal
+(defSuite signal
 
-  (deftest signal.0
+  (defTest signal.0
     (signalsError?
      (signal)
      Error :type 'match :operands# +1))
 
-  (deftest signal.1
+  (defTest signal.1
     (signal (makeSimpleError "foo"))
     #inert)
 
-  (deftest signal.2
+  (defTest signal.2
     (signalsError?
      (signal (new Obj :x 1 :y 2))
      Obj :x 1 :y 2))
 
-  (deftest signal.3
+  (defTest signal.3
     (handlerBind ((SimpleError (\ (e)
                                    (invokeRestart 'continue 12))))
       (signal (makeSimpleError "Foo!")
@@ -600,7 +600,7 @@
         (continue (\ (value) (* value 2)))))
     24)
 
-  (deftest signal.3b
+  (defTest signal.3b
     (handlerBind ((SimpleError (\ (e)
                                    (invokeRestart 'abort 12))))
       (signal (makeSimpleError "Foo!")
@@ -608,7 +608,7 @@
         (continue (\ (value) (* value 2)))))
     120)
 
-  (deftest signal.4
+  (defTest signal.4
     (restartCase ((abort (\ (value) (* 1000 value))))
       (handlerBind ((SimpleError (\ (e)
                                      (invokeRestart 'abort 12))))
@@ -618,7 +618,7 @@
           (continue (\ (value) (* value 2))))))
     12000)
 
-  (deftest signal.4b
+  (defTest signal.4b
     (block b
       (restartCase ((abort (\ (value) (* 1000 value))))
         (handlerBind ((SimpleError (\ (e)
@@ -631,7 +631,7 @@
 
   ;;; Test that `signal' (and `error' likewise) associates the
   ;;; restarts it binds with the signalled error.
-  (deftest signal.associations
+  (defTest signal.associations
     (dolist (signal-operator (list signal error) #t)
       (block ok ; so that the test doesn't fail when testing `error'.
         (handlerBind ((SimpleError
@@ -643,62 +643,62 @@
           (signal-operator (makeSimpleError "error!")
             (r (\ () 1))))))))
 
-(defsuite invokeRestart
+(defSuite invokeRestart
 
-  (deftest invokeRestart.0
+  (defTest invokeRestart.0
     (signalsError?
      (invokeRestart)
      Error :type 'match :operands# +1))
 
-  (deftest invokeRestart.1
+  (defTest invokeRestart.1
     (signalsError?
      (invokeRestart "foo")
      Error :type 'type :datum "foo" :expected '(or Symbol RestartHandler)) ) )
 
-(defsuite invokeRestartInteractively
+(defSuite invokeRestartInteractively
 
-  (deftest invokeRestartInteractively.1
+  (defTest invokeRestartInteractively.1
     (restartBind ((r1 (\ (arg1 arg2) (+ arg1 arg2))
                        :interactiveFunction (\ () (list 1 2))))
       (invokeRestartInteractively 'r1))
     3)
 
-  (deftest invokeRestartInteractively.1a
+  (defTest invokeRestartInteractively.1a
     (restartBind ((r1 (\ (arg1 arg2) (+ arg1 arg2))
                        :interactiveFunction (\ () (list 1 2))))
       (invokeRestartInteractively (opt? (findRestart? 'r1))))
     3)
 
-  (deftest invokeRestartInteractively.1b
+  (defTest invokeRestartInteractively.1b
     (restartBind ((r1 (\ () (+ 1 2))))
       (invokeRestartInteractively 'r1))
     3)
 
-  (deftest invokeRestartInteractively.1c
+  (defTest invokeRestartInteractively.1c
     (restartBind ((r1 (\ () (+ 1 2))))
       (invokeRestartInteractively (opt? (findRestart? 'r1))))
     3)
 
-  (deftest invokeRestartInteractively.2
+  (defTest invokeRestartInteractively.2
     (signalsError?
      (restartBind ((r1 (\ (arg1 arg2) (+ arg1 arg2))
                         :interactiveFunction (\ () '())))
        (invokeRestartInteractively 'r1))
      Error :type 'match :operands# +2))
 
-  (deftest invokeRestartInteractively.3
+  (defTest invokeRestartInteractively.3
     (signalsError?
      (restartBind ((r1 (\ (arg1) arg1)
                         :interactiveFunction (\ () '(1 2))))
        (invokeRestartInteractively 'r1))
      Error :type 'match :operands# -1)))
 
-(defsuite |Condition Handling in the Lisp Language Family|
+(defSuite |Condition Handling in the Lisp Language Family|
   ;; Adapted from https://www.nhplace.com/kent/Papers/Condition-Handling-2001.html
 
   (defClass UnboundVariable (Error) (name))
 
-  (deftest* firewall.1
+  (defTest* firewall.1
     (let ((result
            (handlerCase ((UnboundVariable (\ (c) (list 'outer c))))
              (handlerBind ((Error (\ (#ignore)
@@ -710,7 +710,7 @@
                    (type? (cadr result) UnboundVariable)
                    (== (getSlot (cadr result) 'name) 'fred)))))
 
-  (deftest* firewall.2
+  (defTest* firewall.2
     (let ((result
            (handlerCase ((UnboundVariable (\ (c) (list 'outer c))))
              (handlerBind ((Error (\ (#ignore)

@@ -2,7 +2,7 @@
 
 (def test-util-test:x (newBox 1))
 
-(defsuite test-util-test:1
+(defSuite test-util-test:1
   (before
     (sleep 1)
     (sleep 1)
@@ -14,20 +14,20 @@
     (assert#t (eq? (test-util-test:x) 3))
     (test-util-test:x 4)
     (sleep 1))
-  (deftest* check-it
+  (defTest* check-it
     (sleep 1)
     (sleep 1)
     (assert#t (eq? (test-util-test:x) 2))
     (test-util-test:x 3)
     (sleep 1))
-  (deftest* check-it-again
+  (defTest* check-it-again
     (sleep 1)
     (sleep 1)
     (assert#t (eq? (test-util-test:x) 3))
     (sleep 1)))
 
-(defsuite test-util-test:2
-  (deftest* check-it-again-afterwards
+(defSuite test-util-test:2
+  (defTest* check-it-again-afterwards
     (assert#t (eq? (test-util-test:x) 4))))
 
 ;; Test before-each and after-each
@@ -35,7 +35,7 @@
 (def test-util-test:y (newBox 1))
 (def test-util-test:z (newBox 10))
 
-(defsuite test-util-test:3
+(defSuite test-util-test:3
   (before-each
     (sleep 1)
     (sleep 1)
@@ -46,20 +46,20 @@
     (sleep 1)
     (test-util-test:z (- (test-util-test:z) 1))
     (sleep 1))
-  (deftest* t1
+  (defTest* t1
     (sleep 1)
     (sleep 1)
     (assert#t (eq? (test-util-test:y) 2))
     (assert#t (eq? (test-util-test:z) 10))
       (sleep 1))
-  (deftest* t2
+  (defTest* t2
     (sleep 1)
     (sleep 1)
     (assert#t (eq? (test-util-test:y) 3))
     (assert#t (eq? (test-util-test:z) 9))
     (sleep 1)))
 
-(defsuite test-util-test:4
-  (deftest* t3
+(defSuite test-util-test:4
+  (defTest* t3
     (assert#t (eq? (test-util-test:y) 3))
     (assert#t (eq? (test-util-test:z) 8))))

@@ -28,9 +28,9 @@
 
 ;; The actual tests.
 
-(defsuite caml-shift
+(defSuite caml-shift
 
-  (deftest test1
+  (defTest test1
     (begin
       (assert#t (not (promptSet? 'p)))
       (pushPrompt 'p
@@ -38,23 +38,23 @@
         1))
     1)
 
-  (deftest test2
+  (defTest test2
     (+ (pushPrompt 'p (pushPrompt 'p 5))
        4)
     9)
 
-  (deftest test3
+  (defTest test3
     (+ (pushPrompt 'p (+ 6 (abortSubcont 'p 5)))
        4)
     9)
 
-  (deftest test3'
+  (defTest test3'
     (+ (pushPrompt 'p
          (pushPrompt 'p (+ 6 (abortSubcont 'p 5))))
        4)
     9)
 
-  (deftest test3''
+  (defTest test3''
     (+ (pushPrompt 'p
          (pushPrompt 'p (+ 6 (abortSubcont 'p 5)))
          (+ (abortSubcont 'p 7)
@@ -62,7 +62,7 @@
        20)
     27)
 
-  (deftest test3'''
+  (defTest test3'''
     (signalsError?
      (begin
        (pushPrompt 'p
@@ -72,7 +72,7 @@
        (abortSubcont 'p 9))
      Error :type 'unboundPrompt :prompt 'p))
 
-  (deftest test4
+  (defTest test4
     (+ (pushPrompt 'p
          (+ (takeSubcont 'p sk
               (pushPrompt 'p
@@ -81,7 +81,7 @@
        20)
     35)
 
-  (deftest test5
+  (defTest test5
     (+ (pushPrompt 'p0
          (+ (shift 'p0 (\ (sk)
                          (+ 100 (sk (\ () (sk (\ () 3)))))))
@@ -89,13 +89,13 @@
        10)
     117)
 
-  (deftest test5'
+  (defTest test5'
     (+ 10 (pushPrompt 'p0
             (+ 2 (shift 'p0 (\ (sk)
                               (sk (\ () (+ 3 100))))))))
     115)
 
-  (deftest test5''
+  (defTest test5''
     (+ (pushPrompt 'p0
          (+ (shift 'p0 (\ (sk)
                          (+ (sk (\ ()
@@ -106,7 +106,7 @@
        10)
     115)
 
-  (deftest test5'''
+  (defTest test5'''
     (+ (pushPrompt 'p0
          (let ((v (shift 'p0 (\ (sk)
                                (+ (sk (\ ()
@@ -118,7 +118,7 @@
        10)
     115)
 
-  (deftest test54
+  (defTest test54
     (+ (pushPrompt 'p0
          (let ((v (shift 'p0 (\ (sk)
                                (+ (sk (\ ()
@@ -130,7 +130,7 @@
        10)
     124)
 
-  (deftest test6
+  (defTest test6
     (+ (let\ ((push-twice (sk)
                 (pushSubcont sk (pushSubcont sk 3))))
          (pushPrompt 'p1
@@ -141,7 +141,7 @@
        10)
     15)
 
-  (deftest test7
+  (defTest test7
     (+ (let\ ((push-twice (sk)
                 (pushSubcont sk
                   (pushSubcont sk
@@ -156,7 +156,7 @@
        100)
     135)
 
-  (deftest test7'
+  (defTest test7'
     (+ (let\ ((push-twice (sk)
                 (sk (\ ()
                       (sk (\ ()
@@ -183,9 +183,9 @@
   (prog1 (dget dynvar)
     (dset dynvar value)))
 
-(defsuite dbplusdc
+(defSuite dbplusdc
 
-  (deftest testc
+  (defTest testc
     (begin
       (ddef *p*)
       (dlet ((*p* 0))
@@ -196,14 +196,14 @@
             (list x y z)))))
     '(0 1 0))
 
-  (deftest test1
+  (defTest test1
     (begin
       (ddef *p*)
       (dlet ((*p* 1))
         (list (dget *p*) (dget *p*))))
     '(1 1))
 
-  (deftest test11
+  (defTest test11
     (begin
       (ddef *p*)
       (dlet ((*p* 1))
@@ -215,7 +215,7 @@
 
   ;; It's probably a happy accident that this test works, since
   ;; our `dsetPrv' is pretty different from DBplusDC's.
-  (deftest test12
+  (defTest test12
     (begin
       (ddef *p*)
       (dlet ((*p* 1))
@@ -228,7 +228,7 @@
             (list v1 v2 v5)))))
     '(1 (2 12) 1))
 
-  (deftest test_eq4
+  (defTest test_eq4
     (begin
       (ddef *p*)
       (dlet ((*p* 1))
@@ -236,7 +236,7 @@
           (dget *p*))))
     1)
 
-  (deftest test_eq5
+  (defTest test_eq5
     (begin
       (ddef *p*)
       (dlet ((*p* 1))
@@ -246,7 +246,7 @@
               (dget *p*))))))
     1)
 
-  (deftest test_eq6
+  (defTest test_eq6
     (begin
       (ddef *p*)
       (ddef *q*)
@@ -262,9 +262,9 @@
 
 ;;; Tests for single prompt coroutines
 
-(defsuite |Coroutines|
+(defSuite |Coroutines|
 
-  (deftest |Adapted from A Monadic Framework for Delimited Continuations|
+  (defTest |Adapted from A Monadic Framework for Delimited Continuations|
     (+ 2 (coroutine (if (yield k (+ (resume k #f) (resume k #t)))
                         3
                         4)))

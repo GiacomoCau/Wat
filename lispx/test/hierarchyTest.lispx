@@ -1,6 +1,6 @@
 ;;; Class Hierarchy Integrity Test
 
-(defsuite class-hierarchy
+(defSuite class-hierarchy
 
   (def\ test-hierarchy (classes)
     (let ((env (theEnv)))
@@ -15,7 +15,7 @@
                (assert#t (subClass? class superclass))
                (-test-classes- (cdr c) class))))))))
 
-  (deftest test-hierarchy
+  (defTest test-hierarchy
     (test-hierarchy
      '(string
        symbol
@@ -51,7 +51,7 @@
                         condition-handler)
        continuation)))
 
-  (deftest test-hierarchy.sanity-check
+  (defTest test-hierarchy.sanity-check
     (signalsError?
      (test-hierarchy
       '((number

@@ -151,13 +151,13 @@
 
 ; for minimal lispx test compatibility
 
-(defMacro deftest (name expression . expected?)
+(defMacro defTest (name expression . expected?)
   (list* '%test name expression (if (null? expected?) '(#t) expected?)))
 
-(defMacro deftest* (name . forms)
-  (list deftest name (list* prog1 #t forms)) )
+(defMacro defTest* (name . forms)
+  (list defTest name (list* prog1 #t forms)) )
 
-(defVau defsuite (name . forms) env
+(defVau defSuite (name . forms) env
   (apply begin forms env) )
 
 (def signalsError? assert)

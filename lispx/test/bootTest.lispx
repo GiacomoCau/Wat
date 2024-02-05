@@ -3,99 +3,99 @@
 ;; The order of the tests is haphazard.  It should be brought in line
 ;; with how the operators appear in boot.lispx.
 
-(defsuite signalsError?
+(defSuite signalsError?
 
-  (deftest |SIGNALS-ERROR returns true if the expression signals.|
+  (defTest |SIGNALS-ERROR returns true if the expression signals.|
     (signalsError?
      x
      Error :type 'unboundSymbol))
 
-  (deftest |SIGNALS-ERROR returns true if the expression signals a subclass.|
+  (defTest |SIGNALS-ERROR returns true if the expression signals a subclass.|
     (signalsError?
      x
      Error))
 
-  (deftest |SIGNALS-ERROR returns true if the expression signals and slots match.|
+  (defTest |SIGNALS-ERROR returns true if the expression signals and slots match.|
     (signalsError?
      x
      Error :type 'unboundSymbol :symbol 'x))
 
-  (deftest |SIGNALS-ERROR returns true if the expression signals a subclass and slots match.|
+  (defTest |SIGNALS-ERROR returns true if the expression signals a subclass and slots match.|
     (signalsError?
      x
      Error :symbol 'x))
 
-  (deftest |SIGNALS-ERROR returns false if the expression signals but slots don't match.|
+  (defTest |SIGNALS-ERROR returns false if the expression signals but slots don't match.|
     (signalsError?
      x
      Error :type 'unboundSymbol :symbol 'y)
     #f)
 
-  (deftest |SIGNALS-ERROR returns false if the expression doesn't signal.|
+  (defTest |SIGNALS-ERROR returns false if the expression doesn't signal.|
     (signalsError?
      1
      Error)
     #f)
 
-  (deftest |SIGNALS-ERROR returns false if the expression signals another condition type.|
+  (defTest |SIGNALS-ERROR returns false if the expression signals another condition type.|
     (signalsError?
      x
      Error :type 'match)
     #f))
 
-(defsuite assert#t
+(defSuite assert#t
 
-  (deftest assert#t.1
+  (defTest assert#t.1
     (assert#t (eq? 1 1))
     #inert)
 
-  (deftest assert#t.2
+  (defTest assert#t.2
     (signalsError?
      (assert#t (eq? 1 2))
      Error :type 'assert))
 
-  (deftest assert#t.3
+  (defTest assert#t.3
     (signalsError?
      (assert#t)
      Error :type 'match))
 
-  (deftest assert#t.4
+  (defTest assert#t.4
     (signalsError?
      (assert#t 1)
      Error :type 'type :datum 1 :expected 'Boolean))
 
-  (deftest assert#t.5
+  (defTest assert#t.5
     (signalsError?
      (assert#t #t #t)
      Error :type 'match)))
 
-(defsuite error
+(defSuite error
 
-  (deftest error.1
+  (defTest error.1
     (signalsError?
      (error (new Obj :x 1 :y 2))
      Obj :x 1 :y 2))
 
-  (deftest error.2
+  (defTest error.2
     (signalsError?
      (error)
      Error :type 'match))
 
-  (deftest error.3
+  (defTest error.3
     (handlerBind ((SimpleError (\ (e) (invokeRestart 'continue 12))))
       (error (makeSimpleError "Foo!")
         (abort (\ (value) (* value 10)))
         (continue (\ (value) (* value 2)))))
     24)
 
-  (deftest error.3b
+  (defTest error.3b
     (handlerBind ((SimpleError (\ (e) (invokeRestart 'abort 12))))
       (error (makeSimpleError "Foo!")
         (abort (\ (value) (* value 10)))
         (continue (\ (value) (* value 2)))))
     120)
 
-  (deftest error.4
+  (defTest error.4
     (restartCase ((abort (\ (value) (* 1000 value))))
       (handlerBind ((SimpleError (\ (e) (invokeRestart 'abort 12))))
         (error (error (makeSimpleError "Foo!"))
@@ -103,7 +103,7 @@
           (continue (\ (value) (* value 2))))))
     12000)
 
-  (deftest error.4b
+  (defTest error.4b
     (block b
       (restartCase ((abort (\ (value) (* 1000 value))))
         (handlerBind ((SimpleError (\ (e) (invokeRestart 'abort 12))))
@@ -114,35 +114,35 @@
             (continue (\ (value) (* value 2)))))))
     120000))
 
-(defsuite the
+(defSuite the
 
-  (deftest the.1
+  (defTest the.1
     (the Boolean (== 1 1))
     #t)
 
-  (deftest the.2
+  (defTest the.2
     (signalsError?
      (the String #t)
      Error :type 'type :datum #t :expected 'String))
 
-  (deftest the.3
+  (defTest the.3
     (signalsError?
      (the #t #f)
      Error :type 'type :datum #t :expected 'Class))
 
-  (deftest the.4
+  (defTest the.4
     (signalsError?
      (the)
      Error :type 'match :operands# +2))
 
-  (deftest the.5
+  (defTest the.5
     (signalsError?
      (the #t)
      Error :type 'type :datum #t :expected 'Class)))
 
-(defsuite makeTypeError
+(defSuite makeTypeError
 
-  (deftest makeTypeError.1
+  (defTest makeTypeError.1
     (let ((e (makeTypeError "foo" 'Number)))
       (assert#t (matchObj*? e Error :type 'type :datum "foo" :expected 'Number))
       (assert#t (type? e Error))
@@ -151,9 +151,9 @@
       (assert#t (eq? 'Number (getSlot e 'expected))))
     #inert))
 
-(defsuite simpleError
+(defSuite simpleError
 
-  (deftest makeSimpleError.1
+  (defTest makeSimpleError.1
     (let ((e (makeSimpleError "foo")))
       (assert#t (type? e SimpleError))
       (assert#t (type? e Error))
@@ -161,19 +161,19 @@
       (assert#t (eq? "foo" (@getMessage e))))
     #inert)
 
-  (deftest simpleError.1
+  (defTest simpleError.1
     (signalsError?
      (simpleError)
      Error :type 'match))
 
-  (deftest simpleError.2
+  (defTest simpleError.2
     (signalsError?
      (simpleError "foo")
      SimpleError :type 'simple @getMessage "foo")))
 
-(defsuite makeRestartError
+(defSuite makeRestartError
 
-  (deftest makeRestartError.1
+  (defTest makeRestartError.1
     (let ((e (makeRestartError 'continue)))
       (assert#t (type? e RestartError))
       (assert#t (type? e Error))
@@ -181,17 +181,17 @@
       (assert#t (eq? 'continue (getSlot e 'restartName))))
     #inert))
 
-(defsuite vau
+(defSuite vau
 
-  (deftest |A fexpr without body expression results in #VOID.|
+  (defTest |A fexpr without body expression results in #VOID.|
     ((vau #ignore #ignore))
     #inert)
 
-  (deftest |A fexpr returns its operands unevaluated.|
+  (defTest |A fexpr returns its operands unevaluated.|
     ((vau ops #ignore ops) x y z)
     '(x y z))
 
-  (deftest |A fexpr can have multiple body expressions.|
+  (defTest |A fexpr can have multiple body expressions.|
     (begin
       (def env (theEnv))
       (assert#t (eq? ((vau ops #ignore (set env var 1) ops) x y z)
@@ -199,12 +199,12 @@
       (assert#t (eq? (eval 'var env) 1)))
     #inert)
 
-  (deftest |The environment parameter receives the current environment.|
+  (defTest |The environment parameter receives the current environment.|
     (begin
       (def env (theEnv))
       (== ((vau #ignore e e)) env)))
 
-  (deftest |Fexprs are instances of FEXPR, OPERATOR, OBJECT.|
+  (defTest |Fexprs are instances of FEXPR, OPERATOR, OBJECT.|
     (let ((fexpr (vau #ignore #ignore 12)))
       (type? fexpr Fexpr)
       (type? fexpr Operator)
@@ -212,220 +212,220 @@
       (fexpr))
     12)
 
-  (deftest |Arity check 1.|
+  (defTest |Arity check 1.|
     (signalsError?
      (vau)
      Error :type 'match :operands# +2))
 
-  (deftest |Arity check 2.|
+  (defTest |Arity check 2.|
     (signalsError?
      (vau x)
      Error :type 'match :operands# +1)))
 
-(defsuite quote
+(defSuite quote
 
-  (deftest |Quoted symbols are pointer identical.|
+  (defTest |Quoted symbols are pointer identical.|
      (== 'foo 'foo))
 
-  (deftest |Lists can be quoted.|
+  (defTest |Lists can be quoted.|
     (eq? '(1 2 3) (list 1 2 3)))
 
-  (deftest |Numbers can be quoted.|
+  (defTest |Numbers can be quoted.|
     (eq? '1 1))
 
-  (deftest |Strings can be quoted.|
+  (defTest |Strings can be quoted.|
     (eq? '"foo" "foo"))
 
-  (deftest |QUOTE requires at least one argument.|
+  (defTest |QUOTE requires at least one argument.|
     (signalsError?
      (quote)
      Error :type 'match))
 
-  (deftest |QUOTE requires at most one argument.|
+  (defTest |QUOTE requires at most one argument.|
     (signalsError?
      (quote 1 2 3)
      Error :type 'match)))
 
-(defsuite list
+(defSuite list
 
-  (deftest list.1
+  (defTest list.1
     (== #null (list)))
 
-  (deftest list.2
+  (defTest list.2
     (eq? '(1) (list 1)))
 
-  (deftest list.3
+  (defTest list.3
     (eq? '((1) (2)) (list (list 1) (list 2)))))
 
-(defsuite list*
+(defSuite list*
 
-  (deftest list*.1
+  (defTest list*.1
     (list*)
     #null)
 
-  (deftest list*.2
+  (defTest list*.2
     (list* 1 2 '(3))
     '(1 2 3))
 
-  (deftest list*.3
+  (defTest list*.3
     (list* 1 2 3)
     '(1 2 . 3))
 
-  (deftest list*.4
+  (defTest list*.4
     (list* 1 2)
     '(1 . 2))
 
-  (deftest list*.5
+  (defTest list*.5
     (list* 2)
     '2))
 
-(defsuite theEnv
+(defSuite theEnv
 
-  (deftest theEnv.1
+  (defTest theEnv.1
     (let ((x 1))
       (eval 'x (theEnv)))
     1)
 
-  (deftest theEnv.2
+  (defTest theEnv.2
     (let ((x 1)
           (env (theEnv)))
       (bound? 'x env))
     #f)
 
-  (deftest theEnv.3
+  (defTest theEnv.3
     (let* ((x 1)
            (env (theEnv)))
       (bound? 'x env))
     #t)
 
-  (deftest theEnv.4
+  (defTest theEnv.4
     (signalsError?
      (theEnv #t)
      Error :type 'match)))
 
-(defsuite bound?
+(defSuite bound?
 
-  (deftest bound?.1
+  (defTest bound?.1
     (bound? 'nope (theEnv))
     #f)
 
-  (deftest bound?.2
+  (defTest bound?.2
     (bound? 'def\ (theEnv)))
 
-  (deftest bound?.3
+  (defTest bound?.3
     (bound? 'Obj (theEnv)))
 
-  (deftest bound?.4
+  (defTest bound?.4
     (signalsError?
      (bound?)
      Error :type 'match :operands# +2))
 
-  (deftest bound?.5
+  (defTest bound?.5
     (signalsError?
      (bound? 'x)
      Error :type 'match :operands# +1))
 
-  (deftest bound?.6
+  (defTest bound?.6
     (signalsError?
      (bound? 12 (theEnv))
      Error :type 'type :datum 12 :expected '(or Symbol Keyword String)))
 
-  (deftest bound?.7
+  (defTest bound?.7
     (signalsError?
      (bound? 'x 33)
      Error :type 'type :datum 33 :expected 'ObjEnv))
 
-  (deftest bound?.8
+  (defTest bound?.8
     (signalsError?
      (bound? 'x (theEnv) #t)
      Error :type 'match :operands# -1)))
 
-(defsuite macro
+(defSuite macro
 
-  (deftest macro.0
+  (defTest macro.0
     ((macro ()))
     #inert)
 
-  (deftest macro.1
+  (defTest macro.1
     (let ((z 1))
       ((macro () 'x 'y 'z)))
     1)
 
-  (deftest macro.2
+  (defTest macro.2
     ((macro () (list eq? 1 1)))
     #t)
 
-  (deftest macro.3
+  (defTest macro.3
     (signalsError?
      (macro)
      Error :type 'match)
     #t))
 
-(defsuite defMacro
+(defSuite defMacro
 
-  (deftest defMacro.1
+  (defTest defMacro.1
     (begin
       (defMacro mybegin body
         (list* begin body))
       (mybegin 1 2 3))
     3)
 
-  (deftest defMacro.2
+  (defTest defMacro.2
     (signalsError?
      (defMacro)
      Error :type 'match))
 
-  (deftest defMacro.3
+  (defTest defMacro.3
     (signalsError?
      (defMacro foo)
      Error :type 'match))
 
-  (deftest defMacro.4
+  (defTest defMacro.4
     (begin
       (defMacro foo ())
       (foo))
     #inert))
 
-(defsuite defVau
+(defSuite defVau
 
-  (deftest defVau.1
+  (defTest defVau.1
     (begin
       (defVau mybegin body env
         (eval (cons 'begin body) env))
       (mybegin 1 2 3))
     3)
 
-  (deftest defVau.1'
+  (defTest defVau.1'
     (begin
       (defVau mybegin body env
         (apply begin body env))
       (mybegin 1 2 3))
     3)
 
-  (deftest defVau.2
+  (defTest defVau.2
     (signalsError?
      (defVau)
      Error :type 'match))
 
-  (deftest defVau.3
+  (defTest defVau.3
     (signalsError?
      (defVau foo)
      Error :type 'match :operands# '+2))
 
-  (deftest defVau.3b
+  (defTest defVau.3b
     (signalsError?
      (defVau foo ())
      Error :type 'match :operands# '+1))
 
-  (deftest defVau.4
+  (defTest defVau.4
     (begin
       (defVau foo () #ignore)
       (foo))
     #inert))
 
-(defsuite def
+(defSuite def
 
-  (deftest def.1
+  (defTest def.1
     (begin
       (def (x y z) (list 1 2 3))
       (assert#t (eq? x 1))
@@ -433,394 +433,394 @@
       (assert#t (eq? z 3)))
     #inert)
 
-  (deftest def.2
+  (defTest def.2
     (signalsError?
      (def :key :key)
      Error :type 'type :datum :key :expected '(or Symbol Cons)))
 
-  (deftest def.2b
+  (defTest def.2b
     (signalsError?
      (def :key :key2)
      Error :type 'type :datum :key :expected '(or Symbol Cons)))
 
-  (deftest def.3
+  (defTest def.3
     (signalsError?
       (def #ignore 2)
     Error :type 'type :datum #ignore :expected '(or Symbol Cons)))
 
-  (deftest def.4
+  (defTest def.4
     (def x 1)
     (if (== (bndRes) :rhs) 1 #inert))
 
-  (deftest def.5
+  (defTest def.5
     (signalsError?
       (def () ())
     Error :type 'type :datum #null :expected '(or Symbol Cons)))
 
-  (deftest def.6
+  (defTest def.6
     (signalsError?
      (def)
      Error :type 'match :operands# '+2))
 
-  (deftest def.7
+  (defTest def.7
     (signalsError?
      (def x)
      Error :type 'match :operands# '+1))
 
-  (deftest def.8
+  (defTest def.8
     (signalsError?
      (def #t 12)
      Error :type 'type :datum #t :expected '(or Symbol Cons)))
 
-  (deftest def.9
+  (defTest def.9
     (signalsError?
      (def x 1 "docstring")
      Error :type 'type :datum 1 :expected '(or #inert #ignore :rhs :prv))))
 
-(defsuite defConstant
+(defSuite defConstant
 
-  (deftest defConstant.1
+  (defTest defConstant.1
     (begin
       (defConstant x 1)
       x)
     1)
 
-  (deftest defConstant.2
+  (defTest defConstant.2
     (signalsError?
      (defConstant)
      Error :type 'match :operands# '+2))
 
-  (deftest defConstant.3
+  (defTest defConstant.3
     (signalsError?
      (defConstant x)
      Error :type 'match :operands# '+1))
 
-  (deftest defConstant.4
+  (defTest defConstant.4
     (begin
       (defConstant x 1)
       x)
     1)
 
-  (deftest defConstant.5
+  (defTest defConstant.5
     (defConstant x 1)
     (if (== (bndRes) :rhs) 1 #inert)))
 
-(defsuite \
+(defSuite \
 
-  (deftest \.1
+  (defTest \.1
     ((\ ()))
     #inert)
 
-  (deftest \.2
+  (defTest \.2
     ((\ args 'whatever args) 1 2 (intern "foo"))
     '(1 2 foo))
 
-  (deftest \.3
+  (defTest \.3
     (signalsError?
      (\ )
      Error :type 'match))
 
-  (deftest \.4
+  (defTest \.4
     (signalsError?
      (\ #t)
      Error :type 'type :datum #t :expected '(or () #ignore Symbol Cons))))
 
-(defsuite def\
+(defSuite def\
 
-  (deftest def\.1
+  (defTest def\.1
     (begin
       (def\ foo () 'foo)
       (def\ bar (x) (list (foo) x))
       (bar 'bar))
     '(foo bar))
 
-  (deftest def\.2
+  (defTest def\.2
     (begin
       (def\ nope ())
       (nope))
     #inert)
 
-  (deftest def\.3
+  (defTest def\.3
     (signalsError?
      (def\)
      Error :type 'match))
 
-  (deftest def\.4
+  (defTest def\.4
     (signalsError?
      (def\ foo)
      Error :type 'match))
 
-  (deftest def\.5
+  (defTest def\.5
     (signalsError?
      (def\ #t ())
      Error :type 'type :datum #t :expected '(or Symbol Cons)))
 
-  (deftest def\.6
+  (defTest def\.6
     (type? (def\ foo ()) (if (== (bndRes) :rhs) Function Inert))))
 
-(defsuite begin
+(defSuite begin
 
-  (deftest begin.1
+  (defTest begin.1
     (begin)
     #inert)
 
-  (deftest begin.2
+  (defTest begin.2
     (begin (list))
     (list))
 
-  (deftest begin.3
+  (defTest begin.3
     (begin
       (def env (theEnv))
       (begin (set env x 1) (set env x 2) x))
     2))
 
-(defsuite prog1
+(defSuite prog1
 
-  (deftest prog1.1
+  (defTest prog1.1
     (prog1 1)
     1)
 
-  (deftest prog1.2
+  (defTest prog1.2
     (prog1 1 2 3)
     1)
 
-  (deftest prog1.3
+  (defTest prog1.3
     (signalsError?
      (prog1)
      Error :type 'match))
 
-  (deftest prog1.4
+  (defTest prog1.4
     (begin
       (def env (theEnv))
       (assert#t (eq? 4 (prog1 4 (set env x 2))))
       x)
     2))
 
-(defsuite eval
+(defSuite eval
 
-  (deftest eval.1
+  (defTest eval.1
     (eval #null (theEnv))
     #null)
 
-  (deftest eval.2
+  (defTest eval.2
     (eval '(eq? 1 2) (theEnv))
     #f)
 
-  (deftest eval.3
+  (defTest eval.3
     (signalsError?
      (eval)
      Error :type 'match :operands# +1))
 
-  (deftest eval.4
+  (defTest eval.4
      (eval '1)
      1)
 
-  (deftest eval.5
+  (defTest eval.5
     (signalsError?
      (eval 'x (theEnv))
      Error :type 'unboundSymbol :symbol 'x))
 
-  (deftest eval.6
+  (defTest eval.6
     (signalsError?
      (eval '1 (theEnv) #t)
      Error :type 'match :operands# -1)))
 
-(defsuite cons
+(defSuite cons
 
-  (deftest cons.1
+  (defTest cons.1
     (cons (cons 1) (cons 2))
     '((1) . (2)))
 
-  (deftest cons.2
+  (defTest cons.2
     (cons (cons 1) #null)
     '((1)))
 
-  (deftest cons.3
+  (defTest cons.3
     (signalsError?
      (cons)
      Error :type 'match :operands# +1))
 
-  (deftest cons.4
+  (defTest cons.4
     (cons 1)
     '(1))
 
-  (deftest cons.5
+  (defTest cons.5
     (signalsError?
      (cons 1 2 3)
      Error :type 'match :operands# -1)))
 
-(defsuite car
+(defSuite car
 
-  (deftest car.1
+  (defTest car.1
     (car (list 1 2))
     1)
 
-  (deftest car.2
+  (defTest car.2
     (signalsError?
      (car)
      Error :type 'match :operands# +1))
 
-  (deftest car.3
+  (defTest car.3
     (signalsError?
      (car 1)
      Error :type 'type :datum 1 :expected 'Cons))
 
-  (deftest car.4
+  (defTest car.4
     (signalsError?
      (car 1 2)
      Error :type 'type :expected 'Cons)))
 
-(defsuite cdr
+(defSuite cdr
 
-  (deftest cdr.1
+  (defTest cdr.1
     (cdr (list 1 2))
     '(2))
 
-  (deftest cdr.2
+  (defTest cdr.2
     (signalsError?
      (cdr)
      Error :type 'match :operands# +1))
 
-  (deftest cdr.3
+  (defTest cdr.3
     (signalsError?
      (cdr 1)
      Error :type 'type :datum 1 :expected 'Cons))
 
-  (deftest cdr.4
+  (defTest cdr.4
     (signalsError?
      (cdr 1 2)
      Error :type 'type :expected 'Cons)))
 
-(defsuite symbolName
+(defSuite symbolName
 
-  (deftest symbolName.1
+  (defTest symbolName.1
     (eq? "foo" (symbolName 'foo)))
 
-  (deftest symbolName.2
+  (defTest symbolName.2
     (eq? "foo" (symbolName 'foo)))
 
-  (deftest symbolName.4
+  (defTest symbolName.4
     (eq? "foo" (symbolName :foo)))
 
-  (deftest symbolName.5
+  (defTest symbolName.5
     (signalsError?
      (symbolName)
      Error :type 'match :operands# +1))
 
-  (deftest symbolName.6
+  (defTest symbolName.6
     (signalsError?
      (symbolName 12)
      Error :type 'type :datum 12 :expected 'Intern)))
 
-(defsuite wrap
+(defSuite wrap
 
-  (deftest wrap.1
+  (defTest wrap.1
     ((wrap (vau (x) #ignore x)) (list 1 2 3))
     '(1 2 3))
 
-  (deftest wrap.2
+  (defTest wrap.2
     (signalsError?
      (wrap)
      Error :type 'match :operands# +1))
 
-  (deftest wrap.3
+  (defTest wrap.3
     (signalsError?
      (wrap 33)
      Error :type 'type :datum 33 :expected 'Combinable)))
 
-(defsuite unwrap
+(defSuite unwrap
 
-  (deftest unwrap.1
+  (defTest unwrap.1
     ((unwrap (\ (x) x)) (list 1 2 3))
     '(list 1 2 3))
 
-  (deftest unwrap.2
+  (defTest unwrap.2
     (signalsError?
      (unwrap)
      Error :type 'match :operands# +1))
 
-  (deftest unwrap.3
+  (defTest unwrap.3
     (signalsError?
      (unwrap 33)
      Error :type 'type :datum 33 :expected 'Apv)))
 
-(defsuite if
+(defSuite if
 
-  (deftest if.1
+  (defTest if.1
     (if #t (eq? 1 1) (eq? 1 2))
     #t)
 
-  (deftest if.2
+  (defTest if.2
     (if #f (eq? 1 1) (eq? 1 2))
     #f)
 
-  (deftest if.3
+  (defTest if.3
     (signalsError?
      (if)
      Error :type 'match :operands# +2))
 
-  (deftest if.4
+  (defTest if.4
     (signalsError?
      (if #t)
      Error :type 'match :operands# +1))
 
-  (deftest if.5
+  (defTest if.5
      (if #t #f)
      #f)
 
-  (deftest if.6
+  (defTest if.6
     (signalsError?
      (if 1 #f #t)
      Error :type 'type :datum 1 :expected 'Boolean)))
 
-(defsuite cond
+(defSuite cond
 
-  (deftest cond.1
+  (defTest cond.1
     (cond)
     #inert)
 
-  (deftest cond.2
+  (defTest cond.2
     (cond (#f 1 2 3))
     #inert)
 
-  (deftest cond.3
+  (defTest cond.3
     (cond (#f 1 2 3)
           ((eq? 1 1) 4 5 (eq? 1 1)))
     #t)
 
-  (deftest cond.4
+  (defTest cond.4
      (cond (1 #t))
      #inert))
 
-(defsuite caseType
+(defSuite caseType
 
-  (deftest caseType.1
+  (defTest caseType.1
     (signalsError?
      (caseType)
      Error :type 'match :operands# +1))
 
-  (deftest caseType.2
+  (defTest caseType.2
     (caseType (+ 2 2))
     #inert)
 
-  (deftest caseType.3
+  (defTest caseType.3
     (caseType (+ 2 2)
       (Object 1)
       (Integer 2))
     1)
 
-  (deftest caseType.4
+  (defTest caseType.4
     (caseType (+ 2 2)
       (Integer 2)
       (Object 1))
     2)
     
-  (deftest caseType.5
+  (defTest caseType.5
     (signalsError?
      (caseType (+ 2 2) (else (simpleError "none clause")))
      SimpleError :type 'simple @getMessage "none clause"))
 
-  (deftest caseType.6
+  (defTest caseType.6
     (signalsError?
      (caseType (+ 2 2)
        (String 2)
@@ -828,438 +828,438 @@
        (else => (\ (v) (typeError v '(or String Boolean)))) )
      Error :type 'type :datum 4 :expected '(or String Boolean))) )
 
-(defsuite not
+(defSuite not
 
-  (deftest not.1
+  (defTest not.1
     (not #t)
     #f)
 
-  (deftest not.2
+  (defTest not.2
     (not #f)
     #t)
 
-  (deftest not.3
+  (defTest not.3
     (signalsError?
      (not)
      Error :type 'match :operands# +1))
 
-  (deftest not.4
+  (defTest not.4
     (signalsError?
      (not 1)
      Error :type 'type :datum 1 :expected 'Boolean)))
 
-(defsuite ==
+(defSuite ==
 
-  (deftest ==.1
+  (defTest ==.1
     (== 'foo 'foo)
     #t)
 
-  (deftest ==.2
+  (defTest ==.2
     (== 'foo 'bar)
     #f)
 
-  (deftest ==.3
+  (defTest ==.3
     (== #t #t)
     #t)
 
-  (deftest ==.4
+  (defTest ==.4
     (== #f #f)
     #t)
 
-  (deftest ==.5
+  (defTest ==.5
     (== #inert #inert)
     #t)
 
-  (deftest ==.6
+  (defTest ==.6
     (== #ignore #ignore)
     #t)
 
-  (deftest ==.7
+  (defTest ==.7
     (== #null #null)
     #t)
 
-  (deftest ==.8
+  (defTest ==.8
     (== #null ())
     #t)
 
-  (deftest ==.9
+  (defTest ==.9
     (== #null '())
     #t)
 
-  (deftest ==.10
+  (defTest ==.10
     (signalsError?
      (==)
      Error :type 'match :operands# +2))
 
-  (deftest ==.11
+  (defTest ==.11
     (signalsError?
      (== 11)
      Error :type 'match :operands# +1)))
 
-(defsuite eq?
+(defSuite eq?
 
-  (deftest eq?.1
+  (defTest eq?.1
     (eq? 1 1 1)
     #t)
 
-  (deftest eq?.2
+  (defTest eq?.2
     (eq? 1 1 2)
     #f)
 
-  (deftest eq?.3
+  (defTest eq?.3
     (eq? #t #t #t)
     #t)
 
-  (deftest eq?.4
+  (defTest eq?.4
     (eq? #t #t #f)
     #f)
 
-  (deftest eq?.5
+  (defTest eq?.5
     (eq? "foo" "foo" "foo")
     #t)
 
-  (deftest eq?.6
+  (defTest eq?.6
     (eq? (list (list 1)) (list (list 1)))
     #t)
 
-  (deftest eq?.7
+  (defTest eq?.7
     (signalsError?
      (eq?)
      Error :type 'match :operands# +2))
 
-  (deftest eq?.8
+  (defTest eq?.8
     (signalsError?
      (eq? 1)
      Error :type 'match :operands# +1)))
 
-(defsuite /=
+(defSuite /=
 
-  (deftest /=.1
+  (defTest /=.1
     (/= 1 1 1)
     #f)
 
-  (deftest /=.2
+  (defTest /=.2
     (/= 1 1 2)
     #f)
 
-  (deftest /=.3
+  (defTest /=.3
     (/= 1 2 3)
     #t)
 
-  (deftest /=.4
+  (defTest /=.4
     (/= #t #t #f)
     #f)
 
-  (deftest /=.4b
+  (defTest /=.4b
     (/= #t #f)
     #t)
 
-  (deftest /=.5
+  (defTest /=.5
     (/= "foo" "foo" "foo")
     #f)
 
-  (deftest /=.5b
+  (defTest /=.5b
     (/= "foo" "bar" "quux")
     #t)
 
-  (deftest /=.6
+  (defTest /=.6
     (/= (list (list 1)) (list (list 2)))
     #t)
 
-  (deftest /=.7
+  (defTest /=.7
     (signalsError?
      (/=)
      Error :type 'match :operands# +1))
 
-  (deftest /=.8
+  (defTest /=.8
     (/= 1)
     #t)
 
-  (deftest /=.9
+  (defTest /=.9
     (/= 1 2 3 3)
     #f)
 
-  (deftest /=.9b
+  (defTest /=.9b
     (/= 3 1 2 3)
     #f)
 
-  (deftest /=.9c
+  (defTest /=.9c
     (/= 3 1 2 3 4)
     #f)
 
-  (deftest /=.9d
+  (defTest /=.9d
     (/= 1 2 3 3 4)
     #f)
 
-  (deftest /=.9e
+  (defTest /=.9e
     (/= 3 3 4)
     #f)
 
-  (deftest /=.10
+  (defTest /=.10
     (/= #t "a")
     #t))
 
-(defsuite <
+(defSuite <
 
-  (deftest <.1
+  (defTest <.1
     (< 1 1 1)
     #f)
 
-  (deftest <.2
+  (defTest <.2
     (< 1 1 2)
     #f)
 
-  (deftest <.3
+  (defTest <.3
     (< -3 -2 -1 0 1 2 3)
     #t)
 
-  (deftest <.4
+  (defTest <.4
     (< #t #t #f)
     #f)
 
-  (deftest <.5
+  (defTest <.5
     (< "foo" "foo" "foo")
     #f)
 
-  (deftest <.6
+  (defTest <.6
     (signalsError?
      (< (list (list 1)) (list (list 2)))
      Error))
 
-  (deftest <.7
+  (defTest <.7
     (signalsError?
      (<)
      Error :type 'match :operands# +2))
 
-  (deftest <.8
+  (defTest <.8
     (signalsError?
      (< 1)
      Error :type 'match :operands# +1))
 
-  (deftest <.9
+  (defTest <.9
     (< 1 2 3 3)
     #f)
 
-  (deftest <.different-types
+  (defTest <.different-types
     (signalsError?
      (< 1 2 3 "foo")
      Error :type 'java :member '%< :args '(3 "foo"))) )
 
-(defsuite >
+(defSuite >
 
-  (deftest >.1
+  (defTest >.1
     (> 1 1 1)
     #f)
 
-  (deftest >.2
+  (defTest >.2
     (> 2 1 1)
     #f)
 
-  (deftest >.3
+  (defTest >.3
     (> 3 2 1 0 -1 -2 -3)
     #t)
 
-  (deftest >.4
+  (defTest >.4
     (> #t #t #f)
     #f)
 
-  (deftest >.5
+  (defTest >.5
     (> "foo" "foo" "foo")
     #f)
 
-  (deftest >.6
+  (defTest >.6
     (signalsError?
      (> (list (list 1)) (list (list 2)))
      Error))
 
-  (deftest >.7
+  (defTest >.7
     (signalsError?
      (>)
      Error :type 'match :operands# +2))
 
-  (deftest >.8
+  (defTest >.8
     (signalsError?
      (> 1)
      Error :type 'match :operands# +1))
 
-  (deftest >.9
+  (defTest >.9
     (> 3 2 1 1)
     #f)
 
-  (deftest >.different-types
+  (defTest >.different-types
     (signalsError?
      (> 3 2 1 "foo")
      Error :type 'java :member '%> :args '(1 "foo"))))
 
-(defsuite <=
+(defSuite <=
 
-  (deftest <=.1
+  (defTest <=.1
     (<= 1 1 1)
     #t)
 
-  (deftest <=.2
+  (defTest <=.2
     (<= 1 1 2)
     #t)
 
-  (deftest <=.3
+  (defTest <=.3
     (<= -3 -2 -1 0 1 2 3)
     #t)
 
-  (deftest <=.4
+  (defTest <=.4
     (<= #t #t #f)
     #f)
 
-  (deftest <=.5
+  (defTest <=.5
      (<= "foo" "foo" "foo")
      #t)
 
-  (deftest <=.6
+  (defTest <=.6
     (signalsError?
      (<= (list (list 1)) (list (list 2)))
      Error))
 
-  (deftest <=.7
+  (defTest <=.7
     (signalsError?
      (<=)
      Error :type 'match :operands# +2))
 
-  (deftest <=.8
+  (defTest <=.8
     (signalsError?
      (<= 1)
      Error :type 'match :operands# +1))
 
-  (deftest <=.9
+  (defTest <=.9
     (<= 1 2 3 3)
     #t)
 
-  (deftest <=.10
+  (defTest <=.10
     (<= 1 2 3 3 -1)
     #f)
 
-  (deftest <=.different-types
+  (defTest <=.different-types
     (signalsError?
      (<= 1 1 3 "foo")
      Error :type 'java :member '%<= :args '(3 "foo"))))
 
-(defsuite >=
+(defSuite >=
 
-  (deftest >=.1
+  (defTest >=.1
     (>= 1 1 1)
     #t)
 
-  (deftest >=.2
+  (defTest >=.2
     (>= 2 1 1)
     #t)
 
-  (deftest >=.3
+  (defTest >=.3
     (>= 3 2 1 1 0 0 -1 -2 -3 -3)
     #t)
 
-  (deftest >=.4
+  (defTest >=.4
     (>= #t #t #f)
     #t)
 
-  (deftest >=.5
+  (defTest >=.5
     (>= "foo" "foo" "foo")
     #t)
 
-  (deftest >=.6
+  (defTest >=.6
     (signalsError?
      (>= (list (list 1)) (list (list 2)))
      Error))
 
-  (deftest >=.7
+  (defTest >=.7
     (signalsError?
      (>=)
      Error :type 'match :operands# +2))
 
-  (deftest >=.8
+  (defTest >=.8
     (signalsError?
      (>= 1)
      Error :type 'match :operands# +1))
 
-  (deftest >=.9
+  (defTest >=.9
     (>= 3 3 2 1)
     #t)
 
-  (deftest >=.10
+  (defTest >=.10
     (>= 3 3 2 100)
     #f)
 
-  (deftest >=.different-types
+  (defTest >=.different-types
     (signalsError?
      (>= 3 3 2 "foo")
      Error :type 'java :member '%>= :args '(2 "foo"))))
 
-(defsuite +
+(defSuite +
 
-  (deftest +.1
+  (defTest +.1
     (+)
     0)
 
-  (deftest +.2
+  (defTest +.2
     (+ 10)
     10)
 
-  (deftest +.3
+  (defTest +.3
     (+ 10 10 10)
     30))
 
-(defsuite -
+(defSuite -
 
-  (deftest -.1
+  (defTest -.1
     (signalsError?
      (-)
      Error :type 'match :operands# +1))
 
-  (deftest -.2
+  (defTest -.2
     (- 1)
     -1)
 
-  (deftest -.3
+  (defTest -.3
     (- -1)
     1)
 
-  (deftest -.4
+  (defTest -.4
     (- 100 10 1)
     89))
 
-(defsuite *
+(defSuite *
 
-  (deftest *.1
+  (defTest *.1
     (*)
     1)
 
-  (deftest *.2
+  (defTest *.2
     (* 10)
     10)
 
-  (deftest *.3
+  (defTest *.3
     (* 10 -10 10)
     -1000))
 
-(defsuite /
+(defSuite /
 
-  (deftest /.1
+  (defTest /.1
     (signalsError?
      (/)
      Error :type 'match :operands# +1))
 
-  (deftest /.2
+  (defTest /.2
     (/ 10d)
     0.1)
 
-  (deftest /.3
+  (defTest /.3
     (/ 100 10 2)
     5)
 
-  (deftest /.4
+  (defTest /.4
     (/ -100 10 2)
     -5))
 
-(defsuite type?
+(defSuite type?
 
-  (deftest type?.1
+  (defTest type?.1
     (&&
      (type? #t Boolean)
      (type? #f Boolean)
@@ -1268,96 +1268,96 @@
      (type? #null Null)
      (type? Object Class)))
 
-  (deftest type?.2
+  (defTest type?.2
     (&&
      (type? Condition StandardClass)
      (type? Condition Class)
      (type? Condition Object)))
 
-  (deftest type?.3
+  (defTest type?.3
     (signalsError?
      (type?)
      Error :type 'match :operands# +2))
 
-  (deftest type?.3
+  (defTest type?.3
     (signalsError?
      (type? "foo")
      Error :type 'match :operands# +1)))
 
-(defsuite intern
+(defSuite intern
 
-  (deftest intern.1
+  (defTest intern.1
     (== 'foo (intern "foo")))
 
-  (deftest intern.2
+  (defTest intern.2
     (signalsError?
      (intern 12)
      Error :type 'type :datum 12 :expected 'String))
 
-  (deftest intern.3
+  (defTest intern.3
     (signalsError?
      (intern)
      Error :type 'match :operands# +1)))
 
-(defsuite apply
+(defSuite apply
 
-  (deftest apply.1
+  (defTest apply.1
     (apply list ())
     '())
 
-  (deftest apply.2
+  (defTest apply.2
     (apply list '(1))
     '(1))
 
-  (deftest apply.3
+  (defTest apply.3
     (signalsError?
      (apply)
      Error :type 'match :operands# +2))
 
-  (deftest apply.4
+  (defTest apply.4
     (signalsError?
      (apply list)
      Error :type 'match :operands# +1))
 
-  (deftest apply.5
+  (defTest apply.5
     (signalsError?
      (apply 12 '())
      Error :type 'type :datum 12 :expected 'Combinable)))
 
-(defsuite findClass
+(defSuite findClass
 
-  (deftest findClass.1
+  (defTest findClass.1
     (== (findClass 'String (theEnv))
         (classOf "foo")))
 
-  (deftest findClass.2a
+  (defTest findClass.2a
     (signalsError?
      (findClass)
      Error :type 'match :operands# +2))
 
-  (deftest findClass.2b
+  (defTest findClass.2b
     (signalsError?
      (findClass 'foo)
      Error :type 'match :operands# +1))
 
-  (deftest findClass.3
+  (defTest findClass.3
     (signalsError?
      (findClass "string" (theEnv))
      Error :type 'type :datum "string" :expected 'Symbol))
 
-  (deftest findClass.4
+  (defTest findClass.4
     (signalsError?
      (findClass 'does-not-exist (theEnv))
      Error :type 'unboundSymbol :symbol 'does-not-exist)))
 
-(defsuite newEnv
+(defSuite newEnv
 
-  (deftest newEnv.1
+  (defTest newEnv.1
     (let ((env (newEnv)))
       (bound? 'def env))
     #f)
 
-  (deftest newEnv.2
+  (defTest newEnv.2
     (let* ((env (newEnv (theEnv)))
            (child (newEnv env)))
       (assert#t (not (bound? 'x env)))
@@ -1369,297 +1369,297 @@
       (assert#t (eq? 1 (eval 'x child))))
     #inert)
 
-  (deftest newEnv.3
+  (defTest newEnv.3
     (signalsError?
      (newEnv 12)
      Error :type 'type :datum (12) :expected '(or () (2 (or () Env) Obj) (1 oo (or () Env) (or Symbol Keyword String) Any)))))
 
-(defsuite cxxr
+(defSuite cxxr
 
-  (deftest caar.1
+  (defTest caar.1
     (caar '((1 2) (3 4) (5 6)))
     1)
 
-  (deftest caar.2
+  (defTest caar.2
     (signalsError?
      (caar)
      Error :type 'match :operands# +1))
 
-  (deftest caar.3
+  (defTest caar.3
     (signalsError?
      (caar 1)
      Error :type 'type :datum 1 :expected 'Cons))
 
-  (deftest cadr.1
+  (defTest cadr.1
     (cadr '((1 2) (3 4) (5 6)))
     '(3 4))
 
-  (deftest cadr.2
+  (defTest cadr.2
     (signalsError?
      (cadr)
      Error :type 'match :operands# +1))
 
-  (deftest cadr.3
+  (defTest cadr.3
     (signalsError?
      (cadr 1)
      Error :type 'type :datum 1 :expected 'Cons))
 
-  (deftest cddr.1
+  (defTest cddr.1
     (cddr '((1 2) (3 4) (5 6)))
     '((5 6)))
 
-  (deftest cddr.2
+  (defTest cddr.2
     (signalsError?
      (cddr)
      Error :type 'match :operands# +1))
 
-  (deftest cddr.3
+  (defTest cddr.3
     (signalsError?
      (cddr 1)
      Error :type 'type :datum 1 :expected 'Cons))
 
-  (deftest cdar.1
+  (defTest cdar.1
     (cdar '((1 2) (3 4) (5 6)))
     '(2))
 
-  (deftest cdar.2
+  (defTest cdar.2
     (signalsError?
      (cdar)
      Error :type 'match :operands# +1))
 
-  (deftest cdar.3
+  (defTest cdar.3
     (signalsError?
      (cdar 1)
      Error :type 'type :datum 1 :expected 'Cons))
 
-(defsuite when
+(defSuite when
 
-  (deftest when.1
+  (defTest when.1
     (when #t)
     #inert)
 
-  (deftest when.2
+  (defTest when.2
     (when #f)
     #inert)
 
-  (deftest when.3
+  (defTest when.3
     (when #t 1 2 (eq? 1 1))
     #t)
 
-  (deftest when.4
+  (defTest when.4
     (when #f 1 2 3)
     #inert)
 
-  (deftest when.5
+  (defTest when.5
     (signalsError?
      (when)
      Error :type 'match :operands# +1))
 
-  (deftest when.6
+  (defTest when.6
     (signalsError?
      (when 1)
      Error :type 'type :datum 1 :expected 'Boolean))))
 
-(defsuite unless
+(defSuite unless
 
-  (deftest unless.1
+  (defTest unless.1
     (unless #t)
     #inert)
 
-  (deftest unless.2
+  (defTest unless.2
     (unless #f)
     #inert)
 
-  (deftest unless.3
+  (defTest unless.3
     (unless #f 1 2 (eq? 1 1))
     #t)
 
-  (deftest unless.4
+  (defTest unless.4
     (unless #t 1 2 3)
     #inert)
 
-  (deftest unless.5
+  (defTest unless.5
     (signalsError?
      (unless)
      Error :type 'match :operands# +1))
 
-  (deftest unless.6
+  (defTest unless.6
     (signalsError?
      (unless 1)
      Error :type 'type :datum 1 :expected 'Boolean)))
 
-(defsuite null?
+(defSuite null?
 
-  (deftest null?.1
+  (defTest null?.1
     (null? #null)
     #t)
 
-  (deftest null?.2
+  (defTest null?.2
     (null? '(1))
     #f)
 
-  (deftest null?.3
+  (defTest null?.3
     (signalsError?
      (null?)
      Error :type 'match :operands# +1))
 
-  (deftest null?.4
+  (defTest null?.4
     (null? 1)
     #f))
 
-(defsuite cons?
+(defSuite cons?
 
-  (deftest cons?.1
+  (defTest cons?.1
     (cons? #null)
     #f)
 
-  (deftest cons?.2
+  (defTest cons?.2
     (cons? '(1))
     #t)
 
-  (deftest cons?.3
+  (defTest cons?.3
     (signalsError?
      (cons?)
      Error :type 'match :operands# +1))
 
-  (deftest cons?.4
+  (defTest cons?.4
     (cons? 1)
     #f))
 
-(defsuite identity
+(defSuite identity
 
-  (deftest identity.1
+  (defTest identity.1
     (identity #null)
     #null)
 
-  (deftest identity.2
+  (defTest identity.2
     (identity '(1))
     '(1))
 
-  (deftest identity.3
+  (defTest identity.3
     (signalsError?
      (identity)
      Error :type 'match :operands# +1))
 
-  (deftest identity.4
+  (defTest identity.4
     (identity (+ 1 1))
     2))
 
-(defsuite compose
+(defSuite compose
 
-  (deftest compose.1
+  (defTest compose.1
     (signalsError?
      (compose)
      Error :type 'match :operands# +2))
 
-  (deftest compose.2
+  (defTest compose.2
     (signalsError?
      (compose (\ ()))
      Error :type 'match :operands# +1))
 
-  (deftest compose.3
+  (defTest compose.3
     (type? (compose (\ ()) (\ ())) Function))
 
-  (deftest compose.4
+  (defTest compose.4
     ((compose identity identity) 12)
     12)
 
-  (deftest compose.5
+  (defTest compose.5
     ((compose length list) 'a 'b 'c)
     3)
 
-  (deftest compose.6
+  (defTest compose.6
     ((compose car list) 'a 'b 'c)
     'a))
 
-(defsuite map
+(defSuite map
 
-  (deftest map.1
+  (defTest map.1
     (map intern ())
     ())
 
-  (deftest map.2
+  (defTest map.2
     (map intern '("foo" "bar"))
     '(foo bar))
 
-  (deftest map.3
+  (defTest map.3
     (signalsError?
      (map)
      Error :type 'match :operands# +2))
 
-  (deftest map.4
+  (defTest map.4
     (signalsError?
      (map intern)
      Error :type 'match :operands# +1))
 
-  (deftest map.5
+  (defTest map.5
     (signalsError?
      (map intern 12)
      Error :type 'type :datum 12 :expected 'Cons))
 
-  (deftest map.6
+  (defTest map.6
   	(if (aQuote) #t
       (signalsError?
         (map 12 '(1))
         Error :type 'type :datum 12 :expected 'Combinable))))
 
-(defsuite reduce
+(defSuite reduce
 
-  (deftest reduce.1
+  (defTest reduce.1
     (reduce %* 10 (list 1 2 3))
     60)
 
-  (deftest reduce.2
+  (defTest reduce.2
     (reduce %* 10 (list))
     10)
 
-  (deftest reduce.3
+  (defTest reduce.3
     (signalsError?
      (reduce)
      Error :type 'match :operands# +3))
 
-  (deftest reduce.4
+  (defTest reduce.4
     (signalsError?
      (reduce %*)
      Error :type 'match :operands# +2))
 
-  (deftest reduce.5
+  (defTest reduce.5
     (signalsError?
      (reduce %* (list))
      Error :type 'match :operands# +1))
 
-  (deftest reduce.ansi.3
+  (defTest reduce.ansi.3
     (reduce cons 'z '(a b c d e f) )
     '((((((z . a) . b) . c) . d) . e) . f))
 
-  (deftest reduce.clhs.1
+  (defTest reduce.clhs.1
     (reduce list 'foo '(1 2 3 4))
     '((((foo 1) 2) 3) 4)))
 
-(defsuite forEach
+(defSuite forEach
 
-  (deftest forEach.1
+  (defTest forEach.1
     (signalsError?
      (forEach)
      Error :type 'match :operands# +2))
 
-  (deftest forEach.2
+  (defTest forEach.2
     (signalsError?
      (forEach (\ (x) x))
      Error :type 'match :operands# +1))
 
-  (deftest forEach.3
+  (defTest forEach.3
     (if (aQuote) #t
       (signalsError?
         (forEach "foo" '(1 2 3))
         Error :type 'type :datum "foo" :expected 'Combinable)))
 
-  (deftest forEach.4
+  (defTest forEach.4
     (signalsError?
      (forEach (\ (x) x) "foo")
      Error :type 'type :datum "foo" :expected 'Cons))
 
-  (deftest forEach.5
+  (defTest forEach.5
     (let ((ct 0))
       (def env (theEnv))
       (forEach (\ (x) (set env ct (+ ct x)))
@@ -1667,83 +1667,83 @@
       ct)
     10)
 
-  (deftest forEach.6
+  (defTest forEach.6
     (let ((list (list 1 2 3)))
       (forEach (\ (x)) list))
     (list 1 2 3)))
 
-(defsuite maplist
+(defSuite maplist
 
-  (deftest maplist.1
+  (defTest maplist.1
     (map (\ ()) ())
     ())
 
-  (deftest maplist.2
+  (defTest maplist.2
     (maplist list '("foo" "bar"))
     '("foo" "bar"))
 
-  (deftest maplist.3
+  (defTest maplist.3
     (signalsError?
      (maplist)
      Error :type 'match :operands# +2))
 
-  (deftest maplist.4
+  (defTest maplist.4
     (signalsError?
      (maplist list)
      Error :type 'match :operands# +1))
 
-  (deftest maplist.5
+  (defTest maplist.5
     (signalsError?
      (maplist list 12)
      Error :type 'type :datum 12 :expected 'Cons))
 
-  (deftest maplist.6
+  (defTest maplist.6
   	(if (aQuote) #t
       (signalsError?
         (maplist 12 '(1))
         Error :type 'type :datum 12 :expected 'Combinable)))
 
-  (deftest maplist.7
+  (defTest maplist.7
     (maplist (\ (x) (if (type? x Integer) (list x) #null))
             '(a 1 b c 3 4 d 5))
     '(1 3 4 5))
 
-  (deftest maplist.8
+  (defTest maplist.8
     (maplist (\ (x) (list (+ x 10) 'x)) '(1 2 3 4))
     '(11 x 12 x 13 x 14 x)))
 
-(defsuite dolist
+(defSuite dolist
 
-  (deftest dolist.1
+  (defTest dolist.1
     (signalsError?
      (dolist)
      Error :type 'match :operands# +1))
 
-  (deftest dolist.2
+  (defTest dolist.2
     (signalsError?
      (dolist ())
      Error :type 'match :operands# +2))
 
-  (deftest dolist.3
+  (defTest dolist.3
     (signalsError?
      (dolist (x))
      Error :type 'match :operands# +1))
 
-  (deftest dolist.4
+  (defTest dolist.4
     (dolist (x '(1 2 3)))
     #inert)
 
-  (deftest dolist.5
+  (defTest dolist.5
     (signalsError?
      (dolist (x "not-a-list"))
      Error :type 'type :datum "not-a-list" :expected 'Cons))
 
-  (deftest dolist.6
+  (defTest dolist.6
     (signalsError?
      (dolist ("not-a-symbol" '(1 2 3)))
     Error :type 'type :datum '("not-a-symbol") :expected '(or () #ignore Symbol)))
 
-  (deftest dolist.7
+  (defTest dolist.7
     (let ((ct 0))
       (def env (theEnv))
       (assert#t (eq? #inert (dolist (x '(1 2 3 4))
@@ -1752,7 +1752,7 @@
       ct)
     10)
 
-  (deftest dolist.8
+  (defTest dolist.8
     (let ((ct 0))
       (def env (theEnv))
       (dolist (x '(1 2 3 4) (+ ct 100))
@@ -1760,546 +1760,546 @@
         (set env ct (+ ct x))))
     110)
 
-  (deftest dolist.9
+  (defTest dolist.9
     (dolist (x '(1 2 3) x))
     '()))
 
-(defsuite nth
+(defSuite nth
 
-  (deftest nth.1
+  (defTest nth.1
     (signalsError?
      (nth)
      Error :type 'match :operands# +2))
 
-  (deftest nth.2
+  (defTest nth.2
     (signalsError?
      (nth '())
      Error :type 'type :datum () :expected '(and Integer (>= 0))))
 
-  (deftest nth.3
+  (defTest nth.3
     (signalsError?
      (nth #t '(1 2))
      Error :type 'type :datum #t :expected '(and Integer (>= 0))))
 
-  (deftest nth.3a
+  (defTest nth.3a
     (signalsError?
      (nth 1 '())
      Error :type 'outOfBounds))
 
-  (deftest nth.4
+  (defTest nth.4
     (signalsError?
      (nth 0 "foo")
      Error :type 'type :datum "foo" :expected '(or () Cons)))
 
-  (deftest nth.5
+  (defTest nth.5
     (nth 0 '(1 2))
     1)
 
-  (deftest nth.6
+  (defTest nth.6
     (nth 1 '(1 2))
     2)
 
-  (deftest nth.7
+  (defTest nth.7
     (signalsError?
      (nth 2 '(1 2))
      Error :type 'outOfBounds)))
 
-(defsuite reverse
+(defSuite reverse
 
-  (deftest reverse.1
+  (defTest reverse.1
     (signalsError?
      (reverse)
      Error :type 'match :operands# +1))
 
-  (deftest reverse.2
+  (defTest reverse.2
     (signalsError?
      (reverse "foo")
      Error :type 'type :datum "foo" :expected '(or () List)))
 
-  (deftest reverse.3
+  (defTest reverse.3
     (signalsError?
      (reverse "foo" "bar")
      Error :type 'type :datum "foo" :expected '(or () List)))
 
-  (deftest reverse.4
+  (defTest reverse.4
     (reverse ())
     ())
 
-  (deftest reverse.5
+  (defTest reverse.5
     (reverse '(1))
     '(1))
 
-  (deftest reverse.6
+  (defTest reverse.6
     (reverse '(1 2 3))
     '(3 2 1)))
 
-(defsuite append
+(defSuite append
 
-  (deftest append.1
+  (defTest append.1
     (signalsError?
      (append)
      Error :type 'match :operands# +2))
 
-  (deftest append.2
+  (defTest append.2
     (signalsError?
      (append '())
      Error :type 'match :operands# +1))
 
-  (deftest append.3
+  (defTest append.3
     (signalsError?
      (append 1 '())
      Error :type 'type :datum 1 :expected '(or () List)))
 
-  (deftest append.4
+  (defTest append.4
     (append '() '())
     '())
 
-  (deftest append.5
+  (defTest append.5
     (append '() 12)
     12)
 
-  (deftest append.6
+  (defTest append.6
     (append '(1) 12)
     '(1 . 12))
 
-  (deftest append.7
+  (defTest append.7
     (append '(1 2) 12)
     '(1 2 . 12))
 
-  (deftest append.8
+  (defTest append.8
     (append '(1 2) '(3 4))
     '(1 2 3 4)))
 
-(defsuite length
+(defSuite length
 
-  (deftest length.1
+  (defTest length.1
     (signalsError?
      (length)
      Error))
 
-  (deftest length.2
+  (defTest length.2
     (signalsError?
      (length #f)
      Error)))
 
-(defsuite len
+(defSuite len
 
-  (deftest len.1
+  (defTest len.1
     (length '())
     0)
 
-  (deftest len.2
+  (defTest len.2
     (length '(1 2 3))
     3))
 
-(defsuite nthCdr
+(defSuite nthCdr
 
-  (deftest nthCdr.1
+  (defTest nthCdr.1
     (signalsError?
      (nthCdr)
      Error :type 'match :operands# +2))
 
-  (deftest nthCdr.2
+  (defTest nthCdr.2
     (signalsError?
      (nthCdr 1)
      Error :type 'match :operands# +1))
 
-  (deftest nthCdr.3
+  (defTest nthCdr.3
     (signalsError?
      (nthCdr "foo" '())
      Error :type 'type :datum "foo" :expected '(and Integer (>= 0))))
 
-  (deftest nthCdr.4
+  (defTest nthCdr.4
     (signalsError?
      (nthCdr 12 "foo")
      Error :type 'type :datum "foo" :expected '(or () Cons)))
 
-  (deftest nthCdr.5
+  (defTest nthCdr.5
     (nthCdr 0 '())
     '())
 
-  (deftest nthCdr.6
+  (defTest nthCdr.6
     (signalsError?
      (nthCdr 1 '())
      Error :type 'outOfBounds))
 
-  (deftest nthCdr.7
+  (defTest nthCdr.7
     (signalsError?
      (nthCdr 2 '(1))
      Error :type 'outOfBounds))
 
-  (deftest nthCdr.8
+  (defTest nthCdr.8
     (signalsError?
      (nthCdr 3 '(1))
      Error :type 'outOfBounds))
 
-  (deftest nthCdr.9
+  (defTest nthCdr.9
     (nthCdr 0 '(1 2 3))
     '(1 2 3))
 
-  (deftest nthCdr.10
+  (defTest nthCdr.10
     (nthCdr 1 '(1 2 3))
     '(2 3))
 
-  (deftest nthCdr.11
+  (defTest nthCdr.11
     (nthCdr 2 '(1 2 3))
     '(3))
 
-  (deftest nthCdr.12
+  (defTest nthCdr.12
     (nthCdr 3 '(1 2 3))
     '())
 
-  (deftest nthCdr.13
+  (defTest nthCdr.13
     (signalsError?
      (nthCdr 4 '(1 2 3))
      Error :type 'outOfBounds)))
 
-(defsuite subSeq
+(defSuite subSeq
 
-  (deftest subSeq.1
+  (defTest subSeq.1
     (signalsError?
      (subSeq)
      Error))
 
-  (deftest subSeq.2
+  (defTest subSeq.2
     (signalsError?
      (subSeq '())
      Error :type 'match :operands# +1))
 
-  (deftest subSeq.3
+  (defTest subSeq.3
     (signalsError?
      (subSeq 12 1 2)
      Error :type 'unboundExecutable :class Integer :executable 'subSeq)))
 
-(defsuite listSubseq
+(defSuite listSubseq
 
-  (deftest listSubseq.4
+  (defTest listSubseq.4
     (signalsError?
      (subSeq '() "a" 2)
      Error :type 'type :datum "a" :expected '(and Integer (>= 0))))
 
-  (deftest listSubseq.5
+  (defTest listSubseq.5
     (signalsError?
      (subSeq '() 1 "b")
      Error :type 'type :datum '("b") :expected '(or () (1 (and Integer (>= 0))))))
 
-  (deftest listSubseq.6
+  (defTest listSubseq.6
     (signalsError?
      (subSeq '() 1)
      Error :type 'outOfBounds))
 
-  (deftest listSubseq.7
+  (defTest listSubseq.7
     (signalsError?
      (subSeq '() 0 1)
      Error :type 'outOfBounds))
 
-  (deftest listSubseq.8
+  (defTest listSubseq.8
     (subSeq '() 0)
     '())
 
-  (deftest listSubseq.9
+  (defTest listSubseq.9
     (subSeq '() 0 0)
     '())
 
-  (deftest listSubseq.10
+  (defTest listSubseq.10
     (subSeq '() 0)
     '())
 
-  (deftest listSubseq.11
+  (defTest listSubseq.11
     (subSeq '(1 2 3) 0)
     '(1 2 3))
 
-  (deftest listSubseq.12
+  (defTest listSubseq.12
     (subSeq '(1 2 3) 0)
     '(1 2 3))
 
-  (deftest listSubseq.13
+  (defTest listSubseq.13
     (subSeq '(0 1 2 3 4 5) 2)
     '(2 3 4 5))
 
-  (deftest listSubseq.14
+  (defTest listSubseq.14
     (subSeq '(0 1 2 3 4 5) 3 5)
     '(3 4))
 
-  (deftest listSubseq.15
+  (defTest listSubseq.15
     (subSeq '(0 1 2 3 4 5) 0 6)
     '(0 1 2 3 4 5))
 
-  (deftest listSubseq.16
+  (defTest listSubseq.16
     (signalsError?
      (subSeq '(0 1 2 3 4 5) 0 7)
      Error :type 'outOfBounds))
 
-  (deftest listSubseq.17
+  (defTest listSubseq.17
     (signalsError?
      (subSeq '(0 1 2 3 4 5) 7 10)
      Error :type 'outOfBounds))
 
-  (deftest listSubseq.18
+  (defTest listSubseq.18
     (subSeq '(0 1 2 3 4 5) 6)
     '()))
 
-(defsuite stringSubseq
+(defSuite stringSubseq
 
-  (deftest stringSubseq.2
+  (defTest stringSubseq.2
     (signalsError?
      (subSeq "")
      Error :type 'match :operands# +1))
 
-  (deftest stringSubseq.4
+  (defTest stringSubseq.4
     (signalsError?
      (subSeq "" "a" 2)
      Error :type 'type :datum "a" :expected '(and Integer (>= 0))))
 
-  (deftest stringSubseq.5
+  (defTest stringSubseq.5
     (signalsError?
      (subSeq "foo" 1 "b")
      Error :type 'type :datum '("b") :expected '(or () (1 (and Integer (>= 0))))))
 
-  (deftest stringSubseq.6
+  (defTest stringSubseq.6
     (signalsError?
      (subSeq "" 1)
      Error :type 'outOfBounds))
 
-  (deftest stringSubseq.7
+  (defTest stringSubseq.7
     (signalsError?
      (subSeq "" 0 1)
      Error :type 'outOfBounds))
 
-  (deftest stringSubseq.8
+  (defTest stringSubseq.8
     (subSeq "" 0)
     "")
 
-  (deftest stringSubseq.9
+  (defTest stringSubseq.9
     (subSeq "" 0 0)
     "")
 
-  (deftest stringSubseq.10
+  (defTest stringSubseq.10
     (subSeq "" 0)
     "")
 
-  (deftest stringSubseq.10.1
+  (defTest stringSubseq.10.1
     (signalsError?
      (subSeq "" 1)
      Error :type 'outOfBounds))
 
-  (deftest stringSubseq.11
+  (defTest stringSubseq.11
     (subSeq "123" 0)
     "123")
 
-  (deftest stringSubseq.12
+  (defTest stringSubseq.12
     (subSeq "123" 0)
     "123")
 
-  (deftest stringSubseq.13
+  (defTest stringSubseq.13
     (subSeq "012345" 2)
     "2345")
 
-  (deftest stringSubseq.14
+  (defTest stringSubseq.14
     (subSeq "012345" 3 5)
     "34")
 
-  (deftest stringSubseq.15
+  (defTest stringSubseq.15
     (subSeq "012345" 0 6)
     "012345")
 
-  (deftest stringSubseq.16
+  (defTest stringSubseq.16
     (signalsError?
      (subSeq "012345" 0 7)
      Error :type 'outOfBounds))
 
-  (deftest stringSubseq.17
+  (defTest stringSubseq.17
     (signalsError?
      (subSeq "012345" 7 10)
      Error :type 'outOfBounds))
 
-  (deftest stringSubseq.18
+  (defTest stringSubseq.18
     (subSeq "012345" 6)
      ""))
 
-(defsuite elt
+(defSuite elt
 
-  (deftest elt.1
+  (defTest elt.1
     (signalsError?
      (elt)
      Error))
 
-  (deftest elt.2
+  (defTest elt.2
     (signalsError?
      (elt #t 0)
      Error)))
 
-(defsuite list-elt
+(defSuite list-elt
 
-  (deftest list-elt.2
+  (defTest list-elt.2
     (signalsError?
      (elt '())
      Error :type 'unboundExecutable :class () :executable 'elt))
 
-  (deftest list-elt.3a
+  (defTest list-elt.3a
     (signalsError?
      (elt '() 1)
      Error :type 'unboundExecutable :class () :executable 'elt))
 
-  (deftest list-elt.5
+  (defTest list-elt.5
     (elt '(1 2) 0)
     1)
 
-  (deftest list-elt.6
+  (defTest list-elt.6
     (elt '(1 2) 1)
     2)
 
-  (deftest list-elt.7
+  (defTest list-elt.7
     (signalsError?
      (elt '(1 2) 2)
      Error :type 'outOfBounds)))
 
-(defsuite member
+(defSuite member
 
-  (deftest member.1
+  (defTest member.1
     (signalsError?
      (member)
      Error :type 'match :operands# +2))
 
-  (deftest member.2
+  (defTest member.2
     (signalsError?
      (member 'a)
      Error :type 'match :operands# +1))
 
-  (deftest member.3
+  (defTest member.3
     (member 'a '() :test ==)
     #null)
 
-  (deftest member.3a
+  (defTest member.3a
     (member 'a '())
     #null)
 
-  (deftest member.4
+  (defTest member.4
     (member 'b '(a) :test ==)
     #null)
 
-  (deftest member.5
+  (defTest member.5
     (member 'b '(a b) :test ==)
     '(b))
 
-  (deftest member.5b
+  (defTest member.5b
     (member  'x '(a b) :test ==)
     #null)
 
-  (deftest member.6
+  (defTest member.6
     (member 'b '(a b c) :test ==)
     '(b c))
 
-  (deftest member.6a
+  (defTest member.6a
     (member 'b '(a b c))
     '(b c))
 
-  (deftest member.7
+  (defTest member.7
     (member "b" '("a" "b" "c") :test ==)
     #null)
 
-  (deftest member.7a
+  (defTest member.7a
     (member "b" '("a" "b" "c"))
     #null)
 
-  (deftest member.8
+  (defTest member.8
     (member "b" '("a" "b" "c") :test eq?)
     '("b" "c"))
 
-  (deftest member.9
+  (defTest member.9
     (member 'b '((2 a) (1 b) (3 c)) :fkey cadr)
     '((1 b) (3 c)))
 
-  (deftest member.9a
+  (defTest member.9a
     (member "b" '((2 "a") (1 "b") (3 "c")) :fkey cadr)
     #null)
 
-  (deftest member.9b
+  (defTest member.9b
     (member "b" '((2 "a") (1 "b") (3 "c")) :fkey cadr :test eq?)
     '((1 "b") (3 "c"))))
 
-(defsuite remove
+(defSuite remove
 
-  (deftest remove.1
+  (defTest remove.1
     (signalsError?
      (remove)
      Error :type 'match :operands# +2))
 
-  (deftest remove.2
+  (defTest remove.2
     (signalsError?
      (remove (\ (item) #t))
      Error :type 'match :operands# +1))
 
-  (deftest remove.3
+  (defTest remove.3
     (signalsError?
      (remove (\ (item) #t) 12)
      Error :type 'type :datum 12 :expected 'Cons))
 
-  (deftest remove.4
+  (defTest remove.4
     (signalsError?
      (remove 1 '(1 2))
      Error :type 'type :datum 1 :expected 'Combinable))
 
-  (deftest remove.5
+  (defTest remove.5
     (remove (\ (item) (eq? 1 item)) '(1 2 3 1 2 3))
     '(2 3 2 3))
 
-  (deftest remove.6
+  (defTest remove.6
     (remove (\ (item) (eq? 1 item)) '())
     '()))
 
-(defsuite get?
+(defSuite get?
 
-  (deftest get?.1
+  (defTest get?.1
     (get? :foo '(:foo 1 :bar 2))
     (some 1))
 
-  (deftest get?.2
+  (defTest get?.2
     (get? :bar '(:foo 1 :bar 2))
     (some 2))
 
-  (deftest get?.3
+  (defTest get?.3
     (get? :bar '())
     #null)
 
-  (deftest get?.4
+  (defTest get?.4
     (get? :quux '(:foo 1 :bar 2))
     #null)
 
-  (deftest get?.5
+  (defTest get?.5
     (signalsError?
      (get?)
      Error :type 'match :operands# +2))
 
-  (deftest get?.6
+  (defTest get?.6
     (signalsError?
      (get? '())
      Error :type 'match :operands# +1))
 
-  (deftest get?.7
+  (defTest get?.7
     (get? :quux 12)
     #null))
 
-(defsuite and
+(defSuite and
 
-  (deftest and.1
+  (defTest and.1
     (&&)
     #t)
 
-  (deftest and.2
+  (defTest and.2
     (&& #t #f)
     #f)
 
-  (deftest and.3
+  (defTest and.3
     (&& #t (eq? 1 1) #t)
     #t)
 
-  (deftest and.4
+  (defTest and.4
     (signalsError?
      (&& #t #t 1)
      Error :type 'type :datum 1 :expected 'Boolean))
 
-  (deftest and.5
+  (defTest and.5
     (begin
       (def x 1)
       (def env (theEnv))
@@ -2307,30 +2307,30 @@
       x)
     1))
 
-(defsuite or
+(defSuite or
 
-  (deftest ||.1
+  (defTest ||.1
     (||)
     #f)
 
-  (deftest or.2
+  (defTest or.2
     (|| #t #f)
     #t)
 
-  (deftest or.3
+  (defTest or.3
     (|| #t #t #t)
     #t)
 
-  (deftest or.4
+  (defTest or.4
     (|| #f #f #f)
     #f)
 
-  (deftest or.5
+  (defTest or.5
     (signalsError?
      (|| #f #f 1)
      Error :type 'type :datum 1 :expected 'Boolean))
 
-  (deftest or.6
+  (defTest or.6
     (begin
       (def x 1)
       (def env (theEnv))
@@ -2338,9 +2338,9 @@
       x)
     1))
 
-(defsuite obj
+(defSuite obj
 
-  (deftest obj.1
+  (defTest obj.1
     (begin
       (def obj (new Error :type 'type :datum 1 :expected 'String))
       (assert#t (eq? (getSlot obj 'datum) 1))
@@ -2349,29 +2349,29 @@
       (assert#t (eq? (getSlot obj :expected) 'String)))
     #inert)
 
-  (deftest obj.2
+  (defTest obj.2
     (signalsError?
      (new)
      Error :type 'match :operands# 1))
 
-  (deftest obj.3
+  (defTest obj.3
     (signalsError?
      (new 3)
      Error :type 'type :datum '(3) :expected '(or (2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) ))
 
-  (deftest obj.4
+  (defTest obj.4
     (signalsError?
      (new Object)
      Error :type 'type :datum '(&java.lang.Object) :expected '(or (2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) ))
 
-  (deftest obj.5
+  (defTest obj.5
     (signalsError?
      (new Obj :x)
      Error :type 'type :datum '(&Wat.Vm$Obj :x) :expected '(or (2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) )) )
 
-(defsuite slots
+(defSuite slots
 
-  (deftest slots.1
+  (defTest slots.1
     (begin
       (def obj (new Obj))
       (assert#t (not (slotBound? obj 'x)))
@@ -2390,223 +2390,223 @@
       (assert#t (eq? (getSlot obj :x) 2)))
     #inert)
 
-  (deftest getSlot.1
+  (defTest getSlot.1
     (signalsError?
      (getSlot "foo" 'x)
      Error :type 'type :datum "foo" :expected 'Obj))
 
-  (deftest getSlot.1a
+  (defTest getSlot.1a
     (signalsError?
      (getSlot (new Obj) "x")
      Error :type 'type :datum "x" :expected 'Intern))
 
-  (deftest getSlot.2
+  (defTest getSlot.2
     (signalsError?
      (getSlot (new Obj))
      Error :type 'match :operands# +1))
 
-  (deftest getSlot.3
+  (defTest getSlot.3
     (signalsError?
      (getSlot)
      Error :type 'match :operands# +2))
 
-  (deftest setSlot.1
+  (defTest setSlot.1
     (signalsError?
      (setSlot "foo" 'x 1)
      Error :type 'type :datum "foo" :expected 'Obj))
 
-  (deftest setSlot.1a
+  (defTest setSlot.1a
     (signalsError?
      (setSlot (new Obj) "x" 1)
      Error :type 'type :datum "x" :expected 'Intern))
 
-  (deftest setSlot.2
+  (defTest setSlot.2
     (signalsError?
      (setSlot (new Obj))
      Error :type 'match :operands# +2))
 
-  (deftest setSlot.3
+  (defTest setSlot.3
     (signalsError?
      (setSlot (new Obj) 'x)
      Error :type 'match :operands# +1))
 
-  (deftest slotBound?.1
+  (defTest slotBound?.1
     (signalsError?
      (slotBound? "foo" 'x)
      Error :type 'type :datum "foo" :expected 'Obj))
 
-  (deftest slotBound?.1a
+  (defTest slotBound?.1a
     (signalsError?
      (slotBound? (new Obj) "x")
      Error :type 'type :datum "x" :expected 'Intern))
 
-  (deftest slotBound?.2
+  (defTest slotBound?.2
     (signalsError?
      (slotBound?)
      Error :type 'match :operands# +2))
 
-  (deftest slotBound?.3
+  (defTest slotBound?.3
     (signalsError?
      (slotBound? (new Obj))
      Error :type 'match :operands# +1)))
 
-(defsuite let
+(defSuite let
 
-  (deftest let.1
+  (defTest let.1
     (let ((x 1))
       x)
     1)
 
-  (deftest let.2
+  (defTest let.2
     (let ((x 1))
       (let ((x 2))
         x))
     2)
 
-  (deftest let.3
+  (defTest let.3
     (let ((x 1))
       (let ((x 2)))
       x)
     1)
 
-  (deftest let.4
+  (defTest let.4
     (let ((x 1))
       (let ((x 2)
             (it x))
         it))
     1)
 
-  (deftest let.5
+  (defTest let.5
     (let ())
     #inert)
 
-  (deftest let.6
+  (defTest let.6
     (signalsError?
      (let)
      Error :type 'match :operands# +1))
 
-  (deftest let.7
+  (defTest let.7
     (signalsError?
      (let #t)
      Error :type 'type :datum #t :expected 'Cons))
 
-  (deftest let.8
+  (defTest let.8
     (signalsError?
      (let ((#t 1)))
      Error :type 'type :datum '(#t) :expected '(or () #ignore Symbol))))
 
-(defsuite let*
+(defSuite let*
 
-  (deftest let*.1
+  (defTest let*.1
     (let* ((x 1)
            (y x)
            (z y))
       (list x y z))
     '(1 1 1))
 
-  (deftest let*.2
+  (defTest let*.2
     (let* ())
     #inert)
 
-  (deftest let*.3
+  (defTest let*.3
     (signalsError?
      (let*)
      Error :type 'match :operands# +1))
 
-  (deftest let*.4
+  (defTest let*.4
     (signalsError?
      (let* #t)
      Error :type 'type :datum #t :expected 'Cons))
 
-  (deftest let*.5
+  (defTest let*.5
     (signalsError?
      (let* ((#t 1)))
      Error :type 'type :datum '(#t) :expected '(or () #ignore Symbol))))
 
-(defsuite let\
+(defSuite let\
 
-  (deftest let\.1
+  (defTest let\.1
     (let\ ((f () 1))
           (let\ ((f () 2)
                  (g () (f)))
                 (g)))
     1)
 
-  (deftest let\.2
+  (defTest let\.2
     (let\ ((foo ()))
           (foo))
     #inert)
 
-  (deftest let\.2
+  (defTest let\.2
     (let\ ((foo (x) x))
           (foo 1))
     1)
 
-  (deftest let\.3
+  (defTest let\.3
     (signalsError?
      (let\ )
      Error :type 'match :operands# +1))
 
-  (deftest let\.4
+  (defTest let\.4
     (signalsError?
      (let\ #t)
      Error :type 'type :datum #t :expected 'Cons))
 
-  (deftest let\.5
+  (defTest let\.5
     (let\ ())
     #inert))
 
-(defsuite labels
+(defSuite labels
 
-  (deftest labels.1
+  (defTest labels.1
     (labels ((f () 1))
             (labels ((f () 2)
                      (g () (f)))
                     (g)))
     2)
 
-  (deftest labels.2
+  (defTest labels.2
     (labels ((foo ()))
             (foo))
     #inert)
 
-  (deftest labels.3
+  (defTest labels.3
     (labels ((foo (x) x))
             (foo 1))
     1)
 
-  (deftest labels.4
+  (defTest labels.4
     (signalsError?
      (labels)
      Error :type 'match :operands# +1))
 
-  (deftest labels.5
+  (defTest labels.5
     (signalsError?
       (labels #t)
       Error :type 'type :datum #t :expected 'Cons))
 
-  (deftest labels.6
+  (defTest labels.6
     (signalsError?
       (labels ())
       Error :type 'type :datum () :expected '(or Symbol Cons))))
 
-(defsuite letLoop
+(defSuite letLoop
 
-  (deftest letLoop.1
+  (defTest letLoop.1
     (signalsError?
      (letLoop)
      Error :type 'match))
 
-  (deftest letLoop.2
+  (defTest letLoop.2
     (signalsError?
      (letLoop -name-)
      Error :type 'match :operands# +1))
 
-  (deftest letLoop.3
+  (defTest letLoop.3
     (letLoop -name- ())
     #inert)
 
-  (deftest letLoop.4
+  (defTest letLoop.4
     (letLoop -sum- ((as (list 1 2 3))
                      (bs (list 4 5 6)))
       (if (null? as)
@@ -2615,24 +2615,24 @@
                 (-sum- (cdr as) (cdr bs)))))
     '(5 7 9)))
 
-(defsuite while
+(defSuite while
 
-  (deftest while.1
+  (defTest while.1
     (signalsError?
      (while)
      Error :type 'match :operands# +1))
 
-  (deftest while.2
+  (defTest while.2
     (while (eq? 1 2))
     #inert)
 
-  (deftest while.3
+  (defTest while.3
     (if (> (typeT) 0) #t
       (signalsError?
         (while 12)
         Error :type 'type :datum 12 :expected 'Boolean)))
 
-  (deftest while.4
+  (defTest while.4
     (begin
       (def x 0)
       (def y 0)
@@ -2643,24 +2643,24 @@
       (list x y))
     '(5 5)))
 
-(defsuite until
+(defSuite until
 
-  (deftest until.1
+  (defTest until.1
     (signalsError?
      (until)
      Error :type 'match :operands# +1))
 
-  (deftest until.2
+  (defTest until.2
     (until (/= 1 2))
     #inert)
 
-  (deftest until.3
+  (defTest until.3
     (if (> (typeT) 0) #t
       (signalsError?
         (until 12)
         Error :type 'type :datum 12 :expected 'Boolean)))
 
-  (deftest until.4
+  (defTest until.4
     (begin
       (def x 0)
       (def y 0)
@@ -2671,338 +2671,338 @@
       (list x y))
     '(5 5)))
 
-(defsuite dotimes
+(defSuite doTimes
 
-  (deftest dotimes.1
-    (dotimes (temp-one 10 temp-one))
+  (defTest doTimes.1
+    (doTimes (temp-one 10 temp-one))
     10)
 
-  (deftest dotimes.2
+  (defTest doTimes.2
     (begin
       (def temp-two 0)
       (def env (theEnv))
-      (dotimes (temp-one 10 #t) (set env temp-two (+ temp-two 1)))
+      (doTimes (temp-one 10 #t) (set env temp-two (+ temp-two 1)))
       temp-two)
     10)
 
-  (deftest dotimes.3
+  (defTest doTimes.3
     (signalsError?
-     (dotimes)
+     (doTimes)
      Error :type 'match :operands# +1))
 
-  (deftest dotimes.4
+  (defTest doTimes.4
     (signalsError?
-     (dotimes (x))
+     (doTimes (x))
      Error :type 'match :operands# +1))
 
-  (deftest dotimes.5
-    (dotimes (x 0))
+  (defTest doTimes.5
+    (doTimes (x 0))
     #inert)
 
-  (deftest dotimes.6
-    (dotimes (x 1))
+  (defTest doTimes.6
+    (doTimes (x 1))
     #inert)
 
-  (deftest dotimes.7
-    (dotimes (x 1) 1 2 3)
+  (defTest doTimes.7
+    (doTimes (x 1) 1 2 3)
     #inert)
 
-  (deftest dotimes.8
+  (defTest doTimes.8
     (signalsError?
-     (dotimes (x "foo") 1 2 3)
+     (doTimes (x "foo") 1 2 3)
      Error :type 'java :member '%< :args '(0 "foo")))
 
-  (deftest dotimes.9
+  (defTest doTimes.9
     (begin
       (def x 0)
       (def y 0)
       (def env (theEnv))
-      (dotimes (i 5 (list x y))
+      (doTimes (i 5 (list x y))
         (set env x (+ x 1))
         (set env y (+ y 1))))
     '(5 5)))
 
-(defsuite opt
+(defSuite opt
 
-  (deftest opt.1
+  (defTest opt.1
     (opt? '())
     #null)
 
-  (deftest opt.2
+  (defTest opt.2
     (opt? '() "default")
     "default")
 
-  (deftest opt.3
+  (defTest opt.3
     (opt? (some 1))
     1)
 
-  (deftest opt.4
+  (defTest opt.4
     (opt? (some 1) "default")
     1)
 
-  (deftest opt.5
+  (defTest opt.5
     (signalsError?
      (opt?)
      Error :type 'match :operands# +1))
 
-  (deftest opt.6
+  (defTest opt.6
     (signalsError?
      (opt? 1)
      Error :type 'type :datum 1 :expected '(or () List) ))
 
-  (deftest opt.lazy.1
+  (defTest opt.lazy.1
     (opt? (some 1) (error (makeSimpleError "foo")))
     1)
 
-  (deftest opt.lazy.2
+  (defTest opt.lazy.2
     (signalsError?
      (opt? #null (error (makeSimpleError "foo")))
      SimpleError :type 'simple @getMessage "foo")))
 
-(defsuite opt*?
+(defSuite opt*?
 
-  (deftest opt*?.1
+  (defTest opt*?.1
     (opt*? '())
     '())
 
-  (deftest opt*?.2
+  (defTest opt*?.2
     (opt*? '() 1)
     '(1))
 
-  (deftest opt*?.3
+  (defTest opt*?.3
     (opt*? '() 1 2)
     '(1 2))
 
-  (deftest opt*?.4
+  (defTest opt*?.4
     (opt*? '(4) 1 2)
     '(4 2))
 
-  (deftest opt*?.5
+  (defTest opt*?.5
     (opt*? '(4 5) 1 2)
     '(4 5))
 
-  (deftest opt*?.6
+  (defTest opt*?.6
     (opt*? '(4 5 6) 1 2)
     '(4 5 6))
 
-  (deftest opt*?.7
+  (defTest opt*?.7
     (opt*? '(4 5 6))
     '(4 5 6))
     
-  (deftest opt*?.8
+  (defTest opt*?.8
     (opt*? '(4 () 6) 1 2 3 4)
     '(4 2 6 4)) )
 
-(defsuite getOpt
+(defSuite getOpt
 
-  (deftest getOpt.1
+  (defTest getOpt.1
     (signalsError?
      (getOpt?)
      Error :type 'match :operands# +1))
 
-  (deftest getOpt.2
+  (defTest getOpt.2
     (getOpt? (some 2))
     2)
 
-  (deftest getOpt.3
+  (defTest getOpt.3
     (signalsError?
      (getOpt? #null)
      SimpleError :type 'simple @getMessage "Option is nil")))
 
-(defsuite some
+(defSuite some
 
-  (deftest some.1
+  (defTest some.1
     (some 1)
     (list 1))
 
-  (deftest some.2
+  (defTest some.2
     (signalsError?
      (some)
      Error :type 'match :operands# +1))
 
-  (deftest some.3
+  (defTest some.3
     (signalsError?
      (some 1 2)
      Error :type 'match :operands# -1)))
 
-(defsuite ifOpt
+(defSuite ifOpt
 
-  (deftest ifOpt.1
+  (defTest ifOpt.1
     (ifOpt? (x (some 12))
                x
                14)
     12)
 
-  (deftest ifOpt.2
+  (defTest ifOpt.2
     (ifOpt? (x #null)
                x
                14)
     14)
 
-  (deftest ifOpt.3
+  (defTest ifOpt.3
     (signalsError?
      (ifOpt?)
      Error :type 'match :operands# +2))
 
-  (deftest ifOpt.4
+  (defTest ifOpt.4
     (signalsError?
      (ifOpt? (name))
      Error :type 'match :operands# +1))
 
-  (deftest ifOpt.4.2
+  (defTest ifOpt.4.2
     (signalsError?
      (ifOpt? (name) then)
      Error :type 'match :operands# +1))
 
-  (deftest ifOpt.5
+  (defTest ifOpt.5
     (signalsError?
      (ifOpt? (name option))
      Error :type 'match :operands# +1))
 
-  (deftest ifOpt.6
+  (defTest ifOpt.6
     (signalsError?
      (ifOpt? (name option) then)
      Error :type 'unboundSymbol :symbol 'option)))
 
-(defsuite whenOpt
+(defSuite whenOpt
 
-  (deftest whenOpt.0
+  (defTest whenOpt.0
     (whenOpt? (x (some 12)))
     #null)
 
-  (deftest whenOpt.1
+  (defTest whenOpt.1
     (whenOpt? (x (some 12))
                  x)
     12)
 
-  (deftest whenOpt.2
+  (defTest whenOpt.2
     (whenOpt? (x #null)
                  x)
     #null)
 
-  (deftest whenOpt.3
+  (defTest whenOpt.3
     (signalsError?
      (whenOpt?)
      Error :type 'match :operands# +1))
 
-  (deftest whenOpt.4
+  (defTest whenOpt.4
     (signalsError?
      (whenOpt? (name))
      Error :type 'match :operands# +1)))
 
-(defsuite unlessOpt
+(defSuite unlessOpt
 
-  (deftest unlessOpt.0
+  (defTest unlessOpt.0
     (unlessOpt? (some 12) 2 3 (+ 2 2))
     #null)
 
-  (deftest unlessOpt.1
+  (defTest unlessOpt.1
     (unlessOpt? #null 2 3 (+ 2 2))
     4)
 
-  (deftest unlessOpt.2
+  (defTest unlessOpt.2
     (unlessOpt? #null)
     #null)
 
-  (deftest unlessOpt.3
+  (defTest unlessOpt.3
     (signalsError?
      (unlessOpt?)
      Error :type 'match :operands# +1)))
 
-(defsuite classOf
+(defSuite classOf
 
-  (deftest classOf.1
+  (defTest classOf.1
     (begin
       (assert#t (== (classOf "foo") String))
       (assert#t (== (classOf 12) Integer))
       (assert#t (== (classOf String) Class)))
     #inert)
 
-  (deftest classOf.2
+  (defTest classOf.2
     (signalsError?
      (classOf)
      Error :type 'match :operands# +1)))
 
-(defsuite set
+(defSuite set
 
-  (deftest set.1
+  (defTest set.1
     (begin
       (set (theEnv) x 1)
       x)
     1)
 
-  (deftest set.2
+  (defTest set.2
     (begin
       (def x 0)
       (set (theEnv) x 1)
       x)
     1)
 
-  (deftest set.3
+  (defTest set.3
     (begin
       (set (theEnv) (x y) (list 1 2))
       (list x y))
     '(1 2))
 
-  (deftest set.4
+  (defTest set.4
     (signalsError?
      (set)
      Error :type 'match :operands# +3))
 
-  (deftest set.5
+  (defTest set.5
     (signalsError?
      (set (theEnv))
      Error :type 'match :operands# +2))
 
-  (deftest set.6
+  (defTest set.6
     (signalsError?
      (set (theEnv) x)
      Error :type 'match :operands# +1))
 
-  (deftest set.7
+  (defTest set.7
     (signalsError?
      (set 33 x y)
      Error :type 'type :datum 33 :expected 'Env)))
 
-(defsuite className
+(defSuite className
 
-  (deftest className.1
+  (defTest className.1
     (signalsError?
      (className)
      Error :type 'match :operands# +1))
 
-  (deftest className.2
+  (defTest className.2
     (signalsError?
      (className "foo")
      Error :type 'type :datum "foo" :expected 'Class))
 
-  (deftest className.3
+  (defTest className.3
     (className Object)
     'Object))
 
-(defsuite subClass?
+(defSuite subClass?
 
-  (deftest subClass?.1
+  (defTest subClass?.1
     (signalsError?
      (subClass?)
      Error :type 'match :operands# +2))
 
-  (deftest subClass?.2
+  (defTest subClass?.2
     (signalsError?
      (subClass? Object)
      Error :type 'match :operands# +1))
 
-  (deftest subClass?.3
+  (defTest subClass?.3
     (signalsError?
      (subClass? Object "foo")
      Error :type 'type :datum "foo" :expected 'Class))
 
-  (deftest subClass?.4
+  (defTest subClass?.4
     (signalsError?
      (subClass? "foo" Object)
      Error :type 'type :datum "foo" :expected 'Class))
 
-  (deftest subClass?.5
+  (defTest subClass?.5
     (&& (subClass? Object Object)
         (subClass? Class Object)
         (subClass? StandardClass Class)
@@ -3041,9 +3041,9 @@
   (assert#t (eq? (getSlot q 'y) 2))
   (assert#t (eq? (getSlot q 'z) 3)))
 
-(defsuite %newClass
+(defSuite %newClass
 
-  (deftest %newClass.1
+  (defTest %newClass.1
     (let* ((c (%newClass 'Point2d Obj))
            (d (%newClass 'Point3d c))
            (p (new c :x 1 :y 2))
@@ -3051,28 +3051,28 @@
       (classes-test c d p q))
     #inert)
 
-  (deftest %newClass.2
+  (defTest %newClass.2
     (signalsError?
      (%newClass 'Foo Object)
      Error :type 'type :datum Object :expected '(or Box Obj)))
 
-  (deftest %newClass.3
+  (defTest %newClass.3
      (%newClass 'Foo)
      &Ext.Foo)
 
-  (deftest %newClass.4
+  (defTest %newClass.4
     (signalsError?
      (%newClass)
      Error :type 'match :operands# +1))
 
-  (deftest %newClass.5
+  (defTest %newClass.5
     (signalsError?
      (%newClass "foo" Obj)
      Error :type 'type :datum "foo" :expected 'Symbol)))
 
-(defsuite %reinitialize-standard-class
+(defSuite %reinitialize-standard-class
 
-  (deftest %reinitialize-standard-class.1
+  (defTest %reinitialize-standard-class.1
     (let* ((a (%newClass 'A Obj))
            (b (%newClass 'B a))
            (c (%newClass 'C b))
@@ -3089,32 +3089,32 @@
       (assert#t (subClass? c b)))
      Error :type 'unboundSymbol :symbol '%reinitialize-standard-class ))
 
-(defsuite defClass
+(defSuite defClass
 
-  (deftest defClass.1
+  (defTest defClass.1
     (signalsError?
      (defClass Foo () ("a"))
      Error :type 'type :datum "a" :expected 'Symbol))
 
-  (deftest defClass.2
+  (defTest defClass.2
     (signalsError?
      (defClass)
      Error :type 'match :operands# +3))
 
-  (deftest defClass.3
+  (defTest defClass.3
     (signalsError?
      (defClass Foo)
      Error :type 'match :operands# +2))
 
-  (deftest defClass.4
+  (defTest defClass.4
     (signalsError?
      (defClass Foo ())
      Error :type 'match :operands# +1))
 
-  (deftest defClass.5
+  (defTest defClass.5
     (type? (defClass C () ()) (if (== (bndRes) :rhs) StandardClass Inert)))
 
-  (deftest defClass.6
+  (defTest defClass.6
     (begin
       (defClass Point2d () (x y))
       (defClass Point3d (Point2d) (z))
@@ -3123,7 +3123,7 @@
       (classes-test Point2d Point3d p q))
     #inert)
 
-  (deftest defClass.redefine.1
+  (defTest defClass.redefine.1
     (begin 
       (defClass A () ())
       (defClass B (A) ())
@@ -3144,9 +3144,9 @@
       (assert#t (eq? "bar" (foo b))))
     Error :type 'assert :datum #f :expected #t ))
 
-(defsuite generics
+(defSuite generics
 
-  (deftest generics.1
+  (defTest generics.1
     (begin
       (defClass Foo () ())
       (defClass Bar (Foo) ())
@@ -3209,19 +3209,19 @@
       (assert#t (eq? -2 (g1 "hello" (+ 1 1)))))
     #inert))
 
-(defsuite newBox
+(defSuite newBox
 
-  (deftest newBox.1
+  (defTest newBox.1
     (let ((c (newBox)))
       (c))
     #inert)
 
-  (deftest newBox.2
+  (defTest newBox.2
     (let ((c (newBox (+ 1 1))))
       (c))
     2)
 
-  (deftest newBox.3
+  (defTest newBox.3
     (let ((c (newBox (+ 1 1))))
       (c (+ 2 2))
       (assert#t (eq? (c) 4))

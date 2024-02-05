@@ -135,6 +135,7 @@ public class Vm {
 	boolean intStr = false; // intern string
 	boolean prStk = false; // print stack
 	boolean prWrn = false; // print warning
+	boolean prMap = false; // print error map entry
 	boolean aQuote = true; // auto quote list
 	boolean else1 = false; // else multiple expressions
 	boolean hdlAny = true; // any value for catch hadler
@@ -143,7 +144,7 @@ public class Vm {
 	
 	int prTrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
 	int typeT = 0; // type true: 0:true, 1:!false, 2:!(or false null), 3:!(or false null inert), 4:!(or false null inert zero)
-	int prEnv = 3; // print environment
+	int prEnv = 10; // print environment
 	int bndRes = 0; // bind result: 0:inert 1:rhs 2:prv
 	private Object bndRes(Object o, boolean obj) {
 		switch (o) {
@@ -388,7 +389,7 @@ public class Vm {
 		};
 		int deep() { int i=0; for (var env=this; env != null; env=env.parent) i+=1; return i; }
 		public String toString() {
-			return "{" + (this==theEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" + (map.size() > 10 ? "[" + map.size() + "] ..." : toStringSet(map.reversed().entrySet())) + eIfnull(parent, ()-> " " + parent) + "}";
+			return "{" + (this==theEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" + (map.size() > prEnv ? "[" + map.size() + "] ..." : toStringSet(map.reversed().entrySet())) + eIfnull(parent, ()-> " " + parent) + "}";
 		}
 		public boolean remove(Object obj) {
 			var key = toKey(obj);
@@ -1811,6 +1812,7 @@ public class Vm {
 				"aQuote", wrap(new JFun("AQuote", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? aQuote : inert(aQuote=o.car()) )),
 				"prStk", wrap(new JFun("PrStk", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prStk : inert(prStk=o.car()) )),
 				"prWrn", wrap(new JFun("PrWrn", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prWrn : inert(prWrn=o.car()) )),
+				"prMap", wrap(new JFun("PrMap", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prMap : inert(prMap=o.car()) )),
 				"hdlAny", wrap(new JFun("HdlAny", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? hdlAny : inert(hdlAny=o.car()) ))
 			)
 		);
@@ -1891,7 +1893,7 @@ public class Vm {
 			thw instanceof ParseException pe
 			? "{&" + Utility.getMessage(pe) + "}"
 			: thw instanceof Obj o 
-			?  ifnull(o.getMessage(), "&" + o.getClass().getCanonicalName()) + toStringSet(o.map.entrySet())
+			?  ifnull(o.getMessage(), "&" + o.getClass().getCanonicalName()) + (prMap ? toStringSet(o.map.entrySet()) : "")
 			: "&" + thw.getClass().getCanonicalName() + eIfnull(thw.getMessage(), msg-> ": " + msg)
 		);
 		while ((thw = thw.getCause()) != null);

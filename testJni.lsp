@@ -125,4 +125,6 @@ cls
 (%def get (getMethod &Wat.Prova$Cls "get"))
 (get cls)
 
+(@remove (%theEnv) 'a)
+
 ;(prTrc 0)

@@ -356,6 +356,8 @@
     (list 'rec (car lhs) (list* '\ (cdr lhs) rhs))
     (list 'rec lhs (cons '\ rhs)) ))
 
+(def label rec\)
+
 (assert ((rec\ (f l)   (if (null? l) "" ($ (car l) (f (cdr l))))) '(1 2 3)) "123")
 (assert ((rec\  f (l)  (if (null? l) "" ($ (car l) (f (cdr l))))) '(1 2 3)) "123")
 (assert ((rec\ (f . l) (if (null? l) "" ($ (car l) (apply f (cdr l))))) 1 2 3) "123")
@@ -491,11 +493,25 @@
 (assert (letLoop sum ((a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
 (assert (letLoop (sum (a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
 
+#| TODO sostituito dal seguente, eliminare
+(defMacro (let lhs . rhs)
+  (if (symbol? lhs)
+    (list* 'letLoop lhs rhs)
+    (let1 ((dt* . form*)
+      ( (rec\ loop (lhs)
+          (if (null? lhs) (())
+            (let* ( (((dt . form) . lhs) lhs)
+                    ((dt* . form*) (loop lhs)) )
+              (cons (cons dt dt*) (cons (01->+ form) form*))) ))
+        lhs ))
+      (cons (list* '\ dt* rhs) form*) )))
+|#
 (defMacro (let lhs . rhs)
   (if (symbol? lhs)
     (list* 'letLoop lhs rhs)
     (cons (list* '\ (map car lhs) rhs)
       (map ->begin lhs) )))
+
 
 (assert (let ((a 1)) a) 1)
 
@@ -924,7 +940,7 @@
 ; (def the the+)
 
 
-;;; Block Loop For While Until
+;;; Block Loop For While Until DoTimes Repeat
 
 (defVau block (blockName . forms) env
   (let* ( (tag (list #inert)) ; cons up a fresh object as tag
@@ -957,7 +973,7 @@
                (symbol ($ name (+ i %deep)))
                (@typeError vm ($ "invalid " name " index, not {expected}: {datum}") i `(and (>= ,(- 0 %deep)) (=< 0))) ))) )
     (let\ ( ((makeThrowTag\ name %deep)
-               (\ (#! (or () (1 Integer)) i)
+               (\ (#! (0 1 Integer) i)
                  (throwTag (makeTag (opt? i 0) name %deep)) ))
             ((makeThrowTagValue\ name %deep)
                (\ o
@@ -1049,17 +1065,22 @@
 (defMacro until (cond . forms)
   (list* 'while (list '! cond) forms) )
 
-(defMacro dotimes ((var countForm . resultForm?) . bodyForms)
-  (let\ ((dotimes (n body result)
-           (let ((i (newBox 0)))
-             (while (< (i) n)
-               (body (i))
-               (i (+ (i) 1)))
-             (result (i)))))
-    (list dotimes
-          countForm
-          (list* '\ (list var) bodyForms)
-          (list* '\ (list var) resultForm?))))
+(defMacro doTimes ((var countForm . resultForm?) . bodyForms)
+  (let1\
+    (doTimes (n body result)
+      (let1 (i (newBox 0))
+        (while (< (i) n)
+          (body (i))
+          (i (+ (i) 1)) )
+        (result (i)) ))
+    (list doTimes
+      countForm
+      (list* '\ (list var) bodyForms)
+      (list* '\ (list var) resultForm?) )))
+
+(defVau (repeat n . forms) env
+  (let1 ((#! (and Integer (> 0)) n) (eval n env))
+   (loop (eval (list* 'begin forms) env) (until (zero? (-- n))) )))
 
 
 ;;; Lists
@@ -1212,17 +1233,19 @@
       (list (car bindings))
       (list* 'dlet* (cdr bindings) forms) )))
 
-(def a (newDVar 1))
-(assert (expand (ddef a 1)) '((%d\ (a)) 1) )
-(assert (expand (ddef* (a b) 1 2)) '((%d\ (a b)) 1 2) )
-(assert (expand (progv (a b) (3 4)  (+ (a) (b)))) '((%d\ (a b) (+ (a) (b))) 3 4) )
-(assert (expand (dlet ((a 3) (b 4)) (+ (a) (b)))) '((%d\ (a b) (+ (a) (b))) 3 4) )
-(ddef* (a b) 1 2)
-(assert (progv (a b) (3 4)  (+ (a) (b))) 7)
-(assert (dlet ((a 3) (b 4)) (+ (a) (b))) 7)
-(assert (begin (ddef a 1) (progv (a) (2) (assert (dval a) 2)) (assert (dval a) 1)) #t)
-(assert (begin (ddef* (a b) 1 2) (dlet ((a 2)) (assert (dval a) 2)) (dval b)) 2)
-(assert (begin (ddef* (a) 1) (dlet* ((a (+ 1 (dval a))) (a (+ 1 (dval a)))) (dval a))) 3)
+(let ()
+	(def a (newDVar 1))
+	(assert (expand (ddef a 1)) '((%d\ (a)) 1) )
+	(assert (expand (ddef* (a b) 1 2)) '((%d\ (a b)) 1 2) )
+	(assert (expand (progv (a b) (3 4)  (+ (a) (b)))) '((%d\ (a b) (+ (a) (b))) 3 4) )
+	(assert (expand (dlet ((a 3) (b 4)) (+ (a) (b)))) '((%d\ (a b) (+ (a) (b))) 3 4) )
+	(ddef* (a b) 1 2)
+	(assert (progv (a b) (3 4)  (+ (a) (b))) 7)
+	(assert (dlet ((a 3) (b 4)) (+ (a) (b))) 7)
+	(assert (begin (ddef a 1) (progv (a) (2) (assert (dval a) 2)) (assert (dval a) 1)) #t)
+	(assert (begin (ddef* (a b) 1 2) (dlet ((a 2)) (assert (dval a) 2)) (dval b)) 2)
+	(assert (begin (ddef* (a) 1) (dlet* ((a (+ 1 (dval a))) (a (+ 1 (dval a)))) (dval a))) 3)
+)
 
 
 ;;;; Box
@@ -1238,7 +1261,7 @@
 (def\ findClass (name env)
   (eval (the Symbol name) env))
 
-(defVau defClass (name (#! (or () (1 Symbol)) superClass?) (#! (Symbol) slotSpecs) . properties) env
+(defVau defClass (name (#! (0 1 Symbol) superClass?) (#! (Symbol) slotSpecs) . properties) env
   ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
   (let1 (superClass (findClass (opt? superClass? 'Obj) env))
     (eval (list 'def name (%newClass name superClass)) env)) )
@@ -1630,11 +1653,11 @@
 (assert (arrayGet* (arraySet* (newInstance &int 2 2) 3 1 1) 1 1) 3)
 
 (defVau (time exp) env
-  (let1 (currentTime (@getMethod System "currentTimeMillis"))
-    (def milli (currentTime #null))
-    (def result (eval exp env))
-    (def milli (- (currentTime #null) milli))
-    (log ($ "time " exp ": " milli "ms"))
+  (let* ( (currentTime (@getMethod System "currentTimeMillis"))
+          (milli (currentTime #null))
+          (result (eval exp env))
+          (milli (- (currentTime #null) milli)) )
+    (print "time " exp ": " milli "ms")
     result ))
 
 
