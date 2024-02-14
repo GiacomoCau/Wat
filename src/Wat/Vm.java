@@ -15,7 +15,7 @@ import static Wat.Utility.ifnull;
 import static Wat.Utility.isInstance;
 import static Wat.Utility.more;
 import static Wat.Utility.or;
-import static Wat.Utility.orEquals;
+import static Wat.Utility.member;
 import static Wat.Utility.read;
 import static Wat.Utility.reorg;
 import static Wat.Utility.stackDeep;
@@ -326,8 +326,8 @@ public class Vm {
 		@Override List setCdr(Object cdr) { return cdr == null || cdr instanceof List ? setCdr(cdr) : typeError("cannot set cdr, not a {expected}: {datum}", cdr, symbol("List") ); }
 	}
 	public int len(List o) { int i=0; for (; o != null; i+=1, o=o.cdr()); return i; }
-	public int len(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return i; }
-	//public Object argn(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return o == null ? i : cons(i, symbol("+")) ; }
+	public int len(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return i /*o == null ? i : i + .5*/; }
+	//public Object arity(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return o == null ? i : list(symbol(">="), i); }
 	<T extends Cons> T cons(Object car) { return (T) new List(car, null); }
 	<T extends Cons> T cons(Object car, Object cdr) {
 		return (T)(cdr == null || cdr instanceof List ? new List(car, (List) cdr) : new Cons(car, cdr));
@@ -594,7 +594,7 @@ public class Vm {
 								className,
 								isObj ? "Vm.Obj" : superClass.getCanonicalName(),
 								isBox ? "Object" : "Object ... ", 
-								isObj || orEquals(superClass, Condition.class, Error.class, Box.class) ? "vm.super(" : "super(vm, "
+								isObj || member(superClass, Condition.class, Error.class, Box.class) ? "vm.super(" : "super(vm, "
 							)
 						)
 					)
@@ -677,7 +677,7 @@ public class Vm {
 				throw new MatchException("expected {operands#,%+d} operands, found: {datum}", rhs, -len(rhs));
 			}
 			case Cons lc-> {
-				if (lc.car instanceof Symbol sym && orEquals(sym.name, "%'", "quote")) {
+				if (member(lc.car, quotes)) {
 					if (equals(lc.<Object>car(1), rhs)) yield null; // or rhs?
 					throw new TypeException("expected literal: {expected}, found: {datum}", rhs, lc.car(1));
 				}
@@ -828,15 +828,18 @@ public class Vm {
 	Begin begin = new Begin();
 	class If implements Combinable  {
 		public Object combine(Env e, List o) {
+			return combine(null, e, o);
+		}
+		Object combine(Resumption r, Env e, List o) {
 			var chk = checkR(this, o, 2, else1 ? 3 : more); // o = (test then . else) 
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
-			var test = o.car;
-			return tco(()-> pipe(dbg(e, this, o), ()-> getTco(evaluate(e, test)), res->
-				switch (istrue(res)) {
+			var car = o.car;
+			return tco(()-> pipe(dbg(e, this, o), ()-> getTco(evaluate(e, car)), test->
+				switch (istrue(test)) {
 					case Suspension s-> s;
-					case Boolean b-> b ? evaluate(e, o.car(1))
-						: o.cdr(1) == null ? inert : else1 ? evaluate(e, o.car(2)) : begin.combine(e, o.cdr(1));
+					case Boolean b-> b ? tco(()-> evaluate(e, o.car(1)))
+						: o.cdr(1) == null ? inert : else1 ? tco(()-> evaluate(e, o.car(2))) : tco(()-> begin.combine(e, o.cdr(1)));
 					case Object obj-> resumeError(obj, symbol("Boolean"));
 				}
 			));
@@ -846,38 +849,34 @@ public class Vm {
 	Object istrue(Object res) {
 		return switch (typeT) {
 			case 0-> res instanceof Boolean b ? b : typeError("not a {expected}: {datum}", res, symbol("Boolean")); // Kernel, Wat, Lispx
-			case 1-> !orEquals(res, false); // Scheme, Guile, Racket
-			case 2-> !orEquals(res, false, null); // Clojure
-			case 3-> !orEquals(res, false, null, ignore);
-			case 4-> !orEquals(res, false, null, ignore, 0); // Javascript
+			case 1-> !member(res, false); // Scheme, Guile, Racket
+			case 2-> !member(res, false, null); // Clojure
+			case 3-> !member(res, false, null, ignore);
+			case 4-> !member(res, false, null, ignore, 0); // Javascript
 			default-> res instanceof Boolean b ? b : typeError("not a {expected}: {datum}", res, symbol("Boolean")); // Kernel, Wat, Lispx
 		};
 	}
-	/* TODO tentare implementzione, elimiare altrimenti
-	class ifStar implements Combinable  {
+	class IfStar implements Combinable  {
 		public Object combine(Env e, List o) {
+			var chk = checkR(this, o, 2, more); // o = (test then . else) 
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			return combine(null, e, o);
 		}
 		Object combine(Resumption r, Env e, List o) {
-			for (var first = true;; o = o.cdr(2)) { // only one resume for suspension
-				if (o == null) return inert;
-				var car = o.car;
-				if (o.cdr() == null) return evaluate(e, car); 
-				//var test = first && r != null && !(first = false) ? r.resume() : getTco(evaluate(e, car));
-				//if (test instanceof Suspension s) { var oo = o; return s.suspend(dbg(e, this, o.car), rr-> combine(rr, e, oo)); }
-				return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, car)), test->
-					switch (istrue(test)) {
-						case Suspension s-> s;
-						case Boolean b-> b ? evaluate(e, o.car(1))
-							: o.cdr(1) == null ? inert : else1 ? evaluate(e, o.car(2)) : begin.combine(e, o.cdr(1));
-						case Object obj-> resumeError(obj, symbol("Boolean"));
-					}
-				);
-			}
+			if (o == null) return inert;
+			var car = o.car;
+			if (o.cdr() == null) return tco(()-> evaluate(e, car)); 
+			return tco(()-> pipe(dbg(e, this, o), ()-> getTco(evaluate(e, car)), test->
+				switch (istrue(test)) {
+					case Suspension s-> s;
+					case Boolean b-> b ? tco(()-> evaluate(e, o.car(1))) : tco(()-> combine(null, e, o.cdr(1)));  
+					case Object obj-> resumeError(obj, symbol("Boolean"));
+				}
+			));
 		}
 		public String toString() { return "%If*"; }
 	}
-	//*/
 	class Loop implements Combinable  {
 		public Object combine(Env e, List o) {
 			var chk = checkM(this, o, 1); // o = (form . forms)
@@ -913,7 +912,7 @@ public class Vm {
 				if (tag != ignore && thw instanceof Value val && val.tag != tag) throw thw; 
 				if (hdl != ignore) return combine2(null, e, tag, hdl, thw);
 				if (thw instanceof Value val) return val.value;
-				throw thw instanceof Error err ? err : new Error("catch error!", thw);
+				throw thw instanceof Error err ? err : new Error("catch exception: " + Vm.this.toString(thw.getClass()), thw);
 			}
 		}
 		public Object combine2(Resumption r, Env e, Object tag, Object hdl, Throwable thw) {
@@ -1282,7 +1281,7 @@ public class Vm {
 			if (p == null || p == ignore) { if (ep != null) syms.add(p); return null; }
 			if (p instanceof Symbol) { return syms.add(p) ? null : syntaxError("invalid parameter tree syntax, not a unique symbol: {datum} in: " + pt + " of: {expr}", p, exp); }
 			if (!(p instanceof Cons c)) return null;
-			if (c.car instanceof Symbol sym && orEquals(sym.name, "%'", "quote")) return len(c) == 2 ? null : syntaxError("invalid parameter tree #' syntax: {datum} in: {expr}", c, exp);
+			if (c.car instanceof Symbol sym && member(sym.name, "%'", "quote")) return len(c) == 2 ? null : syntaxError("invalid parameter tree #' syntax: {datum} in: {expr}", c, exp);
 			if (c.car == sheBang) return len(c) == 3 && c.car(2) instanceof Symbol? check(c.car(2)) : syntaxError("invalid parameter tree #! syntax: {datum} in: {expr}", c, exp);
 			var msg = check(c.car); if (msg != null) return msg;
 			return c.cdr() == null ? null : check(c.cdr());
@@ -1353,13 +1352,13 @@ public class Vm {
 		}
 		else if (chk instanceof List chkl) {
 			if (chkl.car instanceof Object[] chks && chkl.cdr() == null) return checkO(o, chks);
-			if (orEquals(chkl.car, comparators)) {
+			if (member(chkl.car, comparators)) {
 				switch (getTco(combine(env(), chkl.car(1), list(o, chkl.car(2))))) {
 					case Boolean b when b: return 0;
 					case Object obj: throw new TypeException("not a {expected}: {datum}", o, toChk(chkl));
 				}
 			}
-			if (orEquals(chkl.car, symbol("and"))) {
+			if (member(chkl.car, symbol("and"))) {
 				for (var chka = chkl.cdr(); chka != null; chka = chka.cdr()) {
 					try {
 						checkO(o, chka.car);
@@ -1380,7 +1379,7 @@ public class Vm {
 		else if (chk instanceof Class chkc) {
 			if (checkC(o, chkc)) return 0;
 		}
-		else if (orEquals(o, chk))  {
+		else if (member(o, chk))  {
 			return 0;
 		}
 		throw new TypeException("not a {expected}: {datum}", o, toChk(chk));
@@ -1389,7 +1388,7 @@ public class Vm {
 		return chk instanceof Class cl ? symbol(cl.getSimpleName())
 			: chk instanceof Integer i && i == more ? symbol("oo")
 			: chk instanceof Object[] a ? cons(symbol("or"), list(stream(a).map(o-> toChk(o)).toArray()))
-			: chk instanceof List l ? map(o-> toChk(o), orEquals(l.car, comparators) ? cons(l.car, l.cdr(1)) : l )
+			: chk instanceof List l ? map(o-> toChk(o), member(l.car, comparators) ? cons(l.car, l.cdr(1)) : l )
 			: chk
 		;
 	}
@@ -1415,7 +1414,7 @@ public class Vm {
 		}
 	}
 	private Object innerError(InnerException ie, Object op, Object o, Object chk) {
-		return !orEquals(op, "check", "the+")
+		return !member(op, "check", "the+")
 			? error("combining {operator} with {operands}", ie, "operator", op, "operands", o)
 			: ie.objs[1] != o /*&& ie.objs[3].equals(toChk(chk))*/
 			? error("checking {operands} with {check}", ie, "operands", o, "check", toChk(chk))
@@ -1578,6 +1577,7 @@ public class Vm {
 	<T extends Intern> T intern(String name) {
 		return (T) interns.computeIfAbsent(name, n-> n.startsWith(":") && n.length() > 1 ? new Keyword(n.substring(1)) : new Symbol(n));
 	}
+	Object[] quotes = $(symbol("%'"), symbol("quote"));
 	Object[] comparators = $(symbol("<"), symbol("<="), symbol(">="), symbol(">"));
 	
 	Object toLispExpr(Object o) {
@@ -1623,7 +1623,7 @@ public class Vm {
 		};
 	}
 	public String toStringSet(Set<Entry<String,Object>> set) {
-		return set.isEmpty() ? "" : " " + set.stream().map(e-> ":" + e.getKey() + " " + toString(true, e.getValue())).collect(joining(" "));
+		return set.isEmpty() ? "" : " " + set.stream().map(e-> e.getKey() + " " + toString(true, e.getValue())).collect(joining(" "));
 	}
 	private String toString(String name, Class[] classes) {
 		return (name.equals("new") ? "constructor: " : "method: ") + name
@@ -1686,6 +1686,7 @@ public class Vm {
 				"%internName", wrap(new JFun("%InternName", (n,o)-> checkN(n, o, 1, Intern.class), (l,o)-> o.<Intern>car().name )),
 				// First-Order Control
 				"%if", new If(),
+				"%if*", new IfStar(),
 				"%loop", new Loop(),
 				"%atEnd", new AtEnd(),
 				"%throwTag", apply(t-> !ctApv ? t : wrap(t), new ThrowTag()),
@@ -1807,7 +1808,7 @@ public class Vm {
 						? switch (bndRes) {case 1-> keyword("rhs"); case 2-> keyword("prv"); default-> inert; }
 						: inert(bndRes=(int) bndRes(o.car, false)) )),
 				"prEnv", wrap(new JFun("PrEnv", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? prEnv : inert(prEnv=o.car()) )),
-				"else1", wrap(new JFun("Else1", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? else1 : inert(else1=o.car()) )),
+				"else1", wrap(new JFun("Else1", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? else1 : inert(else1=o.car()) )),
 				"boxDft", wrap(new JFun("BoxDft", (n,o)-> checkR(n, o, 0, 1), (l,o)-> l == 0 ? boxDft : inert(boxDft=o.car) )),
 				"aQuote", wrap(new JFun("AQuote", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? aQuote : inert(aQuote=o.car()) )),
 				"prStk", wrap(new JFun("PrStk", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prStk : inert(prStk=o.car()) )),

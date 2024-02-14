@@ -199,6 +199,9 @@
 (def compose
   (\ (f g) (\ args (f (apply g args)))) )
 
+(def curry
+  (\ (f v) (\ args (apply** f v args))) )
+  
 (def identity
   (\ (x) x))
 
@@ -304,14 +307,16 @@
     (defMacro (catchTagWth tag hdl . forms)
       (list '%catchTagWth tag hdl (list* '\ () forms)) )
   )
-  (defMacro (catch . forms)
-    (list* '%catchTagWth #_ #_ forms))
-  (defMacro (catchWth hdl . forms)
-    (list* '%catchTagWth #_ hdl forms))
-  (defMacro (catchTag tag . forms)
-    (list* '%catchTagWth tag #_ forms) )
-  (def catchTagWth
-    %catchTagWth)
+  (else
+    (defMacro (catch . forms)
+      (list* '%catchTagWth #_ #_ forms))
+    (defMacro (catchWth hdl . forms)
+      (list* '%catchTagWth #_ hdl forms))
+    (defMacro (catchTag tag . forms)
+      (list* '%catchTagWth tag #_ forms) )
+    (def catchTagWth
+      %catchTagWth)
+  )
 )
 
 (assert (catch (throw)) #inert)
@@ -348,6 +353,8 @@
 (defMacro (rec lhs . rhs)
   (list (list '\ (list lhs) (list* 'def lhs :rhs rhs)) #inert) )
 
+(def label rec)
+
 (assert ((rec f (\ (l) (if (null? l) "" ($ (car l) (f (cdr l)))))) '(1 2 3)) "123")
 (assert ((rec f (\ l (if (null? l) "" ($ (car l) (apply f (cdr l)))))) 1 2 3) "123")
 
@@ -356,7 +363,7 @@
     (list 'rec (car lhs) (list* '\ (cdr lhs) rhs))
     (list 'rec lhs (cons '\ rhs)) ))
 
-(def label rec\)
+(def label\ rec\)
 
 (assert ((rec\ (f l)   (if (null? l) "" ($ (car l) (f (cdr l))))) '(1 2 3)) "123")
 (assert ((rec\  f (l)  (if (null? l) "" ($ (car l) (f (cdr l))))) '(1 2 3)) "123")
@@ -401,25 +408,20 @@
   (list (list* '\ (cons dt) forms) value))
 
 (defMacro (wth* bindings . forms)
-  ( (rec\ loop (bindings)
+  ( (rec\ (loop bindings)
       (if (null? bindings)
         (cons (list* '\ () forms))
         (wth1 (dt value . bindings) bindings
-          (list* 'wth1 dt value (cons (loop bindings)))))) 
+          (list* 'wth1 dt value (cons (loop bindings))) ))) 
     bindings ))
 
 (assert (expand (wth* (a 1 b (1+ a)) 1 2 (+ a b))) '(wth1 a 1 (wth1 b (1+ a) ((\ () 1 2 (+ a b))))))
 (assert (wth* (a 1 b (1+ a)) 1 2 (+ a b)) 3)
 
-(defMacro (wth bindings . forms)
-  (wth1 (dt* . value*)
-    ( (rec\ loop (bindings)
-        (if (null? bindings) (())
-          (wth* ( (dt value . bindings) bindings
-                  (dt* . value*) (loop bindings) )
-              (cons (cons dt dt*) (cons value value*)))))
-      bindings )
-    (cons (list* '\ dt* forms) value*) ))
+(defMacro (wth b* . forms)
+  (def dt* ((rec\ (loop b*) (if (null? b*) #null (wth1 (dt #_ . b*) b* (cons dt (loop b*))))) b*))
+  (def vl* ((rec\ (loop b*) (if (null? b*) #null (wth1 (#_ vl . b*) b* (cons vl (loop b*))))) b*))
+  (cons (list* '\ dt* forms) vl*) )
 
 (assert (expand (wth (a 1 b 2) 1 2 (+ a b))) '((\ (a b) 1 2 (+ a b)) 1 2))
 (assert (wth (a 1 b 2) 1 2 (+ a b)) 3)
@@ -547,10 +549,10 @@
     result))
 
 (defMacro (when test . forms)
-  (list 'if test (cons 'begin forms)))
+  (list 'if test (cons 'then forms)))
 
 (defMacro (unless test . forms)
-  (list* 'if test #inert forms))
+  (list 'if test #inert (cons 'else forms)))
 
 (defVau set (ep dt value) env
   (eval
@@ -564,9 +566,12 @@
         (if (eval test env) (eval then env)
           (apply if* else env) )))))
 
-(assert (if*) #inert)
-(assert (if* 1) 1)
+(def if* %if*)
+
+(assert (if*))
+(assert (if* 1))
 (assert (if* #t 2) 2)
+(assert (if* #f 2) #inert)
 (assert (if* #f 2 3) 3)
 (assert (if* #f 1 #f 2) #inert)
 (assert (if* #f 1 #f 2 3) 3)
@@ -724,7 +729,7 @@
        (let1 ((kv . lst) lst)
          (if (== (car kv) key) kv
            (loop lst) ))
-        #null )))
+       #null )))
 
 (assert (assoc 'b '((a 1) (b 2) (c 3) (d 4))) '(b 2))
 
@@ -748,9 +753,10 @@
       (if (null? clauses) #inert
         (let1 (((values . forms) . clauses) clauses)
           (if (|| (== values 'else) (== value values) (member? value values))
-            (if (== (car forms) '=>)
-              ((eval (cadr! forms) env) value)
-              (apply begin forms env) )
+            (if (null? forms) #inert
+              (if (== (car forms) '=>)
+                ((eval (cadr! forms) env) value)
+                (apply begin forms env) ))
             (next clauses) ))))))
 
 (assert (case 3 ((2 4 6 8) 'pair) ((1 3 5 7 9) 'odd)) 'odd)
@@ -789,7 +795,6 @@
   (list '\ key (list* 'caseType (car key) clauses) ))   
 
 (assert (catchWth (caseType\ (e) ((Error :type 'xx) 1) (else 2)) (error :type 'zz)) 2)
-;(assert (handlerCase (((Error :type 'xx) 1) ((Error :type 'zz) 2)) (error (new Error "!" :type 'zz)) ) 2)
 
 
 ;;; Options
@@ -1065,22 +1070,52 @@
 (defMacro until (cond . forms)
   (list* 'while (list '! cond) forms) )
 
-(defMacro doTimes ((var countForm . resultForm?) . bodyForms)
+(defMacro doTimes ((var times . result) . body)
   (let1\
-    (doTimes (n body result)
+    (doTimes (times body result)
       (let1 (i (newBox 0))
-        (while (< (i) n)
-          (body (i))
-          (i (+ (i) 1)) )
+        (while (< (i) times) (body (i)) (++ i) )
         (result (i)) ))
     (list doTimes
-      countForm
-      (list* '\ (list var) bodyForms)
-      (list* '\ (list var) resultForm?) )))
+      times
+      (list* '\ (list var) body)
+      (list* '\ (list var) result) )))
 
-(defVau (repeat n . forms) env
-  (let1 ((#! (and Integer (> 0)) n) (eval n env))
-   (loop (eval (list* 'begin forms) env) (until (zero? (-- n))) )))
+(defVau (repeat times . forms) env
+  (if (cons? times) 
+    (let* ( (((#! Symbol var) times . ending) times)
+            ((#! (and Integer (> 0)) times) (eval times env))
+            (env (newEnv env var 0)) )
+      (loop (def result (apply begin forms env))
+        (if (>= (eval (list '++ var) env) times)
+          (break/v (if (null? ending) result (apply begin ending env))) )))
+    (let1 ((#! (and Integer (> 0)) times) (eval times env))
+      (loop (def result (apply begin forms env))
+        (if (zero? (-- times)) (break/v result)) ))))
+
+(defMacro doTimes ((var times . result) . body)
+  (list* 'repeat (list* var times result) body) )
+
+#| TODO in alternativa del precedente, da verificare
+(defVau (repeat times . forms) env
+  (if (cons? times) 
+    (let* ( (((#! Symbol var) times . ending) times)
+            ((#! (and Integer (>= 0)) times) (eval times env))
+            (env (newEnv env var 0)) )
+      (loop (if (>= (env var) times)
+              (break/v (if* (!null? ending) (apply begin ending env) (zero? times) #inert result)) )
+            (def result (apply begin forms env))
+            (eval (list '++ var) env) ))
+    (let1 ((#! (and Integer (> 0)) times) (eval times env))
+      (loop (def result (apply begin forms env))
+        (if (zero? (-- times)) (break/v result)) ))))
+
+(defMacro doTimes ((var times . result) . body)
+  (list* 'repeat (list* var times (if (null? result) (cons #inert) result)) body) )
+|#
+
+;(repeat 5 (log 'a))
+;(repeat (a 5 a) (log a))
 
 
 ;;; Lists
@@ -1121,8 +1156,8 @@
 
 (def\ (forEach f lst . lst*)
   (if (null? lst*)
-    (let1 (res lst) ((rec\ (forEach lst) (if (null? lst) res (f (car lst)) (forEach (cdr lst)))) res))
-    (let1 (res* (cons lst lst*)) ((rec\ (forEach* lst*) (if (null? (car lst*)) res* (apply f (map car lst*)) (forEach* (map cdr lst*)) )) res*) )) )
+    (let1 (res lst) ((rec\ (forEach lst) (if (null? lst) res (else (f (car lst)) (forEach (cdr lst)) ))) res))
+    (let1 (res* (cons lst lst*)) ((rec\ (forEach* lst*) (if (null? (car lst*)) res* (else (apply f (map car lst*)) (forEach* (map cdr lst*)) ))) res*) )) )
 
 (assert (forEach (\ (#ignore)) '(1 2)) '(1 2))
 (assert (forEach (\ (#ignore #ignore)) '(1 2) '(3 4)) '((1 2) (3 4)))
@@ -1187,8 +1222,9 @@
   (let1rec\
     (dolist (list body result)
       (if (null? list) (result list)
-        (body (car list))
-        (dolist (cdr list) body result)))
+        (else
+          (body (car list))
+          (dolist (cdr list) body result) )))
     (list dolist
           listForm
           (list* '\ (list var) bodyForms)
@@ -1639,25 +1675,27 @@
 (def\ (arraySet array index value)
   (if (cons? index)
     (apply** arraySet* array value index)
-    (@set &java.lang.reflect.Array array index value)
-    array ))
+    (else
+      (@set &java.lang.reflect.Array array index value)
+      array )))
 
 (def\ (arraySet* array0 value . indexes)
   (if (null? indexes) array
     (let loop ((array array0) (indexes indexes))
        (if (null? (cdr indexes))
-         (begin (arraySet array (car indexes) value) array0)
+         (then (arraySet array (car indexes) value) array0)
          (loop (arrayGet array (car indexes)) (cdr indexes)) ))))  
 
 (assert (arrayGet (arraySet (newInstance &int 2 2) (1 1) 3) (1 1)) 3)
 (assert (arrayGet* (arraySet* (newInstance &int 2 2) 3 1 1) 1 1) 3)
 
-(defVau (time exp) env
+(defVau (time times . forms) env
   (let* ( (currentTime (@getMethod System "currentTimeMillis"))
+          ((#! (and Integer (> 0)) times) (eval times env))
           (milli (currentTime #null))
-          (result (eval exp env))
+          (result (apply repeat (cons times forms) env))
           (milli (- (currentTime #null) milli)) )
-    (print "time " exp ": " milli "ms")
+    (print "time " times " " forms ": " milli "ms" (if (== times 1) "" ($ ", on average: " (@format String "%.2f" (/ milli (@doubleValue times))) "ms" )))
     result ))
 
 

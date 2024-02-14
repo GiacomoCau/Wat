@@ -2696,8 +2696,9 @@
      Error :type 'match :operands# +1))
 
   (defTest doTimes.5
-    (doTimes (x 0))
-    #inert)
+    (signalsError?
+      (doTimes (x 0))
+      Error :type 'type :datum 0 :expected '(and Integer (> 0)) ))
 
   (defTest doTimes.6
     (doTimes (x 1))
@@ -2705,12 +2706,12 @@
 
   (defTest doTimes.7
     (doTimes (x 1) 1 2 3)
-    #inert)
+    3)
 
   (defTest doTimes.8
     (signalsError?
      (doTimes (x "foo") 1 2 3)
-     Error :type 'java :member '%< :args '(0 "foo")))
+     Error :type 'type :datum "foo" :expected '(and Integer (> 0)) ))
 
   (defTest doTimes.9
     (begin

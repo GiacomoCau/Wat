@@ -16,16 +16,16 @@
 (%assert (%list- 1 2 ()) '(1 2))
 (%assert (%list- 1 2 '(3 4)) '(1 2 (3 4)))
 
-(%assert (%def) &Wat.Vm$Error :type 'match :operands# +2)
-(%assert (%def 1) &Wat.Vm$Error :type 'match :operands# +1) 
-(%assert (%def 1 1) &Wat.Vm$Error :type 'type :datum 1 :expected '(or Symbol Cons))
-(%assert (%def a 1) #inert)
-(%assert (%def a 1 2) &Wat.Vm$Error :type 'type :datum 1 :expected '(or #inert #ignore :rhs :prv))
-(%assert (%def a #inert 1) #inert)
+(%assert (%def)             &Wat.Vm$Error :type 'match :operands# +2)
+(%assert (%def 1)           &Wat.Vm$Error :type 'match :operands# +1) 
+(%assert (%def 1 1)         &Wat.Vm$Error :type 'type :datum 1 :expected '(or Symbol Cons))
+(%assert (%def a 1)         #inert)
+(%assert (%def a 1 2)       &Wat.Vm$Error :type 'type :datum 1 :expected '(or #inert #ignore :rhs :prv))
+(%assert (%def a #inert 1)  #inert)
 (%assert (%def a #ignore 1) (%if (%== (bndRes) #inert) #inert (%if (%== (bndRes) :rhs) 1 #null)))
-(%assert (%def a :prv 1) #null)
-(%assert (%def a :rhs 1) 1)
-(%assert (%def a :rhs 1 2) &Wat.Vm$Error :type 'match :operands# -1)
+(%assert (%def a :prv 1)    #null)
+(%assert (%def a :rhs 1)    1)
+(%assert (%def a :rhs 1 2)  &Wat.Vm$Error :type 'match :operands# -1)
  
 (%assert (%begin (%def (a) (1)) a)         1)
 (%assert (%begin (%def (a b) (1 2)) b)     2)
@@ -50,7 +50,19 @@
 (%assert (%if #f 1)     #inert)
 (%assert (%if #t 1 2)   1)
 (%assert (%if #f 1 2)   2)
-(%assert (%if #f 1 2 3) 3)
+(%if (else1)
+  (%assert (%if #f 1 2 3) Error :type 'match :operands# -1)
+  (%assert (%if #f 1 2 3) 3)) 
+
+(%assert (%if*)                ) ;throw
+(%assert (%if* 0)              ) ;throw
+(%assert (%if* #t 1)           1)
+(%assert (%if* #f 1)           #inert)
+(%assert (%if* #f 1 2)         2)
+(%assert (%if* #f 1 #t 3)      3)
+(%assert (%if* #f 1 #f 3)      #inert)
+(%assert (%if* #f 1 #f 3 4)    4)
+(%assert (%if* #f 1 #f 3 #t 5) 5)
 
 (%assert ((%vau))                 ) ;throw
 (%assert ((%vau a))               ) ;throw
@@ -122,4 +134,7 @@
     (%assert (%catchTagWth #_ #_ (%begin (%def x 0) (%loop (%if (%== x 10) (%throwTag #_ x)) (%def x (%+ x 1))))) 10) ))
 
 (%def testTco (%\ (n) (%if (%<= n 0) n (testTco (%- n 1)))))
+(%def testTco* (%\ (n) (%if* (%<= n 0) n (testTco (%- n 1)))))
+
+
 (%if (doTco) (%assert (testTco 400) 0))

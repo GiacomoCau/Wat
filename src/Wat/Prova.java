@@ -1,6 +1,6 @@
 package Wat;
 
-import static Wat.Utility.orEquals;
+import static Wat.Utility.member;
 import static java.lang.System.out;
 import static java.nio.charset.Charset.forName;
 import static java.nio.file.Files.readString;
@@ -55,6 +55,8 @@ public class Prova {
 		}
 	}
 	
+	private BiFunction<String,Integer, Double> xx =  null;
+	
 	public static void replaceAll() {
 		//out.println(Pattern.compile("\\|").matcher("\\|").quoteReplacement("|"));
 		//out.println("\\|".replaceAll("\\|", Matcher.quoteReplacement("__")));
@@ -76,7 +78,7 @@ public class Prova {
 		out.println(Boolean.FALSE == true);
 		//out.println(new Object() == true);
 		//Object obj = null; out.println(obj == true);
-		out.println(orEquals(0, null, false, 0));
+		out.println(member(0, null, false, 0));
 	} 
 
 	//class $ {}

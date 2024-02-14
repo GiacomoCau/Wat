@@ -12,6 +12,7 @@
 (aQuote #t)
 (typeT 1)
 (hdlAny #t)
+(else1 #t)
 
 (%def Null #null)
 (%def Any &Wat.Vm$Any)
@@ -101,22 +102,24 @@
 
 (%def %makeCheckEvl
   (%\ (check)
-    (%def %=*
-      (%vau (key . lst) env
-        (%def key (%eval key env))
-        ((%def loop :rhs (%\ (lst) (%if (%null? lst) #f (%if (%== (%car lst) key) #t (loop (%cdr lst)))))) lst)) )
     (%vau (o ck) env
+      (%def %=*
+        (%vau (key . lst) env
+          (%def key (%eval key env))
+          ( (%def loop :rhs (%\ (lst) (%if* (%null? lst) #f (%== (%car lst) key) #t (loop (%cdr lst)) ) )) lst) ))
       (%def evl
         (%\ (ck)
-          (%if (%== ck 'oo) (.MAX_VALUE &java.lang.Integer)
-            (%if (%! (%cons? ck)) (%eval ck env)
+          (%if*
+            (%== ck 'oo) (.MAX_VALUE &java.lang.Integer)
+            (%! (%cons? ck)) (%eval ck env)
             ( (%\ (ckcar)
-                (%if (%== ckcar 'or) (%list->array (evl (%cdr ck)))
-                  (%if (%=* ckcar %' quote) (%cadr ck)
-                    (%if (%=* ckcar < <= >= >) (%cons ckcar (%cons (%eval ckcar env) (evl (%cdr ck))))
-                      (%if (%== ckcar 'and) (cons 'and (evl (%cdr ck)))
-                        (evm ck) )))))
-              (%car ck) ) ))))
+                (%if*
+                  (%== ckcar 'or) (%list->array (evl (%cdr ck)))
+                  (%=* ckcar %' quote) (%cadr ck)
+                  (%=* ckcar < <= >= >) (%cons ckcar (%cons (%eval ckcar env) (evl (%cdr ck))))
+                  (%== ckcar 'and) (cons 'and (evl (%cdr ck)))
+                  (evm ck) ))
+              (%car ck) ) )))
       (%def evm (%\ (lst) (%if (%null? lst) #null (%cons (evl (%car lst)) (evm (%cdr lst))))))
       (check o (evl ck)) )))
 
@@ -163,9 +166,16 @@
 (def signalsError? assert)
 
 (def SimpleError Error)
+
 (def\ simpleError (message)
   (error message :type 'simple) )
 
+#| TODO da rivedere
+(defMacro (handlerCase cases . forms)
+  (list* 'catchWth (list* 'caseType\ '(e) cases) forms) )  
+
+(assert (handlerCase (((Error :type 'xx) => (\ (e) 1)) ((Error :type 'zz) => (\ (e) 2))) (error (new Error "!" :type 'zz)) ) 2)
+|#
 
 (%def milli (%- (@currentTimeMillis &java.lang.System) milli))
 (%$ "vm started in " (%$ milli "ms"))

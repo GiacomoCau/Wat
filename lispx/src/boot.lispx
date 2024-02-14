@@ -407,6 +407,9 @@
    |#
   (\ (f g) (\ args (f (apply g args)))) )
 
+(def curry
+  (\ (f v) (\ args (apply** f v args))) )
+
 (def identity
   #|Identity function.
    |#
@@ -542,24 +545,26 @@
     (defMacro (catchTagWth tag hdl . forms)
       (list '%catchTagWth tag hdl (list* '\ () forms)) )
   )
-  (defMacro (catch . forms)
-    (list* '%catchTagWth #_ #_ forms))
-  (defMacro (catchWth hdl . forms)
-    (list* '%catchTagWth #_ hdl forms))
-  (defMacro (catchTag tag . forms)
-    #|Establish a catch tag and evaluate FORMS as an implicit `begin'
-     |inside it.  The forms may use `throw' to nonlocally exit from the
-     |tag.  Usually, `block' should be preferred.
-     |#
-    (list* '%catchTagWth tag #_ forms) )
-  (def catchTagWth
-    #|Establish a catch tag and evaluate FORMS as an implicit `begin' inside it.
-     |The forms may use `throw' to nonlocally exit from the tag.
-     |Usually, `block' should be preferred.
-     |$(fn (tag hdl . forms))
-     |$(type operatore)
-     |#
-    %catchTagWth)
+  (else
+    (defMacro (catch . forms)
+      (list* '%catchTagWth #_ #_ forms))
+    (defMacro (catchWth hdl . forms)
+      (list* '%catchTagWth #_ hdl forms))
+    (defMacro (catchTag tag . forms)
+      #|Establish a catch tag and evaluate FORMS as an implicit `begin'
+       |inside it.  The forms may use `throw' to nonlocally exit from the
+       |tag.  Usually, `block' should be preferred.
+       |#
+      (list* '%catchTagWth tag #_ forms) )
+    (def catchTagWth
+      #|Establish a catch tag and evaluate FORMS as an implicit `begin' inside it.
+       |The forms may use `throw' to nonlocally exit from the tag.
+       |Usually, `block' should be preferred.
+       |$(fn (tag hdl . forms))
+       |$(type operatore)
+       |#
+      %catchTagWth)
+  )
 )
 
 
@@ -615,12 +620,14 @@
 (defMacro (rec lhs . rhs)
   (list (list '\ (list lhs) (list* 'def lhs :rhs rhs)) #inert) )
 
+(def label rec)
+
 (defMacro (rec\ lhs . rhs)
   (if (cons? lhs)
     (list 'rec (car lhs) (list* '\ (cdr lhs) rhs))
     (list 'rec lhs (cons '\ rhs)) ))
 
-(def label rec\)
+(def label\ rec\)
 
 (def\ (map f lst . lst*)
   #|Create a new list by applying the FUNCTION to every element of the LIST.
@@ -654,22 +661,17 @@
   (list (list* '\ (cons dt) forms) value))
 
 (defMacro (wth* bindings . forms)
-  ( (rec\ loop (bindings)
+  ( (rec\ (loop bindings)
       (if (null? bindings)
         (cons (list* '\ () forms))
         (wth1 (dt value . bindings) bindings
-          (list* 'wth1 dt value (cons (loop bindings)))))) 
+          (list* 'wth1 dt value (cons (loop bindings))) ))) 
     bindings ))
 
-(defMacro (wth bindings . forms)
-  (wth1 (dt* . value*)
-    ( (rec\ loop (bindings)
-        (if (null? bindings) (())
-          (wth* ( (dt value . bindings) bindings
-                  (dt* . value*) (loop bindings) )
-              (cons (cons dt dt*) (cons value value*)))))
-      bindings )
-    (cons (list* '\ dt* forms) value*) ))
+(defMacro (wth b* . forms)
+  (def dt* ((rec\ (loop b*) (if (null? b*) #null (wth1 (dt #_ . b*) b* (cons dt (loop b*))))) b*))
+  (def vl* ((rec\ (loop b*) (if (null? b*) #null (wth1 (#_ vl . b*) b* (cons vl (loop b*))))) b*))
+  (cons (list* '\ dt* forms) vl*) )
 
 
 (defMacro (let1Loop lhs . rhs)
@@ -804,12 +806,12 @@
 (defMacro (when test . forms)
   #|If TEST yields true, evaluate the FORMS as an implicit `begin'. Otherwise, return inert.
    |#
-  (list 'if test (cons 'begin forms)))
+  (list 'if test (cons 'then forms)))
 
 (defMacro (unless test . forms)
   #|If TEST yields false, evaluate the FORMS as an implicit `begin'. Otherwise, return inert.
    |#
-  (list* 'if test #inert forms))
+  (list 'if test #inert (cons 'else forms)))
 
 (defVau set (ep dt value) env
   #|Match the DEFINIEND-TREE against the VALUE in the ENVIRONMENT,
@@ -823,12 +825,7 @@
     (list 'def dt (list (unwrap eval) value env))
     (eval ep env)))
 
-(defVau if* clauses env
-  (if (null? clauses) #inert
-    (if (null? (cdr clauses)) (eval (car clauses) env)
-      (let1 ((test then . else) clauses)
-        (if (eval test env) (eval then env)
-          (apply if* else env) )))))
+(def if* %if*)
 
 
 ;;; And Or
@@ -985,7 +982,7 @@
        (let1 ((kv . lst) lst)
          (if (== (car kv) key) kv
            (loop lst) ))
-        #null )))
+       #null )))
 
 (def\ (get? key lst)
   #|Search for the KEYWORD in the property list LST
@@ -1008,9 +1005,10 @@
       (if (null? clauses) #inert
         (let1 (((values . forms) . clauses) clauses)
           (if (|| (== values 'else) (== value values) (member? value values))
-            (if (== (car forms) '=>)
-              ((eval (cadr! forms) env) value)
-              (apply begin forms env) )
+            (if (null? forms) #inert
+              (if (== (car forms) '=>)
+                ((eval (cadr! forms) env) value)
+                (apply begin forms env) ))
             (next clauses) ))))))
 
 (def matchObj? %matchObj?)
@@ -1174,7 +1172,7 @@
 
 (defVau check? args env
   (catchTagWth 'check? #f
-    (handlerBind ((Error (\ (#ignore) (throwTag 'check?))))
+    (handlerBind ((Error (\ (#_) (throwTag 'check?))))
       (apply check args env)
       #t )))
 
@@ -1287,24 +1285,51 @@
    |#
   (list* 'while (list '! cond) forms) )
 
-(defMacro doTimes ((var countForm . resultForm?) . bodyForms)
+(defMacro doTimes ((var times . result) . body)
   #|Cf. Common Lisp's DOTIMES.
    |#
   (let1\
-    (doTimes (n body result)
+    (doTimes (times body result)
       (let1 (i (newBox 0))
-        (while (< (i) n)
-          (body (i))
-          (i (+ (i) 1)) )
+        (while (< (i) times) (body (i)) (++ i) )
         (result (i)) ))
     (list doTimes
-      countForm
-      (list* '\ (list var) bodyForms)
-      (list* '\ (list var) resultForm?) )))
+      times
+      (list* '\ (list var) body)
+      (list* '\ (list var) result) )))
 
-(defVau (repeat n . forms) env
-  (let1 ((#! (and Integer (> 0)) n) (eval n env))
-   (loop (eval (list* 'begin forms) env) (until (zero? (-- n))) )))
+(defVau (repeat times . forms) env
+  (if (cons? times) 
+    (let* ( (((#! Symbol var) times . ending) times)
+            ((#! (and Integer (> 0)) times) (eval times env))
+            (env (newEnv env var 0)) )
+      (loop (def result (apply begin forms env))
+        (if (>= (eval (list '++ var) env) times)
+          (break/v (if (null? ending) result (apply begin ending env))) )))
+    (let1 ((#! (and Integer (> 0)) times) (eval times env))
+      (loop (def result (apply begin forms env))
+        (if (zero? (-- times)) (break/v result)) ))))
+
+(defMacro doTimes ((var times . result) . body)
+  (list* 'repeat (list* var times result) body) )
+
+#| TODO in alternativa del precedente, da verificare
+(defVau (repeat times . forms) env
+  (if (cons? times) 
+    (let* ( (((#! Symbol var) times . ending) times)
+            ((#! (and Integer (>= 0)) times) (eval times env))
+            (env (newEnv env var 0)) )
+      (loop (if (>= (env var) times)
+              (break/v (if* (!null? ending) (apply begin ending env) (zero? times) #inert result)) )
+            (def result (apply begin forms env))
+            (eval (list '++ var) env) ))
+    (let1 ((#! (and Integer (> 0)) times) (eval times env))
+      (loop (def result (apply begin forms env))
+        (if (zero? (-- times)) (break/v result)) ))))
+
+(defMacro doTimes ((var times . result) . body)
+  (list* 'repeat (list* var times (if (null? result) (cons #inert) result)) body) )
+|#
 
 
 ;;; Lists
@@ -1334,8 +1359,8 @@
   #|Apply the FUNCTION to every element of the LIST for effect. Return the list.
    |#
   (if (null? lst*)
-    (let1 (res lst) ((rec\ (forEach lst) (if (null? lst) res (f (car lst)) (forEach (cdr lst)))) res))
-    (let1 (res* (cons lst lst*)) ((rec\ (forEach* lst*) (if (null? (car lst*)) res* (apply f (map car lst*)) (forEach* (map cdr lst*)) )) res*) )) )
+    (let1 (res lst) ((rec\ (forEach lst) (if (null? lst) res (else (f (car lst)) (forEach (cdr lst)) ))) res))
+    (let1 (res* (cons lst lst*)) ((rec\ (forEach* lst*) (if (null? (car lst*)) res* (else (apply f (map car lst*)) (forEach* (map cdr lst*)) ))) res*) )) )
 
 (def\ maplist (f lst . lst*)
   #|Apply the FUNCTION, which must return a list, to every element of the
@@ -1388,8 +1413,9 @@
   (let1rec\
     (dolist (list body result)
       (if (null? list) (result list)
-        (body (car list))
-        (dolist (cdr list) body result)))
+        (else
+          (body (car list))
+          (dolist (cdr list) body result) )))
     (list dolist
           listForm
           (list* '\ (list var) bodyForms)
@@ -1894,22 +1920,24 @@
 (def\ (arraySet array index value)
   (if (cons? index)
     (apply** arraySet* array value index)
-    (@set &java.lang.reflect.Array array index value)
-    array ))
+    (else
+      (@set &java.lang.reflect.Array array index value)
+      array )))
 
 (def\ (arraySet* array0 value . indexes)
   (if (null? indexes) array
     (let loop ((array array0) (indexes indexes))
        (if (null? (cdr indexes))
-         (begin (arraySet array (car indexes) value) array0)
+         (then (arraySet array (car indexes) value) array0)
          (loop (arrayGet array (car indexes)) (cdr indexes)) ))))  
 
-(defVau (time exp) env
+(defVau (time times . forms) env
   (let* ( (currentTime (@getMethod System "currentTimeMillis"))
+          ((#! (and Integer (> 0)) times) (eval times env))
           (milli (currentTime #null))
-          (result (eval exp env))
+          (result (apply repeat (cons times forms) env))
           (milli (- (currentTime #null) milli)) )
-    (print "time " exp ": " milli "ms")
+    (print "time " times " " forms ": " milli "ms" (if (== times 1) "" ($ ", on average: " (@format String "%.2f" (/ milli (@doubleValue times))) "ms" )))
     result ))
 
 

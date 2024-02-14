@@ -19,6 +19,7 @@
 (aQuote #t)
 (typeT 0)
 (hdlAny #t)
+(else1 #t)
 
 (%def Null #null)
 (%def Any &Wat.Vm$Any)
@@ -114,22 +115,24 @@
 
 (%def %makeCheckEvl
   (%\ (check)
-    (%def %=*
-      (%vau (key . lst) env
-        (%def key (%eval key env))
-        ((%def loop :rhs (%\ (lst) (%if (%null? lst) #f (%if (%== (%car lst) key) #t (loop (%cdr lst)))))) lst)) )
     (%vau (o ck) env
+      (%def %=*
+        (%vau (key . lst) env
+          (%def key (%eval key env))
+          ( (%def loop :rhs (%\ (lst) (%if* (%null? lst) #f (%== (%car lst) key) #t (loop (%cdr lst)) ) )) lst) ))
       (%def evl
         (%\ (ck)
-          (%if (%== ck 'oo) (.MAX_VALUE &java.lang.Integer)
-            (%if (%! (%cons? ck)) (%eval ck env)
+          (%if*
+            (%== ck 'oo) (.MAX_VALUE &java.lang.Integer)
+            (%! (%cons? ck)) (%eval ck env)
             ( (%\ (ckcar)
-                (%if (%== ckcar 'or) (%list->array (evl (%cdr ck)))
-                  (%if (%=* ckcar %' quote) (%cadr ck)
-                    (%if (%=* ckcar < <= >= >) (%cons ckcar (%cons (%eval ckcar env) (evl (%cdr ck))))
-                      (%if (%== ckcar 'and) (cons 'and (evl (%cdr ck)))
-                        (evm ck) )))))
-              (%car ck) ) ))))
+                (%if*
+                  (%== ckcar 'or) (%list->array (evl (%cdr ck)))
+                  (%=* ckcar %' quote) (%cadr ck)
+                  (%=* ckcar < <= >= >) (%cons ckcar (%cons (%eval ckcar env) (evl (%cdr ck))))
+                  (%== ckcar 'and) (cons 'and (evl (%cdr ck)))
+                  (evm ck) ))
+              (%car ck) ) )))
       (%def evm (%\ (lst) (%if (%null? lst) #null (%cons (evl (%car lst)) (evm (%cdr lst))))))
       (check o (evl ck)) )))
 
@@ -215,12 +218,20 @@
 
 #|
 (load "lispx/tool/repl/repl.lispx")
-(def uprint print)
 (repl:run)
 x
 (invokeRestart 'abort)
 (+ 100 x)
 (invokeRestart 'useValue 42)
+
+(invokeRestart 'replEnd)
+(def\ invokeDebugger (condition)
+  (takeSubcont rootPrompt k
+    (pushDelimSubcont rootPrompt k
+      (if (prStk) (printFrames k))
+      (panic condition))))
+
+(takeSubcont rootPrompt k (pushDelimSubcont rootPrompt k (printFrames k)))
 |#
 
 (%def milli (%- (@currentTimeMillis &java.lang.System) milli))

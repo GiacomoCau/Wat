@@ -365,7 +365,7 @@
 
   (defTest restartCase.nested2
     (restartCase ((r1 (\ () 'outer)))
-      (restartCase ((r1 (\ ()  (invokeRestart 'r1)))
+      (restartCase ((r1 (\ () (invokeRestart 'r1)))
                      (r2 (\ ())))
         (invokeRestart 'r1)))
     'outer)
