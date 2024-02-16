@@ -18,7 +18,7 @@ Queste le differenze rispetto a Wat/lispX
 * le liste proprie, terminano con cdr uguale a `#null`, sono espressioni valutabili
 * le liste proprie dove la valutazione del car non è un `Combinable` sono literal `(autoquote (or #t #f))`
 * le liste possono essere delimitate sia da `()` che da `[]`
-* l'operatore __if__ può avere l'else con forme multiple `(else1 (or #t #f))`
+* l'operatore __if__ può avere più forme test then
 * true può essere #t, !#f, !(or #f #null), !(or #f #null #inert) o !(or #f #null #inert 0) `(typeT (or 0 1 2 3 4))`
 * l'operatote __def__ può restituire:  
 	`#inert`, il valore assegnato (`:rhs`) o il valore precedente (`:prv`) dell'ultima bind effettuata  

@@ -12,7 +12,6 @@
 (aQuote #t)
 (typeT 1)
 (hdlAny #t)
-(else1 #t)
 
 (%def Null #null)
 (%def Any &Wat.Vm$Any)
@@ -106,14 +105,14 @@
       (%def %=*
         (%vau (key . lst) env
           (%def key (%eval key env))
-          ( (%def loop :rhs (%\ (lst) (%if* (%null? lst) #f (%== (%car lst) key) #t (loop (%cdr lst)) ) )) lst) ))
+          ( (%def loop :rhs (%\ (lst) (%if (%null? lst) #f (%== (%car lst) key) #t (loop (%cdr lst)) ) )) lst) ))
       (%def evl
         (%\ (ck)
-          (%if*
+          (%if
             (%== ck 'oo) (.MAX_VALUE &java.lang.Integer)
             (%! (%cons? ck)) (%eval ck env)
             ( (%\ (ckcar)
-                (%if*
+                (%if
                   (%== ckcar 'or) (%list->array (evl (%cdr ck)))
                   (%=* ckcar %' quote) (%cadr ck)
                   (%=* ckcar < <= >= >) (%cons ckcar (%cons (%eval ckcar env) (evl (%cdr ck))))

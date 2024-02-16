@@ -832,8 +832,6 @@
     (list 'def dt (list (unwrap eval) value env))
     (eval ep env)))
 
-(def if* %if*)
-
 
 ;;; And Or
 
@@ -842,10 +840,10 @@
    |If an operand evaluates to false, later operands are not evaluated.
    |If there are no operands, return false.
    |#
-  (if (null? ops) #t
-    (if (eval (car ops) env)
-      (apply && (cdr ops) env)
-      #f )))
+  (if
+    (null? ops) #t
+    (eval (car ops) env) (apply && (cdr ops) env)
+    #f ))
 
 (def and &&)
 
@@ -854,9 +852,10 @@
    |If an operand evaluates to true, later operands are not evaluated.
    |If there are no operands, return true.
    |#
-  (if (null? ops) #f
-    (if (eval (car ops) env) #t
-      (apply || (cdr ops) env) )))
+  (if
+    (null? ops) #f
+    (eval (car ops) env) #t
+    (apply || (cdr ops) env) ))
 
 (def or ||)
 
@@ -1327,7 +1326,7 @@
             ((#! (and Integer (>= 0)) times) (eval times env))
             (env (newEnv env var 0)) )
       (loop (if (>= (env var) times)
-              (break/v (if* (!null? ending) (apply begin ending env) (zero? times) #inert result)) )
+              (break/v (if (!null? ending) (apply begin ending env) (zero? times) #inert result)) )
             (def result (apply begin forms env))
             (eval (list '++ var) env) ))
     (let1 ((#! (and Integer (> 0)) times) (eval times env))
@@ -1343,15 +1342,15 @@
 
 (def\ (any? f lst . lst*)
   (if (null? lst*)
-    ((rec\ (any? lst) (if (null? lst) #f (if (f (car lst)) #t (any? (cdr lst)))) ) lst)
-    ((rec\ (any*? lst*) (if (null? (car lst*)) #f (if (apply f (map car lst*)) #t (any*? (map cdr lst*))))) (cons lst lst*)) ))
+    ((rec\ (any? lst) (if (null? lst) #f (f (car lst)) #t (any? (cdr lst))) ) lst)
+    ((rec\ (any*? lst*) (if (null? (car lst*)) #f (apply f (map car lst*)) #t (any*? (map cdr lst*))) ) (cons lst lst*)) ))
 
 (defMacro (any?* f . lst) (list 'any? f lst))
 
 (def\ (all? f lst . lst*)
   (if (null? lst*)
-    ((rec\ (all? lst) (if (null? lst) #t (if (f (car lst)) (all? (cdr lst)) #f))) lst)
-    ((rec\ (all*? lst*) (if (null? (car lst*)) #t (if (apply f (map car lst*)) (all*? (map cdr lst*)) #f))) (cons lst lst*)) ))
+    ((rec\ (all? lst) (if (null? lst) #t (f (car lst)) (all? (cdr lst)) #f) ) lst)
+    ((rec\ (all*? lst*) (if (null? (car lst*)) #t (apply f (map car lst*)) (all*? (map cdr lst*)) #f) ) (cons lst lst*)) ))
 
 (defMacro (all?* f . lst) (list 'all? f lst))
 

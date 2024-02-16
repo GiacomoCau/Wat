@@ -50,19 +50,11 @@
 (%assert (%if #f 1)     #inert)
 (%assert (%if #t 1 2)   1)
 (%assert (%if #f 1 2)   2)
-(%if (else1)
-  (%assert (%if #f 1 2 3) Error :type 'match :operands# -1)
-  (%assert (%if #f 1 2 3) 3)) 
-
-(%assert (%if*)                ) ;throw
-(%assert (%if* 0)              ) ;throw
-(%assert (%if* #t 1)           1)
-(%assert (%if* #f 1)           #inert)
-(%assert (%if* #f 1 2)         2)
-(%assert (%if* #f 1 #t 3)      3)
-(%assert (%if* #f 1 #f 3)      #inert)
-(%assert (%if* #f 1 #f 3 4)    4)
-(%assert (%if* #f 1 #f 3 #t 5) 5)
+(%assert (%if #f 1 2 3) &Wat.Vm$Error @getMessage "not a Boolean: 2" :type 'type :datum 2 :expected 'Boolean)
+(%assert (%if #f 1 #t 3)      3)
+(%assert (%if #f 1 #f 3)      #inert)
+(%assert (%if #f 1 #f 3 4)    4)
+(%assert (%if #f 1 #f 3 #t 5) 5)
 
 (%assert ((%vau))                 ) ;throw
 (%assert ((%vau a))               ) ;throw
@@ -134,7 +126,6 @@
     (%assert (%catchTagWth #_ #_ (%begin (%def x 0) (%loop (%if (%== x 10) (%throwTag #_ x)) (%def x (%+ x 1))))) 10) ))
 
 (%def testTco (%\ (n) (%if (%<= n 0) n (testTco (%- n 1)))))
-(%def testTco* (%\ (n) (%if* (%<= n 0) n (testTco (%- n 1)))))
 
 
 (%if (doTco) (%assert (testTco 400) 0))

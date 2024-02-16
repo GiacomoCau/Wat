@@ -137,7 +137,6 @@ public class Vm {
 	boolean prWrn = false; // print warning
 	boolean prMap = false; // print error map entry
 	boolean aQuote = true; // auto quote list
-	boolean else1 = false; // else multiple expressions
 	boolean hdlAny = true; // any value for catch hadler
 	
 	Object boxDft = null; // box/dinamic default: null, inert, ...
@@ -828,36 +827,6 @@ public class Vm {
 	Begin begin = new Begin();
 	class If implements Combinable  {
 		public Object combine(Env e, List o) {
-			return combine(null, e, o);
-		}
-		Object combine(Resumption r, Env e, List o) {
-			var chk = checkR(this, o, 2, else1 ? 3 : more); // o = (test then . else) 
-			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
-			var car = o.car;
-			return tco(()-> pipe(dbg(e, this, o), ()-> getTco(evaluate(e, car)), test->
-				switch (istrue(test)) {
-					case Suspension s-> s;
-					case Boolean b-> b ? tco(()-> evaluate(e, o.car(1)))
-						: o.cdr(1) == null ? inert : else1 ? tco(()-> evaluate(e, o.car(2))) : tco(()-> begin.combine(e, o.cdr(1)));
-					case Object obj-> resumeError(obj, symbol("Boolean"));
-				}
-			));
-		}
-		public String toString() { return "%If"; }
-	}
-	Object istrue(Object res) {
-		return switch (typeT) {
-			case 0-> res instanceof Boolean b ? b : typeError("not a {expected}: {datum}", res, symbol("Boolean")); // Kernel, Wat, Lispx
-			case 1-> !member(res, false); // Scheme, Guile, Racket
-			case 2-> !member(res, false, null); // Clojure
-			case 3-> !member(res, false, null, ignore);
-			case 4-> !member(res, false, null, ignore, 0); // Javascript
-			default-> res instanceof Boolean b ? b : typeError("not a {expected}: {datum}", res, symbol("Boolean")); // Kernel, Wat, Lispx
-		};
-	}
-	class IfStar implements Combinable  {
-		public Object combine(Env e, List o) {
 			var chk = checkR(this, o, 2, more); // o = (test then . else) 
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
@@ -876,6 +845,16 @@ public class Vm {
 			));
 		}
 		public String toString() { return "%If*"; }
+	}
+	Object istrue(Object res) {
+		return switch (typeT) {
+			case 0-> res instanceof Boolean b ? b : typeError("not a {expected}: {datum}", res, symbol("Boolean")); // Kernel, Wat, Lispx
+			case 1-> !member(res, false); // Scheme, Guile, Racket
+			case 2-> !member(res, false, null); // Clojure
+			case 3-> !member(res, false, null, ignore);
+			case 4-> !member(res, false, null, ignore, 0); // Javascript
+			default-> res instanceof Boolean b ? b : typeError("not a {expected}: {datum}", res, symbol("Boolean")); // Kernel, Wat, Lispx
+		};
 	}
 	class Loop implements Combinable  {
 		public Object combine(Env e, List o) {
@@ -1686,7 +1665,6 @@ public class Vm {
 				"%internName", wrap(new JFun("%InternName", (n,o)-> checkN(n, o, 1, Intern.class), (l,o)-> o.<Intern>car().name )),
 				// First-Order Control
 				"%if", new If(),
-				"%if*", new IfStar(),
 				"%loop", new Loop(),
 				"%atEnd", new AtEnd(),
 				"%throwTag", apply(t-> !ctApv ? t : wrap(t), new ThrowTag()),
@@ -1808,7 +1786,6 @@ public class Vm {
 						? switch (bndRes) {case 1-> keyword("rhs"); case 2-> keyword("prv"); default-> inert; }
 						: inert(bndRes=(int) bndRes(o.car, false)) )),
 				"prEnv", wrap(new JFun("PrEnv", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? prEnv : inert(prEnv=o.car()) )),
-				"else1", wrap(new JFun("Else1", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? else1 : inert(else1=o.car()) )),
 				"boxDft", wrap(new JFun("BoxDft", (n,o)-> checkR(n, o, 0, 1), (l,o)-> l == 0 ? boxDft : inert(boxDft=o.car) )),
 				"aQuote", wrap(new JFun("AQuote", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? aQuote : inert(aQuote=o.car()) )),
 				"prStk", wrap(new JFun("PrStk", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prStk : inert(prStk=o.car()) )),

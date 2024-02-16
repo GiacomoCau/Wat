@@ -566,38 +566,23 @@
     (list 'def dt (list (unwrap eval) value env))
     (eval ep env)))
 
-(defVau if* clauses env
-  (if (null? clauses) #inert
-    (if (null? (cdr clauses)) (eval (car clauses) env)
-      (let1 ((test then . else) clauses)
-        (if (eval test env) (eval then env)
-          (apply if* else env) )))))
-
-(def if* %if*)
-
-(assert (if*))
-(assert (if* 1))
-(assert (if* #t 2) 2)
-(assert (if* #f 2) #inert)
-(assert (if* #f 2 3) 3)
-(assert (if* #f 1 #f 2) #inert)
-(assert (if* #f 1 #f 2 3) 3)
-
 
 ;;; And Or
 
 (defVau && ops env
-  (if (null? ops) #t
-    (if (eval (car ops) env)
-      (apply && (cdr ops) env)
-      #f )))
+  (if
+    (null? ops) #t
+    (eval (car ops) env) (apply && (cdr ops) env)
+    #f ))
+
 
 (def and &&)
 
 (defVau || ops env
-  (if (null? ops) #f
-    (if (eval (car ops) env) #t
-      (apply || (cdr ops) env) )))
+  (if
+    (null? ops) #f
+    (eval (car ops) env) #t
+    (apply || (cdr ops) env) ))
 
 (def or ||)
 
@@ -1110,7 +1095,7 @@
             ((#! (and Integer (>= 0)) times) (eval times env))
             (env (newEnv env var 0)) )
       (loop (if (>= (env var) times)
-              (break/v (if* (!null? ending) (apply begin ending env) (zero? times) #inert result)) )
+              (break/v (if (!null? ending) (apply begin ending env) (zero? times) #inert result)) )
             (def result (apply begin forms env))
             (eval (list '++ var) env) ))
     (let1 ((#! (and Integer (> 0)) times) (eval times env))
@@ -1129,8 +1114,8 @@
 
 (def\ (any? f lst . lst*)
   (if (null? lst*)
-    ((rec\ (any? lst) (if (null? lst) #f (if (f (car lst)) #t (any? (cdr lst)))) ) lst)
-    ((rec\ (any*? lst*) (if (null? (car lst*)) #f (if (apply f (map car lst*)) #t (any*? (map cdr lst*))))) (cons lst lst*)) ))
+    ((rec\ (any? lst) (if (null? lst) #f (f (car lst)) #t (any? (cdr lst))) ) lst)
+    ((rec\ (any*? lst*) (if (null? (car lst*)) #f (apply f (map car lst*)) #t (any*? (map cdr lst*))) ) (cons lst lst*)) ))
 
 (assert (any? null? (1 2 3 4)) #f)
 (assert (any? null? (1 2 () 4)) #t)
@@ -1141,8 +1126,8 @@
 
 (def\ (all? f lst . lst*)
   (if (null? lst*)
-    ((rec\ (all? lst) (if (null? lst) #t (if (f (car lst)) (all? (cdr lst)) #f))) lst)
-    ((rec\ (all*? lst*) (if (null? (car lst*)) #t (if (apply f (map car lst*)) (all*? (map cdr lst*)) #f))) (cons lst lst*)) ))
+    ((rec\ (all? lst) (if (null? lst) #t (f (car lst)) (all? (cdr lst)) #f) ) lst)
+    ((rec\ (all*? lst*) (if (null? (car lst*)) #t (apply f (map car lst*)) (all*? (map cdr lst*)) #f) ) (cons lst lst*)) ))
 
 (assert (all? number? (1 2 3 4)) #t)
 (assert (all? number? (1 2 () 4)) #f)
