@@ -13,9 +13,9 @@ import static Wat.Utility.getField;
 import static Wat.Utility.headAdd;
 import static Wat.Utility.ifnull;
 import static Wat.Utility.isInstance;
+import static Wat.Utility.member;
 import static Wat.Utility.more;
 import static Wat.Utility.or;
-import static Wat.Utility.member;
 import static Wat.Utility.read;
 import static Wat.Utility.reorg;
 import static Wat.Utility.stackDeep;
@@ -1839,7 +1839,7 @@ public class Vm {
 		}
 	}
 	public String readText(String fileName) throws IOException {
-		return Files.readString(Paths.get(fileName), Charset.forName("cp1252"));
+		return Files.readString(Paths.get(fileName), Charset.forName("UTF-8"));
 	}
 	public Object readList(String fileName) throws Exception {
 		return toLispList(toByteCode(readText(fileName)));
@@ -1864,8 +1864,8 @@ public class Vm {
 	public void repl() throws Exception {
 		loop: for (;;) {
 			switch (read()) {
-				case "\n": break;
-				case "exit\n" : break loop;
+				case "":
+					break loop;
 				case String exp: try {
 					print(exec(toByteCode(exp)));
 				}
@@ -1887,7 +1887,7 @@ public class Vm {
 				}
 			}
 		}
-		print("\nfinito");
+		print("finito");
 	}
 	private void print(Throwable thw) {
 		do out.println(
@@ -1903,6 +1903,8 @@ public class Vm {
 	
 	// Test
 	public static void main(String[] args) throws Exception {
+		//out.println(Charset.defaultCharset());
+		//out.println(getProperty("stdout.encoding"));
 		new Vm().main("boot.lsp");
 	}
 	public void main(String file) throws Exception {

@@ -19,7 +19,7 @@ function camelize(w, a) {
 }
 
 
-# scarto le righe gi‡ commentate
+# scarto le righe gi√† commentate
 /^[[:blank:]]*;/ { print; next }
 
 # scarto stringhe che iniziano e finiscono sulla linea

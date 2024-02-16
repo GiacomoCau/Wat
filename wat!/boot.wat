@@ -201,12 +201,18 @@
 
 (def curry
   (\ (f v) (\ args (apply** f v args))) )
+
+(def curry*
+  (\ (f . v*) (\ args (apply f (append v* args)))) )
   
 (def identity
   (\ (x) x))
 
 (def 1+
   (\ (n) (+ n 1)))
+
+(def _-1
+  (\ (n) (- n 1)))
 
 
 ;;; Macro
@@ -280,6 +286,7 @@
 
 (def\ (inert? o) (== o #inert))
 (def\ (zero? n) (== n 0))
+(def\ (uno? n) (== n 1))
 (def\ (even? n) (== (% n 2) 0))
 (def\ (odd? n)  (== (% n 2) 1))
 
@@ -706,7 +713,7 @@
 (def\ (!member? key lst)
   (null? (member key lst)) )
 
-#| TODO per omogeneità con lispx, da valutare
+#| TODO per omogeneitÃ  con lispx, da valutare
 (def\ (member key lst . keywords)
   (let ( (test (opt? (get? :test keywords) ==))
          (fkey (opt? (get? :fkey keywords) identity)) )
@@ -941,7 +948,7 @@
 (assert (the+ (or 1 2) 2) 2)
 (assert (the+ (or 1 2) 3) Error :type 'type :datum 3 :expected '(or 1 2))
 
-; TODO non è più così costosa la conversione, si può fare
+; TODO non Ã¨ piÃ¹ cosÃ¬ costosa la conversione, si puÃ² fare
 ; (def the the+)
 
 

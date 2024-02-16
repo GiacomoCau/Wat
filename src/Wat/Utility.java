@@ -3,10 +3,12 @@ package Wat;
 import static Wat.Utility.PrimitiveWrapper.toPrimitive;
 import static java.lang.Character.toUpperCase;
 import static java.lang.System.arraycopy;
+import static java.lang.System.getProperty;
 import static java.lang.System.in;
 import static java.lang.System.out;
 import static java.lang.reflect.Array.newInstance;
 import static java.lang.reflect.Array.set;
+import static java.nio.charset.Charset.forName;
 import static java.util.Arrays.copyOf;
 import static java.util.Arrays.copyOfRange;
 import static java.util.Arrays.stream;
@@ -14,12 +16,14 @@ import static java.util.Comparator.comparing;
 import static java.util.Map.of;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.lang.reflect.Array;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -33,6 +37,22 @@ import List.ParseException;
 
 
 public class Utility {
+	
+	//*
+	public static void main(String[] args) throws Exception {
+		//out.println(toSource("a\nb"));
+		//out.println(toString("a\\nb"));
+		//out.println(toSource(toString("a\\nb")));
+		//out.println(toString(toSource("a\nb")));
+		out.println(Charset.defaultCharset());
+		out.println(getProperty("stdout.encoding"));
+		//var isr = new InputStreamReader(in, forName("UTF-8"));
+		for(;;) {
+			var v = read(/*0, isr*/);
+			out.print(v);
+		}
+	}
+	//*/
 	
 	public static int more = Integer.MAX_VALUE;
 	
@@ -135,17 +155,6 @@ public class Utility {
 	
 	public static List toList(Object... objects) {
 		return stream(objects).toList();
-	}
-	
-	public static void main(String[] args) throws Exception {
-		//out.println(toSource("a\nb"));
-		//out.println(toString("a\\nb"));
-		//out.println(toSource(toString("a\\nb")));
-		//out.println(toString(toSource("a\nb")));
-		for(;;) {
-			var v = read();
-			out.print(v);
-		}
 	}
 	
 	private static Set<Entry<String,String>> control = of("\"", "\\\\\"", "\n", "\\\\n", "\t", "\\\\t", "\r", "\\\\r", "\b", "\\\\b", "\f", "\\\\f").entrySet();
@@ -282,7 +291,7 @@ public class Utility {
 			return new Object[] { args.getClass().componentType() == cType ?  args : copyFrom(cType, 0, args) };
 		}
 		if (args.length == length && (args[length-1] == null || args[length-1].getClass() == parms[length-1])) return args;
-		Object[] newArgs = copyOf(args, length); // eventualmente un null in più!
+		Object[] newArgs = copyOf(args, length); // eventualmente un null in piÃ¹!
 		var cType = parms[length-=1].getComponentType();
 		newArgs[length] = copyFrom(cType, length, args);
 		return newArgs;
@@ -334,10 +343,10 @@ public class Utility {
 		boolean constructors = name.equals("new");
 		Class <?> classe = constructors ? (Class) obj : obj.getClass();
 		if (trace) out.println(classe + " " + toString(name, argumentsClass));
-		// per i costruttori obj è una classe e solo su quella vanno cercati 
+		// per i costruttori obj Ã¨ una classe e solo su quella vanno cercati 
 		// i metodi invece vanno cercati sulla classe di obj e le relative super classi
-		// se obj è una classe vanno anche cercati su obj stesso e le relative super classi
-		// escludendo Class e Object perchè già controllate con la prima ricerca 
+		// se obj Ã¨ una classe vanno anche cercati su obj stesso e le relative super classi
+		// escludendo Class e Object perchÃ© giÃ  controllate con la prima ricerca 
 		List<Executable> executables = new ArrayList<>();
 		do addExecutable(executables, classe, publicMember, constructors, name, argumentsClass);
 		while (!constructors && !publicMember && (classe = classe.getSuperclass()) != null);
@@ -572,26 +581,29 @@ public class Utility {
 		}
 	}
 	
-	static public String read() throws IOException {
+	static public String read() throws Exception {
 		return read(0);
 	}
-	static public String read(int lv) throws IOException {
-		return read(lv, in);
+	
+	static InputStreamReader isr = new InputStreamReader(in, forName("UTF-8"));
+	
+	static public String read(int lv) throws Exception {
+		return read(lv, isr);
 	}
-	static public String read(int lv, InputStream in) throws IOException {
+	static public String read(int lv, Reader in) throws IOException {
 		return read(lv, in, false);
 	}
-	static public String read(int lv, InputStream in, boolean inMlComment) throws IOException {
+	static public String read(int lv, Reader in, boolean inMlComment) throws IOException {
 		var s = new StringBuilder();
 		int open = 0, close = 0;
 		boolean inEscape = false, inString = false, inSymbol = false, inUSymbol = false, inComment=false, sMlComment=false, eMlComment=false;
 		do {
 			//out.println("loop");
 			var oc = close-open;
-			if (in.available() == 0) out.print((lv == 0 ? "" : lv + "|") + (oc==0 ? "> " : "%+d%s> ".formatted(oc, oc>0 ? "(" : ")")));
+			if (!in.ready()) out.print((lv == 0 ? "" : lv + "|") + (oc==0 ? "> " : "%+d%s> ".formatted(oc, oc>0 ? "(" : ")")));
 			for (int c; (c = in.read()) != '\n' || inString || inUSymbol || inMlComment;) {
 				//out.printf("%d %c \n",c, c==-1?' ':c);
-				if (c == -1) return "";
+				if (c == -1) { out.println("ctrl-z"); return ""; }
 				if (inEscape) {
 					inEscape = false;
 				}
@@ -600,8 +612,8 @@ public class Utility {
 					case '"'-> inString = false;
 				}
 				else if (inSymbol) switch (c) {
-					case '('->{ inSymbol = false; open += 1; }
-					case ')'->{ inSymbol = false; close += 1; }
+					case '('-> { inSymbol = false; open += 1; }
+					case ')'-> { inSymbol = false; close += 1; }
 					default-> {
 						if (c <= 32) inSymbol = false;
 					}

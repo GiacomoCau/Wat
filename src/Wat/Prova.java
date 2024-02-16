@@ -1,6 +1,8 @@
 package Wat;
 
 import static Wat.Utility.member;
+import static java.lang.System.getProperty;
+import static java.lang.System.in;
 import static java.lang.System.out;
 import static java.nio.charset.Charset.forName;
 import static java.nio.file.Files.readString;
@@ -13,12 +15,15 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,8 +48,38 @@ import Wat.Vm.Symbol;
 
 public class Prova {
 	
-	public static void main(String[] args) throws FileNotFoundException, IOException {
-		out.println(Long.parseLong("1_2L"));
+	public static void main(String[] args) throws IOException {
+		utf8();
+	}
+
+	public static void utf8() throws IOException {
+		out.println(Charset.defaultCharset());
+		out.println(getProperty("stdout.encoding"));
+		var isr = new InputStreamReader(in, Charset.forName("UTF-8"));
+		loop: for (;;) {
+			if (!isr.ready()) out.print("> ");
+			for (int c; (c = isr.read()) != '\n';) {
+				if (c == -1) break loop;
+				out.print((char) c);
+			}
+		}
+		out.print("\nfinito");
+	}
+
+	public static void utf82() throws IOException {
+		// non funziona
+		out.println(Charset.defaultCharset());
+		out.println(getProperty("stdout.encoding"));
+		var isr = new InputStreamReader(in, Charset.forName("UTF-8"));
+		var osw = new OutputStreamWriter(out, Charset.forName("UTF-8"));
+		loop: for (;;) {
+			if (!isr.ready()) osw.write("> ");
+			for (int c; (c = isr.read()) != '\n';) {
+				if (c == -1) break loop;
+				osw.write((char) c);
+			}
+		}
+		osw.write("\nfinito");
 	}
 
 	public static void readPrint() throws IOException, FileNotFoundException {
@@ -679,7 +714,7 @@ public class Prova {
 		out.println(Prova.Cls.class.getConstructor());
 		out.println(Prova.Cls.class.getConstructor(int.class));
 		
-		// facendolo diretto è semplice
+		// facendolo diretto Ã¨ semplice
 		out.println(Integer.class.getConstructor(String.class));
 		out.println();
 
@@ -715,14 +750,14 @@ public class Prova {
 		out.println(classGetConstructor/*.getClass().getSimpleName()*/);
 		out.println();
 
-		// a questo punto sapendo che è un method devo invocarlo passandogli i parametri giusti ma qui sta il problema
+		// a questo punto sapendo che Ã¨ un method devo invocarlo passandogli i parametri giusti ma qui sta il problema
 		// devo recuperare il metodo getConstructor di Integer che prende come argomenti un Class... ovvero un Class[]
 		
-		// però se provo quanto immagino becco un IllegalArgumentException argument type mismatch
+		// perÃ² se provo quanto immagino becco un IllegalArgumentException argument type mismatch
 		try { classGetConstructor.invoke(Integer.class, Class[].class); } catch (Exception e) { e.printStackTrace(out); }
 		out.println();
 		
-		// ma è la stessa cosa se passo direttamente la classe String
+		// ma Ã¨ la stessa cosa se passo direttamente la classe String
 		try { classGetConstructor.invoke(Integer.class, String.class); } catch (Exception e) { e.printStackTrace(out); }
 		out.println();
 
@@ -743,7 +778,7 @@ public class Prova {
 		try { classGetConstructor.invoke(Integer.class, new Object[] { String.class} ); } catch (Exception e) { e.printStackTrace(out); }
 		out.println();
 
-		// a questo punto non so più cosa pensare e soprattutto come riuscire!
+		// a questo punto non so piÃ¹ cosa pensare e soprattutto come riuscire!
 
 		//var integerGetConstructor = classGetConstructor.invoke(new Object[] {Integer.class, String.class} ); // object is not an instance of declaring class
 		//out.println(integerGetConstructor.getClass().getSimpleName());

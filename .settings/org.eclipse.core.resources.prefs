@@ -1,2 +1,6 @@
 eclipse.preferences.version=1
-encoding/<project>=windows-1252
+encoding/<project>=UTF-8
+encoding//lispx/src/boot.lispx=UTF-8
+encoding//lispx/src/condSys.lispx=UTF-8
+encoding//lispx/tool/repl/repl.lispx=UTF-8
+encoding//wat\!/boot.wat=UTF-8

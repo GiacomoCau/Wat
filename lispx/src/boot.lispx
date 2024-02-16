@@ -410,6 +410,9 @@
 (def curry
   (\ (f v) (\ args (apply** f v args))) )
 
+(def curry*
+  (\ (f . v*) (\ args (apply f (append v* args)))) )
+
 (def identity
   #|Identity function.
    |#
@@ -417,6 +420,9 @@
 
 (def 1+
   (\ (n) (+ n 1)))
+
+(def _-1
+  (\ (n) (- n 1)))
 
 
 ;;; Macro
@@ -509,6 +515,7 @@
 
 (def\ (inert? o) (== o #inert))
 (def\ (zero? n) (== n 0))
+(def\ (uno? n) (== n 1))
 (def\ (even? n) (== (% n 2) 0))
 (def\ (odd? n)  (== (% n 2) 1))
 
@@ -1178,7 +1185,7 @@
 
 (defMacro (the+ ck obj) (list 'let1 (list 'obj obj) (list 'check 'obj ck) 'obj))
 
-; TODO non è più così costosa la conversione, si può fare
+; TODO non Ã¨ piÃ¹ cosÃ¬ costosa la conversione, si puÃ² fare
 ; (def the the+)
 
 

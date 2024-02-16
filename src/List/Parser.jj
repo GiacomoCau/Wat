@@ -1,8 +1,10 @@
 
 options {
 	JDK_VERSION = "1.8";
-	static = false;
-	debug_parser = false;
+	STATIC = false;
+	DEBUG_PARSER = false;
+	UNICODE_INPUT = true;
+	JAVA_UNICODE_ESCAPE = true;
 }
 
 
@@ -10,12 +12,16 @@ PARSER_BEGIN(Parser)
 
 package List;
 
+import static java.lang.System.getProperty;
+import static java.lang.System.in;
+import static java.lang.System.out;
 import static Wat.Utility.$;
 import static Wat.Utility.classForName;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,11 +49,12 @@ public class Parser {
 	}
 	
 	public static void main(String args []) throws Exception {
-		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+		//out.println(Charset.defaultCharset());
+		//out.println(getProperty("stdout.encoding"));
 		boolean expr = true;
 		for (;;) {
-			//System.out.print("> "); String line = in.readLine(); line += "\n";
 			String line = Wat.Utility.read();
+			if (line.equals("")) break;
 			if (line.equals("\n")) continue;
 			var cmd = line.substring(0,line.length()-1);
 			if (cmd.equals("!end"))
@@ -57,31 +64,30 @@ public class Parser {
 		  	else if (cmd.equals("!token"))
 		  		expr = false;
 			else try {
- 				//line = Utility.toString(line);
-				System.out.print(line);
+				out.print(line);
 				Parser parser = new Parser(line); // static=false
  				if (expr) {
 					Object o = parser.parse();
-					System.out.println("OK: " + toString(o));
+					out.println("OK: " + toString(o));
 				}
 				else {
 					for(;;) {
 						Token token = parser.getNextToken();
 						if (token.kind == 0) break;
-						System.out.printf("%s:\t%s\n", ParserConstants.tokenImage[token.kind], token.image);
+						out.printf("%s:\t%s\n", ParserConstants.tokenImage[token.kind], token.image);
 					}
 				}
 			}
 			catch (Exception e) {
-				System.out.println("NOK! " /*+ e.getMessage()*/);
+				out.println("NOK! " /*+ e.getMessage()*/);
 				e.printStackTrace(System.out);
 			}
 			catch (Error e) {
-				System.out.println("Oops! " /*+ e.getMessage()*/);
-				e.printStackTrace(System.out);
+				out.println("Oops! " /*+ e.getMessage()*/);
+				e.printStackTrace(out);
 			}
 		}
-		System.out.println("finito!");
+		out.println("finito!");
 	}
 	
 	public static String toString(Object o) {
@@ -182,10 +188,18 @@ TOKEN:	// identifiers
 |   < # jvn: "_" | <jvf> | <digit> >
 |   < Kwd: ":" (<Sym>)+ >
 |	< Sym: <first> ( "#" | "'" | "|" | "," | "`" | "\"" | <first> )* >
-|	< # first: <letter> | <special> | <digit> > 
+|	< # first: <letter> | <special> | <digit> | <unicode> > 
 |	< # special: "-" | "+" | "&" | "." | "@" | "!" | "=" | ">" | "<" | "%" | "?" | "/" | "*" | "$" | "_" | "~" | "^" | ":" | "\\" | "||" | "[]" >
 |	< # letter: [ "A"-"Z", "a"-"z" ] >
 |	< # digit: [ "0"-"9" ] >
+|   < # unicode: [ "\u00A1" - "\u00ff" ] // latin1 supplement
+			|	 [ "\u0370" - "\u03ff" ] // greek and coptic
+			|	 [ "\u2070" - "\u209f" ] // superscripts and subscripts
+			|	 [ "\u20a0" - "\u20bf" ] // currency
+			|	 [ "\u2100" - "\u214f" ] // letterlike symbols
+			|	 [ "\u2150" - "\u218f" ] // number forms
+			|	 [ "\u2200" - "\u22ff" ] // mathematical operator 
+    >
 }
 
 

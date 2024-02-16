@@ -197,7 +197,7 @@
                      (map (\ ((name functionForm . properties))
                              (list* name
                                     (\ args (returnFrom trampoline (\ () (apply (eval functionForm env) args))))
-                                    ; permetterebbe functionForm arbitrarie che verrebbero restituite come valore dell'handler senza però definire l'handler
+                                    ; permetterebbe functionForm arbitrarie che verrebbero restituite come valore dell'handler senza perÃ² definire l'handler
                                     ;(\ args (returnFrom trampoline (\ () (let1 (f (eval functionForm env)) (if (type? f Combinable) (apply f args env) f)) )))
                                     properties ))
                           handlerSpecs)
