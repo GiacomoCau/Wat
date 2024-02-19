@@ -998,8 +998,7 @@
   (let1 loop (lst lst)
     (if (cons? lst)
       (let1 ((k v . lst) lst)
-        (if (== k key) (cons v)
-          (loop lst)) )
+        (if (== k key) (cons v) (loop lst)) )
       #null )))
 
 
@@ -1117,12 +1116,13 @@
               (apply begin forms env+)
               (loop clauses) )))))))
 
-(defMacro (opt? exp . dft)
+(defVau (opt? exp . dft) env
   #|Return the contents of the OPTION?, or the DEFAULT? if the option
    |is nil.  The default itself defaults to void.  The DEFAULT? is
    |evaluated lazily, only when the OPTION? is nil.
    |#
-  (list* ifOpt? (list 'exp exp) 'exp dft))
+  (ifOpt? (exp (eval exp env)) exp
+    (ifOpt? (dft (eval (cons 'list dft) env)) dft) ))
 
 (defVau opt*? (lst . dft) env
   #|Similar to `opt', but provides DEFAULTS for any number of
@@ -1244,8 +1244,8 @@
                     :break (makeThrowTag\ "break" %deep)
                     :continue (makeThrowTag\ "continue" %deep)
                     :break/v (makeThrowTagValue\ "break" %deep)
-                    :until (\ (b) (if b (throwTag break)))
-                    :while (\ (b) (if (! b) (throwTag break))) ))) 
+                    :until! (\ (b) (if b (throwTag break)))
+                    :while! (\ (b) (if (! b) (throwTag break))) ))) 
               (if (check? forms (2 oo 'for ((2 3)) )) ;loop for
                 (let ( (for (cadr forms))
                        (forms (01->+ (cddr forms))) )
@@ -1275,21 +1275,21 @@
 (defMacro (for ((#! Symbol var) init cond . incr) . body)
   (list* 'loop 'for1 (list* var init incr)
     (if (%ignore? cond) body
-      (cons (list 'while cond) body) )))
+      (cons (list 'while! cond) body) )))
 
 (defMacro (for ((#! Symbol var) init . incr) cond . body)
   (list* 'loop 'for1 (list* var init incr)
     (if (%ignore? cond) body
-      (cons (list 'while cond) body) )))
+      (cons (list 'while! cond) body) )))
 
 (defMacro (while cond . body)
-  (list* 'loop (list 'while cond)
+  (list* 'loop (list 'while! cond)
     body ))
 
 (defMacro until (cond . forms)
   #|Evaluate FORMS until TEST-FORM evaluates to true.
    |#
-  (list* 'while (list '! cond) forms) )
+  (list* 'loop (list 'until! cond) forms) )
 
 (defMacro doTimes ((var times . result) . body)
   #|Cf. Common Lisp's DOTIMES.
@@ -1657,8 +1657,16 @@
    |$(fn arguments)
    |#
   (if (null? args) #t
-    (if (cons? (member arg args :test eq?)) #f
+    (if (member? arg args :test eq?) #f
       (apply /= args) )))
+
+#| TODO utile?
+(def\ /= args
+  (if (null? args) #t
+    (let1 ((arg . args) args)
+      (if (member? arg args :test eq?) #f
+        (apply /= args) ))))
+|#
 
 
 ;;; Thetic & Lytic
@@ -1945,6 +1953,35 @@
           (milli (- (currentTime #null) milli)) )
     (print "time " times " " forms ": " milli "ms" (if (== times 1) "" ($ ", on average: " (@format String "%.2f" (/ milli (@doubleValue times))) "ms" )))
     result ))
+
+
+;;;; Simple Set
+
+;(def set? /=) ; TODO solo se (/=) -> #t
+
+(def\ (set? lst) (if (null? lst) #t (apply /= lst)))
+
+(def\ (set+ v lst)
+  (if (member? v lst) lst (cons v lst)))
+  
+(defVau (defSet+ (#! Symbol plc) v) env
+  (let ( (v (eval v env)) (lst (env plc)) )
+    (if (member? v lst) lst (env :def :rhs plc (cons v lst))) ))
+
+(def\ ->set (lst)
+  (let loop ( (res ()) (lst lst) )
+    (if (null? lst) (reverse res)
+      (let1 ((v . lst) lst)
+        (loop (if (member? v res) res (cons v res)) lst) ))))
+
+#| TODO da valutare
+(def\ ->set (lst)
+  (let1 loop (res ())
+    (if (null? lst) (reverse res)
+      (let1 (v (car lst))
+        (set! lst (cdr lst)) 
+        (loop (if (member? v res) res (cons v res))) ))))
+|#
 
 
 ;;;; Java Try/Resource

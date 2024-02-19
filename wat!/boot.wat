@@ -204,7 +204,7 @@
 
 (def curry*
   (\ (f . v*) (\ args (apply f (append v* args)))) )
-  
+
 (def identity
   (\ (x) x))
 
@@ -729,8 +729,7 @@
   (let1 loop (lst lst)
     (if (cons? lst)
       (let1 ((k v . lst) lst)
-        (if (== k key) (cons v)
-          (loop lst)) )
+        (if (== k key) (cons v) (loop lst)) )
       #null )))
 
 (assert (get? :b '(:a 1 :b 2 :c 3)) '(2))
@@ -867,8 +866,9 @@
 (assert (caseOpt? '(1 2) ((a) 1) ((a b) (+ a b))) 3)
 (assert (caseOpt? '(1 2 3) ((a) 1) ((a b) (+ a b))) #null)
 
-(defMacro (opt? exp . dft)
-  (list* ifOpt? (list 'exp exp) 'exp dft))
+(defVau (opt? exp . dft) env
+  (ifOpt? (exp (eval exp env)) exp
+    (ifOpt? (dft (eval (cons 'list dft) env)) dft) ))
 
 (assert (opt? () 10) 10)
 (assert (opt? '(2) 10) 2)
@@ -986,8 +986,8 @@
                     :break (makeThrowTag\ "break" %deep)
                     :continue (makeThrowTag\ "continue" %deep)
                     :break/v (makeThrowTagValue\ "break" %deep)
-                    :until (\ (b) (if b (throwTag break)))
-                    :while (\ (b) (if (! b) (throwTag break))) ))) 
+                    :until! (\ (b) (if b (throwTag break)))
+                    :while! (\ (b) (if (! b) (throwTag break))) ))) 
               (if (check? forms (2 oo 'for ((2 3)) )) ;loop for
                 (let ( (for (cadr forms))
                        (forms (01->+ (cddr forms))) )
@@ -1033,19 +1033,19 @@
 (defMacro (for ((#! Symbol var) init cond . incr) . body)
   (list* 'loop 'for1 (list* var init incr)
     (if (%ignore? cond) body
-      (cons (list 'while cond) body) )))
+      (cons (list 'while! cond) body) )))
 
 ;(for (i 0 (< i 3) (++ i)) (log "x" i) (for (y 0 #ignore (++ y)) (if (> y 3) (break -1)) (log "y" y)))
 
 (defMacro (for ((#! Symbol var) init . incr) cond . body)
   (list* 'loop 'for1 (list* var init incr)
     (if (%ignore? cond) body
-      (cons (list 'while cond) body) )))
+      (cons (list 'while! cond) body) )))
 
 ;(for (i 0 (++ i)) (< i 3) (log "x" i) (for (y 0 (++ y)) #ignore (if (> y 3) (break -1)) (log "y" y)))
 
 (defMacro (while cond . body)
-  (list* 'loop (list 'while cond)
+  (list* 'loop (list 'while! cond)
     body ))
 
 ;(let1 (i 0) (while (< i 3) (print i) (++ i)))
@@ -1060,7 +1060,7 @@
 (assert (let ((c 10) (r #null)) (while #t (if (zero? c) (break/v r)) (if (zero? (% (-- c) 2)) (continue)) (def r (cons c r)) )) '(1 3 5 7 9))
 
 (defMacro until (cond . forms)
-  (list* 'while (list '! cond) forms) )
+  (list* 'loop (list 'until! cond) forms) )
 
 (defMacro doTimes ((var times . result) . body)
   (let1\
@@ -1430,8 +1430,16 @@
 
 (def\ /= (arg . args)
   (if (null? args) #t
-    (if (cons? (member arg args :test eq?)) #f
+    (if (member? arg args) #f
       (apply /= args) )))
+
+#| TODO utile?
+(def\ /= args
+  (if (null? args) #t
+    (let1 ((arg . args) args)
+      (if (member? arg args) #f
+        (apply /= args) ))))
+|#
 
 
 ;;; Thetic & Lytic
@@ -1689,6 +1697,35 @@
           (milli (- (currentTime #null) milli)) )
     (print "time " times " " forms ": " milli "ms" (if (== times 1) "" ($ ", on average: " (@format String "%.2f" (/ milli (@doubleValue times))) "ms" )))
     result ))
+
+
+;;;; Simple Set
+
+;(def set? /=) ; TODO solo se (/=) -> #t
+
+(def\ (set? lst) (if (null? lst) #t (apply /= lst)))
+
+(def\ (set+ v lst)
+  (if (member? v lst) lst (cons v lst)))
+  
+(defVau (defSet+ (#! Symbol plc) v) env
+  (let ( (v (eval v env)) (lst (env plc)) )
+    (if (member? v lst) lst (env :def :rhs plc (cons v lst))) ))
+
+(def\ ->set (lst)
+  (let loop ( (res ()) (lst lst) )
+    (if (null? lst) (reverse res)
+      (let1 ((v . lst) lst)
+        (loop (if (member? v res) res (cons v res)) lst) ))))
+
+#| TODO da valutare
+(def\ ->set (lst)
+  (let1 loop (res ())
+    (if (null? lst) (reverse res)
+      (let1 (v (car lst))
+        (set! lst (cdr lst)) 
+        (loop (if (member? v res) res (cons v res))) ))))
+|#
 
 
 ;;;; Java Try/Resource
