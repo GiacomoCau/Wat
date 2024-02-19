@@ -700,8 +700,8 @@
 
 #| TODO per omogeneità con lispx, da valutare
 (def\ (member key lst . keywords)
-  (let ( (test (opt? (get? :test keywords) ==))
-         (fkey (opt? (get? :fkey keywords) identity)) )
+  (let ( (test (optDft (optValue :test keywords) ==))
+         (fkey (optDft (optValue :fkey keywords) identity)) )
     (let1 loop (lst lst)
       (if (cons? lst)
         (if (test (fkey (car lst)) key) lst
@@ -725,15 +725,15 @@
 
 (assert (assoc 'b '((a 1) (b 2) (c 3) (d 4))) '(b 2))
 
-(def\ (get? key lst)
+(def\ (optValue key lst)
   (let1 loop (lst lst)
     (if (cons? lst)
       (let1 ((k v . lst) lst)
         (if (== k key) (cons v) (loop lst)) )
       #null )))
 
-(assert (get? :b '(:a 1 :b 2 :c 3)) '(2))
-(assert (get? 'b '(a 1 b 2 c 3)) '(2))
+(assert (optValue :b '(:a 1 :b 2 :c 3)) '(2))
+(assert (optValue 'b '(a 1 b 2 c 3)) '(2))
 
 
 ;;; Case CaseType
@@ -805,76 +805,76 @@
   (if (null? (cdr forms)) (car forms) (cons 'begin forms)) )
 
 ;; (Idea from Taylor R. Campbell's blag. https://mumble.net/~campbell/blag.txt)
-(defVau (ifOpt? (pt opt?) then . else) env
+(defVau (ifOpt (pt opt) then . else) env
   #|Destructure the OPTION?.  If it's non-nil, evaluate the THEN form
    |with the NAME bound to the contents of the option.  If it's nil,
    |evaluate the ELSE form.
    |#
-  (let1 (opt? (eval opt? env))
-    (if (null? opt?)
+  (let1 (opt (eval opt env))
+    (if (null? opt)
       (if (null? else) #null
         (eval (1->+ else) env))
-      (if (list? opt?)
-        (eval (list* (list 'vau (list pt) #ignore then) opt?) env)
-        (typeError opt? '(or () List)) ))))
+      (if (list? opt)
+        (eval (list* (list 'vau (list pt) #ignore then) opt) env)
+        (typeError opt '(or () List)) ))))
 
-(assert (ifOpt? (a ()) (+ a 1)) #null)
-(assert (ifOpt? (a '(2)) (+ a 1)) 3)
-(assert (ifOpt? (a '(2 2)) (+ a 1)))
+(assert (ifOpt (a ()) (+ a 1)) #null)
+(assert (ifOpt (a '(2)) (+ a 1)) 3)
+(assert (ifOpt (a '(2 2)) (+ a 1)))
 
-(defVau (ifOpt*? (pt opt?) then . else) env
-  (let1 (opt? (eval opt? env))
-    (if (null? opt?)
+(defVau (ifOpt* (pt opt) then . else) env
+  (let1 (opt (eval opt env))
+    (if (null? opt)
       (if (null? else) #null
         (eval (1->+ else) env))
-      (if (list? opt?)
-        (eval (list* (list 'vau pt #ignore then) opt?) env)
-        (typeError opt? '(or () List)) ))))
+      (if (list? opt)
+        (eval (list* (list 'vau pt #ignore then) opt) env)
+        (typeError opt '(or () List)) ))))
 
-(assert (ifOpt*? ((a) ()) (+ 1 a)) #null)
-(assert (ifOpt*? ((a) ()) (+ 1 a) 0) 0)
-(assert (ifOpt*? ((a) ()) (+ 1 a) 0 1) 1)
-(assert (ifOpt*? ((a) '(2)) (+ a 1)) 3)
-(assert (ifOpt*? ((a) '(2 3)) (+ a 1)))
-(assert (ifOpt*? ((a b) '(2 3)) (+ a b)) 5)
+(assert (ifOpt* ((a) ()) (+ 1 a)) #null)
+(assert (ifOpt* ((a) ()) (+ 1 a) 0) 0)
+(assert (ifOpt* ((a) ()) (+ 1 a) 0 1) 1)
+(assert (ifOpt* ((a) '(2)) (+ a 1)) 3)
+(assert (ifOpt* ((a) '(2 3)) (+ a 1)))
+(assert (ifOpt* ((a b) '(2 3)) (+ a b)) 5)
 
-(defMacro whenOpt? ((pt opt?) . forms)
+(defMacro whenOpt ((pt opt) . forms)
   #|Destructure the OPTION?.  If it's non-nil, evaluate the FORMS with
    |the NAME bound to the contents of the option.  If it's nil, return nil.
    |#
-  (list 'ifOpt? (list pt opt?) (01->+ forms)) )
+  (list 'ifOpt (list pt opt) (01->+ forms)) )
 
-(defMacro unlessOpt? (opt? . forms)
+(defMacro unlessOpt (opt . forms)
   #|Destructure the OPTION?.  If it's nil, evaluate the FORMS.  If it's
    |non-nil, return nil.
    |#
-  (list* 'ifOpt? (list #ignore opt?) #null (01->+ forms)) )
+  (list* 'ifOpt (list #ignore opt) #null (01->+ forms)) )
 
-(defVau (caseOpt? exp . clauses) env
-  (let1 (exp (eval exp env))
-    (if (null? exp) #null
+(defVau (caseOpt opt . clauses) env
+  (let1 (opt (eval opt env))
+    (if (null? opt) #null
       (let1 loop (clauses clauses)
         (if (null? clauses) #null
           (let ( (env+ (newEnv env))
                  (((bindings . forms) . clauses) clauses) )
-            (if (|| (== bindings 'else) (bind? env+ bindings exp))
+            (if (|| (== bindings 'else) (bind? env+ bindings opt))
               (apply begin forms env+)
               (loop clauses) )))))))
 
-(assert (caseOpt? () ((a) 1) ((a b) (+ a b))) ())
-(assert (caseOpt? '(2) ((a) 1) ((a b) (+ a b))) 1)
-(assert (caseOpt? '(1 2) ((a) 1) ((a b) (+ a b))) 3)
-(assert (caseOpt? '(1 2 3) ((a) 1) ((a b) (+ a b))) #null)
+(assert (caseOpt () ((a) 1) ((a b) (+ a b))) ())
+(assert (caseOpt '(2) ((a) 1) ((a b) (+ a b))) 1)
+(assert (caseOpt '(1 2) ((a) 1) ((a b) (+ a b))) 3)
+(assert (caseOpt '(1 2 3) ((a) 1) ((a b) (+ a b))) #null)
 
-(defVau (opt? exp . dft) env
-  (ifOpt? (exp (eval exp env)) exp
-    (ifOpt? (dft (eval (cons 'list dft) env)) dft) ))
+(defVau (optDft opt . dft) env
+  (ifOpt (opt (eval opt env)) opt
+    (ifOpt (dft (eval (cons 'list dft) env)) dft) ))
 
-(assert (opt? () 10) 10)
-(assert (opt? '(2) 10) 2)
-(assert (opt? '(2 3) 10))
+(assert (optDft () 10) 10)
+(assert (optDft '(2) 10) 2)
+(assert (optDft '(2 3) 10))
 
-(defVau opt*? (lst . dft) env
+(defVau optDft* (lst . dft) env
   (let loop ((lst (eval lst env)) (dft dft))
     (if (null? lst)
       (if (null? dft) #null
@@ -886,10 +886,10 @@
         (cons (car lst)
           (loop (cdr lst) (if (null? dft) #null (cdr dft)))) ))))
 
-(assert (opt*? '(1 () 3) 1 2 3 4) '(1 2 3 4))
+(assert (optDft* '(1 () 3) 1 2 3 4) '(1 2 3 4))
 
-(def\ getOpt? (option?)
-  (opt? option? (simpleError "Option is nil")))
+(def\ optDft! (opt)
+  (optDft opt (simpleError "Option is nil")))
 
 
 ;;; Type Checks
@@ -950,7 +950,7 @@
 (assert (block exit (def x 1) (loop (if (== x 4) (exit 7)) (def x (+ x 1)))) 7)
 
 (def\ returnFrom (blockName . value?)
-  (blockName (opt? value? #inert)) )
+  (blockName (optDft value? #inert)) )
 
 (assert (block ciclo (def x 1) (loop (if (== x 4) (returnFrom ciclo 7)) (def x (+ x 1)))) 7)
 
@@ -971,7 +971,7 @@
                (@typeError vm ($ "invalid " name " index, not {expected}: {datum}") i `(and (>= ,(- 0 %deep)) (=< 0))) ))) )
     (let\ ( ((makeThrowTag\ name %deep)
                (\ (#! (0 1 Integer) i)
-                 (throwTag (makeTag (opt? i 0) name %deep)) ))
+                 (throwTag (makeTag (optDft i 0) name %deep)) ))
             ((makeThrowTagValue\ name %deep)
                (\ o
                  (if (== (check o (or (1) (2 Integer))) 1)
@@ -991,7 +991,7 @@
               (if (check? forms (2 oo 'for ((2 3)) )) ;loop for
                 (let ( (for (cadr forms))
                        (forms (01->+ (cddr forms))) )
-                  (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (opt? incr init)) for)))
+                  (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (optDft incr init)) for)))
                   (catchTag break
                     (eval (list* 'def* (map car for) (map cadr for)) env)   
                     (%loop
@@ -1000,7 +1000,7 @@
                 (if (check? forms (2 oo 'for1 (2 3))) ;loop for1
                   (let ( ((pt init . incr) (cadr forms))
                          (forms (01->+ (cddr forms))) )
-                    (def increment (list 'def pt (opt? incr init)))
+                    (def increment (list 'def pt (optDft incr init)))
                     (catchTag break
                       (eval (list 'def pt init) env)
                       (%loop
@@ -1291,7 +1291,7 @@
 
 (defVau defClass (name (#! (0 1 Symbol) superClass?) (#! (Symbol) slotSpecs) . properties) env
   ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
-  (let1 (superClass (findClass (opt? superClass? 'Obj) env))
+  (let1 (superClass (findClass (optDft superClass? 'Obj) env))
     (eval (list 'def name (%newClass name superClass)) env)) )
 
 
@@ -1561,11 +1561,11 @@
 
 (def\ fiberYield v?
   (takeSubcont fiberPrompt k
-    (makeYieldRecord (opt? v? #inert) k)))
+    (makeYieldRecord (optDft v? #inert) k)))
 
 (def\ fiberResume (yieldRecord . v?)
   (pushDelimSubcont fiberPrompt (yieldRecord 'continuation)
-    (opt? v? #inert)))
+    (optDft v? #inert)))
 
 (defMacro fiber body
   (list* pushPrompt 'fiberPrompt body))

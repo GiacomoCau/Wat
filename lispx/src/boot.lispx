@@ -968,8 +968,8 @@
    |each list element before comparison (defaults to `identity').
    |$(fn (item list &key test key))
    |#
-  (let ( (test (opt? (get? :test keywords) ==))
-         (fkey (opt? (get? :fkey keywords) identity)) )
+  (let ( (test (optDft (optValue :test keywords) ==))
+         (fkey (optDft (optValue :fkey keywords) identity)) )
     (let1 loop (lst lst)
       (if (cons? lst)
         (if (test (fkey (car lst)) key) lst
@@ -990,7 +990,7 @@
            (loop lst) ))
        #null )))
 
-(def\ (get? key lst)
+(def\ (optValue key lst)
   #|Search for the KEYWORD in the property list LST
    |(a list of alternating keywords and values)
    |and return the found value as an option.
@@ -1071,63 +1071,63 @@
   (if (null? (cdr forms)) (car forms) (cons 'begin forms)) )
 
 ;; (Idea from Taylor R. Campbell's blag. https://mumble.net/~campbell/blag.txt)
-(defVau (ifOpt? (pt opt?) then . else) env
+(defVau (ifOpt (pt opt) then . else) env
   #|Destructure the OPTION?.  If it's non-nil, evaluate the THEN form
    |with the NAME bound to the contents of the option.  If it's nil,
    |evaluate the ELSE form.
    |#
-  (let1 (opt? (eval opt? env))
-    (if (null? opt?)
+  (let1 (opt (eval opt env))
+    (if (null? opt)
       (if (null? else) #null
         (eval (1->+ else) env))
-      (if (list? opt?)
-        (eval (list* (list 'vau (list pt) #ignore then) opt?) env)
-        (typeError opt? '(or () List)) ))))
+      (if (list? opt)
+        (eval (list* (list 'vau (list pt) #ignore then) opt) env)
+        (typeError opt '(or () List)) ))))
 
-(defVau (ifOpt*? (pt opt?) then . else) env
-  (let1 (opt? (eval opt? env))
-    (if (null? opt?)
+(defVau (ifOpt* (pt opt) then . else) env
+  (let1 (opt (eval opt env))
+    (if (null? opt)
       (if (null? else) #null
         (eval (1->+ else) env))
-      (if (list? opt?)
-        (eval (list* (list 'vau pt #ignore then) opt?) env)
-        (typeError opt? '(or () List)) ))))
+      (if (list? opt)
+        (eval (list* (list 'vau pt #ignore then) opt) env)
+        (typeError opt '(or () List)) ))))
 
-(defMacro whenOpt? ((pt opt?) . forms)
+(defMacro whenOpt ((pt opt) . forms)
   #|Destructure the OPTION?.  If it's non-nil, evaluate the FORMS with
    |the NAME bound to the contents of the option.  If it's nil, return nil.
    |#
-  (list 'ifOpt? (list pt opt?) (01->+ forms)) )
+  (list 'ifOpt (list pt opt) (01->+ forms)) )
 
-(defMacro unlessOpt? (opt? . forms)
+(defMacro unlessOpt (opt . forms)
   #|Destructure the OPTION?.  If it's nil, evaluate the FORMS.  If it's
    |non-nil, return nil.
    |#
-  (list* 'ifOpt? (list #ignore opt?) #null (01->+ forms)) )
+  (list* 'ifOpt (list #ignore opt) #null (01->+ forms)) )
 
-(defVau (caseOpt? exp . clauses) env
-  (let1 (exp (eval exp env))
-    (if (null? exp) #null
+(defVau (caseOpt opt . clauses) env
+  (let1 (opt (eval opt env))
+    (if (null? opt) #null
       (let1 loop (clauses clauses)
         (if (null? clauses) #null
           (let ( (env+ (newEnv env))
                  (((bindings . forms) . clauses) clauses) )
-            (if (|| (== bindings 'else) (bind? env+ bindings exp))
+            (if (|| (== bindings 'else) (bind? env+ bindings opt))
               (apply begin forms env+)
               (loop clauses) )))))))
 
-(defVau (opt? exp . dft) env
+(defVau (optDft opt . dft) env
   #|Return the contents of the OPTION?, or the DEFAULT? if the option
    |is nil.  The default itself defaults to void.  The DEFAULT? is
    |evaluated lazily, only when the OPTION? is nil.
    |#
-  (ifOpt? (exp (eval exp env)) exp
-    (ifOpt? (dft (eval (cons 'list dft) env)) dft) ))
+  (ifOpt (opt (eval opt env)) opt
+    (ifOpt (dft (eval (cons 'list dft) env)) dft) ))
 
-(defVau opt*? (lst . dft) env
+(defVau optDft* (lst . dft) env
   #|Similar to `opt', but provides DEFAULTS for any number of
    |elements of LIST.  This is useful for implementing functions that take
-   |multiple opt? arguments.  Each default is evaluated lazily, only when needed.
+   |multiple optDft arguments.  Each default is evaluated lazily, only when needed.
    |#
   (let loop ((lst (eval lst env)) (dft dft))
     (if (null? lst)
@@ -1140,10 +1140,10 @@
         (cons (car lst)
           (loop (cdr lst) (if (null? dft) #null (cdr dft)))) ))))
 
-(def\ getOpt? (option?)
+(def\ optDft! (opt)
   #|Returns the contents of the OPTION? or signals an error if it is nil.
    |#
-  (opt? option? (simpleError "Option is nil")))
+  (optDft opt (simpleError "Option is nil")))
 
 
 ;;; Type Checks
@@ -1208,7 +1208,7 @@
    |a block whose dynamic extent has ended.
    |$(fn (blockName . value?))
    |#
-  (blockName (opt? value? #inert)) )
+  (blockName (optDft value? #inert)) )
 
 (defVau while (testForm . forms) env
   #|Evaluate FORMS while TEST-FORM evaluates to true.
@@ -1229,7 +1229,7 @@
                (@typeError vm ($ "invalid " name " index, not {expected}: {datum}") i `(and (>= ,(- 0 %deep)) (=< 0))) ))) )
     (let\ ( ((makeThrowTag\ name %deep)
                (\ (#! (0 1 Integer) i)
-                 (throwTag (makeTag (opt? i 0) name %deep)) ))
+                 (throwTag (makeTag (optDft i 0) name %deep)) ))
             ((makeThrowTagValue\ name %deep)
                (\ o
                  (if (== (check o (or (1) (2 Integer))) 1)
@@ -1249,7 +1249,7 @@
               (if (check? forms (2 oo 'for ((2 3)) )) ;loop for
                 (let ( (for (cadr forms))
                        (forms (01->+ (cddr forms))) )
-                  (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (opt? incr init)) for)))
+                  (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (optDft incr init)) for)))
                   (catchTag break
                     (eval (list* 'def* (map car for) (map cadr for)) env)   
                     (%loop
@@ -1258,7 +1258,7 @@
                 (if (check? forms (2 oo 'for1 (2 3))) ;loop for1
                   (let ( ((pt init . incr) (cadr forms))
                          (forms (01->+ (cddr forms))) )
-                    (def increment (list 'def pt (opt? incr init)))
+                    (def increment (list 'def pt (optDft incr init)))
                     (catchTag break
                       (eval (list 'def pt init) env)
                       (%loop
@@ -1441,7 +1441,7 @@
 
 (defMacro (ddef var . val?)
   #|Define a new or update an existing dynamic variable with the given
-   |NAME and opt? default VALUE.
+   |NAME and optDft default VALUE.
    |$(fn (name))
    |$(fn (name value))
    |#
@@ -1510,7 +1510,7 @@
    |$(syntax property (:documentation docstring))
    |#
   ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
-  (let1 (superClass (findClass (opt? superClass? 'Obj) env))
+  (let1 (superClass (findClass (optDft superClass? 'Obj) env))
     (eval (list 'def name (%newClass name superClass)) env)) )
 
 
@@ -1837,13 +1837,13 @@
   #|Yield a value (which defaults to void).
    |#
   (takeSubcont fiberPrompt k
-    (makeYieldRecord (opt? v? #inert) k)))
+    (makeYieldRecord (optDft v? #inert) k)))
 
 (def\ fiberResume (yieldRecord . v?)
   #|Resume a suspended fiber with a value (which defaults to void).
    |#
   (pushDelimSubcont fiberPrompt (yieldRecord 'continuation)
-    (opt? v? #inert)))
+    (optDft v? #inert)))
 
 (defMacro fiber body
   #|Evaluate the body expressions as a fiber.
