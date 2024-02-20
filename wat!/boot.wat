@@ -575,7 +575,6 @@
     (eval (car ops) env) (apply && (cdr ops) env)
     #f ))
 
-
 (def and &&)
 
 (defVau || ops env
@@ -631,6 +630,7 @@
 (assert (match     '(1) ((a) 1) ((a b) 2) (else 3)) 1)
 (assert (match        1 ((a) 1) ((a b) 2) (else 3)) 3)
 (assert (match        4 ((a) 1) ((a b) 2)    (a a)) 4)
+(assert (match '(1 2 3) ((a) 1) ((a b) 2)    (a a)) '(1 2 3))
 
 
 ;;; Quasiquote
@@ -680,50 +680,100 @@
 (assert (let1 (a 1) (cond (a (\ (a) (== a 1)) => (\ (a) (+ a 1))))) 2)
 
 
-;;;; Member Assoc Get
+;;; Options
 
-(def\ (member key lst)
-  (let1 loop (lst lst)
-     (if (cons? lst)
-       (if (== key (car lst)) lst
-         (loop (cdr lst)) )
-       #null )))
+;; An option is either nil ("none"), or a one-element list ("some").
 
-(assert (member 'b '(a b c d)) '(b c d))
-;(assert (member "b" '("a" "b" "c" "d")) '("b" "c" "d")) ; solo se String interned!
+(def\ some (value)
+  #|Create a one-element list from the VALUE.
+   |#
+  (cons value))
 
-(def\ (member? key lst)
-  (cons? (member key lst)) )
-  
-(def\ (!member? key lst)
-  (null? (member key lst)) )
+(def\ (01->+ forms)
+  (if (null? forms) #null (1->+ forms)) )
 
-#| TODO per omogeneità con lispx, da valutare
-(def\ (member key lst . keywords)
-  (let ( (test (optDft (optValue :test keywords) ==))
-         (fkey (optDft (optValue :fkey keywords) identity)) )
-    (let1 loop (lst lst)
-      (if (cons? lst)
-        (if (test (fkey (car lst)) key) lst
-          (loop (cdr lst)) )
-        #null ))))
+(def\ (1->+ (#! List forms))
+  (if (null? (cdr forms)) (car forms) (cons 'begin forms)) )
 
-(def\ (member? key lst . keywords)
-  (cons? (apply** member key lst keywords)) )
-  
-(def\ (!member? key lst . keywords)
-  (null? (apply** member key lst keywords)) )
-|#
+;; (Idea from Taylor R. Campbell's blag. https://mumble.net/~campbell/blag.txt)
+(defVau (ifOpt (pt opt) then . else) env
+  (let1 (opt (eval opt env))
+    (if (null? opt)
+      (if (null? else) #null
+        (eval (1->+ else) env))
+      (if (list? opt)
+        (eval (list* (list 'vau (list pt) #ignore then) opt) env)
+        (typeError opt '(or () List)) ))))
 
-(def\ (assoc key lst)
-  (let1 loop (lst lst)
-     (if (cons? lst)
-       (let1 ((kv . lst) lst)
-         (if (== (car kv) key) kv
-           (loop lst) ))
-       #null )))
+(assert (ifOpt (a ()) (+ a 1)) #null)
+(assert (ifOpt (a '(2)) (+ a 1)) 3)
+(assert (ifOpt (a '(2 2)) (+ a 1)))
 
-(assert (assoc 'b '((a 1) (b 2) (c 3) (d 4))) '(b 2))
+(defVau (ifOpt* (pt opt) then . else) env
+  (let1 (opt (eval opt env))
+    (if (null? opt)
+      (if (null? else) #null
+        (eval (1->+ else) env))
+      (if (list? opt)
+        (eval (list* (list 'vau pt #ignore then) opt) env)
+        (typeError opt '(or () List)) ))))
+
+(assert (ifOpt* ((a) ()) (+ 1 a)) #null)
+(assert (ifOpt* ((a) ()) (+ 1 a) 0) 0)
+(assert (ifOpt* ((a) ()) (+ 1 a) 0 1) 1)
+(assert (ifOpt* ((a) '(2)) (+ a 1)) 3)
+(assert (ifOpt* ((a) '(2 3)) (+ a 1)))
+(assert (ifOpt* ((a b) '(2 3)) (+ a b)) 5)
+
+(defMacro whenOpt ((pt opt) . forms)
+  (list 'ifOpt (list pt opt) (01->+ forms)) )
+
+(defMacro unlessOpt (opt . forms)
+  (list* 'ifOpt (list #ignore opt) #null (01->+ forms)) )
+
+(defVau (caseOpt opt . clauses) env
+  (let1 (opt (eval opt env))
+    (if (null? opt) #null
+      (let1 loop (clauses clauses)
+        (if (null? clauses) #null
+          (let ( (env+ (newEnv env))
+                 (((bindings . forms) . clauses) clauses) )
+            (if (|| (== bindings 'else) (bind? env+ bindings opt))
+              (apply begin forms env+)
+              (loop clauses) )))))))
+
+(assert (caseOpt () ((a) 1) ((a b) (+ a b))) ())
+(assert (caseOpt '(2) ((a) 1) ((a b) (+ a b))) 1)
+(assert (caseOpt '(1 2) ((a) 1) ((a b) (+ a b))) 3)
+(assert (caseOpt '(1 2 3) ((a) 1) ((a b) (+ a b))) #null)
+
+(defVau (optDft opt . dft) env
+  (ifOpt (opt (eval opt env)) opt
+    (ifOpt (dft (eval (cons 'list dft) env)) dft) ))
+
+(assert (optDft () 10) 10)
+(assert (optDft '(2) 10) 2)
+(assert (optDft '(2 3) 10))
+
+(defVau optDft* (lst . dft) env
+  (let loop ((lst (eval lst env)) (dft dft))
+    (if (null? lst)
+      (if (null? dft) #null
+         (cons (eval (car dft) env) (loop #null (cdr dft))) )
+      (if (null? (car lst))
+        (if (null? dft)
+          (cons #null (loop (cdr lst) #null))
+          (cons (eval (car dft) env) (loop (cdr lst) (cdr dft))) )
+        (cons (car lst)
+          (loop (cdr lst) (if (null? dft) #null (cdr dft)))) ))))
+
+(assert (optDft* '(1 () 3) 1 2 3 4) '(1 2 3 4))
+
+(def\ optDft! (opt)
+  (optDft opt (simpleError "Option is nil")))
+
+
+;;;; OptValue Member Member? !Member? OptKey Assoc
 
 (def\ (optValue key lst)
   (let1 loop (lst lst)
@@ -734,6 +784,35 @@
 
 (assert (optValue :b '(:a 1 :b 2 :c 3)) '(2))
 (assert (optValue 'b '(a 1 b 2 c 3)) '(2))
+
+(def\ (member k lst . keywords)
+  (let ( (cmp (optDft (optValue :cmp keywords) ==))
+         (key (optDft (optValue :key keywords) identity))
+         (ret (optDft (optValue :ret keywords) identity)) )
+    (let1 loop (lst lst)
+      (if (cons? lst)
+        (if (cmp (key (car lst)) k) (ret lst)
+          (loop (cdr lst)) )
+        #null ))))
+
+(def\ (member? key lst . keywords)
+  (cons? (apply** member key lst keywords)) )
+  
+(def\ (!member? key lst . keywords)
+  (null? (apply** member key lst keywords)) )
+
+(assert (member 'b '(a b c d)) '(b c d))
+;(assert (member "b" '("a" "b" "c" "d")) '("b" "c" "d")) ; solo se String interned!
+
+(def\ (optKey key lst)
+  (if (cons? key) ((rec\ (loop lst) (if (cons? lst) (let1 (k (car lst)) (if (member? k key) k (loop (cdr lst)))) #null)) lst)
+    (member? key lst) key
+    #null ))
+
+(def\ (assoc k lst) 
+  (member k lst :key car :ret car) )
+
+(assert (assoc 'b '((a 1) (b 2) (c 3) (d 4))) '(b 2))
 
 
 ;;; Case CaseType
@@ -788,108 +867,25 @@
 (assert (catchWth (caseType\ (e) ((Error :type 'xx) 1) (else 2)) (error :type 'zz)) 2)
 
 
-;;; Options
+;;; Sort
 
-;; An option is either nil ("none"), or a one-element list ("some").
-;; Variables holding options are conventionally suffixed with "?".
+(def\ (sort lst . opt)
+  (def cmp (case (optKey (:up :dn) opt) ((#null :up) <) (:dn >=)))
+  (def key (optDft (optValue :key opt) identity))
+  (def\ (sort lst)  
+    (if (<= (len lst) 1) lst
+      (let loop ( (left ()) (right ()) (pivot (car lst)) (rest (cdr lst)) )
+        (if (null? rest)
+            (append (append (sort left) (list pivot)) (sort right))
+          (cmp (key (car rest)) (key pivot))
+            (loop (append left (list (car rest))) right pivot (cdr rest))
+            (loop left (append right (list (car rest))) pivot (cdr rest)) ))))
+  (sort lst) )
 
-(def\ some (value)
-  #|Create a one-element list from the VALUE.
-   |#
-  (cons value))
-
-(def\ (01->+ forms)
-  (if (null? forms) #null (1->+ forms)) )
-
-(def\ (1->+ (#! List forms))
-  (if (null? (cdr forms)) (car forms) (cons 'begin forms)) )
-
-;; (Idea from Taylor R. Campbell's blag. https://mumble.net/~campbell/blag.txt)
-(defVau (ifOpt (pt opt) then . else) env
-  #|Destructure the OPTION?.  If it's non-nil, evaluate the THEN form
-   |with the NAME bound to the contents of the option.  If it's nil,
-   |evaluate the ELSE form.
-   |#
-  (let1 (opt (eval opt env))
-    (if (null? opt)
-      (if (null? else) #null
-        (eval (1->+ else) env))
-      (if (list? opt)
-        (eval (list* (list 'vau (list pt) #ignore then) opt) env)
-        (typeError opt '(or () List)) ))))
-
-(assert (ifOpt (a ()) (+ a 1)) #null)
-(assert (ifOpt (a '(2)) (+ a 1)) 3)
-(assert (ifOpt (a '(2 2)) (+ a 1)))
-
-(defVau (ifOpt* (pt opt) then . else) env
-  (let1 (opt (eval opt env))
-    (if (null? opt)
-      (if (null? else) #null
-        (eval (1->+ else) env))
-      (if (list? opt)
-        (eval (list* (list 'vau pt #ignore then) opt) env)
-        (typeError opt '(or () List)) ))))
-
-(assert (ifOpt* ((a) ()) (+ 1 a)) #null)
-(assert (ifOpt* ((a) ()) (+ 1 a) 0) 0)
-(assert (ifOpt* ((a) ()) (+ 1 a) 0 1) 1)
-(assert (ifOpt* ((a) '(2)) (+ a 1)) 3)
-(assert (ifOpt* ((a) '(2 3)) (+ a 1)))
-(assert (ifOpt* ((a b) '(2 3)) (+ a b)) 5)
-
-(defMacro whenOpt ((pt opt) . forms)
-  #|Destructure the OPTION?.  If it's non-nil, evaluate the FORMS with
-   |the NAME bound to the contents of the option.  If it's nil, return nil.
-   |#
-  (list 'ifOpt (list pt opt) (01->+ forms)) )
-
-(defMacro unlessOpt (opt . forms)
-  #|Destructure the OPTION?.  If it's nil, evaluate the FORMS.  If it's
-   |non-nil, return nil.
-   |#
-  (list* 'ifOpt (list #ignore opt) #null (01->+ forms)) )
-
-(defVau (caseOpt opt . clauses) env
-  (let1 (opt (eval opt env))
-    (if (null? opt) #null
-      (let1 loop (clauses clauses)
-        (if (null? clauses) #null
-          (let ( (env+ (newEnv env))
-                 (((bindings . forms) . clauses) clauses) )
-            (if (|| (== bindings 'else) (bind? env+ bindings opt))
-              (apply begin forms env+)
-              (loop clauses) )))))))
-
-(assert (caseOpt () ((a) 1) ((a b) (+ a b))) ())
-(assert (caseOpt '(2) ((a) 1) ((a b) (+ a b))) 1)
-(assert (caseOpt '(1 2) ((a) 1) ((a b) (+ a b))) 3)
-(assert (caseOpt '(1 2 3) ((a) 1) ((a b) (+ a b))) #null)
-
-(defVau (optDft opt . dft) env
-  (ifOpt (opt (eval opt env)) opt
-    (ifOpt (dft (eval (cons 'list dft) env)) dft) ))
-
-(assert (optDft () 10) 10)
-(assert (optDft '(2) 10) 2)
-(assert (optDft '(2 3) 10))
-
-(defVau optDft* (lst . dft) env
-  (let loop ((lst (eval lst env)) (dft dft))
-    (if (null? lst)
-      (if (null? dft) #null
-         (cons (eval (car dft) env) (loop #null (cdr dft))) )
-      (if (null? (car lst))
-        (if (null? dft)
-          (cons #null (loop (cdr lst) #null))
-          (cons (eval (car dft) env) (loop (cdr lst) (cdr dft))) )
-        (cons (car lst)
-          (loop (cdr lst) (if (null? dft) #null (cdr dft)))) ))))
-
-(assert (optDft* '(1 () 3) 1 2 3 4) '(1 2 3 4))
-
-(def\ optDft! (opt)
-  (optDft opt (simpleError "Option is nil")))
+(assert (sort (1 4 2 5 7 3)) (1 2 3 4 5 7))
+(assert (sort ((1) (4) (2) (5) (7) (3)) :key car) ((1) (2) (3) (4) (5) (7)))
+(assert (sort ((1) (4) (3 1) (5) (7) (3 2)) :key car) ((1) (3 1) (3 2) (4) (5) (7)))
+(assert (sort ((1) (4) (3 1) (5) (7) (3 2)) :key car :dn) ((7) (5) (4) (3 2) (3 1) (1)))
 
 
 ;;; Type Checks
@@ -1643,7 +1639,7 @@
 (assert (begin (def a (new Obj :fld 1)) (+= a :rhs :fld 3)) 4)
 
 
-;;;; Utilities
+;;;; Arrays
 
 (def\ (array . args) (list->array args))
 
@@ -1689,15 +1685,6 @@
 (assert (arrayGet (arraySet (newInstance &int 2 2) (1 1) 3) (1 1)) 3)
 (assert (arrayGet* (arraySet* (newInstance &int 2 2) 3 1 1) 1 1) 3)
 
-(defVau (time times . forms) env
-  (let* ( (currentTime (@getMethod System "currentTimeMillis"))
-          ((#! (and Integer (> 0)) times) (eval times env))
-          (milli (currentTime #null))
-          (result (apply repeat (cons times forms) env))
-          (milli (- (currentTime #null) milli)) )
-    (print "time " times " " forms ": " milli "ms" (if (== times 1) "" ($ ", on average: " (@format String "%.2f" (/ milli (@doubleValue times))) "ms" )))
-    result ))
-
 
 ;;;; Simple Set
 
@@ -1742,3 +1729,14 @@
       (list 'forEach '@close (cons 'list (map car bindings)))
       body )))
 
+
+;;;; Utility
+
+(defVau (time times . forms) env
+  (let* ( (currentTime (@getMethod System "currentTimeMillis"))
+          ((#! (and Integer (> 0)) times) (eval times env))
+          (milli (currentTime #null))
+          (result (apply repeat (cons times forms) env))
+          (milli (- (currentTime #null) milli)) )
+    (print "time " times " " forms ": " milli "ms" (if (== times 1) "" ($ ", on average: " (@format String "%.2f" (/ milli (@doubleValue times))) "ms" )))
+    result ))

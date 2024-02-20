@@ -276,14 +276,18 @@ public class Vm {
 	}
 	
 	// Basic Object
-	abstract class Intern {
+	class Intern implements Comparable<Intern> {
 		String name;
 		Intern(String name) { this.name = name; }
 		public String toString() { return getClass() == Keyword.class ? ":" + name : name; }
 		public int hashCode() { return Objects.hashCode(name); }
 		public boolean equals(Object o) {
 			return this == o || getClass().isInstance(o) && name.equals(((Intern) o).name);
-		}		
+		}
+		public int compareTo(Intern o) {
+			if (getClass().isInstance(o)) return name.compareTo(((Intern) o).name);
+			throw new ClassCastException("class &" + o.getClass().getName()  + " cannot be cast to class &" + getClass().getName());
+		}
 	}
 	class Keyword extends Intern { Keyword(String name) { super(name); }}
 	Keyword keyword(String name) { return intern(name.startsWith(":") ? name : ":" + name); }

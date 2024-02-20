@@ -396,7 +396,7 @@
           #t
           ;; ...or if the condition we are looking is one of the
           ;; handler's associated conditions.
-          (cons? (member condition aCn))))
+          (member? condition aCn)))
     ;; ...if we are not looking for restarts associated with a
     ;; particular condition then every handler is applicable.
     #t))

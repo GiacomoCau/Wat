@@ -946,118 +946,9 @@
               (else (apply cond clauses env)) )))))))
 
 
-;;;; Member Assoc Get
-
-(def\ (member key lst)
-  (let1 loop (lst lst)
-     (if (cons? lst)
-       (if (== key (car lst)) lst
-         (loop (cdr lst)) )
-       #null )))
-
-(def\ (member? key lst)
-  (cons? (member key lst)) )
-  
-(def\ (!member? key lst)
-  (null? (member key lst)) )
-
-(def\ (member key lst . keywords)
-  #|Search for ITEM in the LIST according to the TEST predicate
-   |(defaults to `==').  Return the tail of the list starting with
-   |ITEM if found, nil otherwise.  The KEY function is applied to
-   |each list element before comparison (defaults to `identity').
-   |$(fn (item list &key test key))
-   |#
-  (let ( (test (optDft (optValue :test keywords) ==))
-         (fkey (optDft (optValue :fkey keywords) identity)) )
-    (let1 loop (lst lst)
-      (if (cons? lst)
-        (if (test (fkey (car lst)) key) lst
-          (loop (cdr lst)) )
-        #null ))))
-
-(def\ (member? key lst . keywords)
-  (cons? (apply** member key lst keywords)) )
-  
-(def\ (!member? key lst . keywords)
-  (null? (apply** member key lst keywords)) )
-
-(def\ (assoc key lst)
-  (let1 loop (lst lst)
-     (if (cons? lst)
-       (let1 ((kv . lst) lst)
-         (if (== (car kv) key) kv
-           (loop lst) ))
-       #null )))
-
-(def\ (optValue key lst)
-  #|Search for the KEYWORD in the property list LST
-   |(a list of alternating keywords and values)
-   |and return the found value as an option.
-   |#
-  (let1 loop (lst lst)
-    (if (cons? lst)
-      (let1 ((k v . lst) lst)
-        (if (== k key) (cons v) (loop lst)) )
-      #null )))
-
-
-;;; Case CaseType
-
-(defVau (case exp . clauses) env
-  (let1 (value (eval exp env))
-    (let1 next (clauses clauses)
-      (if (null? clauses) #inert
-        (let1 (((values . forms) . clauses) clauses)
-          (if (|| (== values 'else) (== value values) (member? value values))
-            (if (null? forms) #inert
-              (if (== (car forms) '=>)
-                ((eval (cadr! forms) env) value)
-                (apply begin forms env) ))
-            (next clauses) ))))))
-
-(def matchObj? %matchObj?)
-
-(def\ (matchObj*? obj class . slots) 
-  (matchObj? obj (cons class slots)) )
-
-; vedi signalsError? in vm.lispx (o test-util.lispx) per codice simile
-(defVau (caseType key . clauses) env
-  #|Multi-armed type test.
-   |Evaluate the KEYFORM.  Go through the CLAUSES.  If the result of
-   |evaluating KEYFORM is an instance of the class named by CLASS-NAME,
-   |evaluate the FORMS as an implicit `begin'.  Otherwise go to the next
-   |clause, or return void if there are no more clauses.
-   |$(fn (key . clauses))
-   |$(type fexpr)
-   |$(syntax clauses (clause . clauses))
-   |$(syntax clause (className . forms))
-   |$(syntax clause ((className . slotSpecs) . forms))
-   |#
-  (let1 (key (eval key env))
-    (let1 next (clauses clauses)
-      (if (null? clauses) #inert
-        (let1 (((test . forms) . clauses) clauses)
-          (if (|| (== test 'else)
-                  (let* ( (symbol? (symbol? test))
-                          (class (eval (if symbol? test (car test)) env)) )
-                    (if symbol? (type? key class) (matchObj? key (eval (cons 'list test) env))) ))
-            (if (== (car forms) '=>)
-              ((eval (cadr! forms) env) key)
-              (apply begin forms env) )
-            (next clauses) ))))))
-
-(defMacro (caseType\ (#! Symbol key) . clauses)
-  (list '\ (cons key) (list* 'caseType key clauses) ))   
-
-(defMacro (caseType\ (#! (1 Symbol) key) . clauses)
-  (list '\ key (list* 'caseType (car key) clauses) ))   
-
-
 ;;; Options
 
 ;; An option is either nil ("none"), or a one-element list ("some").
-;; Variables holding options are conventionally suffixed with "?".
 
 (def\ some (value)
   #|Create a one-element list from the VALUE.
@@ -1144,6 +1035,118 @@
   #|Returns the contents of the OPTION? or signals an error if it is nil.
    |#
   (optDft opt (simpleError "Option is nil")))
+
+
+;;;; OptValue Member Member? !Member? OptKey Assoc
+
+(def\ (optValue key lst)
+  #|Search for the KEYWORD in the property list LST
+   |(a list of alternating keywords and values)
+   |and return the found value as an option.
+   |#
+  (let1 loop (lst lst)
+    (if (cons? lst)
+      (let1 ((k v . lst) lst)
+        (if (== k key) (cons v) (loop lst)) )
+      #null )))
+
+(def\ (member k lst . keywords)
+  #|Search for ITEM in the LIST according to the TEST predicate
+   |(defaults to `==').  Return the tail of the list starting with
+   |ITEM if found, nil otherwise.  The KEY function is applied to
+   |each list element before comparison (defaults to `identity').
+   |$(fn (item list &key test key))
+   |#
+  (let ( (cmp (optDft (optValue :cmp keywords) ==))
+         (key (optDft (optValue :key keywords) identity))
+         (ret (optDft (optValue :ret keywords) identity)) )
+    (let1 loop (lst lst)
+      (if (cons? lst)
+        (if (cmp (key (car lst)) k) (ret lst)
+          (loop (cdr lst)) )
+        #null ))))
+
+(def\ (member? key lst . keywords)
+  (cons? (apply** member key lst keywords)) )
+  
+(def\ (!member? key lst . keywords)
+  (null? (apply** member key lst keywords)) )
+
+(def\ (optKey key lst)
+  (if (cons? key) ((rec\ (loop lst) (if (cons? lst) (let1 (k (car lst)) (if (member? k key) k (loop (cdr lst)))) #null)) lst)
+    (member? key lst) key
+    #null ))
+
+(def\ (assoc k lst) 
+  (member k lst :key car :ret car) )
+
+
+;;; Case CaseType
+
+(defVau (case exp . clauses) env
+  (let1 (value (eval exp env))
+    (let1 next (clauses clauses)
+      (if (null? clauses) #inert
+        (let1 (((values . forms) . clauses) clauses)
+          (if (|| (== values 'else) (== value values) (member? value values))
+            (if (null? forms) #inert
+              (if (== (car forms) '=>)
+                ((eval (cadr! forms) env) value)
+                (apply begin forms env) ))
+            (next clauses) ))))))
+
+(def matchObj? %matchObj?)
+
+(def\ (matchObj*? obj class . slots) 
+  (matchObj? obj (cons class slots)) )
+
+; vedi signalsError? in vm.lispx (o test-util.lispx) per codice simile
+(defVau (caseType key . clauses) env
+  #|Multi-armed type test.
+   |Evaluate the KEYFORM.  Go through the CLAUSES.  If the result of
+   |evaluating KEYFORM is an instance of the class named by CLASS-NAME,
+   |evaluate the FORMS as an implicit `begin'.  Otherwise go to the next
+   |clause, or return void if there are no more clauses.
+   |$(fn (key . clauses))
+   |$(type fexpr)
+   |$(syntax clauses (clause . clauses))
+   |$(syntax clause (className . forms))
+   |$(syntax clause ((className . slotSpecs) . forms))
+   |#
+  (let1 (key (eval key env))
+    (let1 next (clauses clauses)
+      (if (null? clauses) #inert
+        (let1 (((test . forms) . clauses) clauses)
+          (if (|| (== test 'else)
+                  (let* ( (symbol? (symbol? test))
+                          (class (eval (if symbol? test (car test)) env)) )
+                    (if symbol? (type? key class) (matchObj? key (eval (cons 'list test) env))) ))
+            (if (== (car forms) '=>)
+              ((eval (cadr! forms) env) key)
+              (apply begin forms env) )
+            (next clauses) ))))))
+
+(defMacro (caseType\ (#! Symbol key) . clauses)
+  (list '\ (cons key) (list* 'caseType key clauses) ))   
+
+(defMacro (caseType\ (#! (1 Symbol) key) . clauses)
+  (list '\ key (list* 'caseType (car key) clauses) ))   
+
+
+;;; Sort
+
+(def\ (sort lst . opt)
+  (def cmp (case (optKey (:up :dn) opt) ((#null :up) <) (:dn >=)))
+  (def key (optDft (optValue :key opt) identity))
+  (def\ (sort lst)  
+    (if (<= (len lst) 1) lst
+      (let loop ( (left ()) (right ()) (pivot (car lst)) (rest (cdr lst)) )
+        (if (null? rest)
+            (append (append (sort left) (list pivot)) (sort right))
+          (cmp (key (car rest)) (key pivot))
+            (loop (append left (list (car rest))) right pivot (cdr rest))
+            (loop left (append right (list (car rest))) pivot (cdr rest)) ))))
+  (sort lst) )
 
 
 ;;; Type Checks
@@ -1657,14 +1660,14 @@
    |$(fn arguments)
    |#
   (if (null? args) #t
-    (if (member? arg args :test eq?) #f
+    (if (member? arg args :cmp eq?) #f
       (apply /= args) )))
 
 #| TODO utile?
 (def\ /= args
   (if (null? args) #t
     (let1 ((arg . args) args)
-      (if (member? arg args :test eq?) #f
+      (if (member? arg args :cmp eq?) #f
         (apply /= args) ))))
 |#
 
@@ -1906,7 +1909,7 @@
 (def -= (assignOp %-))
 
 
-;;;; Utilities
+;;;; Arrays
 
 (def\ (array . args) (list->array args))
 
@@ -1944,15 +1947,6 @@
        (if (null? (cdr indexes))
          (then (arraySet array (car indexes) value) array0)
          (loop (arrayGet array (car indexes)) (cdr indexes)) ))))  
-
-(defVau (time times . forms) env
-  (let* ( (currentTime (@getMethod System "currentTimeMillis"))
-          ((#! (and Integer (> 0)) times) (eval times env))
-          (milli (currentTime #null))
-          (result (apply repeat (cons times forms) env))
-          (milli (- (currentTime #null) milli)) )
-    (print "time " times " " forms ": " milli "ms" (if (== times 1) "" ($ ", on average: " (@format String "%.2f" (/ milli (@doubleValue times))) "ms" )))
-    result ))
 
 
 ;;;; Simple Set
@@ -1998,3 +1992,14 @@
       (list 'forEach '@close (cons 'list (map car bindings)))
       body )))
 
+
+;;;; Utility
+
+(defVau (time times . forms) env
+  (let* ( (currentTime (@getMethod System "currentTimeMillis"))
+          ((#! (and Integer (> 0)) times) (eval times env))
+          (milli (currentTime #null))
+          (result (apply repeat (cons times forms) env))
+          (milli (- (currentTime #null) milli)) )
+    (print "time " times " " forms ": " milli "ms" (if (== times 1) "" ($ ", on average: " (@format String "%.2f" (/ milli (@doubleValue times))) "ms" )))
+    result ))

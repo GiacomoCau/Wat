@@ -15,13 +15,12 @@
 (def\ repl:run ()
   #|Run a REPL.
    |#
-  (restartCase ((replEnd (\ () #| nothing to do here, just unwind |#)))  
+  (restartCase ((replEnd (\ () "repl:run ended!")))  
     (loop
       ;; The internal REPL-ABORT restart causes the loop to begin from the start again.
       ;; The user actually uses ABORT, described below.
       (restartCase ((replAbort (\ () #| nothing to do here, just unwind |#)))
-        (print (eval (read (dget repl:debugLevel)) repl:env)) )))
-  "repl:run ended!" )
+        (print (eval (read (dget repl:debugLevel)) repl:env)) ))))
 
 (def\ repl:runDebuggerLoop (condition k)
   #|Run a debug REPL.

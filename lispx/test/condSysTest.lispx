@@ -638,7 +638,7 @@
                         (\ (e)
                           (let* ((handler (optDft (findRestart? 'r e)))
                                  (a-cs (getSlot handler 'associatedConditions)))
-                            (assert#t (cons? (member e a-cs)))
+                            (assert#t (member? e a-cs))
                             (returnFrom ok)))))
           (signal-operator (makeSimpleError "error!")
             (r (\ () 1))))))))

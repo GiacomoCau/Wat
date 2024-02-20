@@ -2167,7 +2167,7 @@
      Error :type 'match :operands# +1))
 
   (defTest member.3
-    (member 'a '() :test ==)
+    (member 'a '() :cmp ==)
     #null)
 
   (defTest member.3a
@@ -2175,19 +2175,19 @@
     #null)
 
   (defTest member.4
-    (member 'b '(a) :test ==)
+    (member 'b '(a) :cmp ==)
     #null)
 
   (defTest member.5
-    (member 'b '(a b) :test ==)
+    (member 'b '(a b) :cmp ==)
     '(b))
 
   (defTest member.5b
-    (member  'x '(a b) :test ==)
+    (member  'x '(a b) :cmp ==)
     #null)
 
   (defTest member.6
-    (member 'b '(a b c) :test ==)
+    (member 'b '(a b c) :cmp ==)
     '(b c))
 
   (defTest member.6a
@@ -2195,7 +2195,7 @@
     '(b c))
 
   (defTest member.7
-    (member "b" '("a" "b" "c") :test ==)
+    (member "b" '("a" "b" "c") :cmp ==)
     #null)
 
   (defTest member.7a
@@ -2203,19 +2203,19 @@
     #null)
 
   (defTest member.8
-    (member "b" '("a" "b" "c") :test eq?)
+    (member "b" '("a" "b" "c") :cmp eq?)
     '("b" "c"))
 
   (defTest member.9
-    (member 'b '((2 a) (1 b) (3 c)) :fkey cadr)
+    (member 'b '((2 a) (1 b) (3 c)) :key cadr)
     '((1 b) (3 c)))
 
   (defTest member.9a
-    (member "b" '((2 "a") (1 "b") (3 "c")) :fkey cadr)
+    (member "b" '((2 "a") (1 "b") (3 "c")) :key cadr)
     #null)
 
   (defTest member.9b
-    (member "b" '((2 "a") (1 "b") (3 "c")) :fkey cadr :test eq?)
+    (member "b" '((2 "a") (1 "b") (3 "c")) :key cadr :cmp eq?)
     '((1 "b") (3 "c"))))
 
 (defSuite remove
