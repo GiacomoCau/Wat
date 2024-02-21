@@ -654,7 +654,7 @@ public class Utility {
 					case '('-> open += 1;
 					case ')'-> close += 1; 
 					default-> {
-						if (c >= 32) inSymbol = true;
+						if (c > 32) inSymbol = true;
 					}
 				}
 				if (c >= 32 || inUSymbol) s.append((char) c);

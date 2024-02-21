@@ -215,24 +215,16 @@
 ;(load "lispx/test/jsTest.lispx")
 ;(load "lispx/test/hierarchyTest.lispx")
 
+(load "lispx/tool/repl/repl.lispx")
 
 #|
-(load "lispx/tool/repl/repl.lispx")
 (repl:run)
 x
 (invokeRestart 'abort)
 (+ 100 x)
 (invokeRestart 'useValue 42)
-
 (invokeRestart 'replEnd)
-(def\ invokeDebugger (condition)
-  (takeSubcont rootPrompt k
-    (pushDelimSubcont rootPrompt k
-      (if (prStk) (printFrames k))
-      (panic condition))))
-
-(takeSubcont rootPrompt k (printFrames k))
-(takeSubcont rootPrompt k (pushDelimSubcont rootPrompt k (printFrames k)))
+x
 |#
 
 (%def milli (%- (@currentTimeMillis &java.lang.System) milli))

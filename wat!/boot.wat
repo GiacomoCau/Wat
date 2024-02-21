@@ -161,7 +161,7 @@
 (def list
   %list)
 
-(def lambda (vau (formals . body) env (wrap (eval (list* vau formals #ignore body) env))))
+(def lambda (vau (formals . forms) env (wrap (eval (list* vau formals #ignore forms) env))))
 (def lambda %\)
 (def \
   %\)
@@ -205,26 +205,25 @@
 (def curry*
   (\ (f . v*) (\ args (apply f (append v* args)))) )
 
-(def identity
+(def idx
   (\ (x) x))
 
 (def 1+
   (\ (n) (+ n 1)))
 
-(def _-1
+(def 1-
   (\ (n) (- n 1)))
 
 
 ;;; Macro
 
-(def evalMacro (newDVar #t))
+(def evalMacro (newBox #t))
 
 (def makeMacro
   (wrap
     (vau (expander) #ignore
       (vau operands env
-        (def !evalMacro (! (evalMacro)))
-        (if !evalMacro (evalMacro #t))
+        (def !evalMacro (! (evalMacro :prv #t)))
         (def exp (apply expander operands (newEnv)))
         (if !evalMacro exp (eval exp env)) ))))
 
@@ -387,9 +386,9 @@
 (assert (map cadr '((a 1)(b 2))) '(1 2))
 (assert (map (\ (a b) (+ a b)) '(1 2) '(3 4)) '(4 6))
 
-; evlis: (map (\ (x) (eval x env)) x*) <=> (eval (cons 'list x*) env)
 ; apply: (eval (cons opv args) env) <=> (apply opv args env)
 ; apply: (eval (cons apv args) env) <=> (apply apv (evlis env args) env)
+; evlis: (map (\ (x) (eval x env)) x*) <=> (eval (cons 'list x*) env)
 
 (defMacro (def*\ lhs* . rhs*)
   (list* 'def*
@@ -402,7 +401,6 @@
 
 ;;; Lexical Bindings
 
-(def\ (->1expr binding) ((\ ((#_ cadr)) cadr) binding))
 (def\ (->begin binding) ((\ ((#_ cadr . cddr)) (if (null? cddr) cadr (list* 'begin cadr cddr))) binding))
 (def\ (->name+#inert (lhs . #_)) (list (if (cons? lhs) (car lhs) lhs) #inert))
 (def\ (->name+lambda (lhs . rhs)) (if (cons? lhs) (list (car lhs) (list* '\ (cdr lhs) rhs)) (list lhs (cons '\ rhs)) ))
@@ -502,25 +500,12 @@
 (assert (letLoop sum ((a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
 (assert (letLoop (sum (a '(1 2)) (b '(3 4))) (if (null? a) () (cons (+ (car a) (car b)) (sum (cdr a) (cdr b))))) '(4 6))
 
-#| TODO sostituito dal seguente, eliminare
-(defMacro (let lhs . rhs)
-  (if (symbol? lhs)
-    (list* 'letLoop lhs rhs)
-    (let1 ((dt* . form*)
-      ( (rec\ loop (lhs)
-          (if (null? lhs) (())
-            (let* ( (((dt . form) . lhs) lhs)
-                    ((dt* . form*) (loop lhs)) )
-              (cons (cons dt dt*) (cons (01->+ form) form*))) ))
-        lhs ))
-      (cons (list* '\ dt* rhs) form*) )))
-|#
+
 (defMacro (let lhs . rhs)
   (if (symbol? lhs)
     (list* 'letLoop lhs rhs)
     (cons (list* '\ (map car lhs) rhs)
       (map ->begin lhs) )))
-
 
 (assert (let ((a 1)) a) 1)
 
@@ -707,7 +692,7 @@
 
 (assert (ifOpt (a ()) (+ a 1)) #null)
 (assert (ifOpt (a '(2)) (+ a 1)) 3)
-(assert (ifOpt (a '(2 2)) (+ a 1)))
+(assert (ifOpt (a '(2 2)) (+ a 1)) Error :type 'match :operands# -1)
 
 (defVau (ifOpt* (pt opt) then . else) env
   (let1 (opt (eval opt env))
@@ -722,8 +707,10 @@
 (assert (ifOpt* ((a) ()) (+ 1 a) 0) 0)
 (assert (ifOpt* ((a) ()) (+ 1 a) 0 1) 1)
 (assert (ifOpt* ((a) '(2)) (+ a 1)) 3)
-(assert (ifOpt* ((a) '(2 3)) (+ a 1)))
+(assert (ifOpt* ((a) '(2 3)) (+ a 1)) Error :type 'match :operands# -1)
 (assert (ifOpt* ((a b) '(2 3)) (+ a b)) 5)
+(assert (ifOpt* (a '(2 3)) (apply + a)) 5)
+(assert (ifOpt* (a ()) (apply + a)) #null)
 
 (defMacro whenOpt ((pt opt) . forms)
   (list 'ifOpt (list pt opt) (01->+ forms)) )
@@ -787,8 +774,8 @@
 
 (def\ (member k lst . keywords)
   (let ( (cmp (optDft (optValue :cmp keywords) ==))
-         (key (optDft (optValue :key keywords) identity))
-         (ret (optDft (optValue :ret keywords) identity)) )
+         (key (optDft (optValue :key keywords) idx))
+         (ret (optDft (optValue :ret keywords) idx)) )
     (let1 loop (lst lst)
       (if (cons? lst)
         (if (cmp (key (car lst)) k) (ret lst)
@@ -809,13 +796,18 @@
     (member? key lst) key
     #null ))
 
+(assert (optKey :b '(:a :c)) #null)
+(assert (optKey :b '(:a :b :c)) :b)
+(assert (optKey (:b :d) '(:a :b :c)) :b)
+(assert (optKey (:b :c) '(:a :b :c)) :b)
+
 (def\ (assoc k lst) 
   (member k lst :key car :ret car) )
 
 (assert (assoc 'b '((a 1) (b 2) (c 3) (d 4))) '(b 2))
 
 
-;;; Case CaseType
+;;; Case MatchObj? CaseType CaseType\
 
 (defVau (case exp . clauses) env
   (let1 (value (eval exp env))
@@ -871,7 +863,7 @@
 
 (def\ (sort lst . opt)
   (def cmp (case (optKey (:up :dn) opt) ((#null :up) <) (:dn >=)))
-  (def key (optDft (optValue :key opt) identity))
+  (def key (optDft (optValue :key opt) idx))
   (def\ (sort lst)  
     (if (<= (len lst) 1) lst
       (let loop ( (left ()) (right ()) (pivot (car lst)) (rest (cdr lst)) )
@@ -963,7 +955,7 @@
          (makeTag
            (\ (i name %deep)
              (if (&& (>= i (- 0 %deep)) (<= i 0))
-               (symbol ($ name (+ i %deep)))
+               (symbol ($ name (+ %deep i)))
                (@typeError vm ($ "invalid " name " index, not {expected}: {datum}") i `(and (>= ,(- 0 %deep)) (=< 0))) ))) )
     (let\ ( ((makeThrowTag\ name %deep)
                (\ (#! (0 1 Integer) i)
@@ -983,7 +975,9 @@
                     :continue (makeThrowTag\ "continue" %deep)
                     :break/v (makeThrowTagValue\ "break" %deep)
                     :until! (\ (b) (if b (throwTag break)))
-                    :while! (\ (b) (if (! b) (throwTag break))) ))) 
+                    :while! (\ (b) (if (! b) (throwTag break)))
+                    :until* (macro (b . forms) `(if ,b (throwTag ',break (begin ,@forms)))) 
+                    :while* (macro (b . forms) `(if (! ,b) (throwTag ',break (begin ,@forms)))) ))) 
               (if (check? forms (2 oo 'for ((2 3)) )) ;loop for
                 (let ( (for (cadr forms))
                        (forms (01->+ (cddr forms))) )
@@ -1011,28 +1005,28 @@
 (def loop %loop)
 
 #|
-(defMacro (-- n)
-  (list 'set! n :rhs (list '- n 1)) )
-(defMacro (++ n)
-  (list 'set! n :rhs (list '+ n 1)) )
-
-(loop (break/v 3))
-(loop (loop (break/v -1 3)))
-(loop for ((i 0 (++ i)) (y 0 (-- y))) (while (< i 3)) (log i y))
-(loop for ((i 0 (++ i))) (while (< i 3)) (log "x" i) (loop for ((y 0 (++ y))) (if (> y 3) (break)) (log "y" y) ))
-(loop for1 (i 0 (++ i)) (log i) (break) )
-(loop for1 (i 0 (++ i)) (while (< i 3)) (log i))
-(loop for1 (i 0 (++ i)) (while (< i 3)) (log "x" i) (loop for1 (y 0 (++ y)) (if (> y 3) (break)) (log "y" y) ))
-(loop for1 (i 0 (++ i)) (while (< i 3)) (log "x" i) (loop for1 (y 0 (++ y)) (if (> y 3) (break -1)) (log "y" y) ))
+(let ()
+  (defMacro (-- n) (list 'set! n :rhs (list '- n 1)) )
+  (defMacro (++ n) (list 'set! n :rhs (list '+ n 1)) )
+  (loop (break/v 3))
+  (loop (loop (break/v -1 3)))
+  (loop for ((i 0 (++ i)) (y 0 (-- y))) (while! (< i 3)) (log i y))
+  (loop for ((i 0 (++ i))) (while! (< i 3)) (log "x" i) (loop for ((y 0 (++ y))) (if (> y 3) (break)) (log "y" y) ))
+  (loop for1 (i 0 (++ i)) (log i) (break) )
+  (loop for1 (i 0 (++ i)) (while! (< i 3)) (log i))
+  (loop for1 (i 0 (++ i)) (while! (< i 3)) (log "x" i) (loop for1 (y 0 (++ y)) (if (> y 3) (break)) (log "y" y) ))
+  (loop for1 (i 0 (++ i)) (while! (< i 3)) (log "x" i) (loop for1 (y 0 (++ y)) (if (> y 3) (break -1)) (log "y" y) ))
+)
 |#
 
+#| TODO sostituito dal seguente, eliminare
 (defMacro (for ((#! Symbol var) init cond . incr) . body)
   (list* 'loop 'for1 (list* var init incr)
     (if (%ignore? cond) body
       (cons (list 'while! cond) body) )))
 
 ;(for (i 0 (< i 3) (++ i)) (log "x" i) (for (y 0 #ignore (++ y)) (if (> y 3) (break -1)) (log "y" y)))
-
+|#
 (defMacro (for ((#! Symbol var) init . incr) cond . body)
   (list* 'loop 'for1 (list* var init incr)
     (if (%ignore? cond) body
@@ -1040,24 +1034,22 @@
 
 ;(for (i 0 (++ i)) (< i 3) (log "x" i) (for (y 0 (++ y)) #ignore (if (> y 3) (break -1)) (log "y" y)))
 
-(defMacro (while cond . body)
-  (list* 'loop (list 'while! cond)
-    body ))
-
-;(let1 (i 0) (while (< i 3) (print i) (++ i)))
-
-(defMacro (-- n)
-  (list 'set! n :rhs (list '- n 1)) )
-(defMacro (++ n)
-  (list 'set! n :rhs (list '+ n 1)) )
-  
-(assert (let1 (c 2) (while (> c 0) (-- c)) c) 0)
-(assert (let1 (c 2) (while #t (if (zero? c) (break/v (+ 5 5)) (-- c)))) 10)
-(assert (let ((c 10) (r #null)) (while #t (if (zero? c) (break/v r)) (if (zero? (% (-- c) 2)) (continue)) (def r (cons c r)) )) '(1 3 5 7 9))
+(defMacro (while cond . forms)
+  (list* 'loop (list 'while! cond) forms ))
 
 (defMacro until (cond . forms)
   (list* 'loop (list 'until! cond) forms) )
 
+;(let1 (i 0) (while (< i 3) (print i) (++ i)))
+
+(let ()
+  (defMacro (-- n) (list 'set! n :rhs (list '- n 1)) )
+  (defMacro (++ n) (list 'set! n :rhs (list '+ n 1)) )
+  (assert (let1 (c 2) (while (> c 0) (-- c)) c) 0)
+  (assert (let1 (c 2) (while #t (if (zero? c) (break/v (+ 5 5)) (-- c)))) 10)
+  (assert (let ((c 10) (r #null)) (while #t (if (zero? c) (break/v r)) (if (zero? (% (-- c) 2)) (continue)) (def r (cons c r)) )) '(1 3 5 7 9))
+)
+ 
 (defMacro doTimes ((var times . result) . body)
   (let1\
     (doTimes (times body result)
@@ -1206,7 +1198,7 @@
 
 (assert (foldR cons () '(1 2 3 4)) '(1 2 3 4))
 
-(defMacro dolist ((var listForm . resultForm?) . bodyForms)
+(defMacro dolist ((var listForm . resultForm) . bodyForms)
   (let1rec\
     (dolist (list body result)
       (if (null? list) (result list)
@@ -1216,7 +1208,7 @@
     (list dolist
           listForm
           (list* '\ (list var) bodyForms)
-          (list* '\ (list var) resultForm?))))
+          (list* '\ (list var) resultForm))))
 
 (def\ (make\* n f)
   (def\ (resize n lst)
@@ -1328,30 +1320,29 @@
   (def prv (%addMethod (eval class env) name method))
   (case (bndRes) ((#inert) #inert) ((:rhs) method) ((:prv) prv)) )
 
-(assert
-  (begin
-    (defClass Foo () ())
-    (defClass Bar (Foo) (a b))
-    (defGeneric g1 (obj p))
-    (defMethod g1 ((foo Foo) p) (+ p 100))
+(let ()
+  (defClass Foo () ())
+  (defClass Bar (Foo) (a b))
+  (defGeneric g1 (obj p))
+  (defMethod g1 ((foo Foo) p) (+ p 100))
     
-    (defObj foo Foo)
-    (defObj bar Bar :a 1 :b (+ 2 3))
+  (defObj foo Foo)
+  (defObj bar Bar :a 1 :b (+ 2 3))
     
-    (assert (g1 foo (+ 1 1)) 102)
-    (assert (g1 bar (+ 2 3)) 105)
+  (assert (g1 foo (+ 1 1)) 102)
+  (assert (g1 bar (+ 2 3)) 105)
     
-    (defMethod (g1 (bar Bar) p) (+ p (bar :b)))
+  (defMethod (g1 (bar Bar) p) (+ p (bar :b)))
     
-    (assert (bar :b) 5)
-    (assert (g1 bar 2) 7)
-    (assert (g1 bar (* 2 (bar :b))) 15)
-    (assert (bar :prv :b 6) 5)
-    (assert (bar :b) 6)
+  (assert (bar :b) 5)
+  (assert (g1 bar 2) 7)
+  (assert (g1 bar (* 2 (bar :b))) 15)
+  (assert (bar :prv :b 6) 5)
+  (assert (bar :b) 6)
 
-	(defMethod (g1 (bar Bar) p) (* p (+ a b)))
-	(assert (g1 bar 3) 21) )
-  #t )
+  (defMethod (g1 (bar Bar) p) (* p (+ a b)))
+  (assert (g1 bar 3) 21)
+)
 
 
 ;;; Modules
@@ -1398,11 +1389,6 @@
         (apply op (cons arg2 rest)))
       #f )))
 
-(def == (relationalOp ==))
-
-(def eq?
-  (relationalOp eq?) )
-
 (def <
   (relationalOp <) )
 
@@ -1415,27 +1401,39 @@
 (def >=
   (relationalOp >=) )
 
-(assert (== 1 1 1) #t)
+(def eq?
+  (relationalOp eq?) )
+
+(def ==
+  (relationalOp ==))
+
 (assert (< 1 2 3) #t)
 (assert (> 3 2 1) #t)
 (assert (<= 1 2 2 3) #t)
 (assert (>= 3 2 2 1) #t)
+(assert (eq? (1) (1) (1)) #t)
+(assert (== 1 1 1) #t)
 
-(def\ (!= . args)
-  (! (apply == args)))
+(def !=
+  (relationalOp !=))
 
 (def\ /= (arg . args)
   (if (null? args) #t
-    (if (member? arg args) #f
+    (if (member? arg args :cmp eq?) #f
       (apply /= args) )))
 
-#| TODO utile?
+#| TODO in sostituzione del prededente, utile?
 (def\ /= args
   (if (null? args) #t
     (let1 ((arg . args) args)
-      (if (member? arg args) #f
+      (if (member? arg args :cmp eq?) #f
         (apply /= args) ))))
 |#
+
+(assert (!= 1 1 1) #f)
+(assert (!= 1 2 1) #t)
+(assert (/= 1 2 3) #t)
+(assert (/= 1 2 1) #f)
 
 
 ;;; Thetic & Lytic
@@ -1443,7 +1441,7 @@
 ;; The terms thetic (for + and *) and lytic (for - and /) are due to Hankel.
 
 (def\ (theticOp binOp unit)
-  (\ args (reduceL binOp unit args)) )
+  (\ args (reduce binOp unit args)) )
 
 (def +
   (theticOp + 0) )
@@ -1460,7 +1458,7 @@
   (\ (arg1 . rest)
     (if (null? rest)
       (binOp unit arg1)
-      (reduceL binOp arg1 rest) )))
+      (reduce binOp arg1 rest) )))
 
 (def -
   (lyticOp - 0) )
@@ -1493,29 +1491,27 @@
 ;;; Sequences
 
 (defGeneric length (sequence)
-  )
-
+)
 (defMethod length ((seq List))
   (%len seq))
-
 (defMethod length ((seq Null))
   (%len seq))
 
-(defGeneric elt (sequence index)
-  )
 
+(defGeneric elt (sequence index)
+)
 (defMethod elt ((seq List) index)
   (nth index seq))
+(defMethod elt ((seq String) index)
+  (%subString seq index (+ index 1)))
+
 
 (defGeneric subSeq (sequence start . end)
-  )
-
+)
 (defMethod subSeq ((seq List) start . end)
   (apply** %subList seq start end))
-
 (defMethod subSeq ((seq Null) start . end)
   (apply** %subList seq start end))
-
 (defMethod subSeq ((seq String) start . end)
   (apply** %subString seq start end))
 

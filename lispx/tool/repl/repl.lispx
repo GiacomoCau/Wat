@@ -12,15 +12,19 @@
    |#
   0)
 
+(defConstant invokeDebugger0 invokeDebugger)
+
 (def\ repl:run ()
   #|Run a REPL.
    |#
-  (restartCase ((replEnd (\ () "repl:run ended!")))  
+  (set repl:env invokeDebugger invokeDebugger1) 
+  (restartCase ((replEnd (\ () (log "repl:run ended!"))))  
     (loop
       ;; The internal REPL-ABORT restart causes the loop to begin from the start again.
       ;; The user actually uses ABORT, described below.
       (restartCase ((replAbort (\ () #| nothing to do here, just unwind |#)))
-        (print (eval (read (dget repl:debugLevel)) repl:env)) ))))
+        (print (eval (read (dget repl:debugLevel)) repl:env)) )))
+  (set repl:env invokeDebugger invokeDebugger0) )
 
 (def\ repl:runDebuggerLoop (condition k)
   #|Run a debug REPL.
@@ -42,7 +46,7 @@
 
 ;; Overwrite built-in `invokeDebugger'.
 ;; This gets called for all unhandled conditions.
-(def\ invokeDebugger (condition)
+(def\ invokeDebugger1 (condition)
   ;; Immediately grab the stack trace,
   ;; so we don't include any of the below frames in it.
   (takeSubcont rootPrompt k
@@ -71,3 +75,4 @@
                     (repl:runDebuggerLoop condition k) )))
             (else
                (repl:runDebuggerLoop condition k) ) ))))))
+

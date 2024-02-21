@@ -74,7 +74,7 @@
   #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
    |$(fn (fun args . env))
    |$(type function)
-   |$(derivation (eval (cons (unwrap fun) args) (if (null? env) (newEnv) ((\ ((env)) env) env))))
+   |$(derivation (eval (cons (unwrap fun) args) (if (null? env) (newEnv) (car! env)) ))
    |#
   %apply)
 
@@ -115,7 +115,7 @@
 (def bind? %bind?)
 
 (def bound?
-  #|Return true if the SYMBOL is bound in the ENVIRONMENT, false otherwise.
+  #|Return true if the SYMBOL or KEYWORD is bound in the ENVIRONMENT or OBJ, false otherwise.
    |$(fn (symbol environment))
    |$(type function)
    |#
@@ -174,6 +174,7 @@
    |the CONSEQUENT or ALTERNATIVE depending on whether the TEST yielded
    |true or false.
    |$(fn (test consequent . alternative))
+   |$(fn (test1 consequent1 test2 consequent2 ... . alternative))
    |$(type fexpr)
    |#
   %if)
@@ -348,7 +349,7 @@
   #|Create an anonymous function with the given PARAMETER-TREE and FORMS.
    |$(fn (parameterTree . forms))
    |$(type function)
-   |$(derivation (vau (formals . body) env (wrap (eval (list* vau formals #ignore body) env))))
+   |$(derivation (vau (parameterTree . forms) env (wrap (eval (list* 'vau parameterTree #ignore forms) env))))
    |#
   %\)
 
@@ -413,7 +414,7 @@
 (def curry*
   (\ (f . v*) (\ args (apply f (append v* args)))) )
 
-(def identity
+(def idx
   #|Identity function.
    |#
   (\ (x) x))
@@ -421,27 +422,26 @@
 (def 1+
   (\ (n) (+ n 1)))
 
-(def _-1
+(def 1-
   (\ (n) (- n 1)))
 
 
 ;;; Macro
 
-(def evalMacro (newDVar #t))
+(def evalMacro (newBox #t))
 
 (def makeMacro
-  #|Create a macro from an EXPANDER operator.  A macro is an operator
-   |that receives an operand and produces a form (by calling the expander
-   |with the operand as argument) that is then evaluated in place of the
-   |operand.
+  #|Create a macro from an EXPANDER operator.
+   |A macro is an operator that receives an operand and produces a form
+   |(by calling the expander with the operand as argument)
+   |that is then evaluated in place of the operand.
    |$(fn (expander))
    |$(type function)
    |#
   (wrap
     (vau (expander) #ignore
       (vau operands env
-        (def !evalMacro (! (evalMacro)))
-        (if !evalMacro (evalMacro #t))
+        (def !evalMacro (! (evalMacro :prv #t)))
         (def exp (apply expander operands (newEnv)))
         (if !evalMacro exp (eval exp env)) ))))
 
@@ -643,9 +643,9 @@
     ((rec\ (map lst) (if (null? lst) #null (cons (f (car lst)) (map (cdr lst))) )) lst)
     ((rec\ (map* lst*) (if (null? (car lst*)) #null (cons (apply f (map car lst*)) (map* (map cdr lst*))) )) (cons lst lst*)) ))
 
-; evlis: (map (\ (x) (eval x env)) x*) <=> (eval (cons 'list x*) env)
 ; apply: (eval (cons opv args) env) <=> (apply opv args env)
 ; apply: (eval (cons apv args) env) <=> (apply apv (evlis env args) env)
+; evlis: (map (\ (x) (eval x env)) x*) <=> (eval (cons 'list x*) env)
 
 (defMacro (def*\ lhs* . rhs*)
   (list* 'def*
@@ -655,7 +655,6 @@
 
 ;;; Lexical Bindings
 
-(def\ (->1expr binding) ((\ ((#_ cadr)) cadr) binding))
 (def\ (->begin binding) ((\ ((#_ cadr . cddr)) (if (null? cddr) cadr (list* 'begin cadr cddr))) binding))
 (def\ (->name+#inert (lhs . #_)) (list (if (cons? lhs) (car lhs) lhs) #inert))
 (def\ (->name+lambda (lhs . rhs)) (if (cons? lhs) (list (car lhs) (list* '\ (cdr lhs) rhs)) (list lhs (cons '\ rhs)) ))
@@ -747,19 +746,7 @@
     (list* 'rec\ name (map car bindings) body)
     (map ->begin bindings) ))
 
-#| TODO sostituito dal seguente, eliminare
-(defMacro (let lhs . rhs)
-  (if (symbol? lhs)
-    (list* 'letLoop lhs rhs)
-    (let1 ((dt* . form*)
-      ( (rec\ loop (lhs)
-          (if (null? lhs) (())
-            (let* ( (((dt . form) . lhs) lhs)
-                    ((dt* . form*) (loop lhs)) )
-              (cons (cons dt dt*) (cons (01->+ form) form*))) ))
-        lhs ))
-      (cons (list* '\ dt* rhs) form*) )))
-|#
+
 (defMacro (let lhs . rhs)
   #|Establish BINDINGS parallelly during the evaluation of FORMS, so
    |that no binding can refer to the other ones.
@@ -1054,12 +1041,12 @@
   #|Search for ITEM in the LIST according to the TEST predicate
    |(defaults to `==').  Return the tail of the list starting with
    |ITEM if found, nil otherwise.  The KEY function is applied to
-   |each list element before comparison (defaults to `identity').
+   |each list element before comparison (defaults to `idx').
    |$(fn (item list &key test key))
    |#
   (let ( (cmp (optDft (optValue :cmp keywords) ==))
-         (key (optDft (optValue :key keywords) identity))
-         (ret (optDft (optValue :ret keywords) identity)) )
+         (key (optDft (optValue :key keywords) idx))
+         (ret (optDft (optValue :ret keywords) idx)) )
     (let1 loop (lst lst)
       (if (cons? lst)
         (if (cmp (key (car lst)) k) (ret lst)
@@ -1081,7 +1068,7 @@
   (member k lst :key car :ret car) )
 
 
-;;; Case CaseType
+;;; Case MatchObj? CaseType CaseType\
 
 (defVau (case exp . clauses) env
   (let1 (value (eval exp env))
@@ -1137,7 +1124,7 @@
 
 (def\ (sort lst . opt)
   (def cmp (case (optKey (:up :dn) opt) ((#null :up) <) (:dn >=)))
-  (def key (optDft (optValue :key opt) identity))
+  (def key (optDft (optValue :key opt) idx))
   (def\ (sort lst)  
     (if (<= (len lst) 1) lst
       (let loop ( (left ()) (right ()) (pivot (car lst)) (rest (cdr lst)) )
@@ -1228,7 +1215,7 @@
          (makeTag
            (\ (i name %deep)
              (if (&& (>= i (- 0 %deep)) (<= i 0))
-               (symbol ($ name (+ i %deep)))
+               (symbol ($ name (+ %deep i)))
                (@typeError vm ($ "invalid " name " index, not {expected}: {datum}") i `(and (>= ,(- 0 %deep)) (=< 0))) ))) )
     (let\ ( ((makeThrowTag\ name %deep)
                (\ (#! (0 1 Integer) i)
@@ -1248,7 +1235,9 @@
                     :continue (makeThrowTag\ "continue" %deep)
                     :break/v (makeThrowTagValue\ "break" %deep)
                     :until! (\ (b) (if b (throwTag break)))
-                    :while! (\ (b) (if (! b) (throwTag break))) ))) 
+                    :while! (\ (b) (if (! b) (throwTag break)))
+                    :until* (macro (b . forms) `(if ,b (throwTag ',break (begin ,@forms)))) 
+                    :while* (macro (b . forms) `(if (! ,b) (throwTag ',break (begin ,@forms)))) ))) 
               (if (check? forms (2 oo 'for ((2 3)) )) ;loop for
                 (let ( (for (cadr forms))
                        (forms (01->+ (cddr forms))) )
@@ -1285,9 +1274,10 @@
     (if (%ignore? cond) body
       (cons (list 'while! cond) body) )))
 
-(defMacro (while cond . body)
-  (list* 'loop (list 'while! cond)
-    body ))
+(defMacro (while cond . forms)
+  #|Evaluate FORMS while TEST-FORM evaluates to true.
+   |#
+  (list* 'loop (list 'while! cond) forms ))
 
 (defMacro until (cond . forms)
   #|Evaluate FORMS until TEST-FORM evaluates to true.
@@ -1416,7 +1406,7 @@
     ((rec\ (foldr acc lst) (if (null? lst) acc (f (car lst) (foldr acc (cdr lst)) ) )) init lst)
     ((rec\ (foldr* acc lst*) (if (null? (car lst*)) acc (apply* f (map car lst*) (foldr* acc (map cdr lst*)) ) )) init (cons lst lst*)) ))
 
-(defMacro dolist ((var listForm . resultForm?) . bodyForms)
+(defMacro dolist ((var listForm . resultForm) . bodyForms)
   #|Cf. Common Lisp's DOLIST.
    |#
   (let1rec\
@@ -1428,7 +1418,7 @@
     (list dolist
           listForm
           (list* '\ (list var) bodyForms)
-          (list* '\ (list var) resultForm?))))
+          (list* '\ (list var) resultForm))))
 
 (def\ (make\* n f)
   (def\ (resize n lst)
@@ -1611,15 +1601,6 @@
         (apply op (cons arg2 rest)))
       #f )))
 
-(def == (relationalOp ==))
-
-(def eq?
-  #|Return true if all ARGUMENTS are equal, false otherwise.
-   |$(fn arguments)
-   |$(type function)
-   |#
-  (relationalOp eq?) )
-
 (def <
   #|Return true if the ARGUMENTS are in monotonically increasing order,
    |false otherwise.
@@ -1652,18 +1633,36 @@
    |#
   (relationalOp >=) )
 
-(def\ (!= . args)
-  (! (apply == args)))
+(def eq?
+  #|Return true if all ARGUMENTS are equal, false otherwise.
+   |$(fn arguments)
+   |$(type function)
+   |#
+  (relationalOp eq?) )
+
+(def ==
+  #|Return true if all ARGUMENTS are ==, false otherwise.
+   |$(fn arguments)
+   |$(type function)
+   |#
+  (relationalOp ==))
+
+(def !=
+  #|Return true if all ARGUMENTS are ==, false otherwise.
+   |$(fn arguments)
+   |$(type function)
+   |#
+  (relationalOp !=))
 
 (def\ /= (arg . args)
-  #|Return true if no two ARGUMENTS are the same, false otherwise.
+  #|Return true if all ARGUMENTS are distinct, false otherwise.
    |$(fn arguments)
    |#
   (if (null? args) #t
     (if (member? arg args :cmp eq?) #f
       (apply /= args) )))
 
-#| TODO utile?
+#| TODO in sostituzione del prededente, utile?
 (def\ /= args
   (if (null? args) #t
     (let1 ((arg . args) args)
@@ -1679,7 +1678,7 @@
 (def\ (theticOp binOp unit)
   #|Utility to create an n-ary thetic operator from a BINARY-OPERATOR and INITIAL-VALUE.
    |#
-  (\ args (reduceL binOp unit args)) )
+  (\ args (reduce binOp unit args)) )
 
 (def +
   #|Return the sum of the ARGUMENTS, or 0 if no arguments are supplied.
@@ -1708,7 +1707,7 @@
   (\ (arg1 . rest)
     (if (null? rest)
       (binOp unit arg1)
-      (reduceL binOp arg1 rest) )))
+      (reduce binOp arg1 rest) )))
 
 (def -
   #|If only one number is supplied in the ARGUMENTS, return the
@@ -1750,35 +1749,33 @@
 (defGeneric length (sequence)
   #|Return the number of elements in a sequence.
    |#
-  )
-
+)
 (defMethod length ((seq List))
   (%len seq))
-
 (defMethod length ((seq Null))
   (%len seq))
+
 
 (defGeneric elt (sequence index)
   #|Return the sequence element at the specified index.
    |#
-  )
-
+)
 (defMethod elt ((seq List) index)
   (nth index seq))
+(defMethod elt ((seq String) index)
+  (%subString seq index (+ index 1)))
+
 
 (defGeneric subSeq (sequence start . end)
   #|Create a sequence that is a copy of the subsequence
    |of the SEQUENCE bounded by START and optional END?.  If END?  is not
    |supplied or void, the subsequence stretches until the end of the list
    |#
-  )
-
+)
 (defMethod subSeq ((seq List) start . end)
   (apply** %subList seq start end))
-
 (defMethod subSeq ((seq Null) start . end)
   (apply** %subList seq start end))
-
 (defMethod subSeq ((seq String) start . end)
   (apply** %subString seq start end))
 
