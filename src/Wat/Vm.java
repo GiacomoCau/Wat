@@ -822,7 +822,7 @@ public class Vm {
 				if (prTrc == 2 && root && r == null) print("evaluate: ", car);
 				if (lst.cdr() == null) { return evaluate(e, car); } 
 				var res = first && r != null && !(first = false) ? r.resume() : getTco(evaluate(e, car));
-				if (res instanceof Suspension s) { var l = lst; return s.suspend(dbg(e, this, lst.car), rr-> combine(rr, e, l)); }
+				if (res instanceof Suspension s) { var l = lst; return s.suspend(dbg(e, this, car), rr-> combine(rr, e, l)); }
 				lst = lst.cdr();
 			}
 		}
@@ -953,9 +953,9 @@ public class Vm {
 			var chk = checkM(this, o, 2, Any.class, or(ignore, Symbol.class)); // o = (prp (or #ignore symbol) . forms)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+			var hdl = lambda(e, list(o.<Object>car(1)), o.cdr(1));
 			return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, o.car)),
-				prp-> new Suspension(prp, lambda(e, list(o.<Object>car(1)), o.cdr(1)))
-					.suspend(dbg(e, this, o), rr-> Vm.this.combine(e, rr.s, null)))
+				prp-> new Suspension(prp, hdl).suspend(dbg(e, this, prp, hdl), rr-> Vm.this.combine(e, rr.s, null)))
 			;
 		}
 		public String toString() { return "%TakeSubcont"; }

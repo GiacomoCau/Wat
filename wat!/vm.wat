@@ -135,7 +135,8 @@
 (def\ (printFrames k)
   (let1 (k (.nxt k))
     (unless (null? k) (printFrames k)) )
-  (log "v" k) )
+  (log "v" k)
+  #inert)
 
 (def\ (printStacktrace)
   (takeSubcont rootPrompt k

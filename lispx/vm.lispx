@@ -149,7 +149,8 @@
 (def\ (printFrames k)
   (let1 (k (.nxt k))
     (unless (null? k) (printFrames k)) )
-  (log "v" k) )
+  (log "v" k)
+  #inert )
 
 (def\ invokeDebugger (condition)
   #|Invoke the debugger, which as a default just prints a stack trace
@@ -230,6 +231,7 @@ x
       (if (prStk) (printFrames k))
       (panic condition))))
 
+(takeSubcont rootPrompt k (printFrames k))
 (takeSubcont rootPrompt k (pushDelimSubcont rootPrompt k (printFrames k)))
 |#
 
