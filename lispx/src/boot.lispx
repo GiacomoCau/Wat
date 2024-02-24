@@ -82,7 +82,7 @@
   #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
    |$(fn (fun . args)) 
    |$(type function)
-   |$(derivation (apply fun args))
+   |$(derivation (apply fun args (newEnv)))
    |#
   %apply*)
 
@@ -90,7 +90,7 @@
   #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
    |$(fn (fun . args)) 
    |$(type function)
-   |$(derivation (apply fun (apply list* args)))
+   |$(derivation (apply fun (apply list* args) (newEnv)))
    |#
   %apply**)
 
@@ -176,6 +176,7 @@
    |$(fn (test consequent . alternative))
    |$(fn (test1 consequent1 test2 consequent2 ... . alternative))
    |$(type fexpr)
+   |$(derivation (vau (test then . else) env (if (eval then env) (eval then env) (null? else) #inert (null? (cdr else)) (eval (car else)) (apply if else env))))
    |#
   %if)
 
@@ -407,6 +408,9 @@
   #|Compose two functions, creating a new function equivalent to (G (F ...)).
    |#
   (\ (f g) (\ args (f (apply g args)))) )
+
+(def compose* 
+  (\ f* (\ args ((rec\ (loop (f . f*)) (if (null? f*) (apply f args) (f (loop f*)))) f*))) )
 
 (def curry
   (\ (f v) (\ args (apply** f v args))) )
@@ -1162,6 +1166,9 @@
 
 (defVau (check o ck) env
   ((wrap %check) (eval o env) ck) )
+
+(defVau (check o ck) env
+  (apply %check (list (eval o env) ck) env) )
 
 (defMacro (check* o . cks)
     (list 'check o cks) )

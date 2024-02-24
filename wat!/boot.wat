@@ -199,6 +199,9 @@
 (def compose
   (\ (f g) (\ args (f (apply g args)))) )
 
+(def compose* 
+  (\ f* (\ args ((rec\ (loop (f . f*)) (if (null? f*) (apply f args) (f (loop f*)))) f*))) )
+
 (def curry
   (\ (f v) (\ args (apply** f v args))) )
 
@@ -692,7 +695,8 @@
 
 (assert (ifOpt (a ()) (+ a 1)) #null)
 (assert (ifOpt (a '(2)) (+ a 1)) 3)
-(assert (ifOpt (a '(2 2)) (+ a 1)) Error :type 'match :operands# -1)
+(assert (ifOpt (a '(2 3)) (+ a 1)) Error :type 'match :operands# -1)
+(assert (ifOpt ((a b) '((2 3))) (+ a b)) 5)
 
 (defVau (ifOpt* (pt opt) then . else) env
   (let1 (opt (eval opt env))
@@ -896,6 +900,9 @@
 
 (defVau (check o ck) env
   ((wrap %check) (eval o env) ck) )
+
+(defVau (check o ck) env
+  (apply %check (list (eval o env) ck) env) )
 
 (defMacro (check* o . cks)
     (list 'check o cks) )

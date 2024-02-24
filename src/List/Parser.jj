@@ -186,13 +186,15 @@ TOKEN:	// identifiers
 |	< # jvid: ( <jvf> | "_" <jvn>) ( <jvn> )* >
 |	< # jvf: "$" | <letter> >
 |   < # jvn: "_" | <jvf> | <digit> >
+|   < Mac: "'" | "`" | "," | ",@" | "\u00b4" >
 |   < Kwd: ":" (<Sym>)+ >
-|	< Sym: <first> ( "#" | "'" | "|" | "," | "`" | "\"" | <first> )* >
+|	< Sym: <first> ( "#" | "\"" | "|" | <Mac> | ":" | <first> )* >
 |	< # first: <letter> | <special> | <digit> | <unicode> > 
-|	< # special: "-" | "+" | "&" | "." | "@" | "!" | "=" | ">" | "<" | "%" | "?" | "/" | "*" | "$" | "_" | "~" | "^" | ":" | "\\" | "||" | "[]" >
+|	< # special: "-" | "+" | "&" | "." | "@" | "!" | "=" | ">" | "<" | "%" | "?" | "/" | "*" | "$" | "_" | "~" | "^" | "\\" | "||" | "[]" >
 |	< # letter: [ "A"-"Z", "a"-"z" ] >
 |	< # digit: [ "0"-"9" ] >
-|   < # unicode: [ "\u00A1" - "\u00ff" ] // latin1 supplement
+|   < # unicode: [ "\u00a1" - "\u00b3" ] // latin1 supplement
+			|	 [ "\u00b5" - "\u00ff" ] // latin1 supplement
 			|	 [ "\u0370" - "\u03ff" ] // greek and coptic
 			|	 [ "\u2070" - "\u209f" ] // superscripts and subscripts
 			|	 [ "\u20a0" - "\u20bf" ] // currency
@@ -223,15 +225,12 @@ Object Elt() throws Exception: {
 	|	t=<USym>     { return t.image.substring(1,t.image.length()-1).replaceAll("\\\\\\|", "|").replaceAll("\\\\\\\\", "\\\\"); }
 	|	t=<Prim>     { return classForName(t.image.substring(1)); }	
 	|	t=<Cls>      { return classForName(t.image.substring(1)); }	
-	|   t=<Dot>      { return $("%dot", $("wat-string", t.image.substring(1))); } 
+	|   t=<Dot>      { return $("%dot", $("wat-string", t.image.substring(1))); }
 	|   t=<At>       { return $("%at", $("wat-string", t.image.substring(1))); } 
+	|   t=<Mac> o=Elt() { return $("%"+t, o); }
 	|	t=<Kwd>      { return t.image; }
 	|	t=<Sym>      { return t.image; }  	
 	//|	t=<Sym> ["::" t2=<Sym>] {	return t2 == null ? t.image : $("%eval", $("%'", t2.image), t.image); }  	
-	|	"'" o=Elt()  { return $("%'", o); }
-	|	",@" o=Elt() { return $("%,@", o); }
-	|	"," o=Elt()  { return $("%,", o); }
-	|	"`"  o=Elt() { return $("%`", o); }
 	|	"(" ( o=Elt(){ l.add(o); } )+ [ "." o2=Elt() ] ")" {
 		if (o2 != null && !isNil(o2)) { l.add( "." ); l.add( o2 ); };
 		return l.toArray();

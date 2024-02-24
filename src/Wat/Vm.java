@@ -341,9 +341,11 @@ public class Vm {
 	interface ObjEnv {
 		Object value(Object key);
 		boolean isBound(Object key);
-		boolean remove(Object key);
-		List keys();
 		Object get(Object key);
+		List keys();
+		List symbols();
+		List keywords();
+		boolean remove(Object key);
 	}
 	class Env implements ArgsList, ObjEnv {
 		Env parent; LinkedHashMap<String,Object> map = new LinkedHashMap();
@@ -403,11 +405,15 @@ public class Vm {
 			}
 			return false;
 		};
-		public List keys() {
-			var keys = map.keySet();
-			for (var env=parent; env != null; env=env.parent) keys.addAll(env.map.keySet());
-			return list(keys.toArray());
+		public Set<String> keySet() {
+			Set<String> keySet = new HashSet();
+			keySet.addAll(map.keySet());
+			for (var env=parent; env != null; env=env.parent) keySet.addAll(env.map.keySet());
+			return keySet;
 		}
+		public List keys() { return list(keySet().toArray()); }
+		public List symbols() { return list(keySet().stream().map(Vm.this::symbol).toArray()); }
+		public List keywords() { return list(keySet().stream().map(Vm.this::keyword).toArray()); }
 		@Override public Object apply(List o) {
 			var len = len(o);
 			return switch (len(o)) {
@@ -474,7 +480,10 @@ public class Vm {
 		public Object value(Object key) { return map.get(toKey(key)); }
 		public boolean isBound(Object key) { return map.containsKey(toKey(key)); }
 		public boolean remove(Object key) { key=toKey(key); if (!map.containsKey(key)) return false; map.remove(key); return true; }
-		public List keys() { return list(map.keySet().toArray()); }
+		public Set<String> keySet() { return map.keySet(); }
+		public List keys() { return list(keySet().toArray()); }
+		public List symbols() { return list(keySet().stream().map(Vm.this::symbol).toArray()); }
+		public List keywords() { return list(keySet().stream().map(Vm.this::keyword).toArray()); }
 		public Object get(Object obj) {
 			var key = toKey(obj);
 			var val = map.get(key);
@@ -1650,6 +1659,9 @@ public class Vm {
 				"%value", wrap(new JFun("%Value", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), ObjEnv.class), (l,o)-> o.<ObjEnv>car(1).value(o.car)) ),
 				"%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), ObjEnv.class), (l,o)-> o.<ObjEnv>car(1).isBound(o.car)) ),
 				"%remove!", wrap(new JFun("%remove!", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), ObjEnv.class), (l,o)-> o.<ObjEnv>car(1).remove(o.car)) ),				
+				"%keys", wrap(new JFun("%Keys", (n,o)-> checkN(n, o, 1, or(ObjEnv.class)), (l,o)-> o.<ObjEnv>car().keys()) ),
+				"%symbols", wrap(new JFun("%Symbols", (n,o)-> checkN(n, o, 1, ObjEnv.class), (l,o)-> o.<ObjEnv>car().symbols()) ),
+				"%keywords", wrap(new JFun("%Keywords", (n,o)-> checkN(n, o, 1, ObjEnv.class), (l,o)-> o.<ObjEnv>car().keywords()) ),				
 				// Values
 				"%car", wrap(new JFun("%Car", (n,o)-> checkR(n, o, 1, 2, Cons.class, Integer.class), (l,o)-> apply(c-> l == 1 ? c.car() : c.car(o.<Integer>car(1)), o.<Cons>car()) )),
 				"%cdr", wrap(new JFun("%Car", (n,o)-> checkR(n, o, 1, 2, Cons.class, Integer.class), (l,o)-> apply(c-> l == 1 ? c.cdr() : c.cdr(o.<Integer>car(1)), o.<Cons>car()) )),
