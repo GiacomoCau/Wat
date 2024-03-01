@@ -191,7 +191,7 @@
 
 (def keyword %keyword)
 (def keyword? %keyword?)
-(def keywordName %internName)
+(def keywordName %name)
 (def len %len)
 (def list*
   #|Create a list from the ARGUMENTS so that the last argument becomes
@@ -277,7 +277,7 @@
    |$(fn (symbol))
    |$(type function)
    |#
-  %internName)
+  %name)
 
 (def subClass?
   #|Return true if the CLASS is a subclass of the SUPERCLASS, false otherwise.
@@ -413,7 +413,7 @@
   (\ f* (\ args ((rec\ (loop (f . f*)) (if (null? f*) (apply f args) (f (loop f*)))) f*))) )
 
 (def curry
-  (\ (f v) (\ args (apply** f v args))) )
+  (\ (f v) (\ args (apply f (cons v args)))) )
 
 (def curry*
   (\ (f . v*) (\ args (apply f (append v* args)))) )

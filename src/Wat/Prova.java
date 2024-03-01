@@ -49,7 +49,8 @@ import Wat.Vm.Symbol;
 public class Prova {
 	
 	public static void main(String[] args) throws IOException {
-		utf8();
+		out.println(Arrays.stream(";._".split("")).toList());
+		out.println(Arrays.stream("cc.1".splitWithDelimiters(":|!|,|'|\\.|&", 0)).toList());
 	}
 
 	public static void utf8() throws IOException {

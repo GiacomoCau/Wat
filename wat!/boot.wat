@@ -98,7 +98,7 @@
 
 (def keyword %keyword)
 (def keyword? %keyword?)
-(def keywordName %internName)
+(def keywordName %name)
 (def len %len)
 (def list*
   %list*)
@@ -130,7 +130,7 @@
 (def symbol %symbol)
 (def symbol? %symbol?)
 (def symbolName
-  %internName)
+  %name)
 (def subClass?
   %subClass?)
 (def the %the)
@@ -202,8 +202,129 @@
 (def compose* 
   (\ f* (\ args ((rec\ (loop (f . f*)) (if (null? f*) (apply f args) (f (loop f*)))) f*))) )
 
+#|
+(def\ compose* f* 
+  (\ args ((rec\ (loop (f . f*)) (if (null? f*) (apply f args) (f (loop f*)))) f*)) )
+
+(defMacro compose* f* 
+  (list '\ 'args ((rec\ (loop (f . f*)) (if (null? f*) (list 'apply f 'args) (list f (loop f*)))) f*)) )
+
+(defMacro _ forms
+  (list* '\ '(_) forms) )
+
+; ´a;b -> (compose a b c)
+; ´a;b;c -> (compose* a b c)
+; ´!a -> (compose ! a)
+; ´a_b -> (a b)
+; ´a_'b -> (a 'b)
+; ´a_'b_c -> (a 'b c)
+; ´a,b -> (curry a b)
+; ´a,'b,c -> (curry* a 'b c) 
+; ´a,_,'b,c -> [_ (a _ 'b c)]
+
+(defMacro %´ ((#! Symbol x))
+  (def\ (end? r . c) (|| (null? r) (member? (car r) (map symbol c))) )
+  (def\ (expd; t r)
+    (if (null? r)
+      (if (null? (cdr t)) (car t) (cons (if (null? (cddr t)) 'compose 'compose*) (reverse t)))
+      (let1 ((f . r) r)
+        (if 
+          (== f '!)
+            (if (end? r ";" "," "_") (%error "!")
+              (expd; (cons (list 'compose '! (car r)) t) (cdr r)) )
+          (== f (symbol ","))
+            (let1 ((f . r) (expd, (cons (car t)) r))
+              (expd; (cons f (cdr t)) r) )
+          (== f (symbol "_"))
+            (let1 ((f . r) (expd_ (cons (car t)) r))
+              (expd; (cons f (cdr t)) r) )
+          (expd; (if (== f (symbol ";")) t (cons f t)) r) ))))
+  (def\ (expd, t r)
+    (if (end? r ";") 
+      (cons (if (null? (cdr t)) (car t) (member? '_ t) (list '_ (reverse t)) (cons (if (null? (cddr t)) 'curry  'curry*) (reverse t))) (if (null? r) r (cdr r)))
+      (let1 ((f . r) r)
+        (if (== f (symbol "'"))
+          (if (end? r ";" ",")  (%error "'")
+            (expd, (cons (list 'quote (car r)) t) (cdr r)) )
+          (expd, (if (== f (symbol ",")) t (cons f t)) r) ))))
+  (def\ (expd_ t r)
+    (if (end? r ";") 
+      (cons (if (null? (cdr t)) (car t) (reverse t)) (if (null? r) r (cdr r)))
+      (let1 ((f . r) r)
+        (if (== f (symbol "'"))
+          (if (end? r ";" "_") (%error "'")
+            (expd_ (cons (list 'quote (car r)) t) (cdr r)) )
+          (expd_ (if (== f (symbol "_")) t (cons f t)) r) ))))
+  (def\ (expds x)
+     (map [_ (if (>= (@indexOf ";!,'_&" _) 0) (symbol _) (car (@toLispList vm _)))]
+       (filter [_ (!= _ "")] (array->list #t (@splitWithDelimiters (%name x) ";|!|,|'|_|&" -1)) )) )
+  (expd; () (expds x)) ) 
+
+(defMacro %´ ((#! Symbol x))
+  ;(def sep (map symbol (array->list #t (@split ";._" ""))))
+  (def (comma semicolon apostrophe lowline bang) (map symbol (array->list #t (@split ",;'_!" ""))))
+  (def\ (mkc t) (if (member? lowline t) (list lowline t) (cons (if (null? (cddr t)) 'curry 'curry*) t)))
+  (def\ (end? r . s*) (|| (null? r) (member? (car r) s*)) )
+  (def\ (expd1 t r)
+    (if (null? r)
+      (if (null? (cdr t)) (car t) (cons (if (null? (cddr t)) 'compose 'compose*) (reverse t)))
+      (let1 ((f . r) r)
+        (if 
+          (== f bang)
+            (if (end? r semicolon comma lowline) (%error "!")
+              (expd1 (cons (list 'compose bang (car r)) t) (cdr r)) )
+          (== f comma)
+            (let1 ((f . r) (expd2 comma mkc (cons (car t)) r))
+              (expd1 (cons f (cdr t)) r) )
+          (== f lowline)
+            (let1 ((f . r) (expd2 lowline idx (cons (car t)) r))
+              (expd1 (cons f (cdr t)) r) )
+          (expd1 (if (== f semicolon) t (cons f t)) r) ))))
+  ;(def\ (switch v a b) (if (== v a) b a))
+  (def\ (expd2 sep mk t r)
+    (if (end? r semicolon) 
+      (cons (if (null? (cdr t)) (car t) (mk (reverse t))) (if (null? r) r (cdr r)))
+      (let1 ((f . r) r)
+        (if 
+          (== f apostrophe)
+            (if (end? r semicolon comma lowline) (%error "'")
+              (expd2 sep mk (cons (list 'quote (car r)) t) (cdr r)) )
+          ;(== f bang)    
+          ;  (if (end? r semicolon comma lowline) (%error "!")
+          ;    (expd2 sep mk (cons (list bang (car r)) t) (cdr r)) )
+          ;(== f (switch sep comma lowline))    
+          ;  (let1 ((f . r) (expd2 (switch sep comma lowline) (switch mk mkc idx) (cons (car t)) r))
+          ;    (expd1 (cons f (cdr t)) r) )
+          (expd2 sep mk (if (== f sep) t (cons f t)) r) ))))
+  (def\ (expd0 x)
+     (map [_ (if (>= (@indexOf ";!,'_&" _) 0) (symbol _) (car (@toLispList vm _)))]
+       (filter [_ (!= _ "")] (array->list #t (@splitWithDelimiters (%name x) ";|!|,|'|_|&" -1)) )) )
+  (expd1 () (expd0 x)) ) 
+
+(assert (expand ´a) 'a)
+(assert (expand ´!a) '(compose ! a))
+(assert (expand ´a;b) '(compose a b))
+(assert (expand ´a;!b;c) '(compose* a (compose ! b) c))
+
+(assert (expand ´cc) 'cc)
+(assert (expand ´cc,1) '(curry cc 1))
+(assert (expand ´cc,1,2) '(curry* cc 1 2))
+(assert (expand ´cc,1,'a,2) '(curry* cc 1 (quote a) 2))
+(assert (expand ´cc,1,_,2) '(_ (cc 1 _ 2)))
+
+(assert (expand ´cc) 'cc)
+(assert (expand ´cc_1) '(cc 1))
+(assert (expand ´cc_1_2) '(cc 1 2))
+(assert (expand ´cc_1_'a_2) '(cc 1 (quote a) 2))
+
+(assert (expand ´a;!b;cc,1,'d;e) '(compose* a (compose ! b) (curry* cc 1 (quote d)) e))
+(assert (expand ´a;!b;cc,1,'d;ee_2_'f;g) '(compose* a (compose ! b) (curry* cc 1 (quote d)) (ee 2 (quote f)) g)) 
+(assert (expand ´a;!b;cc,1,'d;ee_2_'f_:gg;h) '(compose* a (compose ! b) (curry* cc 1 (quote d)) (ee 2 (quote f) :gg) h)) 
+
+|#
+
 (def curry
-  (\ (f v) (\ args (apply** f v args))) )
+  (\ (f v) (\ args (apply f (cons v args)))) )
 
 (def curry*
   (\ (f . v*) (\ args (apply f (append v* args)))) )
