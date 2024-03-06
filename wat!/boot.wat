@@ -1357,6 +1357,7 @@
 ; ´a,'b,c -> (curry* a 'b c) 
 ; ´a,_,'b,c -> [_ (a _ 'b c)]
 
+#| TODO sostituite dalla seguente, eliminare
 (defMacro %´ ((#! Symbol x))
   (def\ (end? r . c) (|| (null? r) (member? (car r) (map symbol c))) )
   (def\ (expd; t r)
@@ -1429,7 +1430,6 @@
        (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (%name x) ";|!|,|'|_|&" -1)) )) )
   (expd1 () (expd0 x)) )
 
-#|
 (defMacro %´ ((#! Symbol x))
   (def (comma semicolon apostrophe underscore bang) (map symbol (array->list (@split ",;'_!" ""))))
   (def\ (mkc t) (if (member? underscore t) (list underscore t) (cons (if (null? (cddr t)) 'curry 'curry*) t)))
@@ -1483,6 +1483,52 @@
   (expd1 () (expd0 x)) )
 |#
 
+(defMacro %´ ((#! Symbol x))
+  (def (comma semicolon apostrophe underscore bang) (map symbol (array->list (@split ",;'_!" ""))))
+  (def\ (mkc t) (if (member? underscore t) (list underscore t) (cons (if (null? (cddr t)) 'curry 'curry*) t)))
+  (def\ (end? r . s*) (|| (null? r) (member? (car r) s*)) )
+  (def\ (expd1 t r)
+    (if (null? r)
+      (if (null? (cdr t)) (car t) (cons (if (null? (cddr t)) 'compose 'compose*) (reverse t)))
+      (let1 ((f . r) r)
+        (if 
+          (== f bang)
+            (if (end? r semicolon comma underscore) (%error "!")
+              (expd1 (cons (list 'compose bang (car r)) t) (cdr r)) )
+          (== f comma)
+            (let1 ((f . r) (expd2 0 comma mkc (list (car r) (car t)) (cdr r)))
+              (expd1 (cons f (cdr t)) r) )
+          (== f underscore)
+            (let1 ((f . r) (expd2 0 underscore idx (list (car r) (car t)) (cdr r)))
+              (expd1 (cons f (cdr t)) r) )
+          (expd1 (if (== f semicolon) t (cons f t)) r) ))))
+  (def\ (switch sep a b) (if (== sep a) b a))
+  (def\ (expd2 lev sep mk t r)
+    (if (end? r semicolon) 
+        (cons (if (null? (cdr t)) (car t) (mk (reverse t))) (if (null? r) r (cdr r)))
+      (end? r (switch sep comma underscore))
+        (if (zero? lev)
+          (let1 ((f . r) (expd2 (1+ lev) (switch sep comma underscore) (switch mk mkc idx) (car t) r))
+            (expd2 lev sep mk (cons f (cdr t)) r) )
+          (cons (mk (reverse t)) r) )    
+      (let1 ((f . r) r) 
+        (if 
+          (== f apostrophe)
+            (if (end? r semicolon sep) (%error "'")
+              (expd2 lev sep mk (cons (list 'quote (car r)) t) (cdr r)) )
+          (== f bang)
+            (if (end? r semicolon sep) (%error "!")
+              (expd2 lev sep mk (cons (list bang (car r)) t) (cdr r)) )
+          (== f sep)
+            (if (member? (car r) (list apostrophe bang))
+              (expd2 lev sep mk t r)
+              (expd2 lev sep mk (cons (car r) (if (cons? t) t (cons t))) (cdr r)) )
+          (%error "errore expd2") ))))
+  (def\ (expd0 x)
+     (map [_ (if (>= (@indexOf ";!,'_&" _) 0) (symbol _) (car (@toLispList vm _)))]
+       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (%name x) ";|!|,|'|_|&" -1)) )) )
+  (expd1 () (expd0 x)) )
+
 (assert (expand ´a) 'a)
 (assert (expand ´!a) '(compose ! a))
 (assert (expand ´a;b) '(compose a b))
@@ -1492,7 +1538,7 @@
 (assert (expand ´cc,1) '(curry cc 1))
 (assert (expand ´cc,1,2) '(curry* cc 1 2))
 (assert (expand ´cc,1,'a,2) '(curry* cc 1 (quote a) 2))
-(assert (expand ´cc,1,_,2) '(_ (cc 1 _ 2)))
+(assert (expand ´cc,1,_,2) '[_ (cc 1 _ 2)])
 
 (assert (expand ´cc) 'cc)
 (assert (expand ´cc_1) '(cc 1))
@@ -1502,6 +1548,12 @@
 (assert (expand ´a;!b;cc,1,'d;e) '(compose* a (compose ! b) (curry* cc 1 (quote d)) e))
 (assert (expand ´a;!b;cc,1,'d;ee_2_'f;g) '(compose* a (compose ! b) (curry* cc 1 (quote d)) (ee 2 (quote f)) g)) 
 (assert (expand ´a;!b;cc,1,'d;ee_2_'f_:gg;h) '(compose* a (compose ! b) (curry* cc 1 (quote d)) (ee 2 (quote f) :gg) h)) 
+
+(assert (expand ´cc,1,bb_2) '(curry* cc 1 (bb 2)))
+(assert (expand ´cc_1_bb,2) '(cc 1 (curry bb 2)))
+(assert (expand ´aa,bb_2,cc_3,dd) '(curry* aa (bb 2) (cc 3) dd))
+(assert (expand ´aa,bb_2,3;dd) '(compose (curry* aa (bb 2) 3) dd))
+(assert (expand ´aa,bb_2_'b_!x,3;dd) '(compose (curry* aa (bb 2 (quote b) (! x)) 3) dd))
 
 
 ;;; Box
