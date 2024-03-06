@@ -6,7 +6,7 @@
 
 ;; ``72. An adequate bootstrap is a contradiction in terms.''
 
-;; Rename %def
+;;; Built-Ins Renames for Macro and Definitions Forms
 
 (%def def
   #|Match the DEFINIEND-TREE against the VALUE and place resulting
@@ -16,59 +16,34 @@
    |#
   %def)
 
+(def vau
+  #|Construct a fexpr with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER, and FORMS.
+   |$(fn (parameterTree environmentParameter . forms))
+   |$(type fexpr)
+   |$(derivation (vau (pt ep . forms) env (eval (list 'vau pt ep (cons 'begin forms)) env)))
+   |#
+  %vau)
 
-;;; Built-Ins - rename bindings that will be used as provided by VM
+(def \
+  #|Create an anonymous function with the given PARAMETER-TREE and FORMS.
+   |$(fn (parameterTree . forms))
+   |$(type function)
+   |$(derivation (vau (parameterTree . forms) env (wrap (eval (list* 'vau parameterTree #ignore forms) env))))
+   |#
+  %\)
+(def lambda \)
+
+(def wrap
+  #|Create a new function that wraps around an underlying OPERATOR, and
+   |induces argument evaluation around it.
+   |$(fn (operator))
+   |$(type function)
+   |$(type fexpr)
+   |$(derivation (vau () environment environment)))
+   |#
+  %wrap)
 
 (def assert %assert)
-
-(def ==
-  #|Return true if the values A and B are pointer-identical, false otherwise.
-   |$(fn (a b))
-   |$(type function)
-   |#
-  %==)
-(def != %!=)
-
-(def string? %string?)
-(def $ %$)
-
-(def number? %number?)
-(def + %+)
-(def * %*)
-(def - %-)
-(def / %/)
-(def % %%)
-
-(def !
-  #|Invert the BOOLEAN.
-   |$(fn (boolean))
-   |$(type function)
-   |$(derivation (if boolean #f #t))
-   |#
-  %!)
-(def !! %!!)
-(def < %<)
-(def > %>)
-(def <= %<=)
-(def >= %>=)
-
-(def ~ %~)
-(def & %&)
-(def \| %|)
-(def ^ %^)
-(def << %<<)
-(def >> %>>)
-(def >>> %>>>)
-
-(def append
-  #|Append two lists.  The first one must be proper and is copied.  The
-   |second one is not copied (and doesn't even have to be a list). It
-   |becomes the `cdr' of the final cons of the first list, or is returned
-   |directly if the first list is empty.
-   |$(fn (list1 list2))
-   |$(type function)
-   |#
-  %append)
 
 (def apply
   #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
@@ -78,33 +53,6 @@
    |#
   %apply)
 
-(def apply*
-  #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
-   |$(fn (fun . args)) 
-   |$(type function)
-   |$(derivation (apply fun args (newEnv)))
-   |#
-  %apply*)
-
-(def apply**
-  #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
-   |$(fn (fun . args)) 
-   |$(type function)
-   |$(derivation (apply fun (apply list* args) (newEnv)))
-   |#
-  %apply**)
-
-(def array->list %array->list)
-
-(def atEnd
-  #|valuate the PROTECTED-FORM and return its result.  Regardless of
-   |whether the protected form returns normally, or via a nonlocal exit or
-   |panic, the CLEANUP-FORM are evaluated after the protected forms.
-   |$(fn (cleanupForm . protectedForms))
-   |$(type fexpr)
-   |#
-  %atEnd)
-
 (def begin
   #|Sequentially evaluate FORMS, returning the value of the last one, or void if there are no forms.
    |$(fn forms)
@@ -112,24 +60,27 @@
    |#
   %begin)
 
-(def bind? %bind?)
-
-(def bound?
-  #|Return true if the SYMBOL or KEYWORD is bound in the ENVIRONMENT or OBJ, false otherwise.
-   |$(fn (symbol environment))
+(def car
+  #|Return the contents of the address part of the register.
+   |$(fn (cons))
    |$(type function)
    |#
-  %bound?)
+  %car)
 
-(def newBox
-  #|Create a new box with the optional INITIAL-VALUE?.  A box is a
-   |function that encapsulates a mutable value.  Calling the box without
-   |arguments returns the value.  Calling the box with an argument sets
-   |the value.
-   |$(fn initialValue?)
+(def cadr
+  #|Return the `car' of the `cdr' of the CONS.
+   |$(derivation (car (cdr cons)))
+   |$(derivation (\ ((#_ . (cadr . #_))) cadr))
+   |$(derivation (\ ((#_ cadr . #_)) cadr))
+   |#
+  %cadr)
+
+(def cdr
+  #|Return the contents of the decrement part of the register.
+   |$(fn (cons))
    |$(type function)
    |#
-  %newBox)
+  %cdr)
 
 (def cons
   #|Create a cons with the given CAR and CDR.
@@ -145,23 +96,6 @@
    |#
   %cons?)
 
-(def className
-  #|Return the name symbol of the CLASS.
-   |$(fn (class))
-   |$(type function)
-   |#
-  %className)
-
-(def classOf
-  #|Return the class of the OBJECT.
-   |$(fn (object))
-   |$(type function)
-   |#
-  %classOf)
-
-(def dval %dVal)
-(def newDVar %newDVar)
-(def eq? %eq?)
 (def eval
   #|Evaluate the FORM in the ENVIRONMENT, returning its result.
    |$(fn (form environment))
@@ -180,164 +114,6 @@
    |#
   %if)
 
-(def intern
-  #|Get or create the unique symbol with STRING as name.
-   |$(fn (string))
-   |$(type function)
-   |#
-  %intern)
-
-(def instanceOf? %instanceOf?)
-
-(def keyword %keyword)
-(def keyword? %keyword?)
-(def keywordName %name)
-(def len %len)
-(def list*
-  #|Create a list from the ARGUMENTS so that the last argument becomes
-   |the `cdr' of the list.
-   |$(fn arguments)
-   |$(type function)
-   |#
-  %list*)
-
-(def list?
-  #|Return true if the OBJECT is a list, false otherwise.
-   |$(fn (object))
-   |$(type function)
-   |#
-  %list?)
-
-(def list->array %list->array)
-(def loop
-  #|Evaluate the FORMS in an infinite loop.
-   |$(fn forms)
-   |$(type fexpr)
-   |#
-  %loop)
-
-(def newEnv
-  #|Create a new environment with an optional PARENT-ENVIRONMENT? in
-   |which bindings are looked up if they are not found.
-   |$(fn parentEnvironment?)
-   |$(type function)
-   |#
-  %newEnv)
-
-(def null?
-  #|Return true if the OBJECT is nil, false otherwise.
-   |$(fn (object))
-   |$(type function)
-   |#
-  %null?)
-(def !null? %!null?)
-(def not
-  #|Invert the BOOLEAN.
-   |$(fn (boolean))
-   |$(type function)
-   |$(derivation (if boolean #f #t))
-   |#
-  !)
-
-(def nth
-  #|Return element number N of LIST, where the `car' is element zero.
-   |$(fn (n list))
-   |$(type function)
-   |#
-  %nth)
-
-(def nthCdr
-  #|Returns the tail of LIST that would be obtained by calling `cdr' N times in succession.
-   |$(fn (n list))
-   |$(type function)
-   |#
-  %nthCdr)
-
-(def new
-  #|Create a new instance of CLASS (that must be a `standard-class').
-   |The SLOT-INITS must be of even length, and alternately contain slot
-   |names (symbols, typically keywords) and values.
-   |$(fn (class . slotInits))
-   |#
-  %new)
-
-(def reverse
-  #|Reverse the LIST.
-   |$(fn (list))
-   |$(type function)
-   |#
-  %reverse)
-(def rootPrompt %rootPrompt)
-(def set! %set!)
-(def symbol %symbol)
-(def symbol? %symbol?)
-
-(def symbolName
-  #|Return the name of the SYMBOL as a string.
-   |$(fn (symbol))
-   |$(type function)
-   |#
-  %name)
-
-(def subClass?
-  #|Return true if the CLASS is a subclass of the SUPERCLASS, false otherwise.
-   |A class is considered a subclass of itself.
-   |$(fn (class superclass))
-   |$(type function)
-   |#
-  %subClass?)
-
-(def the %the)
-
-(def type?
-  #|Return true if the OBJECT is an instance of the CLASS, false otherwise.
-   |$(fn (object class))
-   |$(type function)
-   |#
-  %type?)
-(def value %value)
-(def unwrap
-  #|Return the underlying operator of a FUNCTION.
-   |$(fn (function))
-   |$(type function)
-   |#
-  %unwrap)
-
-(def wrap
-  #|Create a new function that wraps around an underlying OPERATOR, and
-   |induces argument evaluation around it.
-   |$(fn (operator))
-   |$(type function)
-   |#
-  %wrap)
-
-
-;;; Core Forms
-
-(def vau
-  #|Construct a fexpr with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER, and FORMS.
-   |$(fn (parameterTree environmentParameter . forms))
-   |$(type fexpr)
-   |$(derivation (vau (pt ep . forms) env (eval (list 'vau pt ep (cons 'begin forms)) env)))
-   |#
-  %vau)
-
-(def theEnv
-  #|Return the current environment.
-   |$(fn parent?)
-   |$(type fexpr)
-   |$(derivation (vau () environment environment)))
-   |#
-  %theEnv)
-
-(def quote
-  #|Return the unevaluated OPERAND.
-   |$(fn (operand))
-   |$(type fexpr)
-   |$(derivation (vau (operand) #ignore operand))
-   |#
-  %')
-
 (def list
   #|Return the list of evaluated ARGUMENTS.
    |$(fn arguments)
@@ -346,88 +122,24 @@
    |#
   %list)
 
-(def \
-  #|Create an anonymous function with the given PARAMETER-TREE and FORMS.
-   |$(fn (parameterTree . forms))
-   |$(type function)
-   |$(derivation (vau (parameterTree . forms) env (wrap (eval (list* 'vau parameterTree #ignore forms) env))))
-   |#
-  %\)
-
-(def car
-  #|Return the contents of the address part of the register.
-   |$(fn (cons))
+(def list*
+  #|Create a list from the ARGUMENTS so that the last argument becomes
+   |the `cdr' of the list.
+   |$(fn arguments)
    |$(type function)
    |#
-  %car)
+  %list*)
 
-(def car!
-  #|Return the contents of the address part of the register if decrement part of the register is null, else error.
+(def newBox
+  %newBox)
+
+(def quote
+  #|Return the unevaluated OPERAND.
+   |$(fn (operand))
+   |$(type fexpr)
+   |$(derivation (vau (operand) #ignore operand))
    |#
-  (\ ((car)) car))
-
-(def cadr
-  #|Return the `car' of the `cdr' of the CONS.
-   |$(derivation (car (cdr cons)))
-   |$(derivation (\ ((#_ . (cadr . #_))) cadr))
-   |$(derivation (\ ((#_ cadr . #_)) cadr))
-   |#
-  %cadr)
-
-(def cadr!
-  #|Return the `car' of the `cdr' of the CONS if 'cddr' is null, else error.
-   |#
-  (\ ((#_ cadr)) cadr))
-
-(def cdr
-  #|Return the contents of the decrement part of the register.
-   |$(fn (cons))
-   |$(type function)
-   |#
-  %cdr)
-
-(def cddr
-  #|Return the `cdr' of the `cdr' of the CONS.
-   |$(derivation (cdr (cdr cons)))
-   |$(derivation (\ ((#_ . (#_ . cddr))) cddr))
-   |$(derivation (\ ((#_ #_ . cddr)) cddr))
-   |#
-  %cddr)
-
-(def caar
-  #|Return the `car' of the `car' of the CONS.
-   |#
-  (\ (x) (car (car x))))
-
-(def cdar
-  #|Return the `cdr' of the `car' of the CONS.
-   |#
-  (\ (x) (cdr (car x))))
-
-(def compose
-  #|Compose two functions, creating a new function equivalent to (G (F ...)).
-   |#
-  (\ (f g) (\ args (f (apply g args)))) )
-
-(def compose* 
-  (\ f* (\ args ((rec\ (loop (f . f*)) (if (null? f*) (apply f args) (f (loop f*)))) f*))) )
-
-(def curry
-  (\ (f v) (\ args (apply f (cons v args)))) )
-
-(def curry*
-  (\ (f . v*) (\ args (apply f (append v* args)))) )
-
-(def idx
-  #|Identity function.
-   |#
-  (\ (x) x))
-
-(def 1+
-  (\ (n) (+ n 1)))
-
-(def 1-
-  (\ (n) (- n 1)))
+  %')
 
 
 ;;; Macro
@@ -445,9 +157,9 @@
   (wrap
     (vau (expander) #ignore
       (vau operands env
-        (def !evalMacro (! (evalMacro :prv #t)))
-        (def exp (apply expander operands (newEnv)))
-        (if !evalMacro exp (eval exp env)) ))))
+        (def evalMacro (evalMacro :prv #t))
+        (def exp (apply expander operands))
+        (if evalMacro (eval exp env) exp) ))))
 
 (def macro
   #|Create an anonymous macro with the given PARAMETER-TREE and FORMS.
@@ -459,13 +171,14 @@
       (list 'makeMacro (list* 'vau pt #ignore forms)) )))
 
 
+;;; Definitions Forms
+
 ; defMacro defVau def\ def*\ rec\ let1\ let1rec\ let\ letrec\ permettono la definizione in due forme
 ;
 ;    (_ name parameters . body)
 ;    (_ (name . parameters) . body)
 ;
 ; rec rec\ let1rec let1rec\ letrec letrec\ inizializzano a #inert le definizioni prima della valutazione
-
 
 (def defMacro
   #|Define a macro with the given NAME, PARAMETER-TREE, and FORMS.
@@ -515,23 +228,314 @@
     (list 'def lhs (cons '\ rhs)) ))
 
 
-;;;; Basic value test
+;;; Other Built-Ins Renames & Simple Forms
 
+(def apply*
+  #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
+   |$(fn (fun . args)) 
+   |$(type function)
+   |$(derivation (apply fun args (newEnv)))
+   |#
+  %apply*)
+
+(def apply**
+  #|Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
+   |$(fn (fun . args)) 
+   |$(type function)
+   |$(derivation (apply fun (apply list* args) (newEnv)))
+   |#
+  %apply**)
+
+(defVau set (ep dt value) env
+  #|Match the DEFINIEND-TREE against the VALUE in the ENVIRONMENT,
+   |creating or updating existing bindings.  Unlike Common Lisp (or
+   |Scheme), we have no `setq' (or `set!') that allows updating arbitrary
+   |bindings -- you always need to know the environment a binding is in to
+   |change it.  Therefore, we usually use boxes (see below) instead of
+   |mutating bindings directly.
+   |#
+  (eval
+    (list 'def dt (list (unwrap eval) value env))
+    (eval ep env)))
+
+(def set! %set!)
+
+(def unwrap
+  #|Return the underlying operator of a FUNCTION.
+   |$(fn (function))
+   |$(type function)
+   |#
+  %unwrap)
+
+
+;;; Env
+
+(def newEnv
+  #|Create a new environment with an optional PARENT-ENVIRONMENT? in
+   |which bindings are looked up if they are not found.
+   |$(fn parentEnvironment?)
+   |$(type function)
+   |#
+  %newEnv)
+
+(def theEnv
+  #|Return the current environment.
+   |$(fn parent?)
+   |$(type fexpr)
+   |$(derivation (vau () environment environment)))
+   |#
+  %theEnv)
+
+
+;;; Obj
+
+(def new
+  #|Create a new instance of CLASS (that must be a `standard-class').
+   |The SLOT-INITS must be of even length, and alternately contain slot
+   |names (symbols, typically keywords) and values.
+   |$(fn (class . slotInits))
+   |#
+  %new)
+
+(defMacro (defObj name class . attr)
+  (list 'def name (list* 'new class attr)) )
+
+
+;;; Env & Obj
+
+(def bound?
+  #|Return true if the SYMBOL or KEYWORD is bound in the ENVIRONMENT or OBJ, false otherwise.
+   |$(fn (symbol environment))
+   |$(type function)
+   |#
+  %bound?)
+
+(def value %value)
+
+(def\ getSlot (object slotName)
+  #|Return the value of the slot named SLOT-NAME of the OBJECT.
+   |#
+  (%getSlot object slotName))
+
+(def\ setSlot (object slotName value)
+  #|Set the value of the slot named SLOT-NAME of the OBJECT to VALUE.
+   |#
+  (%setSlot object slotName value))
+
+(def\ slotBound? (object slotName)
+  #|Return true if the slot named SLOT-NAME of the OBJECT is set, false otherwise.
+   |#
+  (%slotBound? object slotName))
+
+
+;;; Cons
+
+(def\ (car! (car))
+  #|Return the contents of the address part of the register if decrement part of the register is null, else error.
+   |#
+  car)
+
+(def\ (cadr! (#_ cadr))
+  #|Return the `car' of the `cdr' of the CONS if 'cddr' is null, else error.
+   |#
+  cadr)
+
+(def\ (caar x)
+  #|Return the `car' of the `car' of the CONS.
+   |#
+  (car (car x)) )
+
+(def\ (cdar x)
+  #|Return the `cdr' of the `car' of the CONS.
+   |#
+  (cdr (car x)) )
+
+
+(def cddr
+  #|Return the `cdr' of the `cdr' of the CONS.
+   |$(derivation (cdr (cdr cons)))
+   |$(derivation (\ ((#_ . (#_ . cddr))) cddr))
+   |$(derivation (\ ((#_ #_ . cddr)) cddr))
+   |#
+  %cddr)
+
+(def\ (cons! car) (cons car))
+
+(def null?
+  #|Return true if the OBJECT is nil, false otherwise.
+   |$(fn (object))
+   |$(type function)
+   |#
+  %null?)
+
+(def !null? %!null?)
+
+(def nth
+  #|Return element number N of LIST, where the `car' is element zero.
+   |$(fn (n list))
+   |$(type function)
+   |#
+  %nth)
+
+(def nthCdr
+  #|Returns the tail of LIST that would be obtained by calling `cdr' N times in succession.
+   |$(fn (n list))
+   |$(type function)
+   |#
+  %nthCdr)
+
+
+;;; List
+
+(def append
+  #|Append two lists.  The first one must be proper and is copied.  The
+   |second one is not copied (and doesn't even have to be a list). It
+   |becomes the `cdr' of the final cons of the first list, or is returned
+   |directly if the first list is empty.
+   |$(fn (list1 list2))
+   |$(type function)
+   |#
+  %append)
+
+(def len %len)
+(def list?
+  #|Return true if the OBJECT is a list, false otherwise.
+   |$(fn (object))
+   |$(type function)
+   |#
+  %list?)
+
+(def reverse
+  #|Reverse the LIST.
+   |$(fn (list))
+   |$(type function)
+   |#
+  %reverse)
+
+
+;;; Symbol & Keyword
+
+(def intern
+  #|Get or create the unique symbol with STRING as name.
+   |$(fn (string))
+   |$(type function)
+   |#
+  %intern)
+
+(def keyword %keyword)
+(def keyword? %keyword?)
+(def keywordName %name)
+
+(def symbol %symbol)
+(def symbol? %symbol?)
+(def symbolName
+  #|Return the name of the SYMBOL as a string.
+   |$(fn (symbol))
+   |$(type function)
+   |#
+  %name)
+
+
+;;; Equals
+
+(def ==
+  #|Return true if the values A and B are pointer-identical, false otherwise.
+   |$(fn (a b))
+   |$(type function)
+   |#
+  %==)
+(def != %!=)
+(def eq? %eq?)
+
+(def\ (ignore? o) (== o #_))
+(def\ (sheBang? o) (== o #!))
 (def\ (inert? o) (== o #inert))
+
+
+;;; Boolean
+
+(def !
+  #|Invert the BOOLEAN.
+   |$(fn (boolean))
+   |$(type function)
+   |$(derivation (if boolean #f #t))
+   |#
+  %!)
+(def not !)
+
+(def !! %!!)
+
+
+;;; Number
+
+(def number? %number?)
+(def + %+)
+(def * %*)
+(def - %-)
+(def / %/)
+(def % %%)
+(def\ (1+ n) (+ n 1))
+(def\ (1- n) (- n 1))
 (def\ (zero? n) (== n 0))
 (def\ (uno? n) (== n 1))
 (def\ (even? n) (== (% n 2) 0))
 (def\ (odd? n)  (== (% n 2) 1))
 
 
-;;; Wrap incomplete VM forms
+;;; String
+
+(def string? %string?)
+(def $ %$)
+
+
+;;; Comparator
+
+(def < %<)
+(def > %>)
+(def <= %<=)
+(def >= %>=)
+
+
+;;; Bit
+
+(def ~ %~)
+(def & %&)
+(def \| %|)
+(def ^ %^)
+(def << %<<)
+(def >> %>>)
+(def >>> %>>>)
+
+
+;;; First-Order Control
 
 (def* (then else) begin begin)
 
-(defMacro (finally x . cnl)
-  (list 'atEnd (cons 'begin cnl) x) )  
+(def\ (01->+ forms)
+  (if (null? forms) #null (1->+ forms)) )
 
-(defMacro (throw . val) (list* '%throwTag #_ val) )
+(def\ (1->+ (#! List forms))
+  (if (null? (cdr forms)) (car forms) (cons 'begin forms)) )
+
+(def loop
+  #|Evaluate the FORMS in an infinite loop.
+   |$(fn forms)
+   |$(type fexpr)
+   |#
+  %loop)
+
+(def atEnd
+  #|valuate the PROTECTED-FORM and return its result.  Regardless of
+   |whether the protected form returns normally, or via a nonlocal exit or
+   |panic, the CLEANUP-FORM are evaluated after the protected forms.
+   |$(fn (cleanupForm . protectedForms))
+   |$(type fexpr)
+   |#
+  %atEnd)
+
+(defMacro (finally x . cnl)
+  (list 'atEnd (01->+ cnl) x) )  
+
 (def throwTag
   #|Abort to a nesting catch tag established by `catch' and pass the
    |optional RESULT? (defaults to void) to it.
@@ -540,33 +544,25 @@
    |#
   %throwTag)
 
+(defMacro (throw . val) (list* 'throwTag #_ val) )
+
 ;; ctApv non andrebbe mai cambiato dopo il boot, anche la riesecuzione di quanto segue potrebbe non bastare!
 (if (ctApv)
   (then
+    (defMacro (catchTagWth tag hdl . forms)
+      (list '%catchTagWth tag hdl (list* '\ () forms)) )
     (defMacro (catch . forms)
-      (list '%catchTagWth #_ #_ (list* '\ () forms)) )
+      (list* 'catchTagWth #_ #_ forms) )
     (defMacro (catchWth hdl . forms)
-      (list '%catchTagWth #_ hdl (list* '\ () forms)) )
+      (list* 'catchTagWth #_ hdl forms) )
     (defMacro (catchTag tag . forms)
       #|Establish a catch tag and evaluate FORMS as an implicit `begin' inside it.
        |The forms may use `throw' to nonlocally exit from the tag.
        |Usually, `block' should be preferred.
        |#
-      (list '%catchTagWth tag #_ (list* '\ () forms)) )
-    (defMacro (catchTagWth tag hdl . forms)
-      (list '%catchTagWth tag hdl (list* '\ () forms)) )
+      (list* 'catchTagWth tag #_ forms) )
   )
   (else
-    (defMacro (catch . forms)
-      (list* '%catchTagWth #_ #_ forms))
-    (defMacro (catchWth hdl . forms)
-      (list* '%catchTagWth #_ hdl forms))
-    (defMacro (catchTag tag . forms)
-      #|Establish a catch tag and evaluate FORMS as an implicit `begin'
-       |inside it.  The forms may use `throw' to nonlocally exit from the
-       |tag.  Usually, `block' should be preferred.
-       |#
-      (list* '%catchTagWth tag #_ forms) )
     (def catchTagWth
       #|Establish a catch tag and evaluate FORMS as an implicit `begin' inside it.
        |The forms may use `throw' to nonlocally exit from the tag.
@@ -575,11 +571,21 @@
        |$(type operatore)
        |#
       %catchTagWth)
+    (defMacro (catch . forms)
+      (list* 'catchTagWth #_ #_ forms))
+    (defMacro (catchWth hdl . forms)
+      (list* 'catchTagWth #_ hdl forms))
+    (defMacro (catchTag tag . forms)
+      #|Establish a catch tag and evaluate FORMS as an implicit `begin'
+       |inside it.  The forms may use `throw' to nonlocally exit from the
+       |tag.  Usually, `block' should be preferred.
+       |#
+      (list* 'catchTagWth tag #_ forms) )
   )
 )
 
 
-;;; Delimited Control Operators
+;;; Delimited-Control Operators
 
 ;; These operators follow the API put forth in the delimcc library
 ;; at URL `http://okmij.org/ftp/continuations/implementations.html'.
@@ -615,7 +621,7 @@
    |$(fn (continuation . forms))
    |$(type macro)
    |#
-  (list* '%pushDelimSubcont #ignore continuation forms) )
+  (list* 'pushDelimSubcont #ignore continuation forms) )
 
 (def pushSubcontBarrier
   #|Push a continuation barrier that prevents the FORMS from capturing
@@ -626,7 +632,79 @@
   %pushSubcontBarrier)
 
 
-;;; Basic macros and functions
+;;; Error
+
+(def rootPrompt %rootPrompt)
+
+(def\ makeTypeError (datum expected)
+  (new Error "not a {expected}: {datum}" :type 'type :datum datum :expected expected) )
+
+(def\ typeError (datum expected)
+  (error (makeTypeError datum expected)) )
+
+
+;;; Classes
+
+(def className
+  #|Return the name symbol of the CLASS.
+   |$(fn (class))
+   |$(type function)
+   |#
+  %className)
+
+(def instanceOf? %instanceOf?)
+
+(def classOf
+  #|Return the class of the OBJECT.
+   |$(fn (object))
+   |$(type function)
+   |#
+  %classOf)
+
+(def subClass?
+  #|Return true if the CLASS is a subclass of the SUPERCLASS, false otherwise.
+   |A class is considered a subclass of itself.
+   |$(fn (class superclass))
+   |$(type function)
+   |#
+  %subClass?)
+
+(def type?
+  #|Return true if the OBJECT is an instance of the CLASS, false otherwise.
+   |$(fn (object class))
+   |$(type function)
+   |#
+  %type?)
+
+
+;;; Basic Macros and Functions
+
+(def\ (idx x)
+  #|Identity function.
+   |#
+  x)
+
+(defMacro _ forms
+  #|"Implicit" Argument Lambda.
+   |#
+  (list* '\ '(_) forms) )
+
+(def\ (curry f v)
+  (\ args (apply f (cons v args))) )
+
+(def\ (curry* f . v*)
+  (\ args (apply f (append v* args))) )
+
+(def\ (compose f g)
+  #|Compose two functions, creating a new function equivalent to (G (F ...)).
+   |#
+  (\ args (f (apply g args))) )
+
+(def\ (compose* . f*)
+  (\ args ((rec\ (loop (f . f*)) (if (null? f*) (apply f args) (f (loop f*)))) f*)) )
+
+;(defMacro compose* f* 
+;  (list '\ 'args ((rec\ (loop (f . f*)) (if (null? f*) (list 'apply f 'args) (list f (loop f*)))) f*)) )
 
 (defMacro (rec lhs . rhs)
   (list (list '\ (list lhs) (list* 'def lhs :rhs rhs)) #inert) )
@@ -659,7 +737,8 @@
 
 ;;; Lexical Bindings
 
-(def\ (->begin binding) ((\ ((#_ cadr . cddr)) (if (null? cddr) cadr (list* 'begin cadr cddr))) binding))
+(def\ (->begin (#_ cadr . cddr)) (if (null? cddr) cadr (list* 'begin cadr cddr)))
+;(def\ (->begin binding) (01->+ (cdr binding)))
 (def\ (->name+#inert (lhs . #_)) (list (if (cons? lhs) (car lhs) lhs) #inert))
 (def\ (->name+lambda (lhs . rhs)) (if (cons? lhs) (list (car lhs) (list* '\ (cdr lhs) rhs)) (list lhs (cons '\ rhs)) ))
 ;(def\ (->name+lambda (lhs . rhs)) (list (if (cons? lhs) (car lhs) lhs) (cons '\ (if (cons? lhs) (cons (cdr lhs) rhs) rhs))))
@@ -692,12 +771,6 @@
     (list* 'rec\ name (cons (car binding)) body)
     (->begin binding) ))
 
-#| TODO da valutare
-(defMacro (let1 lhs . rhs)
-  (if (symbol? lhs)
-    (list* 'let1Loop lhs rhs)
-    (list* 'wth1 (car lhs) (->begin lhs) rhs)))
-|#
 
 (defMacro (let1 lhs . rhs)
   (if (symbol? lhs)
@@ -811,21 +884,6 @@
    |#
   (list 'if test #inert (cons 'else forms)))
 
-(defVau set (ep dt value) env
-  #|Match the DEFINIEND-TREE against the VALUE in the ENVIRONMENT,
-   |creating or updating existing bindings.  Unlike Common Lisp (or
-   |Scheme), we have no `setq' (or `set!') that allows updating arbitrary
-   |bindings -- you always need to know the environment a binding is in to
-   |change it.  Therefore, we usually use boxes (see below) instead of
-   |mutating bindings directly.
-   |#
-  (eval
-    (list 'def dt (list (unwrap eval) value env))
-    (eval ep env)))
-
-
-;;; And Or
-
 (defVau && ops env
   #|Return true if all OPERANDS evaluate to true, false otherwise.
    |If an operand evaluates to false, later operands are not evaluated.
@@ -851,7 +909,9 @@
 (def or ||)
 
 
-;;;; Bind? IfBind? CaseVau Case\ Match
+;;;; Bind Bind? IfBind? CaseVau DefCaseVau Case\ DefCase\ Match Cond
+
+(def bind? %bind?)
 
 (defVau (ifBind? (pt exp) then . else) env
   (let1 (env+ (newEnv env))
@@ -887,24 +947,6 @@
   (list (cons 'case\ (map (\ ((a . b)) (list* (if (== a 'else) a (list a)) b)) clauses)) exp) )
 
 
-;;; Quasiquote
-
-;; (Idea from Alf Petrofsky http://scheme-reports.org/mail/scheme-reports/msg00800.html)
-(defVau %` (x) env
-  (defCase\ qq
-    ( ((('%,@ x) . y) #f . d) (append (map (\ (x) (list '%,@ x)) (apply** qq (list x) d)) (apply** qq y #f d)) )
-    ( ((('%,@ x) . y) . d)    (append (eval x env) (apply** qq y d)) )
-    ( ((('%, x) . y) #f . d)  (append (map (\ (x) (list '%, x))  (apply** qq (list x) d)) (apply** qq y #f d)) )
-    ( (('%, x) #f . d)        (list '%, (apply** qq x d)) )
-    ( (('%, x) . d)           (eval x env) )
-    ( (('%` x) . d)           (list '%` (apply** qq x #f d)) )
-    ( ((x . y) . d)           (cons (apply** qq x d) (apply** qq y d)) )
-    ( (x . d)                 x) )
-  (qq x))
-
-
-;;; Cond
-
 (defVau (cond . clauses) env
   #|Multi-armed conditional.
    |Go through the CLAUSES in order.  Evaluate the TEST.
@@ -936,21 +978,31 @@
                    (apply cond clauses env) ))
               (else (apply cond clauses env)) )))))))
 
+;;; Quasiquote
+
+;; (Idea from Alf Petrofsky http://scheme-reports.org/mail/scheme-reports/msg00800.html)
+(defVau %` (x) env
+  (defCase\ qq
+    ( ((('%,@ x) . y) #f . d) (append (map (\ (x) (list '%,@ x)) (apply** qq (list x) d)) (apply** qq y #f d)) )
+    ( ((('%,@ x) . y) . d)    (append (eval x env) (apply** qq y d)) )
+    ( ((('%, x) . y) #f . d)  (append (map (\ (x) (list '%, x))  (apply** qq (list x) d)) (apply** qq y #f d)) )
+    ( (('%, x) #f . d)        (list '%, (apply** qq x d)) )
+    ( (('%, x) . d)           (eval x env) )
+    ( (('%` x) . d)           (list '%` (apply** qq x #f d)) )
+    ( ((x . y) . d)           (cons (apply** qq x d) (apply** qq y d)) )
+    ( (x . d)                 x) )
+  (qq x))
+
+
 
 ;;; Options
 
 ;; An option is either nil ("none"), or a one-element list ("some").
 
-(def\ some (value)
+(def some
   #|Create a one-element list from the VALUE.
    |#
-  (cons value))
-
-(def\ (01->+ forms)
-  (if (null? forms) #null (1->+ forms)) )
-
-(def\ (1->+ (#! List forms))
-  (if (null? (cdr forms)) (car forms) (cons 'begin forms)) )
+  cons!)
 
 ;; (Idea from Taylor R. Campbell's blag. https://mumble.net/~campbell/blag.txt)
 (defVau (ifOpt (pt opt) then . else) env
@@ -1079,7 +1131,7 @@
     (let1 next (clauses clauses)
       (if (null? clauses) #inert
         (let1 (((values . forms) . clauses) clauses)
-          (if (|| (== values 'else) (== value values) (member? value values))
+          (if (|| (== values 'else) (eq? value values) (member? value values :cmp eq?))
             (if (null? forms) #inert
               (if (== (car forms) '=>)
                 ((eval (cadr! forms) env) value)
@@ -1140,7 +1192,7 @@
   (sort lst) )
 
 
-;;; Type Checks
+;;; Checks
 
 (def\ assert#t (boolean)
   #|Signal an error if the BOOLEAN is false. Otherwise return void.
@@ -1271,11 +1323,12 @@
 
 (def loop %loop)
 
+#| TODO sostituito dal seguente, eliminare
 (defMacro (for ((#! Symbol var) init cond . incr) . body)
   (list* 'loop 'for1 (list* var init incr)
     (if (%ignore? cond) body
       (cons (list 'while! cond) body) )))
-
+|#
 (defMacro (for ((#! Symbol var) init . incr) cond . body)
   (list* 'loop 'for1 (list* var init incr)
     (if (%ignore? cond) body
@@ -1437,7 +1490,233 @@
   (\ lst (apply f (resize n lst))))
 
 
+;;;; Arrays
+
+(def\ (array->list arr)
+  (%array->list #t arr) )
+
+(def\ (array->cons arr)
+  (%array->list #f arr) )
+
+(def list->array %list->array)
+
+(def\ (array . args) (list->array args))
+
+(def Object[] &java.lang.Object[])
+
+(def\ (arrayMap fun (#! Object[] arr))
+  (list->array (map fun (array->list arr))) )
+
+(def\ (arrayFilter pred (#! Object[] arr))
+  (list->array (filter pred (array->list arr))) )
+
+(def\ (newInstance class dim . dims)
+  (apply** @newInstance Array class dim dims))
+
+(def\ (arrayGet array index)
+  (if (cons? index)
+    (apply** arrayGet* array index)
+    (@get Array array index) ))
+
+(def\ (arrayGet* array . indexes)
+  (let loop ((array array) (indexes indexes))
+    (if (null? indexes) array
+      (loop (arrayGet array (car indexes)) (cdr indexes)) )))  
+
+(def\ (arraySet array index value)
+  (if (cons? index)
+    (apply** arraySet* array value index)
+    (else
+      (@set Array array index value)
+      array )))
+
+(def\ (arraySet* array0 value . indexes)
+  (if (null? indexes) array
+    (let loop ((array array0) (indexes indexes))
+       (if (null? (cdr indexes))
+         (then (arraySet array (car indexes) value) array0)
+         (loop (arrayGet array (car indexes)) (cdr indexes)) ))))  
+
+
+;;; Syntetic Expression
+
+; ´a;b -> (compose a b c)
+; ´a;b;c -> (compose* a b c)
+; ´!a -> (compose ! a)
+; ´a_b -> (a b)
+; ´a_'b -> (a 'b)
+; ´a_'b_c -> (a 'b c)
+; ´a,b -> (curry a b)
+; ´a,'b,c -> (curry* a 'b c) 
+; ´a,_,'b,c -> [_ (a _ 'b c)]
+
+(defMacro %´ ((#! Symbol x))
+  (def\ (end? r . c) (|| (null? r) (member? (car r) (map symbol c))) )
+  (def\ (expd; t r)
+    (if (null? r)
+      (if (null? (cdr t)) (car t) (cons (if (null? (cddr t)) 'compose 'compose*) (reverse t)))
+      (let1 ((f . r) r)
+        (if 
+          (== f '!)
+            (if (end? r ";" "," "_") (%error "!")
+              (expd; (cons (list 'compose '! (car r)) t) (cdr r)) )
+          (== f (symbol ","))
+            (let1 ((f . r) (expd, (cons (car t)) r))
+              (expd; (cons f (cdr t)) r) )
+          (== f (symbol "_"))
+            (let1 ((f . r) (expd_ (cons (car t)) r))
+              (expd; (cons f (cdr t)) r) )
+          (expd; (if (== f (symbol ";")) t (cons f t)) r) ))))
+  (def\ (expd, t r)
+    (if (end? r ";") 
+      (cons (if (null? (cdr t)) (car t) (member? '_ t) (list '_ (reverse t)) (cons (if (null? (cddr t)) 'curry  'curry*) (reverse t))) (if (null? r) r (cdr r)))
+      (let1 ((f . r) r)
+        (if (== f (symbol "'"))
+          (if (end? r ";" ",")  (%error "'")
+            (expd, (cons (list 'quote (car r)) t) (cdr r)) )
+          (expd, (if (== f (symbol ",")) t (cons f t)) r) ))))
+  (def\ (expd_ t r)
+    (if (end? r ";") 
+      (cons (if (null? (cdr t)) (car t) (reverse t)) (if (null? r) r (cdr r)))
+      (let1 ((f . r) r)
+        (if (== f (symbol "'"))
+          (if (end? r ";" "_") (%error "'")
+            (expd_ (cons (list 'quote (car r)) t) (cdr r)) )
+          (expd_ (if (== f (symbol "_")) t (cons f t)) r) ))))
+  (def\ (expds x)
+     (map [_ (if (>= (@indexOf ";!,'_&" _) 0) (symbol _) (car (@toLispList vm _)))]
+       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (%name x) ";|!|,|'|_|&" -1)) )) )
+  (expd; () (expds x)) ) 
+
+(defMacro %´ ((#! Symbol x))
+  (def (comma semicolon apostrophe underscore bang) (map symbol (array->list (@split ",;'_!" ""))))
+  (def\ (mkc t) (if (member? underscore t) (list underscore t) (cons (if (null? (cddr t)) 'curry 'curry*) t)))
+  (def\ (end? r . s*) (|| (null? r) (member? (car r) s*)) )
+  (def\ (expd1 t r)
+    (if (null? r)
+      (if (null? (cdr t)) (car t) (cons (if (null? (cddr t)) 'compose 'compose*) (reverse t)))
+      (let1 ((f . r) r)
+        (if 
+          (== f bang)
+            (if (end? r semicolon comma underscore) (%error "!")
+              (expd1 (cons (list 'compose bang (car r)) t) (cdr r)) )
+          (== f comma)
+            (let1 ((f . r) (expd2 comma mkc (cons (car t)) r))
+              (expd1 (cons f (cdr t)) r) )
+          (== f underscore)
+            (let1 ((f . r) (expd2 underscore idx (cons (car t)) r))
+              (expd1 (cons f (cdr t)) r) )
+          (expd1 (if (== f semicolon) t (cons f t)) r) ))))
+  (def\ (switch sep a b) (if (== sep a) b a))
+  (def\ (expd2 sep mk t r)
+    (if (end? r semicolon) 
+      (cons (if (null? (cdr t)) (car t) (mk (reverse t))) (if (null? r) r (cdr r)))
+      (let1 ((f . r) r)
+        (if 
+          (== f apostrophe)
+            (if (end? r semicolon sep) (%error "'")
+              (expd2 sep mk (cons (list 'quote (car r)) t) (cdr r)) )
+          (expd2 sep mk (if (== f sep) t (cons f t)) r) ))))
+  (def\ (expd0 x)
+     (map [_ (if (>= (@indexOf ";!,'_&" _) 0) (symbol _) (car (@toLispList vm _)))]
+       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (%name x) ";|!|,|'|_|&" -1)) )) )
+  (expd1 () (expd0 x)) )
+
+#|
+(defMacro %´ ((#! Symbol x))
+  (def (comma semicolon apostrophe underscore bang) (map symbol (array->list (@split ",;'_!" ""))))
+  (def\ (mkc t) (if (member? underscore t) (list underscore t) (cons (if (null? (cddr t)) 'curry 'curry*) t)))
+  (def\ (end? r . s*) (|| (null? r) (member? (car r) s*)) )
+  (def\ (expd1 t r)
+    (if (null? r)
+      (if (null? (cdr t)) (car t) (cons (if (null? (cddr t)) 'compose 'compose*) (reverse t)))
+      (let1 ((f . r) r)
+        (if 
+          (== f bang)
+            (if (end? r semicolon comma underscore) (%error "!")
+              (expd1 (cons (list 'compose bang (car r)) t) (cdr r)) )
+          (== f comma)
+            (let1 ((f . r) (expd2 comma mkc (list (car r) (car t)) (cdr r)))
+              (expd1 (cons f (cdr t)) r) )
+          (== f underscore)
+            (let1 ((f . r) (expd2 underscore idx (list (car r) (car t)) (cdr r)))
+              (expd1 (cons f (cdr t)) r) )
+          (expd1 (if (== f semicolon) t (cons f t)) r) ))))
+  (def\ (switch sep a b) (if (== sep a) b a))
+  (def\ (expd2 sep mk t r)
+    ;(log sep t r) 
+    (if (end? r semicolon) 
+        (cons (if (null? (cdr t)) (car t) (mk (reverse t))) (if (null? r) r (cdr r)))
+      (end? r (switch sep comma underscore))
+        (cons (mk (reverse t)) r)
+      (let1 ((f . r) r) 
+        (if 
+          (== f apostrophe)
+            (if (end? r semicolon sep) (%error "'")
+              (expd2 sep mk (cons (list 'quote (car r)) t) (cdr r)) )
+          ;(== f bang)    
+          ;  (if (end? r semicolon comma underscore) (%error "!")
+          ;    (expd2 sep mk (cons (list bang (car r)) t) (cdr r)) )
+          (== f (switch sep comma underscore))
+            (let1 ((f . r)
+                     ;(log sep t f r "+") 
+                     (if (== (car r) apostrophe)
+                       (expd2 (switch sep comma underscore) (switch mk mkc idx) t r)
+                       (expd2 (switch sep comma underscore) (switch mk mkc idx) (list (car r) (car t)) (cdr r)) )
+              ;(log sep t f r "-")        
+              (expd2 sep mk (cons f (cdr t)) r) ))
+          (== f sep)
+            (if (== (car r) apostrophe)
+              (expd2 sep mk t r)
+              (expd2 sep mk (cons (car r) t) (cdr r)) )
+          (%error "errore expd2") ))))
+  (def\ (expd0 x)
+     (map [_ (if (>= (@indexOf ";!,'_&" _) 0) (symbol _) (car (@toLispList vm _)))]
+       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (%name x) ";|!|,|'|_|&" -1)) )) )
+  (expd1 () (expd0 x)) )
+|#
+
+(assert (expand ´a) 'a)
+(assert (expand ´!a) '(compose ! a))
+(assert (expand ´a;b) '(compose a b))
+(assert (expand ´a;!b;c) '(compose* a (compose ! b) c))
+
+(assert (expand ´cc) 'cc)
+(assert (expand ´cc,1) '(curry cc 1))
+(assert (expand ´cc,1,2) '(curry* cc 1 2))
+(assert (expand ´cc,1,'a,2) '(curry* cc 1 (quote a) 2))
+(assert (expand ´cc,1,_,2) '(_ (cc 1 _ 2)))
+
+(assert (expand ´cc) 'cc)
+(assert (expand ´cc_1) '(cc 1))
+(assert (expand ´cc_1_2) '(cc 1 2))
+(assert (expand ´cc_1_'a_2) '(cc 1 (quote a) 2))
+
+(assert (expand ´a;!b;cc,1,'d;e) '(compose* a (compose ! b) (curry* cc 1 (quote d)) e))
+(assert (expand ´a;!b;cc,1,'d;ee_2_'f;g) '(compose* a (compose ! b) (curry* cc 1 (quote d)) (ee 2 (quote f)) g)) 
+(assert (expand ´a;!b;cc,1,'d;ee_2_'f_:gg;h) '(compose* a (compose ! b) (curry* cc 1 (quote d)) (ee 2 (quote f) :gg) h)) 
+
+
+;;; Box
+
+(def newBox
+  #|Create a new box with the optional INITIAL-VALUE?.  A box is a
+   |function that encapsulates a mutable value.  Calling the box without
+   |arguments returns the value.  Calling the box with an argument sets
+   |the value.
+   |$(fn initialValue?)
+   |$(type function)
+   |#
+  %newBox)
+
+(defMacro (defBox name . value?)
+  (list 'def name (cons 'newBox value?)) )
+
+
 ;;; Dynamic Binding
+
+(def newDVar %newDVar)
+(def dval %dVal)
 
 (defMacro (ddef var . val?)
   #|Define a new or update an existing dynamic variable with the given
@@ -1487,20 +1766,12 @@
       (list* 'dlet* (cdr bindings) forms) )))
 
 
-;;;; Box
-
-(def newBox %newBox)
-
-(defMacro (defBox name . value?)
-  (list 'def name (cons 'newBox value?)) )
-
-
 ;;; Classes
 
-(def\ findClass (name env)
+(def\ findClass ((#! Symbol name) env)
   #|Look up a class based on its NAME symbol (evaluated) in the given ENVIRONMENT.
    |#
-  (eval (the Symbol name) env))
+  (eval name env))
 
 (defVau defClass (name (#! (0 1 Symbol) superClass?) (#! (Symbol) slotSpecs) . properties) env
   #|Define a new `StandardClass' with the given NAME, optional SUPERCLASS?, and SLOT-SPECS.
@@ -1510,37 +1781,8 @@
    |$(syntax property (:documentation docstring))
    |#
   ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
-  (let1 (superClass (findClass (optDft superClass? 'Obj) env))
-    (eval (list 'def name (%newClass name superClass)) env)) )
-
-
-;;; Objects
-
-(def new
-  #|Create a new instance of CLASS (that must be a `standard-class').
-   |The SLOT-INITS must be of even length, and alternately contain slot
-   |names (symbols, typically keywords) and values.
-   |$(fn (class . slotInits))
-   |#
-  %new)
-
-(def\ getSlot (object slotName)
-  #|Return the value of the slot named SLOT-NAME of the OBJECT.
-   |#
-  (%getSlot object slotName))
-
-(def\ setSlot (object slotName value)
-  #|Set the value of the slot named SLOT-NAME of the OBJECT to VALUE.
-   |#
-  (%setSlot object slotName value))
-
-(def\ slotBound? (object slotName)
-  #|Return true if the slot named SLOT-NAME of the OBJECT is set, false otherwise.
-   |#
-  (%slotBound? object slotName))
-
-(defMacro (defObj name class . attr)
-  (list 'def name (list* 'new class attr)) )
+  (def superClass (findClass (optDft superClass? 'Obj) env))
+  (eval (list 'def name (%newClass name superClass)) env) )
 
 
 ;;; Generic Functions
@@ -1911,46 +2153,6 @@
 (def $= (assignOp %$))
 (def += (assignOp %+))
 (def -= (assignOp %-))
-
-
-;;;; Arrays
-
-(def\ (array . args) (list->array args))
-
-(def Object[] &java.lang.Object[])
-
-(def\ (arrayMap fun (#! Object[] arr))
-  (list->array (map fun (array->list #t arr))) )
-
-(def\ (arrayFilter pred (#! Object[] arr))
-  (list->array (filter pred (array->list #t arr))) )
-
-(def\ (newInstance class dim . dims)
-  (apply** @newInstance &java.lang.reflect.Array class dim dims))
-
-(def\ (arrayGet array index)
-  (if (cons? index)
-    (apply** arrayGet* array index)
-    (@get &java.lang.reflect.Array array index) ))
-
-(def\ (arrayGet* array . indexes)
-  (let loop ((array array) (indexes indexes))
-    (if (null? indexes) array
-      (loop (arrayGet array (car indexes)) (cdr indexes)) )))  
-
-(def\ (arraySet array index value)
-  (if (cons? index)
-    (apply** arraySet* array value index)
-    (else
-      (@set &java.lang.reflect.Array array index value)
-      array )))
-
-(def\ (arraySet* array0 value . indexes)
-  (if (null? indexes) array
-    (let loop ((array array0) (indexes indexes))
-       (if (null? (cdr indexes))
-         (then (arraySet array (car indexes) value) array0)
-         (loop (arrayGet array (car indexes)) (cdr indexes)) ))))  
 
 
 ;;;; Simple Set

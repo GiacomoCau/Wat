@@ -16,6 +16,7 @@
 (%def Null #null)
 (%def Any &Wat.Vm$Any)
 (%def Apv &Wat.Vm$Apv)
+(%def Array &java.lang.reflect.Array)
 (%def At &Wat.Vm$At)
 (%def AtDot &Wat.Vm$AtDot)
 (%def Box &Wat.Vm$Box)
@@ -43,6 +44,7 @@
 (%def Opv &Wat.Vm$Opv)
 (%def Keyword &Wat.Vm$Keyword)
 (%def Obj &Wat.Vm$Obj)
+(%def ObjEnv &Wat.Vm$ObjEnv)
 (%def Object &java.lang.Object)
 (%def Opv &Wat.Vm$Opv)
 (%def Symbol &Wat.Vm$Symbol)
@@ -95,9 +97,9 @@
 (%def %className (%\ (class) (%intern (@getSimpleName (%the Class class)))))
 ;(%def %newClass ((%\ (%newClass) (%\ (name superclass) (%newClass (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass))) %newClass))
 
-(%def %getSlot (%\ (obj slot) ((%the Obj obj) (%the Intern slot)) ))
-(%def %setSlot (%\ (obj slot value) ((%the Obj obj) (%the Intern slot) value) ))
-(%def %slotBound? (%\ (obj slot) (@isBound (%the Obj obj) (%the Intern slot)) ))
+(%def %getSlot (%\ (obj slot) ((%the ObjEnv obj) (%the Intern slot)) ))
+(%def %setSlot (%\ (obj slot value) ((%the ObjEnv obj) (%the Intern slot) value) ))
+(%def %slotBound? (%\ (obj slot) (@isBound (%the ObjEnv obj) (%the Intern slot)) ))
 
 (%def %makeCheckEvl
   (%\ (check)

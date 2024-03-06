@@ -6,337 +6,69 @@
 
 ;; ``72. An adequate bootstrap is a contradiction in terms.''
 
-;; Rename %def
+;;; Built-Ins Renames for Macro and Definitions Forms
 
 (%def def
   %def)
-
-
-;;; Built-Ins - rename bindings that will be used as provided by VM
-
-(def assert %assert)
-(def error %error)
-(def test %test)
-
-(def ==
-  %==)
-(def != %!=)
-
-(def string? %string?)
-(def $ %$)
-
-(def number? %number?)
-(def + %+)
-(def * %*)
-(def - %-)
-(def / %/)
-(def % %%)
-
-(def !
-  %!)
-(def !! %!!)
-(def < %<)
-(def > %>)
-(def <= %<=)
-(def >= %>=)
-
-(def ~ %~)
-(def & %&)
-(def \| %|)
-(def ^ %^)
-(def << %<<)
-(def >> %>>)
-(def >>> %>>>)
-
-(def append
-  %append)
-
-(def apply
-  %apply)
-
-(def apply*
-  %apply*)
-
-(def apply**
-  %apply**)
-
-(def array->list %array->list)
-
-(def atEnd
-  %atEnd)
-
-(def begin
-  %begin)
-
-(def bind? %bind?)
-(def bound?
-  %bound?)
-(def newBox
-  %newBox)
-(def cons
-  %cons)
-(def cons?
-  %cons?)
-
-(def className
-  %className)
-
-(def classOf
-  %classOf)
-
-(def dval %dVal)
-(def newDVar %newDVar)
-(def eq? %eq?)
-(def eval
-  %eval)
-
-(def if
-  %if)
-(def intern
-  %intern)
-(def instanceOf? %instanceOf?)
-
-(def keyword %keyword)
-(def keyword? %keyword?)
-(def keywordName %name)
-(def len %len)
-(def list*
-  %list*)
-(def list?
-  %list?)
-
-(def list->array %list->array)
-(def loop
-  %loop)
-(def newEnv
-  %newEnv)
-(def null?
-  %null?)
-(def !null? %!null?)
-(def not
-  !)
-
-(def nth
-  %nth)
-
-(def nthCdr
-  %nthCdr)
-(def new
-  %new)
-(def reverse
-  %reverse)
-(def rootPrompt %rootPrompt)
-(def set! %set!)
-(def symbol %symbol)
-(def symbol? %symbol?)
-(def symbolName
-  %name)
-(def subClass?
-  %subClass?)
-(def the %the)
-(def type?
-  %type?)
-(def value %value)
-(def unwrap
-  %unwrap)
-(def wrap
-  %wrap)
-
-
-;;; Core Forms
 
 (def vau (%vau (pt ep . forms) env (eval (list '%vau pt ep (cons 'begin forms)) env)))
 (def vau
   %vau)
 
-(def theEnv (vau () e e))
-(def theEnv
-  %theEnv)
-
-(def quote (vau (x) #ignore x))
-(def quote
-  %')
-
-(def list (wrap (vau x #ignore x)))
-(def list
-  %list)
-
-(def lambda (vau (formals . forms) env (wrap (eval (list* vau formals #ignore forms) env))))
-(def lambda %\)
+(def \ (vau (formals . forms) env (wrap (eval (list* vau formals #ignore forms) env))))
 (def \
   %\)
+(def lambda \)
+
+(def wrap
+  %wrap)
+
+(def assert %assert)
+
+(def apply
+  %apply)
+
+(def begin
+  %begin)
 
 (def car (\ ((car . #_)) car))
 (def car
   %car)
-
-(def car!
-  (\ ((car)) car))
 
 (def cadr (\ ((#_ . (cadr . #_))) cadr))
 (def cadr (\ ((#_ cadr . #_)) cadr))
 (def cadr
   %cadr)
 
-(def cadr!
-  (\ ((#_ cadr)) cadr))
-
 (def cdr (\ ((#_ . cdr)) cdr))
 (def cdr
   %cdr)
 
-(def cddr (\ ((#_ . (#_ . cddr))) cddr))
-(def cddr (\ ((#_ #_ . cddr)) cddr))
-(def cddr
-  %cddr)
+(def cons
+  %cons)
 
-(def caar
-  (\ (x) (car (car x))))
+(def cons?
+  %cons?)
 
-(def cdar
-  (\ (x) (cdr (car x))))
+(def eval
+  %eval)
 
-(def compose
-  (\ (f g) (\ args (f (apply g args)))) )
+(def if
+  %if)
 
-(def compose* 
-  (\ f* (\ args ((rec\ (loop (f . f*)) (if (null? f*) (apply f args) (f (loop f*)))) f*))) )
+(def list (wrap (vau x #ignore x)))
+(def list
+  %list)
 
-#|
-(def\ compose* f* 
-  (\ args ((rec\ (loop (f . f*)) (if (null? f*) (apply f args) (f (loop f*)))) f*)) )
+(def list*
+  %list*)
 
-(defMacro compose* f* 
-  (list '\ 'args ((rec\ (loop (f . f*)) (if (null? f*) (list 'apply f 'args) (list f (loop f*)))) f*)) )
+(def newBox
+  %newBox)
 
-(defMacro _ forms
-  (list* '\ '(_) forms) )
-
-; ´a;b -> (compose a b c)
-; ´a;b;c -> (compose* a b c)
-; ´!a -> (compose ! a)
-; ´a_b -> (a b)
-; ´a_'b -> (a 'b)
-; ´a_'b_c -> (a 'b c)
-; ´a,b -> (curry a b)
-; ´a,'b,c -> (curry* a 'b c) 
-; ´a,_,'b,c -> [_ (a _ 'b c)]
-
-(defMacro %´ ((#! Symbol x))
-  (def\ (end? r . c) (|| (null? r) (member? (car r) (map symbol c))) )
-  (def\ (expd; t r)
-    (if (null? r)
-      (if (null? (cdr t)) (car t) (cons (if (null? (cddr t)) 'compose 'compose*) (reverse t)))
-      (let1 ((f . r) r)
-        (if 
-          (== f '!)
-            (if (end? r ";" "," "_") (%error "!")
-              (expd; (cons (list 'compose '! (car r)) t) (cdr r)) )
-          (== f (symbol ","))
-            (let1 ((f . r) (expd, (cons (car t)) r))
-              (expd; (cons f (cdr t)) r) )
-          (== f (symbol "_"))
-            (let1 ((f . r) (expd_ (cons (car t)) r))
-              (expd; (cons f (cdr t)) r) )
-          (expd; (if (== f (symbol ";")) t (cons f t)) r) ))))
-  (def\ (expd, t r)
-    (if (end? r ";") 
-      (cons (if (null? (cdr t)) (car t) (member? '_ t) (list '_ (reverse t)) (cons (if (null? (cddr t)) 'curry  'curry*) (reverse t))) (if (null? r) r (cdr r)))
-      (let1 ((f . r) r)
-        (if (== f (symbol "'"))
-          (if (end? r ";" ",")  (%error "'")
-            (expd, (cons (list 'quote (car r)) t) (cdr r)) )
-          (expd, (if (== f (symbol ",")) t (cons f t)) r) ))))
-  (def\ (expd_ t r)
-    (if (end? r ";") 
-      (cons (if (null? (cdr t)) (car t) (reverse t)) (if (null? r) r (cdr r)))
-      (let1 ((f . r) r)
-        (if (== f (symbol "'"))
-          (if (end? r ";" "_") (%error "'")
-            (expd_ (cons (list 'quote (car r)) t) (cdr r)) )
-          (expd_ (if (== f (symbol "_")) t (cons f t)) r) ))))
-  (def\ (expds x)
-     (map [_ (if (>= (@indexOf ";!,'_&" _) 0) (symbol _) (car (@toLispList vm _)))]
-       (filter [_ (!= _ "")] (array->list #t (@splitWithDelimiters (%name x) ";|!|,|'|_|&" -1)) )) )
-  (expd; () (expds x)) ) 
-
-(defMacro %´ ((#! Symbol x))
-  ;(def sep (map symbol (array->list #t (@split ";._" ""))))
-  (def (comma semicolon apostrophe lowline bang) (map symbol (array->list #t (@split ",;'_!" ""))))
-  (def\ (mkc t) (if (member? lowline t) (list lowline t) (cons (if (null? (cddr t)) 'curry 'curry*) t)))
-  (def\ (end? r . s*) (|| (null? r) (member? (car r) s*)) )
-  (def\ (expd1 t r)
-    (if (null? r)
-      (if (null? (cdr t)) (car t) (cons (if (null? (cddr t)) 'compose 'compose*) (reverse t)))
-      (let1 ((f . r) r)
-        (if 
-          (== f bang)
-            (if (end? r semicolon comma lowline) (%error "!")
-              (expd1 (cons (list 'compose bang (car r)) t) (cdr r)) )
-          (== f comma)
-            (let1 ((f . r) (expd2 comma mkc (cons (car t)) r))
-              (expd1 (cons f (cdr t)) r) )
-          (== f lowline)
-            (let1 ((f . r) (expd2 lowline idx (cons (car t)) r))
-              (expd1 (cons f (cdr t)) r) )
-          (expd1 (if (== f semicolon) t (cons f t)) r) ))))
-  ;(def\ (switch v a b) (if (== v a) b a))
-  (def\ (expd2 sep mk t r)
-    (if (end? r semicolon) 
-      (cons (if (null? (cdr t)) (car t) (mk (reverse t))) (if (null? r) r (cdr r)))
-      (let1 ((f . r) r)
-        (if 
-          (== f apostrophe)
-            (if (end? r semicolon comma lowline) (%error "'")
-              (expd2 sep mk (cons (list 'quote (car r)) t) (cdr r)) )
-          ;(== f bang)    
-          ;  (if (end? r semicolon comma lowline) (%error "!")
-          ;    (expd2 sep mk (cons (list bang (car r)) t) (cdr r)) )
-          ;(== f (switch sep comma lowline))    
-          ;  (let1 ((f . r) (expd2 (switch sep comma lowline) (switch mk mkc idx) (cons (car t)) r))
-          ;    (expd1 (cons f (cdr t)) r) )
-          (expd2 sep mk (if (== f sep) t (cons f t)) r) ))))
-  (def\ (expd0 x)
-     (map [_ (if (>= (@indexOf ";!,'_&" _) 0) (symbol _) (car (@toLispList vm _)))]
-       (filter [_ (!= _ "")] (array->list #t (@splitWithDelimiters (%name x) ";|!|,|'|_|&" -1)) )) )
-  (expd1 () (expd0 x)) ) 
-
-(assert (expand ´a) 'a)
-(assert (expand ´!a) '(compose ! a))
-(assert (expand ´a;b) '(compose a b))
-(assert (expand ´a;!b;c) '(compose* a (compose ! b) c))
-
-(assert (expand ´cc) 'cc)
-(assert (expand ´cc,1) '(curry cc 1))
-(assert (expand ´cc,1,2) '(curry* cc 1 2))
-(assert (expand ´cc,1,'a,2) '(curry* cc 1 (quote a) 2))
-(assert (expand ´cc,1,_,2) '(_ (cc 1 _ 2)))
-
-(assert (expand ´cc) 'cc)
-(assert (expand ´cc_1) '(cc 1))
-(assert (expand ´cc_1_2) '(cc 1 2))
-(assert (expand ´cc_1_'a_2) '(cc 1 (quote a) 2))
-
-(assert (expand ´a;!b;cc,1,'d;e) '(compose* a (compose ! b) (curry* cc 1 (quote d)) e))
-(assert (expand ´a;!b;cc,1,'d;ee_2_'f;g) '(compose* a (compose ! b) (curry* cc 1 (quote d)) (ee 2 (quote f)) g)) 
-(assert (expand ´a;!b;cc,1,'d;ee_2_'f_:gg;h) '(compose* a (compose ! b) (curry* cc 1 (quote d)) (ee 2 (quote f) :gg) h)) 
-
-|#
-
-(def curry
-  (\ (f v) (\ args (apply f (cons v args)))) )
-
-(def curry*
-  (\ (f . v*) (\ args (apply f (append v* args)))) )
-
-(def idx
-  (\ (x) x))
-
-(def 1+
-  (\ (n) (+ n 1)))
-
-(def 1-
-  (\ (n) (- n 1)))
+(def quote (vau (x) #ignore x))
+(def quote
+  %')
 
 
 ;;; Macro
@@ -347,9 +79,9 @@
   (wrap
     (vau (expander) #ignore
       (vau operands env
-        (def !evalMacro (! (evalMacro :prv #t)))
-        (def exp (apply expander operands (newEnv)))
-        (if !evalMacro exp (eval exp env)) ))))
+        (def evalMacro (evalMacro :prv #t))
+        (def exp (apply expander operands))
+        (if evalMacro (eval exp env) exp) ))))
 
 (def macro
   (makeMacro
@@ -357,13 +89,14 @@
       (list 'makeMacro (list* 'vau pt #ignore forms)) )))
 
 
+;;; Definitions Forms
+
 ; defMacro defVau def\ def*\ rec\ let1\ let1rec\ let\ letrec\ permettono la definizione in due forme
 ;
 ;    (_ name parameters . body)
 ;    (_ (name . parameters) . body)
 ;
 ; rec rec\ let1rec let1rec\ letrec letrec\ inizializzano a #inert le definizioni prima della valutazione
-
 
 (def defMacro
   (macro (lhs . rhs)
@@ -405,47 +138,229 @@
 (assert (expand (def\ (succ n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
 
 
-;;;; Basic value test
+;;; Other Built-Ins Renames & Simple Forms
 
+(def apply*
+  %apply*)
+
+(def apply**
+  %apply**)
+
+(defVau set (ep dt value) env
+  (eval
+    (list 'def dt (list (unwrap eval) value env))
+    (eval ep env)))
+
+(def set! %set!)
+
+(def unwrap
+  %unwrap)
+
+
+;;; Env
+
+(def newEnv
+  %newEnv)
+
+(def theEnv (vau () e e))
+(def theEnv
+  %theEnv)
+
+
+;;; Obj
+
+(def new
+  %new)
+
+(defMacro (defObj name class . attr)
+  (list 'def name (list* 'new class attr)) )
+
+
+;;; Env & Obj
+
+(def bound?
+  %bound?)
+
+(def value %value)
+
+(def\ getSlot (object slotName)
+  (%getSlot object slotName))
+
+(def\ setSlot (object slotName value)
+  (%setSlot object slotName value))
+
+(def\ slotBound? (object slotName)
+  (%slotBound? object slotName))
+
+
+;;; Cons
+
+(def\ (car! (car))
+  car)
+
+(def\ (cadr! (#_ cadr))
+  cadr)
+
+(def\ (caar x)
+  (car (car x)) )
+
+(def\ (cdar x)
+  (cdr (car x)) )
+
+(def\ (cddr (#_ . (#_ . cddr))) cddr)
+(def\ (cddr (#_ #_ . cddr)) cddr)
+(def cddr
+  %cddr)
+
+(def\ (cons! car) (cons car))
+
+(def null?
+  %null?)
+
+(def !null? %!null?)
+
+(def nth
+  %nth)
+
+(def nthCdr
+  %nthCdr)
+
+
+;;; List
+
+(def append
+  %append)
+
+(def len %len)
+(def list?
+  %list?)
+
+(def reverse
+  %reverse)
+
+
+;;; Symbol & Keyword
+
+(def intern
+  %intern)
+
+(def keyword %keyword)
+(def keyword? %keyword?)
+(def keywordName %name)
+
+(def symbol %symbol)
+(def symbol? %symbol?)
+(def symbolName
+  %name)
+
+
+;;; Equals
+
+(def ==
+  %==)
+(def != %!=)
+(def eq? %eq?)
+
+(def\ (ignore? o) (== o #_))
+(def\ (sheBang? o) (== o #!))
 (def\ (inert? o) (== o #inert))
+
+
+;;; Boolean
+
+(def !
+  %!)
+(def not !)
+
+(def !! %!!)
+
+
+;;; Number
+
+(def number? %number?)
+(def + %+)
+(def * %*)
+(def - %-)
+(def / %/)
+(def % %%)
+(def\ (1+ n) (+ n 1))
+(def\ (1- n) (- n 1))
 (def\ (zero? n) (== n 0))
 (def\ (uno? n) (== n 1))
 (def\ (even? n) (== (% n 2) 0))
 (def\ (odd? n)  (== (% n 2) 1))
 
 
-;;; Wrap incomplete VM forms
+;;; String
+
+(def string? %string?)
+(def $ %$)
+
+
+;;; Comparator
+
+(def < %<)
+(def > %>)
+(def <= %<=)
+(def >= %>=)
+
+
+;;; Bit
+
+(def ~ %~)
+(def & %&)
+(def \| %|)
+(def ^ %^)
+(def << %<<)
+(def >> %>>)
+(def >>> %>>>)
+
+
+;;; First-Order Control
 
 (def* (then else) begin begin)
 
-(defMacro (finally x . cnl)
-  (list 'atEnd (cons 'begin cnl) x) )  
+(def\ (01->+ forms)
+  (if (null? forms) #null (1->+ forms)) )
 
-(defMacro (throw . val) (list* '%throwTag #_ val) )
+(def\ (1->+ (#! List forms))
+  (if (null? (cdr forms)) (car forms) (cons 'begin forms)) )
+
+(def loop
+  %loop)
+
+(def atEnd
+  %atEnd)
+
+(defMacro (finally x . cnl)
+  (list 'atEnd (01->+ cnl) x) )  
+
 (def throwTag
   %throwTag)
+
+(defMacro (throw . val) (list* 'throwTag #_ val) )
 
 ;; ctApv non andrebbe mai cambiato dopo il boot, anche la riesecuzione di quanto segue potrebbe non bastare!
 (if (ctApv)
   (then
-    (defMacro (catch . forms)
-      (list '%catchTagWth #_ #_ (list* '\ () forms)) )
-    (defMacro (catchWth hdl . forms)
-      (list '%catchTagWth #_ hdl (list* '\ () forms)) )
-    (defMacro (catchTag tag . forms)
-      (list '%catchTagWth tag #_ (list* '\ () forms)) )
     (defMacro (catchTagWth tag hdl . forms)
       (list '%catchTagWth tag hdl (list* '\ () forms)) )
+    (defMacro (catch . forms)
+      (list* 'catchTagWth #_ #_ forms) )
+    (defMacro (catchWth hdl . forms)
+      (list* 'catchTagWth #_ hdl forms) )
+    (defMacro (catchTag tag . forms)
+      (list* 'catchTagWth tag #_ forms) )
   )
   (else
-    (defMacro (catch . forms)
-      (list* '%catchTagWth #_ #_ forms))
-    (defMacro (catchWth hdl . forms)
-      (list* '%catchTagWth #_ hdl forms))
-    (defMacro (catchTag tag . forms)
-      (list* '%catchTagWth tag #_ forms) )
     (def catchTagWth
       %catchTagWth)
+    (defMacro (catch . forms)
+      (list* 'catchTagWth #_ #_ forms))
+    (defMacro (catchWth hdl . forms)
+      (list* 'catchTagWth #_ hdl forms))
+    (defMacro (catchTag tag . forms)
+      (list* 'catchTagWth tag #_ forms) )
   )
 )
 
@@ -457,7 +372,7 @@
 (assert (catchTagWth 'a (\ (x) (+ x 1)) (throwTag 'a 1) ) 2)
 
 
-;;; Delimited Control Operators
+;;; Delimited-Control Operators
 
 ;; These operators follow the API put forth in the delimcc library
 ;; at URL `http://okmij.org/ftp/continuations/implementations.html'.
@@ -472,13 +387,64 @@
   %pushDelimSubcont)
 
 (defMacro pushSubcont (continuation . forms)
-  (list* '%pushDelimSubcont #ignore continuation forms) )
+  (list* 'pushDelimSubcont #ignore continuation forms) )
 
 (def pushSubcontBarrier
   %pushSubcontBarrier)
 
 
-;;; Basic macros and functions
+;;; Error
+
+(def test %test)
+(def error %error)
+(def rootPrompt %rootPrompt)
+
+(def\ makeTypeError (datum expected)
+  (new Error "not a {expected}: {datum}" :type 'type :datum datum :expected expected) )
+
+(def\ typeError (datum expected)
+  (error (makeTypeError datum expected)) )
+
+
+;;; Classes
+
+(def className
+  %className)
+
+(def instanceOf? %instanceOf?)
+
+(def classOf
+  %classOf)
+
+(def subClass?
+  %subClass?)
+
+(def type?
+  %type?)
+
+
+;;; Basic Macros and Functions
+
+(def\ (idx x)
+  x)
+
+(defMacro _ forms
+  (list* '\ '(_) forms) )
+
+(def\ (curry f v)
+  (\ args (apply f (cons v args))) )
+
+(def\ (curry* f . v*)
+  (\ args (apply f (append v* args))) )
+
+(def\ (compose f g)
+  (\ args (f (apply g args))) )
+
+(def\ (compose* . f*)
+  (\ args ((rec\ (loop (f . f*)) (if (null? f*) (apply f args) (f (loop f*)))) f*)) )
+
+;(defMacro compose* f* 
+;  (list '\ 'args ((rec\ (loop (f . f*)) (if (null? f*) (list 'apply f 'args) (list f (loop f*)))) f*)) )
 
 (defMacro (rec lhs . rhs)
   (list (list '\ (list lhs) (list* 'def lhs :rhs rhs)) #inert) )
@@ -525,7 +491,8 @@
 
 ;;; Lexical Bindings
 
-(def\ (->begin binding) ((\ ((#_ cadr . cddr)) (if (null? cddr) cadr (list* 'begin cadr cddr))) binding))
+(def\ (->begin (#_ cadr . cddr)) (if (null? cddr) cadr (list* 'begin cadr cddr)))
+;(def\ (->begin binding) (01->+ (cdr binding)))
 (def\ (->name+#inert (lhs . #_)) (list (if (cons? lhs) (car lhs) lhs) #inert))
 (def\ (->name+lambda (lhs . rhs)) (if (cons? lhs) (list (car lhs) (list* '\ (cdr lhs) rhs)) (list lhs (cons '\ rhs)) ))
 ;(def\ (->name+lambda (lhs . rhs)) (list (if (cons? lhs) (car lhs) lhs) (cons '\ (if (cons? lhs) (cons (cdr lhs) rhs) rhs))))
@@ -567,12 +534,6 @@
 (assert (let1Loop add1 (a '(1 2)) (if (null? a) () (cons (+ (car a) 1) (add1 (cdr a))))) '(2 3))
 (assert (let1Loop (add1 a '(1 2)) (if (null? a) () (cons (+ (car a) 1) (add1 (cdr a))))) '(2 3))
 
-#| TODO da valutare
-(defMacro (let1 lhs . rhs)
-  (if (symbol? lhs)
-    (list* 'let1Loop lhs rhs)
-    (list* 'wth1 (car lhs) (->begin lhs) rhs)))
-|#
 
 (defMacro (let1 lhs . rhs)
   (if (symbol? lhs)
@@ -581,7 +542,7 @@
       (->begin lhs) )))
 
 (assert (let1 (a 1) a) 1)
-(assert (let1 (a 1 2) a) 2) ; need ->begin
+(assert (let1 (a 1 2) a) 2)
 (assert (let1 f (a 2) (if (zero? a) 'end (f (- a 1)))) 'end)
 
 (defMacro (let1\ binding . body)
@@ -670,14 +631,6 @@
 (defMacro (unless test . forms)
   (list 'if test #inert (cons 'else forms)))
 
-(defVau set (ep dt value) env
-  (eval
-    (list 'def dt (list (unwrap eval) value env))
-    (eval ep env)))
-
-
-;;; And Or
-
 (defVau && ops env
   (if
     (null? ops) #t
@@ -695,7 +648,9 @@
 (def or ||)
 
 
-;;;; Bind? IfBind? CaseVau Case\ Match
+;;;; Bind Bind? IfBind? CaseVau DefCaseVau Case\ DefCase\ Match Cond
+
+(def bind? %bind?)
 
 (defVau (ifBind? (pt exp) then . else) env
   (let1 (env+ (newEnv env))
@@ -741,30 +696,6 @@
 (assert (match        4 ((a) 1) ((a b) 2)    (a a)) 4)
 (assert (match '(1 2 3) ((a) 1) ((a b) 2)    (a a)) '(1 2 3))
 
-
-;;; Quasiquote
-
-;; (Idea from Alf Petrofsky http://scheme-reports.org/mail/scheme-reports/msg00800.html)
-(defVau %` (x) env
-  (defCase\ qq
-    ( ((('%,@ x) . y) #f . d) (append (map (\ (x) (list '%,@ x)) (apply** qq (list x) d)) (apply** qq y #f d)) )
-    ( ((('%,@ x) . y) . d)    (append (eval x env) (apply** qq y d)) )
-    ( ((('%, x) . y) #f . d)  (append (map (\ (x) (list '%, x))  (apply** qq (list x) d)) (apply** qq y #f d)) )
-    ( (('%, x) #f . d)        (list '%, (apply** qq x d)) )
-    ( (('%, x) . d)           (eval x env) )
-    ( (('%` x) . d)           (list '%` (apply** qq x #f d)) )
-    ( ((x . y) . d)           (cons (apply** qq x d) (apply** qq y d)) )
-    ( (x . d)                 x) )
-  (qq x))
-
-(assert (let ((a 1) (b 2) (c '(3 4))) `(,@c ,a (,a) (,@c) b ,@c)) '(3 4 1 (1) (3 4) b 3 4))
-(assert (let1 (x '(a b c)) ``(,,x ,@,x ,,@x ,@,@x)) '`(,(a b c) ,@(a b c) ,a ,b ,c ,@a ,@b ,@c))
-(assert ``(,,@'() ,@,@(list)) '`())
-(assert `````(a ,(b c ,@,,@,@'(a b c))) '````(a ,(b c ,@,,@a ,@,,@b ,@,,@c)))
-
-
-;;; Cond
-
 (defVau (cond . clauses) env
   (unless (null? clauses)
     (let1 (((test . body) . clauses) clauses)
@@ -789,20 +720,35 @@
 (assert (let1 (a 1) (cond (a (\ (a) (== a 1)) => (\ (a) (+ a 1))))) 2)
 
 
+;;; Quasiquote
+
+;; (Idea from Alf Petrofsky http://scheme-reports.org/mail/scheme-reports/msg00800.html)
+(defVau %` (x) env
+  (defCase\ qq
+    ( ((('%,@ x) . y) #f . d) (append (map (\ (x) (list '%,@ x)) (apply** qq (list x) d)) (apply** qq y #f d)) )
+    ( ((('%,@ x) . y) . d)    (append (eval x env) (apply** qq y d)) )
+    ( ((('%, x) . y) #f . d)  (append (map (\ (x) (list '%, x))  (apply** qq (list x) d)) (apply** qq y #f d)) )
+    ( (('%, x) #f . d)        (list '%, (apply** qq x d)) )
+    ( (('%, x) . d)           (eval x env) )
+    ( (('%` x) . d)           (list '%` (apply** qq x #f d)) )
+    ( ((x . y) . d)           (cons (apply** qq x d) (apply** qq y d)) )
+    ( (x . d)                 x) )
+  (qq x))
+
+(assert (let ((a 1) (b 2) (c '(3 4))) `(,@c ,a (,a) (,@c) b ,@c)) '(3 4 1 (1) (3 4) b 3 4))
+(assert (let1 (x '(a b c)) ``(,,x ,@,x ,,@x ,@,@x)) '`(,(a b c) ,@(a b c) ,a ,b ,c ,@a ,@b ,@c))
+(assert ``(,,@'() ,@,@(list)) '`())
+(assert `````(a ,(b c ,@,,@,@'(a b c))) '````(a ,(b c ,@,,@a ,@,,@b ,@,,@c)))
+
+
 ;;; Options
 
 ;; An option is either nil ("none"), or a one-element list ("some").
 
-(def\ some (value)
+(def some
   #|Create a one-element list from the VALUE.
    |#
-  (cons value))
-
-(def\ (01->+ forms)
-  (if (null? forms) #null (1->+ forms)) )
-
-(def\ (1->+ (#! List forms))
-  (if (null? (cdr forms)) (car forms) (cons 'begin forms)) )
+  cons!)
 
 ;; (Idea from Taylor R. Campbell's blag. https://mumble.net/~campbell/blag.txt)
 (defVau (ifOpt (pt opt) then . else) env
@@ -939,7 +885,7 @@
     (let1 next (clauses clauses)
       (if (null? clauses) #inert
         (let1 (((values . forms) . clauses) clauses)
-          (if (|| (== values 'else) (== value values) (member? value values))
+          (if (|| (== values 'else) (eq? value values) (member? value values :cmp eq?))
             (if (null? forms) #inert
               (if (== (car forms) '=>)
                 ((eval (cadr! forms) env) value)
@@ -1005,16 +951,10 @@
 (assert (sort ((1) (4) (3 1) (5) (7) (3 2)) :key car :dn) ((7) (5) (4) (3 2) (3 1) (1)))
 
 
-;;; Type Checks
+;;; Checks
 
 (def\ assert#t (boolean)
   (unless boolean (error (new Error "invalid assetion" :type 'assert :datum boolean :expected #t))))
-
-(def\ makeTypeError (datum expected)
-  (new Error "not a {expected}: {datum}" :type 'type :datum datum :expected expected) )
-
-(def\ typeError (datum expected)
-  (error (makeTypeError datum expected)) )
 
 (def the
   %the)
@@ -1350,7 +1290,233 @@
 (assert ((make\* 2 (\(a b) b)) 1 2 3 4 5) '(2 3 4 5))
 
 
+;;;; Arrays
+
+(def\ (array->list arr)
+  (%array->list #t arr) )
+
+(def\ (array->cons arr)
+  (%array->list #f arr) )
+
+(def list->array %list->array)
+
+(def\ (array . args) (list->array args))
+
+(def Object[] &java.lang.Object[])
+
+(def\ (arrayMap fun (#! Object[] arr))
+  (list->array (map fun (array->list arr))) )
+
+(assert (arrayMap 1+ (array 1 2 3)) (array 2 3 4))
+
+(def\ (arrayFilter pred (#! Object[] arr))
+  (list->array (filter pred (array->list arr))) )
+
+(assert (arrayFilter odd? (array 1 2 3)) (array 1 3))
+
+(def\ (newInstance class dim . dims)
+  (apply** @newInstance Array class dim dims))
+
+(def\ (arrayGet array index)
+  (if (cons? index)
+    (apply** arrayGet* array index)
+    (@get Array array index) ))
+
+(def\ (arrayGet* array . indexes)
+  (let loop ((array array) (indexes indexes))
+    (if (null? indexes) array
+      (loop (arrayGet array (car indexes)) (cdr indexes)) )))  
+
+(def\ (arraySet array index value)
+  (if (cons? index)
+    (apply** arraySet* array value index)
+    (else
+      (@set Array array index value)
+      array )))
+
+(def\ (arraySet* array0 value . indexes)
+  (if (null? indexes) array
+    (let loop ((array array0) (indexes indexes))
+       (if (null? (cdr indexes))
+         (then (arraySet array (car indexes) value) array0)
+         (loop (arrayGet array (car indexes)) (cdr indexes)) ))))  
+
+(assert (arrayGet (arraySet (newInstance &int 2 2) (1 1) 3) (1 1)) 3)
+(assert (arrayGet* (arraySet* (newInstance &int 2 2) 3 1 1) 1 1) 3)
+
+
+;;; Syntetic Expression
+
+; ´a;b -> (compose a b c)
+; ´a;b;c -> (compose* a b c)
+; ´!a -> (compose ! a)
+; ´a_b -> (a b)
+; ´a_'b -> (a 'b)
+; ´a_'b_c -> (a 'b c)
+; ´a,b -> (curry a b)
+; ´a,'b,c -> (curry* a 'b c) 
+; ´a,_,'b,c -> [_ (a _ 'b c)]
+
+(defMacro %´ ((#! Symbol x))
+  (def\ (end? r . c) (|| (null? r) (member? (car r) (map symbol c))) )
+  (def\ (expd; t r)
+    (if (null? r)
+      (if (null? (cdr t)) (car t) (cons (if (null? (cddr t)) 'compose 'compose*) (reverse t)))
+      (let1 ((f . r) r)
+        (if 
+          (== f '!)
+            (if (end? r ";" "," "_") (%error "!")
+              (expd; (cons (list 'compose '! (car r)) t) (cdr r)) )
+          (== f (symbol ","))
+            (let1 ((f . r) (expd, (cons (car t)) r))
+              (expd; (cons f (cdr t)) r) )
+          (== f (symbol "_"))
+            (let1 ((f . r) (expd_ (cons (car t)) r))
+              (expd; (cons f (cdr t)) r) )
+          (expd; (if (== f (symbol ";")) t (cons f t)) r) ))))
+  (def\ (expd, t r)
+    (if (end? r ";") 
+      (cons (if (null? (cdr t)) (car t) (member? '_ t) (list '_ (reverse t)) (cons (if (null? (cddr t)) 'curry  'curry*) (reverse t))) (if (null? r) r (cdr r)))
+      (let1 ((f . r) r)
+        (if (== f (symbol "'"))
+          (if (end? r ";" ",")  (%error "'")
+            (expd, (cons (list 'quote (car r)) t) (cdr r)) )
+          (expd, (if (== f (symbol ",")) t (cons f t)) r) ))))
+  (def\ (expd_ t r)
+    (if (end? r ";") 
+      (cons (if (null? (cdr t)) (car t) (reverse t)) (if (null? r) r (cdr r)))
+      (let1 ((f . r) r)
+        (if (== f (symbol "'"))
+          (if (end? r ";" "_") (%error "'")
+            (expd_ (cons (list 'quote (car r)) t) (cdr r)) )
+          (expd_ (if (== f (symbol "_")) t (cons f t)) r) ))))
+  (def\ (expds x)
+     (map [_ (if (>= (@indexOf ";!,'_&" _) 0) (symbol _) (car (@toLispList vm _)))]
+       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (%name x) ";|!|,|'|_|&" -1)) )) )
+  (expd; () (expds x)) ) 
+
+(defMacro %´ ((#! Symbol x))
+  (def (comma semicolon apostrophe underscore bang) (map symbol (array->list (@split ",;'_!" ""))))
+  (def\ (mkc t) (if (member? underscore t) (list underscore t) (cons (if (null? (cddr t)) 'curry 'curry*) t)))
+  (def\ (end? r . s*) (|| (null? r) (member? (car r) s*)) )
+  (def\ (expd1 t r)
+    (if (null? r)
+      (if (null? (cdr t)) (car t) (cons (if (null? (cddr t)) 'compose 'compose*) (reverse t)))
+      (let1 ((f . r) r)
+        (if 
+          (== f bang)
+            (if (end? r semicolon comma underscore) (%error "!")
+              (expd1 (cons (list 'compose bang (car r)) t) (cdr r)) )
+          (== f comma)
+            (let1 ((f . r) (expd2 comma mkc (cons (car t)) r))
+              (expd1 (cons f (cdr t)) r) )
+          (== f underscore)
+            (let1 ((f . r) (expd2 underscore idx (cons (car t)) r))
+              (expd1 (cons f (cdr t)) r) )
+          (expd1 (if (== f semicolon) t (cons f t)) r) ))))
+  (def\ (switch sep a b) (if (== sep a) b a))
+  (def\ (expd2 sep mk t r)
+    (if (end? r semicolon) 
+      (cons (if (null? (cdr t)) (car t) (mk (reverse t))) (if (null? r) r (cdr r)))
+      (let1 ((f . r) r)
+        (if 
+          (== f apostrophe)
+            (if (end? r semicolon sep) (%error "'")
+              (expd2 sep mk (cons (list 'quote (car r)) t) (cdr r)) )
+          (expd2 sep mk (if (== f sep) t (cons f t)) r) ))))
+  (def\ (expd0 x)
+     (map [_ (if (>= (@indexOf ";!,'_&" _) 0) (symbol _) (car (@toLispList vm _)))]
+       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (%name x) ";|!|,|'|_|&" -1)) )) )
+  (expd1 () (expd0 x)) )
+
+#|
+(defMacro %´ ((#! Symbol x))
+  (def (comma semicolon apostrophe underscore bang) (map symbol (array->list (@split ",;'_!" ""))))
+  (def\ (mkc t) (if (member? underscore t) (list underscore t) (cons (if (null? (cddr t)) 'curry 'curry*) t)))
+  (def\ (end? r . s*) (|| (null? r) (member? (car r) s*)) )
+  (def\ (expd1 t r)
+    (if (null? r)
+      (if (null? (cdr t)) (car t) (cons (if (null? (cddr t)) 'compose 'compose*) (reverse t)))
+      (let1 ((f . r) r)
+        (if 
+          (== f bang)
+            (if (end? r semicolon comma underscore) (%error "!")
+              (expd1 (cons (list 'compose bang (car r)) t) (cdr r)) )
+          (== f comma)
+            (let1 ((f . r) (expd2 comma mkc (list (car r) (car t)) (cdr r)))
+              (expd1 (cons f (cdr t)) r) )
+          (== f underscore)
+            (let1 ((f . r) (expd2 underscore idx (list (car r) (car t)) (cdr r)))
+              (expd1 (cons f (cdr t)) r) )
+          (expd1 (if (== f semicolon) t (cons f t)) r) ))))
+  (def\ (switch sep a b) (if (== sep a) b a))
+  (def\ (expd2 sep mk t r)
+    ;(log sep t r) 
+    (if (end? r semicolon) 
+        (cons (if (null? (cdr t)) (car t) (mk (reverse t))) (if (null? r) r (cdr r)))
+      (end? r (switch sep comma underscore))
+        (cons (mk (reverse t)) r)
+      (let1 ((f . r) r) 
+        (if 
+          (== f apostrophe)
+            (if (end? r semicolon sep) (%error "'")
+              (expd2 sep mk (cons (list 'quote (car r)) t) (cdr r)) )
+          ;(== f bang)    
+          ;  (if (end? r semicolon comma underscore) (%error "!")
+          ;    (expd2 sep mk (cons (list bang (car r)) t) (cdr r)) )
+          (== f (switch sep comma underscore))
+            (let1 ((f . r)
+                     ;(log sep t f r "+") 
+                     (if (== (car r) apostrophe)
+                       (expd2 (switch sep comma underscore) (switch mk mkc idx) t r)
+                       (expd2 (switch sep comma underscore) (switch mk mkc idx) (list (car r) (car t)) (cdr r)) )
+              ;(log sep t f r "-")        
+              (expd2 sep mk (cons f (cdr t)) r) ))
+          (== f sep)
+            (if (== (car r) apostrophe)
+              (expd2 sep mk t r)
+              (expd2 sep mk (cons (car r) t) (cdr r)) )
+          (%error "errore expd2") ))))
+  (def\ (expd0 x)
+     (map [_ (if (>= (@indexOf ";!,'_&" _) 0) (symbol _) (car (@toLispList vm _)))]
+       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (%name x) ";|!|,|'|_|&" -1)) )) )
+  (expd1 () (expd0 x)) )
+|#
+
+(assert (expand ´a) 'a)
+(assert (expand ´!a) '(compose ! a))
+(assert (expand ´a;b) '(compose a b))
+(assert (expand ´a;!b;c) '(compose* a (compose ! b) c))
+
+(assert (expand ´cc) 'cc)
+(assert (expand ´cc,1) '(curry cc 1))
+(assert (expand ´cc,1,2) '(curry* cc 1 2))
+(assert (expand ´cc,1,'a,2) '(curry* cc 1 (quote a) 2))
+(assert (expand ´cc,1,_,2) '(_ (cc 1 _ 2)))
+
+(assert (expand ´cc) 'cc)
+(assert (expand ´cc_1) '(cc 1))
+(assert (expand ´cc_1_2) '(cc 1 2))
+(assert (expand ´cc_1_'a_2) '(cc 1 (quote a) 2))
+
+(assert (expand ´a;!b;cc,1,'d;e) '(compose* a (compose ! b) (curry* cc 1 (quote d)) e))
+(assert (expand ´a;!b;cc,1,'d;ee_2_'f;g) '(compose* a (compose ! b) (curry* cc 1 (quote d)) (ee 2 (quote f)) g)) 
+(assert (expand ´a;!b;cc,1,'d;ee_2_'f_:gg;h) '(compose* a (compose ! b) (curry* cc 1 (quote d)) (ee 2 (quote f) :gg) h)) 
+
+
+;;; Box
+
+(def newBox
+  %newBox)
+
+(defMacro (defBox name . value?)
+  (list 'def name (cons 'newBox value?)) )
+
+
 ;;; Dynamic Binding
+
+(def newDVar %newDVar)
+(def dval %dVal)
 
 (defMacro (ddef var . val?)
   (list* (list '%d\ (list var)) val?) )
@@ -1392,41 +1558,15 @@
 )
 
 
-;;;; Box
-
-(def newBox %newBox)
-
-(defMacro (defBox name . value?)
-  (list 'def name (cons 'newBox value?)) )
-
-
 ;;; Classes
 
-(def\ findClass (name env)
-  (eval (the Symbol name) env))
+(def\ findClass ((#! Symbol name) env)
+  (eval name env))
 
 (defVau defClass (name (#! (0 1 Symbol) superClass?) (#! (Symbol) slotSpecs) . properties) env
   ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
-  (let1 (superClass (findClass (optDft superClass? 'Obj) env))
-    (eval (list 'def name (%newClass name superClass)) env)) )
-
-
-;;; Objects
-
-(def new
-  %new)
-
-(def\ getSlot (object slotName)
-  (%getSlot object slotName))
-
-(def\ setSlot (object slotName value)
-  (%setSlot object slotName value))
-
-(def\ slotBound? (object slotName)
-  (%slotBound? object slotName))
-
-(defMacro (defObj name class . attr)
-  (list 'def name (list* 'new class attr)) )
+  (def superClass (findClass (optDft superClass? 'Obj) env))
+  (eval (list 'def name (%newClass name superClass)) env) )
 
 
 ;;; Generic Functions
@@ -1573,8 +1713,10 @@
 
 (def +
   (theticOp + 0) )
+
 (def *
   (theticOp * 1) )
+
 (def $
   (theticOp $ "") )
 
@@ -1590,6 +1732,7 @@
 
 (def -
   (lyticOp - 0) )
+
 (def /
   (lyticOp / 1) )
 
@@ -1761,53 +1904,6 @@
 (assert (begin (def a 1) (+= a :rhs 3)) 4)
 (assert (begin (def a (newBox 1)) (+= a :rhs 3)) 4)
 (assert (begin (def a (new Obj :fld 1)) (+= a :rhs :fld 3)) 4)
-
-
-;;;; Arrays
-
-(def\ (array . args) (list->array args))
-
-(def Object[] &java.lang.Object[])
-
-(def\ (arrayMap fun (#! Object[] arr))
-  (list->array (map fun (array->list #t arr))) )
-
-(assert (arrayMap 1+ (array 1 2 3)) (array 2 3 4))
-
-(def\ (arrayFilter pred (#! Object[] arr))
-  (list->array (filter pred (array->list #t arr))) )
-
-(assert (arrayFilter odd? (array 1 2 3)) (array 1 3))
-
-(def\ (newInstance class dim . dims)
-  (apply** @newInstance &java.lang.reflect.Array class dim dims))
-
-(def\ (arrayGet array index)
-  (if (cons? index)
-    (apply** arrayGet* array index)
-    (@get &java.lang.reflect.Array array index) ))
-
-(def\ (arrayGet* array . indexes)
-  (let loop ((array array) (indexes indexes))
-    (if (null? indexes) array
-      (loop (arrayGet array (car indexes)) (cdr indexes)) )))  
-
-(def\ (arraySet array index value)
-  (if (cons? index)
-    (apply** arraySet* array value index)
-    (else
-      (@set &java.lang.reflect.Array array index value)
-      array )))
-
-(def\ (arraySet* array0 value . indexes)
-  (if (null? indexes) array
-    (let loop ((array array0) (indexes indexes))
-       (if (null? (cdr indexes))
-         (then (arraySet array (car indexes) value) array0)
-         (loop (arrayGet array (car indexes)) (cdr indexes)) ))))  
-
-(assert (arrayGet (arraySet (newInstance &int 2 2) (1 1) 3) (1 1)) 3)
-(assert (arrayGet* (arraySet* (newInstance &int 2 2) 3 1 1) 1 1) 3)
 
 
 ;;;; Simple Set

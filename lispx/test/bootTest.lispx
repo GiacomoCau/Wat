@@ -2393,7 +2393,7 @@
   (defTest getSlot.1
     (signalsError?
      (getSlot "foo" 'x)
-     Error :type 'type :datum "foo" :expected 'Obj))
+     Error :type 'type :datum "foo" :expected 'ObjEnv))
 
   (defTest getSlot.1a
     (signalsError?
@@ -2413,7 +2413,7 @@
   (defTest setSlot.1
     (signalsError?
      (setSlot "foo" 'x 1)
-     Error :type 'type :datum "foo" :expected 'Obj))
+     Error :type 'type :datum "foo" :expected 'ObjEnv))
 
   (defTest setSlot.1a
     (signalsError?
@@ -2433,7 +2433,7 @@
   (defTest slotBound?.1
     (signalsError?
      (slotBound? "foo" 'x)
-     Error :type 'type :datum "foo" :expected 'Obj))
+     Error :type 'type :datum "foo" :expected 'ObjEnv))
 
   (defTest slotBound?.1a
     (signalsError?
