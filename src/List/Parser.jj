@@ -159,6 +159,13 @@ TOKEN:	// reserved words
 | 	< Null: "#null" >
 |	< Inert: "#inert" >
 |	< Ignore: "#ignore" | "#_" >
+|	< Comma: "#," >
+|	< Quote: "#'" >
+|	< Grave: "#`" >
+|	< Acute: "#\u00b4" >
+|	< DQuote: "#\"" >
+|	< Vertical: "#\\|" >
+|	< SemiColon: "#;" >
 }
 
 TOKEN:	// literals
@@ -216,6 +223,13 @@ Object Elt() throws Exception: {
 	|	t=<Inert>    { return t.image; }    
 	|	t=<Ignore>   { return t.image; }    
 	|	t=<SheBang>  { return t.image; }    
+	|	t=<Comma>    { return ","; }    
+	|	t=<Quote>    { return "'"; }    
+	|	t=<Grave>    { return "`"; }    
+	|	t=<Acute>    { return "\u00b4"; }    
+	|	t=<SemiColon>{ return ";"; }    
+	|	t=<DQuote>   { return "\""; }    
+	|	t=<Vertical>  { return "|"; }    
 	|	t=<BDecimal> { return new java.math.BigDecimal(t.image.substring(0,t.image.length()-2).replaceAll("_","")); }
 	|	t=<Double>   { return java.lang.Double.parseDouble(t.image.replaceAll("_","")); }
 	|	t=<BInteger> { return new java.math.BigInteger(t.image.substring(0,t.image.length()-2).replaceAll("_","")); }

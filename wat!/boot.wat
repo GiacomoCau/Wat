@@ -6,7 +6,7 @@
 
 ;; ``72. An adequate bootstrap is a contradiction in terms.''
 
-;;; Built-Ins Renames for Macro and Definitions Forms
+;;; Core Built-Ins Renames for Macro and Definitions Forms
 
 (%def def
   %def)
@@ -138,7 +138,7 @@
 (assert (expand (def\ (succ n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
 
 
-;;; Other Built-Ins Renames & Simple Forms
+;;; Other Core Built-Ins Renames
 
 (def apply*
   %apply*)
@@ -618,7 +618,7 @@
 (assert (labels ( ((even? n) (if (zero? n) #t (odd? (- n 1)))) (odd? (n) (if (zero? n) #f (even? (- n 1)))) ) (even? 88) ) #t)
 
 
-;;;; Simple Control
+;;; Simple Control
 
 (defVau prog1 (form . forms) env
   (let1 (result (eval form env))
@@ -648,7 +648,7 @@
 (def or ||)
 
 
-;;;; Bind Bind? IfBind? CaseVau DefCaseVau Case\ DefCase\ Match Cond
+;;; Bind Bind? IfBind? CaseVau DefCaseVau Case\ DefCase\ Match Cond
 
 (def bind? %bind?)
 
@@ -831,7 +831,7 @@
   (optDft opt (simpleError "Option is nil")))
 
 
-;;;; OptValue Member Member? !Member? OptKey Assoc
+;;; OptValue Member Member? !Member? OptKey Assoc Member*?
 
 (def\ (optValue key lst)
   (let1 loop (lst lst)
@@ -876,6 +876,9 @@
   (member k lst :key car :ret car) )
 
 (assert (assoc 'b '((a 1) (b 2) (c 3) (d 4))) '(b 2))
+
+(def\ (member*? key . lst)
+  (member? key lst) )
 
 
 ;;; Case MatchObj? CaseType CaseType\
@@ -1357,45 +1360,6 @@
 ; ´a,'b,c -> (curry* a 'b c) 
 ; ´a,_,'b,c -> [_ (a _ 'b c)]
 
-#| TODO sostituite dalla seguente, eliminare
-(defMacro %´ ((#! Symbol x))
-  (def\ (end? r . c) (|| (null? r) (member? (car r) (map symbol c))) )
-  (def\ (expd; t r)
-    (if (null? r)
-      (if (null? (cdr t)) (car t) (cons (if (null? (cddr t)) 'compose 'compose*) (reverse t)))
-      (let1 ((f . r) r)
-        (if 
-          (== f '!)
-            (if (end? r ";" "," "_") (%error "!")
-              (expd; (cons (list 'compose '! (car r)) t) (cdr r)) )
-          (== f (symbol ","))
-            (let1 ((f . r) (expd, (cons (car t)) r))
-              (expd; (cons f (cdr t)) r) )
-          (== f (symbol "_"))
-            (let1 ((f . r) (expd_ (cons (car t)) r))
-              (expd; (cons f (cdr t)) r) )
-          (expd; (if (== f (symbol ";")) t (cons f t)) r) ))))
-  (def\ (expd, t r)
-    (if (end? r ";") 
-      (cons (if (null? (cdr t)) (car t) (member? '_ t) (list '_ (reverse t)) (cons (if (null? (cddr t)) 'curry  'curry*) (reverse t))) (if (null? r) r (cdr r)))
-      (let1 ((f . r) r)
-        (if (== f (symbol "'"))
-          (if (end? r ";" ",")  (%error "'")
-            (expd, (cons (list 'quote (car r)) t) (cdr r)) )
-          (expd, (if (== f (symbol ",")) t (cons f t)) r) ))))
-  (def\ (expd_ t r)
-    (if (end? r ";") 
-      (cons (if (null? (cdr t)) (car t) (reverse t)) (if (null? r) r (cdr r)))
-      (let1 ((f . r) r)
-        (if (== f (symbol "'"))
-          (if (end? r ";" "_") (%error "'")
-            (expd_ (cons (list 'quote (car r)) t) (cdr r)) )
-          (expd_ (if (== f (symbol "_")) t (cons f t)) r) ))))
-  (def\ (expds x)
-     (map [_ (if (>= (@indexOf ";!,'_&" _) 0) (symbol _) (car (@toLispList vm _)))]
-       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (%name x) ";|!|,|'|_|&" -1)) )) )
-  (expd; () (expds x)) ) 
-
 (defMacro %´ ((#! Symbol x))
   (def (comma semicolon apostrophe underscore bang) (map symbol (array->list (@split ",;'_!" ""))))
   (def\ (mkc t) (if (member? underscore t) (list underscore t) (cons (if (null? (cddr t)) 'curry 'curry*) t)))
@@ -1405,100 +1369,13 @@
       (if (null? (cdr t)) (car t) (cons (if (null? (cddr t)) 'compose 'compose*) (reverse t)))
       (let1 ((f . r) r)
         (if 
-          (== f bang)
-            (if (end? r semicolon comma underscore) (%error "!")
+          (== f bang) ;negate
+            (if (end? r semicolon comma underscore) (%error "! without function")
               (expd1 (cons (list 'compose bang (car r)) t) (cdr r)) )
-          (== f comma)
-            (let1 ((f . r) (expd2 comma mkc (cons (car t)) r))
-              (expd1 (cons f (cdr t)) r) )
-          (== f underscore)
-            (let1 ((f . r) (expd2 underscore idx (cons (car t)) r))
-              (expd1 (cons f (cdr t)) r) )
-          (expd1 (if (== f semicolon) t (cons f t)) r) ))))
-  (def\ (switch sep a b) (if (== sep a) b a))
-  (def\ (expd2 sep mk t r)
-    (if (end? r semicolon) 
-      (cons (if (null? (cdr t)) (car t) (mk (reverse t))) (if (null? r) r (cdr r)))
-      (let1 ((f . r) r)
-        (if 
-          (== f apostrophe)
-            (if (end? r semicolon sep) (%error "'")
-              (expd2 sep mk (cons (list 'quote (car r)) t) (cdr r)) )
-          (expd2 sep mk (if (== f sep) t (cons f t)) r) ))))
-  (def\ (expd0 x)
-     (map [_ (if (>= (@indexOf ";!,'_&" _) 0) (symbol _) (car (@toLispList vm _)))]
-       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (%name x) ";|!|,|'|_|&" -1)) )) )
-  (expd1 () (expd0 x)) )
-
-(defMacro %´ ((#! Symbol x))
-  (def (comma semicolon apostrophe underscore bang) (map symbol (array->list (@split ",;'_!" ""))))
-  (def\ (mkc t) (if (member? underscore t) (list underscore t) (cons (if (null? (cddr t)) 'curry 'curry*) t)))
-  (def\ (end? r . s*) (|| (null? r) (member? (car r) s*)) )
-  (def\ (expd1 t r)
-    (if (null? r)
-      (if (null? (cdr t)) (car t) (cons (if (null? (cddr t)) 'compose 'compose*) (reverse t)))
-      (let1 ((f . r) r)
-        (if 
-          (== f bang)
-            (if (end? r semicolon comma underscore) (%error "!")
-              (expd1 (cons (list 'compose bang (car r)) t) (cdr r)) )
-          (== f comma)
-            (let1 ((f . r) (expd2 comma mkc (list (car r) (car t)) (cdr r)))
-              (expd1 (cons f (cdr t)) r) )
-          (== f underscore)
-            (let1 ((f . r) (expd2 underscore idx (list (car r) (car t)) (cdr r)))
-              (expd1 (cons f (cdr t)) r) )
-          (expd1 (if (== f semicolon) t (cons f t)) r) ))))
-  (def\ (switch sep a b) (if (== sep a) b a))
-  (def\ (expd2 sep mk t r)
-    ;(log sep t r) 
-    (if (end? r semicolon) 
-        (cons (if (null? (cdr t)) (car t) (mk (reverse t))) (if (null? r) r (cdr r)))
-      (end? r (switch sep comma underscore))
-        (cons (mk (reverse t)) r)
-      (let1 ((f . r) r) 
-        (if 
-          (== f apostrophe)
-            (if (end? r semicolon sep) (%error "'")
-              (expd2 sep mk (cons (list 'quote (car r)) t) (cdr r)) )
-          ;(== f bang)    
-          ;  (if (end? r semicolon comma underscore) (%error "!")
-          ;    (expd2 sep mk (cons (list bang (car r)) t) (cdr r)) )
-          (== f (switch sep comma underscore))
-            (let1 ((f . r)
-                     ;(log sep t f r "+") 
-                     (if (== (car r) apostrophe)
-                       (expd2 (switch sep comma underscore) (switch mk mkc idx) t r)
-                       (expd2 (switch sep comma underscore) (switch mk mkc idx) (list (car r) (car t)) (cdr r)) )
-              ;(log sep t f r "-")        
-              (expd2 sep mk (cons f (cdr t)) r) ))
-          (== f sep)
-            (if (== (car r) apostrophe)
-              (expd2 sep mk t r)
-              (expd2 sep mk (cons (car r) t) (cdr r)) )
-          (%error "errore expd2") ))))
-  (def\ (expd0 x)
-     (map [_ (if (>= (@indexOf ";!,'_&" _) 0) (symbol _) (car (@toLispList vm _)))]
-       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (%name x) ";|!|,|'|_|&" -1)) )) )
-  (expd1 () (expd0 x)) )
-|#
-
-(defMacro %´ ((#! Symbol x))
-  (def (comma semicolon apostrophe underscore bang) (map symbol (array->list (@split ",;'_!" ""))))
-  (def\ (mkc t) (if (member? underscore t) (list underscore t) (cons (if (null? (cddr t)) 'curry 'curry*) t)))
-  (def\ (end? r . s*) (|| (null? r) (member? (car r) s*)) )
-  (def\ (expd1 t r)
-    (if (null? r)
-      (if (null? (cdr t)) (car t) (cons (if (null? (cddr t)) 'compose 'compose*) (reverse t)))
-      (let1 ((f . r) r)
-        (if 
-          (== f bang)
-            (if (end? r semicolon comma underscore) (%error "!")
-              (expd1 (cons (list 'compose bang (car r)) t) (cdr r)) )
-          (== f comma)
+          (== f comma) ;curry
             (let1 ((f . r) (expd2 0 comma mkc (list (car r) (car t)) (cdr r)))
               (expd1 (cons f (cdr t)) r) )
-          (== f underscore)
+          (== f underscore) ;eval
             (let1 ((f . r) (expd2 0 underscore idx (list (car r) (car t)) (cdr r)))
               (expd1 (cons f (cdr t)) r) )
           (expd1 (if (== f semicolon) t (cons f t)) r) ))))
@@ -1513,20 +1390,20 @@
           (cons (mk (reverse t)) r) )    
       (let1 ((f . r) r) 
         (if 
-          (== f apostrophe)
-            (if (end? r semicolon sep) (%error "'")
+          (== f apostrophe) ;quote
+            (if (end? r semicolon sep) (%error "' without value")
               (expd2 lev sep mk (cons (list 'quote (car r)) t) (cdr r)) )
-          (== f bang)
-            (if (end? r semicolon sep) (%error "!")
+          (== f bang) ;not
+            (if (end? r semicolon sep) (%error "! without value")
               (expd2 lev sep mk (cons (list bang (car r)) t) (cdr r)) )
           (== f sep)
-            (if (member? (car r) (list apostrophe bang))
+            (if (member*? (car r) apostrophe bang)
               (expd2 lev sep mk t r)
               (expd2 lev sep mk (cons (car r) (if (cons? t) t (cons t))) (cdr r)) )
-          (%error "errore expd2") ))))
+          (%error ("invalid syntax " f)) ))))
   (def\ (expd0 x)
-     (map [_ (if (>= (@indexOf ";!,'_&" _) 0) (symbol _) (car (@toLispList vm _)))]
-       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (%name x) ";|!|,|'|_|&" -1)) )) )
+     (map [_ (if (>= (@indexOf ";!,'_" _) 0) (symbol _) (car (@toLispList vm _)))]
+       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (%name x) ";|!|,|'|_" -1)) )) )
   (expd1 () (expd0 x)) )
 
 (assert (expand ´a) 'a)
@@ -1638,7 +1515,7 @@
     (def (name ((receiver class) . parameters) . forms) args) )
   (def method (\ (args) (apply (eval (list* '\ (cons receiver parameters) forms) (let1 (receiver (car args)) (if (type? receiver Obj) (newEnv env receiver) env)) ) args)))  
   (def prv (%addMethod (eval class env) name method))
-  (case (bndRes) ((#inert) #inert) ((:rhs) method) ((:prv) prv)) )
+  (case (bndRes) (#inert #inert) (:rhs method) (:prv prv)) )
 
 (let ()
   (defClass Foo () ())
@@ -1913,7 +1790,7 @@
 (def runFiber runFiber*)
 
 
-;;;; Auto Increment/Decrement and Assignement Operator
+;;; Auto Increment/Decrement and Assignement Operator
 
 (defVau (++ plc . args) env
   (def val (eval plc env))
@@ -1946,7 +1823,7 @@
         ((fld rval) (lval fld (op (lval fld) (eval rval env))))
         ((key fld rval) (lval key fld (op (lval fld) (eval rval env)))) ))
       (Object (match args
-        ((rval) (eval (list 'def plc (op lval (eval rval env))) env))
+        ((rval) (eval (list 'set! plc (op lval (eval rval env))) env))
         ((key rval) (eval (list 'set! plc key (op lval (eval rval env))) env)) )))))
 
 (def $= (assignOp %$))
@@ -1958,7 +1835,7 @@
 (assert (begin (def a (new Obj :fld 1)) (+= a :rhs :fld 3)) 4)
 
 
-;;;; Simple Set
+;;; Simple Set
 
 ;(def set? /=) ; TODO solo se (/=) -> #t
 
@@ -1987,7 +1864,7 @@
 |#
 
 
-;;;; Java Try/Resource
+;;; Java Try/Resource
 
 (defMacro (close1 binding . body)
   (list 'let1 binding
@@ -2002,7 +1879,7 @@
       body )))
 
 
-;;;; Utility
+;;; Utility
 
 (defVau (time times . forms) env
   (let* ( (currentTime (@getMethod System "currentTimeMillis"))

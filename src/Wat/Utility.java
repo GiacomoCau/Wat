@@ -596,7 +596,7 @@ public class Utility {
 	static public String read(int lv, Reader in, boolean inMlComment) throws IOException {
 		var s = new StringBuilder();
 		int open = 0, close = 0;
-		boolean inEscape = false, inString = false, inSymbol = false, inUSymbol = false, inComment=false, sMlComment=false, eMlComment=false;
+		boolean inEscape = false, inVertical=false, inString = false, inSymbol = false, inUSymbol = false, inComment=false, sMlComment=false, eMlComment=false;
 		do {
 			//out.println("loop");
 			var oc = close-open;
@@ -606,6 +606,9 @@ public class Utility {
 				if (c == -1) { out.println("ctrl-z"); return ""; }
 				if (inEscape) {
 					inEscape = false;
+				}
+				else if (inVertical) {
+					inVertical = false;
 				}
 				else if (inString) switch (c) {
 					case '\\'-> inEscape = true;
@@ -643,6 +646,10 @@ public class Utility {
 						s.append((char) c);
 						s.append(read(lv, in, !(sMlComment = false)));
 						c = '#';
+					}
+					case '\\'-> {
+						inVertical = true;
+						sMlComment = false;
 					}
 					default -> sMlComment = false;
 				}
