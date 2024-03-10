@@ -1,6 +1,11 @@
 package Wat;
 
+import static Wat.Utility.apply;
 import static Wat.Utility.member;
+import static java.lang.Character.getName;
+import static java.lang.Character.isISOControl;
+import static java.lang.Integer.parseInt;
+import static java.lang.Integer.toHexString;
 import static java.lang.System.getProperty;
 import static java.lang.System.in;
 import static java.lang.System.out;
@@ -34,6 +39,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.tools.DiagnosticCollector;
@@ -49,6 +55,34 @@ import Wat.Vm.Symbol;
 public class Prova {
 	
 	public static void main(String[] args) throws IOException {
+		{
+			// to source
+			var names = false;
+			var p = Pattern.compile("[\\x00-\\x1f\\x7f-\\x9f]");
+			var sb = new StringBuffer();
+			var m = p.matcher("\u0015\u007f\u009f");
+			while (m.find()) {
+				var c = m.group().charAt(0);
+				m.appendReplacement(sb, !isISOControl(c) ? "" + c : "\\\\x" + toHexString(c) + ";");  
+				//m.appendReplacement(sb, !isISOControl(c) ? "" + c : "\\\\x" + apply(n-> (n != null && names ? n : toHexString(c)), getName(c)) + ";" );  
+			}
+			m.appendTail(sb);
+			out.println(sb);
+		}
+		{
+			// to String
+			var p = Pattern.compile("\\\\x([0-9a-bA-b]{1,4});");
+			var sb = new StringBuffer();
+			var m = p.matcher("a\\x3bb;b\\x9;c");
+			while (m.find()) m.appendReplacement(sb, "" + (char) parseInt(m.group(1), 16));
+			m.appendTail(sb);
+			out.println(sb);
+		}
+	}
+
+	public static void stringhe() {
+		out.println("\u0028");
+		out.println((char) Integer.parseInt("#\\x0040".substring(3),16));
 		out.println(Arrays.stream(";._".split("")).toList());
 		out.println(Arrays.stream("cc.1".splitWithDelimiters(":|!|,|'|\\.|&", 0)).toList());
 	}

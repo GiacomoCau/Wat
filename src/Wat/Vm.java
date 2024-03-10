@@ -32,6 +32,8 @@ import static Wat.Utility.BinOp.Sl;
 import static Wat.Utility.BinOp.Sr;
 import static Wat.Utility.BinOp.Sr0;
 import static Wat.Utility.BinOp.Xor;
+import static java.lang.Character.isISOControl;
+import static java.lang.Integer.toHexString;
 import static java.lang.Runtime.version;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.System.out;
@@ -1604,6 +1606,7 @@ public class Vm {
 		return switch (o) {
 			case null-> "#null"; // () in cons altrove #null
 			case Boolean b-> b ? "#t" : "#f";
+			case Character c-> !t ? c.toString() : "#\\" + (isISOControl(c) ? "x"+ toHexString(c) : c);
 			case Class cl-> "&" + toSource(cl);
 			case String s-> !t ? s : '"' + toSource(s) + '"';
 			case Object[] a-> {

@@ -2,6 +2,8 @@ package Wat;
 
 import static Wat.Utility.PrimitiveWrapper.toPrimitive;
 import static java.lang.Character.toUpperCase;
+import static java.lang.Integer.parseInt;
+import static java.lang.Integer.toHexString;
 import static java.lang.System.arraycopy;
 import static java.lang.System.getProperty;
 import static java.lang.System.in;
@@ -32,6 +34,7 @@ import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import List.ParseException;
 
@@ -157,16 +160,26 @@ public class Utility {
 		return stream(objects).toList();
 	}
 	
-	private static Set<Entry<String,String>> control = of("\"", "\\\\\"", "\n", "\\\\n", "\t", "\\\\t", "\r", "\\\\r", "\b", "\\\\b", "\f", "\\\\f").entrySet();
+	private static Set<Entry<String,String>> control = of("\"", "\\\\\"", "\n", "\\\\n", "\t", "\\\\t", "\r", "\\\\r", "\b", "\\\\b", "\f", "\\\\f", "\\\\", "\\\\\\\\").entrySet();
+	private static Pattern isoControl = Pattern.compile("[\\x00-\\x1f\\x7f-\\x9f]");
+	private static Pattern xEscape = Pattern.compile("\\\\x([0-9a-bA-b]{1,4});");
 	
 	public static String toSource(String s) {
 		for (Entry<String,String> e: control) s = s.replaceAll(e.getKey(), e.getValue());
-		return s;
+		var m = isoControl.matcher(s);
+		if (!m.find()) return s;
+		var sb = new StringBuffer();
+		do m.appendReplacement(sb, "\\\\x" + toHexString(m.group().charAt(0)) + ";"); while (m.find()); 
+		return m.appendTail(sb).toString();
 	}
 	
 	public static String toString(String s) {
 		for (Entry<String,String> e: control) s = s.replaceAll(e.getValue(), e.getKey());
-		return s;
+		var m = xEscape.matcher(s);
+		if (!m.find()) return s;
+		var sb = new StringBuffer();
+		do m.appendReplacement(sb, "" + (char) parseInt(m.group(1), 16)); while (m.find());
+		return m.appendTail(sb).toString();
 	}
 	
 	enum BinOp {

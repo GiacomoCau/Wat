@@ -12,6 +12,7 @@ PARSER_BEGIN(Parser)
 
 package List;
 
+import static java.lang.Integer.parseInt;
 import static java.lang.System.getProperty;
 import static java.lang.System.in;
 import static java.lang.System.out;
@@ -159,13 +160,16 @@ TOKEN:	// reserved words
 | 	< Null: "#null" >
 |	< Inert: "#inert" >
 |	< Ignore: "#ignore" | "#_" >
-|	< Comma: "#," >
-|	< Quote: "#'" >
-|	< Grave: "#`" >
-|	< Acute: "#\u00b4" >
-|	< DQuote: "#\"" >
-|	< Vertical: "#\\|" >
-|	< SemiColon: "#;" >
+//|	< Sharp: "##" >
+//|	< Comma: "#," >
+//|	< Quote: "#'" >
+//|	< Grave: "#`" >
+//|	< Acute: "#\u00b4" >
+//|	< DQuote: "#\"" >
+//|	< Vertical: "#\\|" >
+//|	< SemiColon: "#;" >
+|	< # hex: ["0"-"9", "a"-"f", "A"-"f"] >
+|   < Char: "#\\" ( [ "\u0000" - "\uffff" ] | "x" <hex> ( <hex> ( <hex> ( <hex> )? )? )? ) >
 }
 
 TOKEN:	// literals
@@ -223,13 +227,15 @@ Object Elt() throws Exception: {
 	|	t=<Inert>    { return t.image; }    
 	|	t=<Ignore>   { return t.image; }    
 	|	t=<SheBang>  { return t.image; }    
-	|	t=<Comma>    { return ","; }    
-	|	t=<Quote>    { return "'"; }    
-	|	t=<Grave>    { return "`"; }    
-	|	t=<Acute>    { return "\u00b4"; }    
-	|	t=<SemiColon>{ return ";"; }    
-	|	t=<DQuote>   { return "\""; }    
-	|	t=<Vertical>  { return "|"; }    
+	//|	t=<Sharp>    { return "#"; }    
+	//|	t=<Comma>    { return ","; }    
+	//|	t=<Quote>    { return "'"; }    
+	//|	t=<Grave>    { return "`"; }    
+	//|	t=<Acute>    { return "\u00b4"; }    
+	//|	t=<DQuote>   { return "\""; }    
+	//|	t=<Vertical> { return "|"; }
+	//|	t=<SemiColon>{ return ";"; }
+	|	t=<Char>     { return t.image.length() == 3 ? t.image.charAt(2) : (char) parseInt(t.image.substring(3),16); }    
 	|	t=<BDecimal> { return new java.math.BigDecimal(t.image.substring(0,t.image.length()-2).replaceAll("_","")); }
 	|	t=<Double>   { return java.lang.Double.parseDouble(t.image.replaceAll("_","")); }
 	|	t=<BInteger> { return new java.math.BigInteger(t.image.substring(0,t.image.length()-2).replaceAll("_","")); }

@@ -58,7 +58,7 @@
 (%def Parser &List.Parser)
 (%def PTree &Wat.Vm$PTree)
 
-(%def %zero? (%\ (v) (%== v 0)))
+(%def %0? (%\ (v) (%== v 0)))
 (%def %inert? (%\ (v) (%== v #inert)))
 (%def %ignore? (%\ (v) (%== v #ignore)))
 
@@ -68,12 +68,12 @@
       (error (%new Error "cannot get car" :type 'outOfBounds))) ))
 (%def %nthCdr
   (%\ ([#! (and Integer (>= 0)) i] [#! (or () Cons) lst])
-    (%if (%zero? i) lst
+    (%if (%0? i) lst
       (%if (%!null? lst) (@cdr lst (%- i 1))
         (error (%new Error "cannot get cdr" :type 'outOfBounds)) ))))
 (%def %take
   (%\ ([#! (and Integer (>= 0)) i] [#! (or () Cons) lst])
-    (%if (%zero? i) #null
+    (%if (%0? i) #null
       (%if (%cons? lst) (%cons (%car lst) (%take (%- i 1) (%cdr lst)))
         (error (%new Error "cannot take" :type 'outOfBounds)) ))))
 (%def %subList

@@ -88,6 +88,10 @@
     (vau (pt . forms) #ignore
       (list 'makeMacro (list* 'vau pt #ignore forms)) )))
 
+(def expand
+  (macro (form)
+    (list 'begin (list 'evalMacro #f) form) ))
+
 
 ;;; Definitions Forms
 
@@ -104,9 +108,6 @@
       (list 'def (car lhs) (list* 'macro (cdr lhs) rhs))
       (list 'def lhs (cons 'macro rhs)) )))
 
-(defMacro (expand macro)
-  (list 'begin (list 'evalMacro #f) macro) )
-
 (assert (expand (defMacro (succ n) (list '+ n 1))) '(def succ (macro (n) (list (%' +) n 1))))
 (assert (expand (defMacro succ (n) (list '+ n 1))) '(def succ (macro (n) (list (%' +) n 1))))
 
@@ -121,11 +122,6 @@
 (def defConstant
   def)
 
-(defMacro (wrau pt ep . body)
-  (list 'wrap (list* 'vau pt ep body)))
-
-(assert (expand (wrau pt env a b c)) '(wrap (vau pt env a b c)))
-
 (defMacro (def* lhs . rhs)
   (list 'def lhs (cons 'list rhs)) )
 
@@ -138,7 +134,7 @@
 (assert (expand (def\ (succ n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
 
 
-;;; Other Core Built-Ins Renames
+;;; Other Core Built-Ins
 
 (def apply*
   %apply*)
@@ -155,6 +151,11 @@
 
 (def unwrap
   %unwrap)
+
+(defMacro (wrau pt ep . body)
+  (list 'wrap (list* 'vau pt ep body)))
+
+(assert (expand (wrau pt env a b c)) '(wrap (vau pt env a b c)))
 
 
 ;;; Env
@@ -285,8 +286,10 @@
 (def % %%)
 (def\ (1+ n) (+ n 1))
 (def\ (1- n) (- n 1))
-(def\ (zero? n) (== n 0))
-(def\ (uno? n) (== n 1))
+(def\ (0? n) (== n 0))
+(def\ (0? n) (== n 0))
+(def\ (1? n) (== n 1))
+(def\ (-1? n) (== n -1))
 (def\ (even? n) (== (% n 2) 0))
 (def\ (odd? n)  (== (% n 2) 1))
 
@@ -446,6 +449,10 @@
 ;(defMacro compose* f* 
 ;  (list '\ 'args ((rec\ (loop (f . f*)) (if (null? f*) (list 'apply f 'args) (list f (loop f*)))) f*)) )
 
+(def\ (iota n) (reverse ((rec\ (ι n) (if (0? n) () (cons n (ι (1- n))))) n)))
+(def\ (fork f l r) [_ (f (l _) (r _))])
+(def\ (hook l r) [_ (l _ (r _))])
+
 (defMacro (rec lhs . rhs)
   (list (list '\ (list lhs) (list* 'def lhs :rhs rhs)) #inert) )
 
@@ -543,7 +550,7 @@
 
 (assert (let1 (a 1) a) 1)
 (assert (let1 (a 1 2) a) 2)
-(assert (let1 f (a 2) (if (zero? a) 'end (f (- a 1)))) 'end)
+(assert (let1 f (a 2) (if (0? a) 'end (f (- a 1)))) 'end)
 
 (defMacro (let1\ binding . body)
   (list* 'let1 (->name+lambda binding) body))
@@ -605,7 +612,7 @@
     (list* 'def* names (map ->begin bindings))
     body ))
 
-(assert (letrec ( (even? (\ (n) (if (zero? n) #t (odd? (- n 1))))) (odd? (\ (n) (if (zero? n) #f (even? (- n 1))))) ) (even? 88)) #t)
+(assert (letrec ( (even? (\ (n) (if (0? n) #t (odd? (- n 1))))) (odd? (\ (n) (if (0? n) #f (even? (- n 1))))) ) (even? 88)) #t)
 
 (defMacro (letrec\ bindings . body)
   (list* 'let (map ->name+#inert bindings)
@@ -615,7 +622,7 @@
 (def labels
   letrec\)
 
-(assert (labels ( ((even? n) (if (zero? n) #t (odd? (- n 1)))) (odd? (n) (if (zero? n) #f (even? (- n 1)))) ) (even? 88) ) #t)
+(assert (labels ( ((even? n) (if (0? n) #t (odd? (- n 1)))) (odd? (n) (if (0? n) #f (even? (- n 1)))) ) (even? 88) ) #t)
 
 
 ;;; Simple Control
@@ -646,6 +653,24 @@
     (apply || (cdr ops) env) ))
 
 (def or ||)
+
+(def\ &&f fs
+  (\ args
+    ( (rec\ (&&f fs)
+        (if
+          (null? fs) #t
+          (apply (car fs) args) (&&f (cdr fs))
+          #f ))
+      fs )))  
+
+(def\ ||f fs
+  (\ args
+    ( (rec\ (||f fs)
+        (if
+          (null? fs) #f
+          (apply (car fs) args) #t
+          (||f (cdr fs)) ))
+      fs )))    
 
 
 ;;; Bind Bind? IfBind? CaseVau DefCaseVau Case\ DefCase\ Match Cond
@@ -1117,8 +1142,8 @@
   (defMacro (-- n) (list 'set! n :rhs (list '- n 1)) )
   (defMacro (++ n) (list 'set! n :rhs (list '+ n 1)) )
   (assert (let1 (c 2) (while (> c 0) (-- c)) c) 0)
-  (assert (let1 (c 2) (while #t (if (zero? c) (break/v (+ 5 5)) (-- c)))) 10)
-  (assert (let ((c 10) (r #null)) (while #t (if (zero? c) (break/v r)) (if (zero? (% (-- c) 2)) (continue)) (def r (cons c r)) )) '(1 3 5 7 9))
+  (assert (let1 (c 2) (while #t (if (0? c) (break/v (+ 5 5)) (-- c)))) 10)
+  (assert (let ((c 10) (r #null)) (while #t (if (0? c) (break/v r)) (if (0? (% (-- c) 2)) (continue)) (def r (cons c r)) )) '(1 3 5 7 9))
 )
  
 (defMacro doTimes ((var times . result) . body)
@@ -1142,7 +1167,7 @@
           (break/v (if (null? ending) result (apply begin ending env))) )))
     (let1 ((#! (and Integer (> 0)) times) (eval times env))
       (loop (def result (apply begin forms env))
-        (if (zero? (-- times)) (break/v result)) ))))
+        (if (0? (-- times)) (break/v result)) ))))
 
 (defMacro doTimes ((var times . result) . body)
   (list* 'repeat (list* var times result) body) )
@@ -1154,12 +1179,12 @@
             ((#! (and Integer (>= 0)) times) (eval times env))
             (env (newEnv env var 0)) )
       (loop (if (>= (env var) times)
-              (break/v (if (!null? ending) (apply begin ending env) (zero? times) #inert result)) )
+              (break/v (if (!null? ending) (apply begin ending env) (0? times) #inert result)) )
             (def result (apply begin forms env))
             (eval (list '++ var) env) ))
     (let1 ((#! (and Integer (> 0)) times) (eval times env))
       (loop (def result (apply begin forms env))
-        (if (zero? (-- times)) (break/v result)) ))))
+        (if (0? (-- times)) (break/v result)) ))))
 
 (defMacro doTimes ((var times . result) . body)
   (list* 'repeat (list* var times (if (null? result) (cons #inert) result)) body) )
@@ -1348,6 +1373,35 @@
 (assert (arrayGet* (arraySet* (newInstance &int 2 2) 3 1 1) 1 1) 3)
 
 
+;;; Simple Set
+
+;(def set? /=) ; TODO solo se (/=) -> #t
+
+(def\ (set? lst) (if (null? lst) #t (apply /= lst)))
+
+(def\ (set+ v lst)
+  (if (member? v lst) lst (cons v lst)))
+  
+(defVau (defSet+ (#! Symbol plc) v) env
+  (let ( (v (eval v env)) (lst (env plc)) )
+    (if (member? v lst) lst (env :def :rhs plc (cons v lst))) ))
+
+(def\ ->set (lst)
+  (let loop ( (res ()) (lst lst) )
+    (if (null? lst) (reverse res)
+      (let1 ((v . lst) lst)
+        (loop (if (member? v res) res (cons v res)) lst) ))))
+
+#| TODO da valutare
+(def\ ->set (lst)
+  (let1 loop (res ())
+    (if (null? lst) (reverse res)
+      (let1 (v (car lst))
+        (set! lst (cdr lst)) 
+        (loop (if (member? v res) res (cons v res))) ))))
+|#
+
+
 ;;; Syntetic Expression
 
 ; ´a;b -> (compose a b c)
@@ -1358,11 +1412,22 @@
 ; ´a_'b_c -> (a 'b c)
 ; ´a,b -> (curry a b)
 ; ´a,'b,c -> (curry* a 'b c) 
-; ´a,_,'b,c -> [_ (a _ 'b c)]
+; ´a,~,'b,c -> (\ (~) (a ~ 'b c))
+; ´dd,~c,1,~b,"a",~a,_a,'c,~,:ff,~*)) -> (\ (~ ~a ~b ~c . ~*) (dd ~c 1 ~b "a" ~a ~a 'c ~ :ff ~*))
+; ´(dd ~c 1 ~b "a" ~a _a 'c ~ :ff ~*)) -> (\ (~ ~a ~b ~c . ~*) (dd ~c 1 ~b "a" ~a ~a 'c ~ :ff ~*))
 
-(defMacro %´ ((#! Symbol x))
+(defMacro %´ ((#! (or Symbol List) x))
   (def (comma semicolon apostrophe underscore bang) (map symbol (array->list (@split ",;'_!" ""))))
-  (def\ (mkc t) (if (member? underscore t) (list underscore t) (cons (if (null? (cddr t)) 'curry 'curry*) t)))
+  (def\ (mkc t)
+    (def\ (pt t)
+      (if
+        (&& (symbol? t) (@startsWith (.name t) "~")) (cons t)
+        (cons? t) (append (pt (car t)) (pt (cdr t))) 
+        #null ))
+    (let1 (pt (sort (->set (pt t))))
+      (if (null? pt)
+        (cons (if (null? (cddr t)) 'curry 'curry*) t)
+        (list* '\ (if (member? '~* pt) (append (remove [_ (== _ '~*)] pt) '~*) pt) (cons t)) )))
   (def\ (end? r . s*) (|| (null? r) (member? (car r) s*)) )
   (def\ (expd1 t r)
     (if (null? r)
@@ -1384,7 +1449,7 @@
     (if (end? r semicolon) 
         (cons (if (null? (cdr t)) (car t) (mk (reverse t))) (if (null? r) r (cdr r)))
       (end? r (switch sep comma underscore))
-        (if (zero? lev)
+        (if (0? lev)
           (let1 ((f . r) (expd2 (1+ lev) (switch sep comma underscore) (switch mk mkc idx) (car t) r))
             (expd2 lev sep mk (cons f (cdr t)) r) )
           (cons (mk (reverse t)) r) )    
@@ -1402,9 +1467,11 @@
               (expd2 lev sep mk (cons (car r) (if (cons? t) t (cons t))) (cdr r)) )
           (%error ("invalid syntax " f)) ))))
   (def\ (expd0 x)
-     (map [_ (if (>= (@indexOf ";!,'_" _) 0) (symbol _) (car (@toLispList vm _)))]
-       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (%name x) ";|!|,|'|_" -1)) )) )
-  (expd1 () (expd0 x)) )
+     (map [_ (if (>= (@indexOf ";!,'_~" (%subString _ 0 1)) 0) (symbol _) (car (@toLispList vm _)))]
+       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (%name x) ";|!|,|'|_|~[1-9a-z*]?" -1)) )) )
+  (if (symbol? x)
+    (expd1 () (expd0 x))
+    (mkc x)) )
 
 (assert (expand ´a) 'a)
 (assert (expand ´!a) '(compose ! a))
@@ -1415,7 +1482,7 @@
 (assert (expand ´cc,1) '(curry cc 1))
 (assert (expand ´cc,1,2) '(curry* cc 1 2))
 (assert (expand ´cc,1,'a,2) '(curry* cc 1 (quote a) 2))
-(assert (expand ´cc,1,_,2) '[_ (cc 1 _ 2)])
+(assert (expand ´cc,1,~,2) '(\ (~) (cc 1 ~ 2)))
 
 (assert (expand ´cc) 'cc)
 (assert (expand ´cc_1) '(cc 1))
@@ -1431,6 +1498,9 @@
 (assert (expand ´aa,bb_2,cc_3,dd) '(curry* aa (bb 2) (cc 3) dd))
 (assert (expand ´aa,bb_2,3;dd) '(compose (curry* aa (bb 2) 3) dd))
 (assert (expand ´aa,bb_2_'b_!x,3;dd) '(compose (curry* aa (bb 2 (quote b) (! x)) 3) dd))
+
+(assert (expand ´dd,~c,1,~b,"a",~a,~a,'c,~,:ff,~*) '(\ (~ ~a ~b ~c . ~*) (dd ~c 1 ~b "a" ~a ~a (quote c) ~ :ff ~*)) )
+(assert (expand ´(dd ~c 1 ~b "a" ~a ~a 'c ~ :ff ~*) '(\ (~ ~a ~b ~c . ~*) (dd ~c 1 ~b "a" ~a ~a 'c ~ :ff ~*)) ))
 
 
 ;;; Box
@@ -1670,7 +1740,7 @@
 
 (def\ (gcd a b . more)
   (if (null? more)
-    (if (zero? b) a (gcd b (% a b)))
+    (if (0? b) a (gcd b (% a b)))
     (gcd a (apply gcd (cons b more))) ))
 
 (def abs (let1 (abs (@getMethod Math "abs" &int)) (\ (n) (abs #null n))))
@@ -1680,7 +1750,7 @@
 
 (def\ (lcm a b . more)
   (if (null? more)
-    (if (|| (zero? a) (zero? b)) 0
+    (if (|| (0? a) (0? b)) 0
       (abs (* b (/ a (gcd a b)))) )
     (lcm a (apply lcm (cons b more))) ))
 
@@ -1833,35 +1903,6 @@
 (assert (begin (def a 1) (+= a :rhs 3)) 4)
 (assert (begin (def a (newBox 1)) (+= a :rhs 3)) 4)
 (assert (begin (def a (new Obj :fld 1)) (+= a :rhs :fld 3)) 4)
-
-
-;;; Simple Set
-
-;(def set? /=) ; TODO solo se (/=) -> #t
-
-(def\ (set? lst) (if (null? lst) #t (apply /= lst)))
-
-(def\ (set+ v lst)
-  (if (member? v lst) lst (cons v lst)))
-  
-(defVau (defSet+ (#! Symbol plc) v) env
-  (let ( (v (eval v env)) (lst (env plc)) )
-    (if (member? v lst) lst (env :def :rhs plc (cons v lst))) ))
-
-(def\ ->set (lst)
-  (let loop ( (res ()) (lst lst) )
-    (if (null? lst) (reverse res)
-      (let1 ((v . lst) lst)
-        (loop (if (member? v res) res (cons v res)) lst) ))))
-
-#| TODO da valutare
-(def\ ->set (lst)
-  (let1 loop (res ())
-    (if (null? lst) (reverse res)
-      (let1 (v (car lst))
-        (set! lst (cdr lst)) 
-        (loop (if (member? v res) res (cons v res))) ))))
-|#
 
 
 ;;; Java Try/Resource
