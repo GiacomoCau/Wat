@@ -160,14 +160,8 @@ TOKEN:	// reserved words
 | 	< Null: "#null" >
 |	< Inert: "#inert" >
 |	< Ignore: "#ignore" | "#_" >
-//|	< Sharp: "##" >
-//|	< Comma: "#," >
-//|	< Quote: "#'" >
-//|	< Grave: "#`" >
-//|	< Acute: "#\u00b4" >
-//|	< DQuote: "#\"" >
-//|	< Vertical: "#\\|" >
-//|	< SemiColon: "#;" >
+|	< Comment: "#;" >
+|	< Symbol1: "#s" ["#", "," , "'" , "`" , "\u00b4" , "\"" , "|"] >
 |	< # hex: ["0"-"9", "a"-"f", "A"-"f"] >
 |   < Char: "#\\" ( [ "\u0000" - "\uffff" ] | "x" <hex> ( <hex> ( <hex> ( <hex> )? )? )? ) >
 }
@@ -184,6 +178,7 @@ TOKEN:	// literals
 |	< Double: <Dec> ( "d" | "D" )?  >
 |	< # Dec: (( "+" | "-" )? ("0" | <Nat>)) ( "." ( ("_")? <d09> )+ )? (<exp>)?  >
 |	< # exp: ["e","E"] <Int> >
+// isoControl ,"\u0000"-"\u001f", "\u007f"-"\u009f"
 //|	< String: "\"" ("\\" ["\\","\"","n","r","f","b","t"] | ~["\\","\"","\n","\r","\f","\b","\t"])* "\"" >
 |	< String: "\"" ( "\\\\" | "\\\"" | ~["\""] )* "\"" >
 |	< USym:	"|" ( "\\\\" | "\\|" | ~["|"] )+ "|" >
@@ -227,14 +222,7 @@ Object Elt() throws Exception: {
 	|	t=<Inert>    { return t.image; }    
 	|	t=<Ignore>   { return t.image; }    
 	|	t=<SheBang>  { return t.image; }    
-	//|	t=<Sharp>    { return "#"; }    
-	//|	t=<Comma>    { return ","; }    
-	//|	t=<Quote>    { return "'"; }    
-	//|	t=<Grave>    { return "`"; }    
-	//|	t=<Acute>    { return "\u00b4"; }    
-	//|	t=<DQuote>   { return "\""; }    
-	//|	t=<Vertical> { return "|"; }
-	//|	t=<SemiColon>{ return ";"; }
+	|	t=<Symbol1>  { return t.image.substring(2); }    
 	|	t=<Char>     { return t.image.length() == 3 ? t.image.charAt(2) : (char) parseInt(t.image.substring(3),16); }    
 	|	t=<BDecimal> { return new java.math.BigDecimal(t.image.substring(0,t.image.length()-2).replaceAll("_","")); }
 	|	t=<Double>   { return java.lang.Double.parseDouble(t.image.replaceAll("_","")); }
@@ -248,6 +236,7 @@ Object Elt() throws Exception: {
 	|   t=<Dot>      { return $("%dot", $("wat-string", t.image.substring(1))); }
 	|   t=<At>       { return $("%at", $("wat-string", t.image.substring(1))); } 
 	|   t=<Mac> o=Elt() { return $("%"+t, o); }
+	|	t=<Comment> Elt() { return "#inert"; }
 	|	t=<Kwd>      { return t.image; }
 	|	t=<Sym>      { return t.image; }  	
 	//|	t=<Sym> ["::" t2=<Sym>] {	return t2 == null ? t.image : $("%eval", $("%'", t2.image), t.image); }  	

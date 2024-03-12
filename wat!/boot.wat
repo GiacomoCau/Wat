@@ -6,7 +6,7 @@
 
 ;; ``72. An adequate bootstrap is a contradiction in terms.''
 
-;;; Core Built-Ins Renames for Macro and Definitions Forms
+;;; Core Built-Ins for Macro and Definitions Forms
 
 (%def def
   %def)
@@ -199,11 +199,11 @@
 (def\ (car! (car))
   car)
 
-(def\ (cadr! (#_ cadr))
-  cadr)
-
 (def\ (caar x)
   (car (car x)) )
+
+(def\ (cadr! (#_ cadr))
+  cadr)
 
 (def\ (cdar x)
   (cdr (car x)) )
@@ -287,7 +287,6 @@
 (def\ (1+ n) (+ n 1))
 (def\ (1- n) (- n 1))
 (def\ (0? n) (== n 0))
-(def\ (0? n) (== n 0))
 (def\ (1? n) (== n 1))
 (def\ (-1? n) (== n -1))
 (def\ (even? n) (== (% n 2) 0))
@@ -323,12 +322,6 @@
 
 (def* (then else) begin begin)
 
-(def\ (01->+ forms)
-  (if (null? forms) #null (1->+ forms)) )
-
-(def\ (1->+ (#! List forms))
-  (if (null? (cdr forms)) (car forms) (cons 'begin forms)) )
-
 (def loop
   %loop)
 
@@ -336,12 +329,12 @@
   %atEnd)
 
 (defMacro (finally x . cnl)
-  (list 'atEnd (01->+ cnl) x) )  
+  (list 'atEnd (cons 'begin cnl) x) )  
 
 (def throwTag
   %throwTag)
 
-(defMacro (throw . val) (list* 'throwTag #_ val) )
+(defMacro (throw . forms) (list* 'throwTag #_ forms) )
 
 ;; ctApv non andrebbe mai cambiato dopo il boot, anche la riesecuzione di quanto segue potrebbe non bastare!
 (if (ctApv)
@@ -414,10 +407,10 @@
 (def className
   %className)
 
-(def instanceOf? %instanceOf?)
-
 (def classOf
   %classOf)
+
+(def instanceOf? %instanceOf?)
 
 (def subClass?
   %subClass?)
@@ -426,9 +419,9 @@
   %type?)
 
 
-;;; Basic Macros and Functions
+;;; Basic Functions and Macro
 
-(def\ (idx x)
+(def\ (idf x)
   x)
 
 (defMacro _ forms
@@ -498,13 +491,9 @@
 
 ;;; Lexical Bindings
 
-(def\ (->begin (#_ cadr . cddr)) (if (null? cddr) cadr (list* 'begin cadr cddr)))
-;(def\ (->begin binding) (01->+ (cdr binding)))
+(def\ (->begin binding) (cons 'begin (cdr binding)))
 (def\ (->name+#inert (lhs . #_)) (list (if (cons? lhs) (car lhs) lhs) #inert))
 (def\ (->name+lambda (lhs . rhs)) (if (cons? lhs) (list (car lhs) (list* '\ (cdr lhs) rhs)) (list lhs (cons '\ rhs)) ))
-;(def\ (->name+lambda (lhs . rhs)) (list (if (cons? lhs) (car lhs) lhs) (cons '\ (if (cons? lhs) (cons (cdr lhs) rhs) rhs))))
-;(def\ (->name+lambda (lhs . rhs)) (def t (cons? lhs)) (list (if t (car lhs) lhs) (cons '\ (if t (cons (cdr lhs) rhs) rhs))))
-;(def\ (->name+lambda (lhs . rhs)) (list (if (def t :rhs (cons? lhs)) (car lhs) lhs) (cons '\ (if t (cons (cdr lhs) rhs) rhs))))
 
 
 (defMacro (wth1 dt value . forms)
@@ -780,7 +769,7 @@
   (let1 (opt (eval opt env))
     (if (null? opt)
       (if (null? else) #null
-        (eval (1->+ else) env))
+        (eval (cons 'begin else) env))
       (if (list? opt)
         (eval (list* (list 'vau (list pt) #ignore then) opt) env)
         (typeError opt '(or () List)) ))))
@@ -794,7 +783,7 @@
   (let1 (opt (eval opt env))
     (if (null? opt)
       (if (null? else) #null
-        (eval (1->+ else) env))
+        (eval (cons 'begin else) env))
       (if (list? opt)
         (eval (list* (list 'vau pt #ignore then) opt) env)
         (typeError opt '(or () List)) ))))
@@ -809,10 +798,10 @@
 (assert (ifOpt* (a ()) (apply + a)) #null)
 
 (defMacro whenOpt ((pt opt) . forms)
-  (list 'ifOpt (list pt opt) (01->+ forms)) )
+  (list 'ifOpt (list pt opt) (if (null? forms) #null (cons 'begin forms))) )
 
 (defMacro unlessOpt (opt . forms)
-  (list* 'ifOpt (list #ignore opt) #null (01->+ forms)) )
+  (list* 'ifOpt (list #ignore opt) #null (if (null? forms) #null (cons 'begin forms))) )
 
 (defVau (caseOpt opt . clauses) env
   (let1 (opt (eval opt env))
@@ -870,8 +859,8 @@
 
 (def\ (member k lst . keywords)
   (let ( (cmp (optDft (optValue :cmp keywords) ==))
-         (key (optDft (optValue :key keywords) idx))
-         (ret (optDft (optValue :ret keywords) idx)) )
+         (key (optDft (optValue :key keywords) idf))
+         (ret (optDft (optValue :ret keywords) idf)) )
     (let1 loop (lst lst)
       (if (cons? lst)
         (if (cmp (key (car lst)) k) (ret lst)
@@ -962,7 +951,7 @@
 
 (def\ (sort lst . opt)
   (def cmp (case (optKey (:up :dn) opt) ((#null :up) <) (:dn >=)))
-  (def key (optDft (optValue :key opt) idx))
+  (def key (optDft (optValue :key opt) idf))
   (def\ (sort lst)  
     (if (<= (len lst) 1) lst
       (let loop ( (left ()) (right ()) (pivot (car lst)) (rest (cdr lst)) )
@@ -1070,13 +1059,11 @@
                     :break (makeThrowTag\ "break" %deep)
                     :continue (makeThrowTag\ "continue" %deep)
                     :break/v (makeThrowTagValue\ "break" %deep)
-                    :until! (\ (b) (if b (throwTag break)))
-                    :while! (\ (b) (if (! b) (throwTag break)))
-                    :until* (macro (b . forms) `(if ,b (throwTag ',break (begin ,@forms)))) 
-                    :while* (macro (b . forms) `(if (! ,b) (throwTag ',break (begin ,@forms)))) ))) 
+                    :until! (macro (b . forms) (list 'if b (list* 'throwTag (list 'quote break) forms))) 
+                    :while! (macro (b . forms) (list 'if b #inert (list* 'throwTag (list 'quote break) forms))) ))) 
               (if (check? forms (2 oo 'for ((2 3)) )) ;loop for
                 (let ( (for (cadr forms))
-                       (forms (01->+ (cddr forms))) )
+                       (forms (cons 'begin (cddr forms))) )
                   (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (optDft incr init)) for)))
                   (catchTag break
                     (eval (list* 'def* (map car for) (map cadr for)) env)   
@@ -1085,14 +1072,14 @@
                       (eval increments env) )))
                 (if (check? forms (2 oo 'for1 (2 3))) ;loop for1
                   (let ( ((pt init . incr) (cadr forms))
-                         (forms (01->+ (cddr forms))) )
+                         (forms (cons 'begin (cddr forms))) )
                     (def increment (list 'def pt (optDft incr init)))
                     (catchTag break
                       (eval (list 'def pt init) env)
                       (%loop
                         (catchTag continue (eval forms env) )
                         (eval increment env) )))
-                  (let1 (forms (01->+ forms)) ;loop
+                  (let1 (forms (cons 'begin forms)) ;loop
                     (catchTag break
                       (%loop
                         (catchTag continue
@@ -1116,19 +1103,19 @@
 |#
 
 #| TODO sostituito dal seguente, eliminare
-(defMacro (for ((#! Symbol var) init cond . incr) . body)
+(defMacro (for1 ((#! Symbol var) init cond . incr) . body)
   (list* 'loop 'for1 (list* var init incr)
     (if (%ignore? cond) body
       (cons (list 'while! cond) body) )))
 
-;(for (i 0 (< i 3) (++ i)) (log "x" i) (for (y 0 #ignore (++ y)) (if (> y 3) (break -1)) (log "y" y)))
+;(for1 (i 0 (< i 3) (++ i)) (log "x" i) (for (y 0 #ignore (++ y)) (if (> y 3) (break -1)) (log "y" y)))
 |#
-(defMacro (for ((#! Symbol var) init . incr) cond . body)
+(defMacro (for1 ((#! Symbol var) init . incr) cond . body)
   (list* 'loop 'for1 (list* var init incr)
     (if (%ignore? cond) body
       (cons (list 'while! cond) body) )))
 
-;(for (i 0 (++ i)) (< i 3) (log "x" i) (for (y 0 (++ y)) #ignore (if (> y 3) (break -1)) (log "y" y)))
+;(for1 (i 0 (++ i)) (< i 3) (log "x" i) (for (y 0 (++ y)) #ignore (if (> y 3) (break -1)) (log "y" y)))
 
 (defMacro (while cond . forms)
   (list* 'loop (list 'while! cond) forms ))
@@ -1412,22 +1399,22 @@
 ; ´a_'b_c -> (a 'b c)
 ; ´a,b -> (curry a b)
 ; ´a,'b,c -> (curry* a 'b c) 
-; ´a,~,'b,c -> (\ (~) (a ~ 'b c))
-; ´dd,~c,1,~b,"a",~a,_a,'c,~,:ff,~*)) -> (\ (~ ~a ~b ~c . ~*) (dd ~c 1 ~b "a" ~a ~a 'c ~ :ff ~*))
-; ´(dd ~c 1 ~b "a" ~a _a 'c ~ :ff ~*)) -> (\ (~ ~a ~b ~c . ~*) (dd ~c 1 ~b "a" ~a ~a 'c ~ :ff ~*))
+; ´a,§,'b,c -> (\ (§) (a § 'b c))
+; ´dd,§c,1,§b,"a",§a,_a,'c,§,:ff,§*)) -> (\ (§ §a §b §c . §*) (dd §c 1 §b "a" §a §a 'c § :ff §*))
+; ´(dd §c 1 §b "a" §a _a 'c § :ff §*)) -> (\ (§ §a §b §c . §*) (dd §c 1 §b "a" §a §a 'c § :ff §*))
 
 (defMacro %´ ((#! (or Symbol List) x))
   (def (comma semicolon apostrophe underscore bang) (map symbol (array->list (@split ",;'_!" ""))))
   (def\ (mkc t)
     (def\ (pt t)
       (if
-        (&& (symbol? t) (@startsWith (.name t) "~")) (cons t)
+        (&& (symbol? t) (@startsWith (.name t) "§")) (cons t)
         (cons? t) (append (pt (car t)) (pt (cdr t))) 
         #null ))
     (let1 (pt (sort (->set (pt t))))
       (if (null? pt)
         (cons (if (null? (cddr t)) 'curry 'curry*) t)
-        (list* '\ (if (member? '~* pt) (append (remove [_ (== _ '~*)] pt) '~*) pt) (cons t)) )))
+        (list* '\ (if (member? '§* pt) (append (remove [_ (== _ '§*)] pt) '§*) pt) (cons t)) )))
   (def\ (end? r . s*) (|| (null? r) (member? (car r) s*)) )
   (def\ (expd1 t r)
     (if (null? r)
@@ -1441,7 +1428,7 @@
             (let1 ((f . r) (expd2 0 comma mkc (list (car r) (car t)) (cdr r)))
               (expd1 (cons f (cdr t)) r) )
           (== f underscore) ;eval
-            (let1 ((f . r) (expd2 0 underscore idx (list (car r) (car t)) (cdr r)))
+            (let1 ((f . r) (expd2 0 underscore idf (list (car r) (car t)) (cdr r)))
               (expd1 (cons f (cdr t)) r) )
           (expd1 (if (== f semicolon) t (cons f t)) r) ))))
   (def\ (switch sep a b) (if (== sep a) b a))
@@ -1450,7 +1437,7 @@
         (cons (if (null? (cdr t)) (car t) (mk (reverse t))) (if (null? r) r (cdr r)))
       (end? r (switch sep comma underscore))
         (if (0? lev)
-          (let1 ((f . r) (expd2 (1+ lev) (switch sep comma underscore) (switch mk mkc idx) (car t) r))
+          (let1 ((f . r) (expd2 (1+ lev) (switch sep comma underscore) (switch mk mkc idf) (car t) r))
             (expd2 lev sep mk (cons f (cdr t)) r) )
           (cons (mk (reverse t)) r) )    
       (let1 ((f . r) r) 
@@ -1467,8 +1454,8 @@
               (expd2 lev sep mk (cons (car r) (if (cons? t) t (cons t))) (cdr r)) )
           (%error ("invalid syntax " f)) ))))
   (def\ (expd0 x)
-     (map [_ (if (>= (@indexOf ";!,'_~" (%subString _ 0 1)) 0) (symbol _) (car (@toLispList vm _)))]
-       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (%name x) ";|!|,|'|_|~[1-9a-z*]?" -1)) )) )
+     (map [_ (if (>= (@indexOf ";!,'_§" (%subString _ 0 1)) 0) (symbol _) (car (@toLispList vm _)))]
+       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (%name x) ";|!|,|'|_|§[1-9a-z*]?" -1)) )) )
   (if (symbol? x)
     (expd1 () (expd0 x))
     (mkc x)) )
@@ -1482,7 +1469,7 @@
 (assert (expand ´cc,1) '(curry cc 1))
 (assert (expand ´cc,1,2) '(curry* cc 1 2))
 (assert (expand ´cc,1,'a,2) '(curry* cc 1 (quote a) 2))
-(assert (expand ´cc,1,~,2) '(\ (~) (cc 1 ~ 2)))
+(assert (expand ´cc,1,§,2) '(\ (§) (cc 1 § 2)))
 
 (assert (expand ´cc) 'cc)
 (assert (expand ´cc_1) '(cc 1))
@@ -1499,8 +1486,8 @@
 (assert (expand ´aa,bb_2,3;dd) '(compose (curry* aa (bb 2) 3) dd))
 (assert (expand ´aa,bb_2_'b_!x,3;dd) '(compose (curry* aa (bb 2 (quote b) (! x)) 3) dd))
 
-(assert (expand ´dd,~c,1,~b,"a",~a,~a,'c,~,:ff,~*) '(\ (~ ~a ~b ~c . ~*) (dd ~c 1 ~b "a" ~a ~a (quote c) ~ :ff ~*)) )
-(assert (expand ´(dd ~c 1 ~b "a" ~a ~a 'c ~ :ff ~*) '(\ (~ ~a ~b ~c . ~*) (dd ~c 1 ~b "a" ~a ~a 'c ~ :ff ~*)) ))
+(assert (expand ´dd,§c,1,§b,"a",§a,§a,'c,§,:ff,§*) '(\ (§ §a §b §c . §*) (dd §c 1 §b "a" §a §a (quote c) § :ff §*)) )
+(assert (expand ´(dd §c 1 §b "a" §a §a 'c § :ff §*) '(\ (§ §a §b §c . §*) (dd §c 1 §b "a" §a §a 'c § :ff §*)) ))
 
 
 ;;; Box

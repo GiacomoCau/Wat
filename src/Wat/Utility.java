@@ -182,6 +182,24 @@ public class Utility {
 		return m.appendTail(sb).toString();
 	}
 	
+	public static String encode(String a) {
+		if (a == null) return "";
+		char c;
+		StringBuffer sb = new StringBuffer(2*a.length());
+		for (int i = 0, end = a.length(); i < end; i++) {
+			switch (c = a.charAt(i)) {
+				case '<': sb.append("&lt;"); break;
+				case '>': sb.append("&gt;"); break;
+				case '&': sb.append("&amp;"); break;
+				case '"': sb.append("&quot;"); break;
+				case '\n': sb.append("<br>"); break;
+				case '\t': sb.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"); break;
+				default: sb.append(c); break;
+			}
+		}
+		return sb.toString();
+	}
+
 	enum BinOp {
 		Pls((a, b)-> a+b,   (a, b)-> a+b,   (a, b)-> a.add(b),                   (a, b)-> a+b,            (a, b)-> a.add(b)            ),
 		Mns((a, b)-> a-b,   (a, b)-> a-b,   (a, b)-> a.subtract(b),              (a, b)-> a-b,            (a, b)-> a.subtract(b)       ),
@@ -609,7 +627,7 @@ public class Utility {
 	static public String read(int lv, Reader in, boolean inMlComment) throws IOException {
 		var s = new StringBuilder();
 		int open = 0, close = 0;
-		boolean inEscape = false, inVertical=false, inString = false, inSymbol = false, inUSymbol = false, inComment=false, sMlComment=false, eMlComment=false;
+		boolean inEscape = false, inChar=false, inSymbol1=false, inString = false, inSymbol = false, inUSymbol = false, inComment=false, sMlComment=false, eMlComment=false;
 		do {
 			//out.println("loop");
 			var oc = close-open;
@@ -620,8 +638,11 @@ public class Utility {
 				if (inEscape) {
 					inEscape = false;
 				}
-				else if (inVertical) {
-					inVertical = false;
+				else if (inChar) {
+					inChar = false;
+				}
+				else if (inSymbol1) {
+					inSymbol1 = false;
 				}
 				else if (inString) switch (c) {
 					case '\\'-> inEscape = true;
@@ -661,7 +682,11 @@ public class Utility {
 						c = '#';
 					}
 					case '\\'-> {
-						inVertical = true;
+						inChar = true;
+						sMlComment = false;
+					}
+					case 's'-> {
+						inSymbol1 = true;
 						sMlComment = false;
 					}
 					default -> sMlComment = false;

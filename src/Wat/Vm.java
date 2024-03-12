@@ -921,13 +921,14 @@ public class Vm {
 	}
 	class ThrowTag implements Combinable {
 		public Object combine(Env e, List o) {
-			var chk = checkR(this, o, 1, 2); // o = (tag) | (tag value)
+			var chk = ctApv
+				? checkR(this, o, 1, 2) // o = (tag) | (tag value)
+				: checkM(this, o, 1); // o = (tag . forms)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
-			var value = len == 1 ? inert : o.car(1);
 			var dbg = dbg(e, this, o);
 			return pipe(dbg, ()-> ctApv ? o.car : getTco(evaluate(e, o.car)),
-				tag->{ throw new Value(tag, ctApv ? value : pipe(dbg, ()-> getTco(evaluate(e, value)))); }
+				tag->{ throw new Value(tag, ctApv ? (len == 1 ? inert : o.car(1)) : pipe(dbg, ()-> getTco(begin.combine(e, o.cdr())))); }
 			);		
 		}
 		public String toString() { return "%ThrowTag"; }

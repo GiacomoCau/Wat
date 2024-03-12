@@ -1526,23 +1526,23 @@
     (cons? 1)
     #f))
 
-(defSuite idx
+(defSuite idf
 
-  (defTest idx.1
-    (idx #null)
+  (defTest idf.1
+    (idf #null)
     #null)
 
-  (defTest idx.2
-    (idx '(1))
+  (defTest idf.2
+    (idf '(1))
     '(1))
 
-  (defTest idx.3
+  (defTest idf.3
     (signalsError?
-     (idx)
+     (idf)
      Error :type 'match :operands# +1))
 
-  (defTest idx.4
-    (idx (+ 1 1))
+  (defTest idf.4
+    (idf (+ 1 1))
     2))
 
 (defSuite compose
@@ -1561,7 +1561,7 @@
     (type? (compose (\ ()) (\ ())) Function))
 
   (defTest compose.4
-    ((compose idx idx) 12)
+    ((compose idf idf) 12)
     12)
 
   (defTest compose.5
