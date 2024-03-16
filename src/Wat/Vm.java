@@ -1347,13 +1347,7 @@ public class Vm {
 		}
 		else if (chk instanceof List chkl) {
 			if (chkl.car instanceof Object[] chks && chkl.cdr() == null) return checkO(o, chks);
-			if (member(chkl.car, comparators)) {
-				switch (getTco(combine(env(), chkl.car(1), list(o, chkl.car(2))))) {
-					case Boolean b when b: return 0;
-					case Object obj: throw new TypeException("not a {expected}: {datum}", o, toChk(chkl));
-				}
-			}
-			if (member(chkl.car, symbol("and"))) {
+			if (chkl.car == symbol("and")) {
 				for (var chka = chkl.cdr(); chka != null; chka = chka.cdr()) {
 					try {
 						checkO(o, chka.car);
@@ -1363,6 +1357,12 @@ public class Vm {
 					}
 				}
 				return 0;
+			}
+			if (chkl.car instanceof Apv) {
+				switch (getTco(combine(env(), chkl.car, cons(o, chkl.cdr(1))))) {
+					case Boolean b when b: return 0;
+					case Object obj: throw new TypeException("not a {expected}: {datum}", o, toChk(chkl.cdr()));
+				}
 			}
 			if (o != null && !(o instanceof List)) throw new TypeException("not a {expected}: {datum}", o, toChk(or(null, List.class)));
 			var ol = (List) o;
@@ -1383,7 +1383,7 @@ public class Vm {
 		return chk instanceof Class cl ? symbol(cl.getSimpleName())
 			: chk instanceof Integer i && i == more ? symbol("oo")
 			: chk instanceof Object[] a ? cons(symbol("or"), list(stream(a).map(o-> toChk(o)).toArray()))
-			: chk instanceof List l ? map(o-> toChk(o), member(l.car, comparators) ? cons(l.car, l.cdr(1)) : l )
+			: chk instanceof List l ? map(o-> toChk(o), l.car instanceof Apv ? l.cdr() : l )
 			: chk
 		;
 	}
@@ -1573,7 +1573,6 @@ public class Vm {
 		return (T) interns.computeIfAbsent(name, n-> n.startsWith(":") && n.length() > 1 ? new Keyword(n.substring(1)) : new Symbol(n));
 	}
 	Object[] quotes = $(symbol("%'"), symbol("quote"));
-	Object[] comparators = $(symbol("<"), symbol("<="), symbol(">="), symbol(">"));
 	
 	Object toLispExpr(Object o) {
 		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore", "#_"-> ignore; case "#!"-> sheBang; default-> intern(intStr ? s.intern() : s); };

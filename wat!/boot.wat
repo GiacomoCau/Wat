@@ -1035,6 +1035,7 @@
             (eval forms env)
             (returnFrom exit #inert))))))
 
+#| TODO sostituiti dal seguente, eliminare appena verificato
 (def %loop
   (let ( (%loop %loop)
          (makeTag
@@ -1085,20 +1086,162 @@
                         (catchTag continue
                           (eval forms env) )))) )))))) )))
 
+(def %loop
+  (let ( (%loop ((.parent (theEnv)) '%loop))
+         (makeTag
+           (\ (i name %deep)
+             (if (&& (>= i (- 0 %deep)) (<= i 0))
+               (symbol ($ name (+ %deep i)))
+               (@typeError vm ($ "invalid " name " index, not {expected}: {datum}") i `(and (>= ,(- 0 %deep)) (=< 0))) ))) )
+    (let\ ( ((makeThrowTag\ name %deep)
+               (\ (#! (0 1 Integer) i)
+                 (throwTag (makeTag (optDft i 0) name %deep)) ))
+            ((makeThrowTagValue\ name %deep)
+               (\ o
+                 (if (== (check o (or (1) (2 Integer))) 1)
+                   (throwTag (makeTag 0 name %deep) (car o))
+                   (throwTag (makeTag (car o) name %deep) (cadr o)) ))) )
+      (vau forms env
+        (let1 (%deep (let1 (%deep (value :%deep env)) (if (null? %deep) 0 (+ %deep 1))))
+          (let ( (break (symbol ($ "break" %deep)))
+                 (continue (symbol ($ "continue" %deep))) )
+            (defMacro (break- n . forms) (list* 'throwTag (list 'quote (symbol ($ "break" (- %deep n)))) forms))
+            (defMacro (continue- n . forms) (list* 'throwTag (list 'quote (symbol ($ "continue" (- %deep n)))) forms))
+            (def\ (mkThrowTag tag n . forms) (list* 'throwTag (list 'quote (symbol ($ tag (- %deep n)))) forms))
+            (defMacro (break- n . forms) (mkThrowTag "break" n forms))
+            (defMacro (continue- n . forms) (mkThrowTag "continue" n forms))
+            (let1 (env (newEnv (newEnv env
+                    :%deep %deep
+                    :break- break-
+                    :break+ (macro forms (list* break- 0 forms))
+                    :continue- continue-
+                    :continue+ (macro forms (list* continue- 0 forms)) 
+                    :break (makeThrowTag\ "break" %deep)
+                    :continue (makeThrowTag\ "continue" %deep)
+                    :break/v (makeThrowTagValue\ "break" %deep)
+                    :until! (macro (b . forms) (list 'if b (list* 'throwTag (list 'quote break) forms))) 
+                    :while! (macro (b . forms) (list 'if b #inert (list* 'throwTag (list 'quote break) forms))) ))) 
+              (if (check? forms (2 oo 'for ((2 3)) )) ;loop for
+                (let ( (for (cadr forms))
+                       (forms (cons 'begin (cddr forms))) )
+                  (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (optDft incr init)) for)))
+                  (catchTag break
+                    (eval (list* 'def* (map car for) (map cadr for)) env)   
+                    (%loop
+                      (catchTag continue (eval forms env) )
+                      (eval increments env) )))
+                (if (check? forms (2 oo 'for1 (2 3))) ;loop for1
+                  (let ( ((pt init . incr) (cadr forms))
+                         (forms (cons 'begin (cddr forms))) )
+                    (def increment (list 'def pt (optDft incr init)))
+                    (catchTag break
+                      (eval (list 'def pt init) env)
+                      (%loop
+                        (catchTag continue (eval forms env) )
+                        (eval increment env) )))
+                  (let1 (forms (cons 'begin forms)) ;loop
+                    (catchTag break
+                      (%loop
+                        (catchTag continue
+                          (eval forms env) )))) )))))) )))
+|#
+
+(def %loop
+  (let1 (%loop ((.parent (theEnv)) '%loop))
+    (vau forms env
+      (let1 (%deep (let1 (%deep (value :%deep env)) (if (null? %deep) 0 (1+ %deep))))
+        (let ( (break (symbol ($ 'break %deep)))
+               (continue (symbol ($ 'continue %deep))) )
+          (def\ (mkThrow tag (#! (and Integer (>= 0) (<= %deep)) n) forms)
+            (list* 'throwTag (list 'quote (symbol ($ tag (- %deep n)))) forms) )
+          (let1 (env (newEnv (newEnv env
+                  :%deep %deep
+                  :break (macro forms (mkThrow 'break 0 forms))
+                  :break- (macro (n . forms) (mkThrow 'break n forms))
+                  :continue (macro forms (mkThrow 'continue 0 forms)) 
+                  :continue- (macro (n . forms) (mkThrow 'continue n forms))
+                  :continue! (macro (b n . forms) (list 'if b (mkThrow 'continue n forms)))
+                  :until! (macro (b . forms) (list 'if b (mkThrow 'break 0 forms))) 
+                  :while! (macro (b . forms) (list 'if b #inert (mkThrow 'break 0 forms)))  ))) 
+            (if (check? forms (2 oo 'for ((2 3)) )) ;loop for
+              (let ( (for (cadr forms))
+                     (forms (cons 'begin (cddr forms))) )
+                (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (optDft incr init)) for)))
+                (catchTag break
+                  (eval (list* 'def* (map car for) (map cadr for)) env)   
+                  (%loop
+                    (catchTag continue (eval forms env) )
+                    (eval increments env) )))
+              (if (check? forms (2 oo 'for1 (2 3))) ;loop for1
+                (let ( ((pt init . incr) (cadr forms))
+                       (forms (cons 'begin (cddr forms))) )
+                  (def increment (list 'def pt (optDft incr init)))
+                  (catchTag break
+                    (eval (list 'def pt init) env)
+                    (%loop
+                      (catchTag continue (eval forms env) )
+                      (eval increment env) )))
+                (let1 (forms (cons 'begin forms)) ;loop
+                  (catchTag break
+                    (%loop
+                      (catchTag continue
+                        (eval forms env) )))) )))))) ))
+
+#| in alternativa al precedente
+; ambiguo per (loop (loop (break -1))) deve teminare il primo loop o tornarci con -1 
+(def %loop
+  (let1 (%loop ((.parent (theEnv)) '%loop))
+    (vau forms env
+      (let1 (%deep (let1 (%deep (value :%deep env)) (if (null? %deep) 0 (1+ %deep))))
+        (let ( (break (symbol ($ 'break %deep)))
+               (continue (symbol ($ 'continue %deep))) )
+          (def\ (mkThrow tag forms)
+            (if (|| (null? forms) (null? (cdr forms)) (! (type? (car forms) Integer)))
+              (list* 'throwTag (list 'quote (symbol ($ tag %deep))) forms)
+              (list* 'throwTag (list 'quote (symbol ($ tag (+ %deep (the+ (and (>= (- %deep)) (<= 0)) (car forms)))))) forms) ))
+          (let1 (env (newEnv (newEnv env
+                  :%deep %deep
+                  :break (macro forms (mkThrow 'break forms))
+                  :continue (macro forms (mkThrow 'continue forms)) 
+                  :until! (macro (b . forms) (list 'if b (mkThrow 'break forms))) 
+                  :while! (macro (b . forms) (list 'if b #inert (mkThrow 'break forms)))  ))) 
+            (if (check? forms (2 oo 'for ((2 3)) )) ;loop for
+              (let ( (for (cadr forms))
+                     (forms (cons 'begin (cddr forms))) )
+                (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (optDft incr init)) for)))
+                (catchTag break
+                  (eval (list* 'def* (map car for) (map cadr for)) env)   
+                  (%loop
+                    (catchTag continue (eval forms env) )
+                    (eval increments env) )))
+              (if (check? forms (2 oo 'for1 (2 3))) ;loop for1
+                (let ( ((pt init . incr) (cadr forms))
+                       (forms (cons 'begin (cddr forms))) )
+                  (def increment (list 'def pt (optDft incr init)))
+                  (catchTag break
+                    (eval (list 'def pt init) env)
+                    (%loop
+                      (catchTag continue (eval forms env) )
+                      (eval increment env) )))
+                (let1 (forms (cons 'begin forms)) ;loop
+                  (catchTag break
+                    (%loop
+                      (catchTag continue
+                        (eval forms env) )))) )))))) ))
+|#
+
 (def loop %loop)
 
 #|
 (let ()
-  (defMacro (-- n) (list 'set! n :rhs (list '- n 1)) )
-  (defMacro (++ n) (list 'set! n :rhs (list '+ n 1)) )
-  (loop (break/v 3))
-  (loop (loop (break/v -1 3)))
-  (loop for ((i 0 (++ i)) (y 0 (-- y))) (while! (< i 3)) (log i y))
-  (loop for ((i 0 (++ i))) (while! (< i 3)) (log "x" i) (loop for ((y 0 (++ y))) (if (> y 3) (break)) (log "y" y) ))
-  (loop for1 (i 0 (++ i)) (log i) (break) )
-  (loop for1 (i 0 (++ i)) (while! (< i 3)) (log i))
-  (loop for1 (i 0 (++ i)) (while! (< i 3)) (log "x" i) (loop for1 (y 0 (++ y)) (if (> y 3) (break)) (log "y" y) ))
-  (loop for1 (i 0 (++ i)) (while! (< i 3)) (log "x" i) (loop for1 (y 0 (++ y)) (if (> y 3) (break -1)) (log "y" y) ))
+  (loop (break 3))
+  (loop (loop (break- 1 3)))
+  (loop for ((i 0 (1+ i)) (y 0 (-- y))) (while! (< i 3)) (log i y))
+  (loop for ((i 0 (1+ i))) (while! (< i 3)) (log "x" i) (loop for ((y 0 (1+ y))) (if (> y 3) (break)) (log "y" y) ))
+  (loop for1 (i 0 (1+ i)) (log i) (break) )
+  (loop for1 (i 0 (1+ i)) (while! (< i 3)) (log i))
+  (loop for1 (i 0 (1+ i)) (while! (< i 3)) (log "x" i) (loop for1 (y 0 (1+ y)) (if (> y 3) (break)) (log "y" y) ))
+  (loop for1 (i 0 (1+ i)) (while! (< i 3)) (log "x" i) (loop for1 (y 0 (1+ y)) (if (> y 3) (break- 1)) (log "y" y) ))
 )
 |#
 
@@ -1108,17 +1251,17 @@
     (if (%ignore? cond) body
       (cons (list 'while! cond) body) )))
 
-;(for1 (i 0 (< i 3) (++ i)) (log "x" i) (for (y 0 #ignore (++ y)) (if (> y 3) (break -1)) (log "y" y)))
+;(for1 (i 0 (< i 3) (1+ i)) (log "x" i) (for1 (y 0 #ignore (1+ y)) (if (> y 3) (break- 1)) (log "y" y)))
 |#
 (defMacro (for1 ((#! Symbol var) init . incr) cond . body)
   (list* 'loop 'for1 (list* var init incr)
     (if (%ignore? cond) body
       (cons (list 'while! cond) body) )))
 
-;(for1 (i 0 (++ i)) (< i 3) (log "x" i) (for (y 0 (++ y)) #ignore (if (> y 3) (break -1)) (log "y" y)))
+;(for1 (i 0 (1+ i)) (< i 3) (log "x" i) (for1 (y 0 (1+ y)) #ignore (if (> y 3) (break- 1)) (log "y" y)))
 
 (defMacro (while cond . forms)
-  (list* 'loop (list 'while! cond) forms ))
+  (list* 'loop (list 'while! cond) forms) )
 
 (defMacro until (cond . forms)
   (list* 'loop (list 'until! cond) forms) )
@@ -1126,11 +1269,13 @@
 ;(let1 (i 0) (while (< i 3) (print i) (++ i)))
 
 (let ()
-  (defMacro (-- n) (list 'set! n :rhs (list '- n 1)) )
-  (defMacro (++ n) (list 'set! n :rhs (list '+ n 1)) )
+  (defMacro (-- n) (list 'set! n :rhs (list '1- n)) )
+  (defMacro (++ n) (list 'set! n :rhs (list '1+ n)) )
   (assert (let1 (c 2) (while (> c 0) (-- c)) c) 0)
-  (assert (let1 (c 2) (while #t (if (0? c) (break/v (+ 5 5)) (-- c)))) 10)
-  (assert (let ((c 10) (r #null)) (while #t (if (0? c) (break/v r)) (if (0? (% (-- c) 2)) (continue)) (def r (cons c r)) )) '(1 3 5 7 9))
+  (assert (let1 (c 2) (while #t (if (0? c) (break (+ c 5)) (-- c)))) 5)
+  (assert (let1 (c 2) (loop (until! (0? c) (+ c 5)) (-- c))) 5)
+  (assert (let ((c 10) (r #null)) (while #t (if (0? c) (break r)) (if (0? (% (-- c) 2)) (continue)) (def r (cons c r)) )) '(1 3 5 7 9))
+  (assert (let ((c 10) (r #null)) (loop (until! (0? c) r) (if (0? (% (-- c) 2)) (continue)) (def r (cons c r)) )) '(1 3 5 7 9))
 )
  
 (defMacro doTimes ((var times . result) . body)
@@ -1151,10 +1296,10 @@
             (env (newEnv env var 0)) )
       (loop (def result (apply begin forms env))
         (if (>= (eval (list '++ var) env) times)
-          (break/v (if (null? ending) result (apply begin ending env))) )))
+          (break (if (null? ending) result (apply begin ending env))) )))
     (let1 ((#! (and Integer (> 0)) times) (eval times env))
       (loop (def result (apply begin forms env))
-        (if (0? (-- times)) (break/v result)) ))))
+        (if (0? (-- times)) (break result)) ))))
 
 (defMacro doTimes ((var times . result) . body)
   (list* 'repeat (list* var times result) body) )
@@ -1166,12 +1311,12 @@
             ((#! (and Integer (>= 0)) times) (eval times env))
             (env (newEnv env var 0)) )
       (loop (if (>= (env var) times)
-              (break/v (if (!null? ending) (apply begin ending env) (0? times) #inert result)) )
+              (break (if (!null? ending) (apply begin ending env) (0? times) #inert result)) )
             (def result (apply begin forms env))
             (eval (list '++ var) env) ))
     (let1 ((#! (and Integer (> 0)) times) (eval times env))
       (loop (def result (apply begin forms env))
-        (if (0? (-- times)) (break/v result)) ))))
+        (if (0? (-- times)) (break result)) ))))
 
 (defMacro doTimes ((var times . result) . body)
   (list* 'repeat (list* var times (if (null? result) (cons #inert) result)) body) )
@@ -1753,6 +1898,8 @@
   (%len seq))
 (defMethod length ((seq Null))
   (%len seq))
+(defMethod length ((seq String))
+  (@length seq))
 
 
 (defGeneric elt (sequence index)

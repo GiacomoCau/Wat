@@ -101,7 +101,7 @@
 (%def %setSlot (%\ (obj slot value) ((%the ObjEnv obj) (%the Intern slot) value) ))
 (%def %slotBound? (%\ (obj slot) (@isBound (%the ObjEnv obj) (%the Intern slot)) ))
 
-(%def %makeCheckEvl
+(%def %mkCheckEval
   (%\ (check)
     (%vau (o ck) env
       (%def %=*
@@ -115,17 +115,20 @@
             (%! (%cons? ck)) (%eval ck env)
             ( (%\ (ckcar)
                 (%if
-                  (%== ckcar 'or) (%list->array (evl (%cdr ck)))
+                  (%== ckcar 'or) (%list->array (evm (%cdr ck)))
+                  (%== ckcar 'and) (cons 'and (evm (%cdr ck)))
                   (%=* ckcar %' quote) (%cadr ck)
-                  (%=* ckcar < <= >= >) (%cons ckcar (%cons (%eval ckcar env) (evl (%cdr ck))))
-                  (%== ckcar 'and) (cons 'and (evl (%cdr ck)))
-                  (evm ck) ))
+                  ( (%\ (evckcar)
+                      (%if (%type? evckcar Apv)
+                        (%cons evckcar (%cons ckcar (%eval (%list* '%list (%cdr ck)) env)))
+                        (%cons (evl ckcar) (evm (%cdr ck))) ))
+                    (%eval ckcar env) )))
               (%car ck) ) )))
       (%def evm (%\ (lst) (%if (%null? lst) #null (%cons (evl (%car lst)) (evm (%cdr lst))))))
       (check o (evl ck)) )))
 
-(%def %check (%makeCheckEvl %check))
-(%def %checkO (%makeCheckEvl %checkO))
+(%def %check (%mkCheckEval %check))
+(%def %checkO (%mkCheckEval %checkO))
 
 
 ;;; Boot
