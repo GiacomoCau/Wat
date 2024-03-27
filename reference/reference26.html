@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Options
+    </title>
+    <style>
+      ul { list-style-type: none; }
+      a { text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference25.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference27.html">
+      <input type="button" value="&gt;"/>
+    </a>
+    <h2>
+      Options
+    </h2>
+    <div>
+      <h3>
+        some
+      </h3>
+      <ul>
+        <li>
+          Create a one-element list from the VALUE.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        ifOpt
+      </h3>
+      <ul>
+        <li>
+          Destructure the OPTION?.  If it's non-nil, evaluate the THEN form
+          with the NAME bound to the contents of the option.  If it's nil,
+          evaluate the ELSE form.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        ifOpt*
+      </h3>
+      <ul>
+        <li>
+          (defVau (ifOpt* (pt opt) then . else) env
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        whenOpt
+      </h3>
+      <ul>
+        <li>
+          Destructure the OPTION?.  If it's non-nil, evaluate the FORMS with
+          the NAME bound to the contents of the option.  If it's nil, return nil.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        unlessOpt
+      </h3>
+      <ul>
+        <li>
+          Destructure the OPTION?.  If it's nil, evaluate the FORMS.  If it's
+          non-nil, return nil.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        caseOpt
+      </h3>
+      <ul>
+        <li>
+          (defVau (caseOpt opt . clauses) env
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        optDft
+      </h3>
+      <ul>
+        <li>
+          Return the contents of the OPTION?, or the DEFAULT? if the option
+          is nil.  The default itself defaults to void.  The DEFAULT? is
+          evaluated lazily, only when the OPTION? is nil.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        optDft*
+      </h3>
+      <ul>
+        <li>
+          Similar to `opt', but provides DEFAULTS for any number of
+          elements of LIST.  This is useful for implementing functions that take
+          multiple optDft arguments.  Each default is evaluated lazily, only when needed.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        optDft!
+      </h3>
+      <ul>
+        <li>
+          Returns the contents of the OPTION? or signals an error if it is nil.
+        </li>
+      </ul>
+    </div>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference25.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference27.html">
+      <input type="button" value="&gt;"/>
+    </a>
+  </body>
+</html>

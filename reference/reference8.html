@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Cons
+    </title>
+    <style>
+      ul { list-style-type: none; }
+      a { text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference7.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference9.html">
+      <input type="button" value="&gt;"/>
+    </a>
+    <h2>
+      Cons
+    </h2>
+    <div>
+      <h3>
+        car!
+      </h3>
+      <ul>
+        <li>
+          Return the contents of the address part of the register if decrement part of the register is null, else error.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        caar
+      </h3>
+      <ul>
+        <li>
+          Return the `car' of the `car' of the CONS.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        cadr!
+      </h3>
+      <ul>
+        <li>
+          Return the `car' of the `cdr' of the CONS if 'cddr' is null, else error.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        cdar
+      </h3>
+      <ul>
+        <li>
+          Return the `cdr' of the `car' of the CONS.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        cddr
+      </h3>
+      <ul>
+        <li>
+          Return the `cdr' of the `cdr' of the CONS.
+        </li>
+        <li>
+          $(derivation (cdr (cdr cons)))
+        </li>
+        <li>
+          $(derivation (\ ((#_ . (#_ . cddr))) cddr))
+        </li>
+        <li>
+          $(derivation (\ ((#_ #_ . cddr)) cddr))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        cons!
+      </h3>
+      <ul>
+        <li>
+          (def\ (cons! car) (cons car))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        null?
+      </h3>
+      <ul>
+        <li>
+          Return true if the OBJECT is nil, false otherwise.
+        </li>
+        <li>
+          $(fn (object))
+        </li>
+        <li>
+          $(type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        !null?
+      </h3>
+      <ul>
+        <li>
+          (def !null? %!null?)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        nth
+      </h3>
+      <ul>
+        <li>
+          Return element number N of LIST, where the `car' is element zero.
+        </li>
+        <li>
+          $(fn (n list))
+        </li>
+        <li>
+          $(type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        nthCdr
+      </h3>
+      <ul>
+        <li>
+          Returns the tail of LIST that would be obtained by calling `cdr' N times in succession.
+        </li>
+        <li>
+          $(fn (n list))
+        </li>
+        <li>
+          $(type function)
+        </li>
+      </ul>
+    </div>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference7.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference9.html">
+      <input type="button" value="&gt;"/>
+    </a>
+  </body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Lexical Bindings
+    </title>
+    <style>
+      ul { list-style-type: none; }
+      a { text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference21.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference23.html">
+      <input type="button" value="&gt;"/>
+    </a>
+    <h2>
+      Lexical Bindings
+    </h2>
+    <div>
+      <h3>
+        -&gt;begin
+      </h3>
+      <ul>
+        <li>
+          (def\ (-&gt;begin binding) (cons 'begin (cdr binding)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        -&gt;name+#inert
+      </h3>
+      <ul>
+        <li>
+          (def\ (-&gt;name+#inert (lhs . #_)) (list (if (cons? lhs) (car lhs) lhs) #inert))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        -&gt;name+lambda
+      </h3>
+      <ul>
+        <li>
+          (def\ (-&gt;name+lambda (lhs . rhs)) (if (cons? lhs) (list (car lhs) (list* '\ (cdr lhs) rhs)) (list lhs (cons '\ rhs)) ))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        wth1
+      </h3>
+      <ul>
+        <li>
+          (defMacro (wth1 dt value . forms)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        wth*
+      </h3>
+      <ul>
+        <li>
+          (defMacro (wth* bindings . forms)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        wth
+      </h3>
+      <ul>
+        <li>
+          (defMacro (wth b* . forms)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        let1Loop
+      </h3>
+      <ul>
+        <li>
+          (defMacro (let1Loop lhs . rhs)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        let1
+      </h3>
+      <ul>
+        <li>
+          (defMacro (let1 lhs . rhs)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        let1\
+      </h3>
+      <ul>
+        <li>
+          (defMacro (let1\ binding . body)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        let1rec
+      </h3>
+      <ul>
+        <li>
+          (defMacro (let1rec binding . body)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        let1rec\
+      </h3>
+      <ul>
+        <li>
+          (defMacro (let1rec\ binding . body)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        let*
+      </h3>
+      <ul>
+        <li>
+          Establish BINDINGS serially during the evaluation of FORMS, so that
+          every binding can refer to previous ones.
+        </li>
+        <li>
+          $(syntax bindings ((definiendTree value) . bindings))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        letLoop
+      </h3>
+      <ul>
+        <li>
+          Labelled recursive loop, analogous to Scheme's named `let'.
+          Lexically bind a function named NAME with one PARAMETER for every
+          INITIALIZER and the FORMS as body.  Then immediately apply the
+          function to a list containing one VALUE for every INITIALIZER and
+          return the result.  The function is bound per `labels' so it can
+          recursively refer to itself.
+        </li>
+        <li>
+          $(fn (initializers . body))
+        </li>
+        <li>
+          $(fn (name initializers . body))
+        </li>
+        <li>
+          $(syntax initializers ((parameter value) . initializers)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        let
+      </h3>
+      <ul>
+        <li>
+          Establish BINDINGS parallelly during the evaluation of FORMS, so
+          that no binding can refer to the other ones.
+        </li>
+        <li>
+          $(fn (bindings . body))
+        </li>
+        <li>
+          $(fn (name bindings . body))
+        </li>
+        <li>
+          $(syntax bindings ((parameter value) . bindings)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        let\
+      </h3>
+      <ul>
+        <li>
+          Establish FUNCTION-BINDINGS parallelly during evaluation of FORMS,
+          so that no function can refer to the other ones.
+        </li>
+        <li>
+          $(syntax functionBinding (name parameterTree . forms))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        letrec
+      </h3>
+      <ul>
+        <li>
+          Utility to establish BINDINGS recursively during the evaluation of
+          FORMS.  Used by `labels'.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        letrec\
+      </h3>
+      <ul>
+        <li>
+          (defMacro (letrec\ bindings . body)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        labels
+      </h3>
+      <ul>
+        <li>
+          Establish FUNCTION-BINDINGS recursively during evaluation of FORMS,
+          so that every function can refer to the other ones.
+        </li>
+        <li>
+          $(syntax functionBinding (name parameterTree . forms))
+        </li>
+      </ul>
+    </div>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference21.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference23.html">
+      <input type="button" value="&gt;"/>
+    </a>
+  </body>
+</html>

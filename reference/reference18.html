@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Delimited-Control Operators
+    </title>
+    <style>
+      ul { list-style-type: none; }
+      a { text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference17.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference19.html">
+      <input type="button" value="&gt;"/>
+    </a>
+    <h2>
+      Delimited-Control Operators
+    </h2>
+    <div>
+      <h3>
+        takeSubcont
+      </h3>
+      <ul>
+        <li>
+          Abort outwards to the PROMPT.  When the prompt is reached, evaluate
+          the FORMS with NAME bound to the captured continuation (which does not
+          include the prompt).
+        </li>
+        <li>
+          $(fn (prompt symbol . forms))
+        </li>
+        <li>
+          $(type operatore)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        pushPrompt
+      </h3>
+      <ul>
+        <li>
+          Push the PROMPT and evaluate the FORMS inside the prompt.  This
+          delimits the continuation.
+        </li>
+        <li>
+          $(fn (prompt . forms))
+        </li>
+        <li>
+          $(type operatore)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        pushDelimSubcont
+      </h3>
+      <ul>
+        <li>
+          Push the PROMPT and compose the previously captured CONTINUATION
+          inside it.  The FORMS are then evaluated inside the new continuation.
+        </li>
+        <li>
+          $(fn (prompt continuation . forms))
+        </li>
+        <li>
+          $(type operatore)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        pushSubcont
+      </h3>
+      <ul>
+        <li>
+          We don't have `pushSubcont' but for these tests we can emulate it
+          with a `pushDelimSubcont' that pushes an unused prompt.
+        </li>
+        <li>
+          $(fn (continuation . forms))
+        </li>
+        <li>
+          $(type macro)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        pushSubcontBarrier
+      </h3>
+      <ul>
+        <li>
+          Push a continuation barrier that prevents the FORMS from capturing
+          any continuations to the outside.
+        </li>
+        <li>
+          $(fn forms)
+        </li>
+        <li>
+          $(type operatore)
+        </li>
+      </ul>
+    </div>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference17.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference19.html">
+      <input type="button" value="&gt;"/>
+    </a>
+  </body>
+</html>

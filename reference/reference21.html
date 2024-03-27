@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Basic Functions and Macro
+    </title>
+    <style>
+      ul { list-style-type: none; }
+      a { text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference20.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference22.html">
+      <input type="button" value="&gt;"/>
+    </a>
+    <h2>
+      Basic Functions and Macro
+    </h2>
+    <div>
+      <h3>
+        idf
+      </h3>
+      <ul>
+        <li>
+          Identity function.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        _
+      </h3>
+      <ul>
+        <li>
+          &quot;Implicit&quot; Argument Lambda.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        curry
+      </h3>
+      <ul>
+        <li>
+          (def\ (curry f v)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        curry*
+      </h3>
+      <ul>
+        <li>
+          (def\ (curry* f . v*)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        compose
+      </h3>
+      <ul>
+        <li>
+          Compose two functions, creating a new function equivalent to (G (F ...)).
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        compose*
+      </h3>
+      <ul>
+        <li>
+          (def\ (compose* . f*)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        iota
+      </h3>
+      <ul>
+        <li>
+          (def\ (iota n) (reverse ((rec\ (ι n) (if (0? n) () (cons n (ι (1- n))))) n)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        fork
+      </h3>
+      <ul>
+        <li>
+          (def\ (fork f l r) [_ (f (l _) (r _))])
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        hook
+      </h3>
+      <ul>
+        <li>
+          (def\ (hook l r) [_ (l _ (r _))])
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        rec
+      </h3>
+      <ul>
+        <li>
+          (defMacro (rec lhs . rhs)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        label
+      </h3>
+      <ul>
+        <li>
+          (def label rec)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        rec\
+      </h3>
+      <ul>
+        <li>
+          (defMacro (rec\ lhs . rhs)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        label\
+      </h3>
+      <ul>
+        <li>
+          (def label\ rec\)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        map
+      </h3>
+      <ul>
+        <li>
+          Create a new list by applying the FUNCTION to every element of the LIST.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        def*\
+      </h3>
+      <ul>
+        <li>
+          (defMacro (def*\ lhs* . rhs*)
+        </li>
+      </ul>
+    </div>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference20.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference22.html">
+      <input type="button" value="&gt;"/>
+    </a>
+  </body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Dynamic Binding
+    </title>
+    <style>
+      ul { list-style-type: none; }
+      a { text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference36.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference38.html">
+      <input type="button" value="&gt;"/>
+    </a>
+    <h2>
+      Dynamic Binding
+    </h2>
+    <div>
+      <h3>
+        newDVar
+      </h3>
+      <ul>
+        <li>
+          (def newDVar %newDVar)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        dval
+      </h3>
+      <ul>
+        <li>
+          (def dval %dVal)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        ddef
+      </h3>
+      <ul>
+        <li>
+          Define a new or update an existing dynamic variable with the given
+          NAME and optDft default VALUE.
+        </li>
+        <li>
+          $(fn (name))
+        </li>
+        <li>
+          $(fn (name value))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        ddef*
+      </h3>
+      <ul>
+        <li>
+          (defMacro (ddef* var* . val*)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        dget
+      </h3>
+      <ul>
+        <li>
+          Return the current value of the DYNAMIC-VARIABLE.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        dset
+      </h3>
+      <ul>
+        <li>
+          Set the current value of the DYNAMIC-VARIABLE.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        dlet
+      </h3>
+      <ul>
+        <li>
+          Evaluate the FORMS with the dynamic variables specified by BINDINGS
+          temporarily bound to new values.  Bindings are established parallely
+          as per `let'.
+        </li>
+        <li>
+          $(syntax binding (dynamicVariable value))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        progv
+      </h3>
+      <ul>
+        <li>
+          Evaluate the FORMS with the list of DYNAMIC-VARIABLES temporarily
+          bound to new VALUES.  The DYNAMIC-VARIABLES and VALUES lists must have
+          the same length.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        dlet*
+      </h3>
+      <ul>
+        <li>
+          Evaluate the FORMS with the dynamic variables specified by BINDINGS
+          temporarily bound to new values.  Bindings are established serially as
+          per `let*'.
+        </li>
+      </ul>
+    </div>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference36.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference38.html">
+      <input type="button" value="&gt;"/>
+    </a>
+  </body>
+</html>

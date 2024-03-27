@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Fibers
+    </title>
+    <style>
+      ul { list-style-type: none; }
+      a { text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference45.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference47.html">
+      <input type="button" value="&gt;"/>
+    </a>
+    <h2>
+      Fibers
+    </h2>
+    <div>
+      <h3>
+        fiberPrompt
+      </h3>
+      <ul>
+        <li>
+          The prompt used for delimiting fibers.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        YieldRecord
+      </h3>
+      <ul>
+        <li>
+          Instances of this class are yielded.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        makeYieldRecord
+      </h3>
+      <ul>
+        <li>
+          Create a new yield record with the given yielded value and resume continuation.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        fiberYield
+      </h3>
+      <ul>
+        <li>
+          Yield a value (which defaults to void).
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        fiberResume
+      </h3>
+      <ul>
+        <li>
+          Resume a suspended fiber with a value (which defaults to void).
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        fiber
+      </h3>
+      <ul>
+        <li>
+          Evaluate the body expressions as a fiber.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        runFiber*
+      </h3>
+      <ul>
+        <li>
+          Get all values yielded by a fiber, and its final result, and collect them in a list.
+          Uses the optional list of values to sent to the fiber with `fiberResume'.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        runFiberWithValues
+      </h3>
+      <ul>
+        <li>
+          (defMacro (runFiberWithValues f args) (list 'eval (list 'list* 'runFiber* f args))) 
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        runFiberWithValues
+      </h3>
+      <ul>
+        <li>
+          (defMacro (runFiberWithValues f args) (list 'apply 'runFiber* (list 'cons f args))) 
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        runFiberWithValues
+      </h3>
+      <ul>
+        <li>
+          (defMacro (runFiberWithValues f args) (list 'apply** 'runFiber* f args)) 
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        runFiber
+      </h3>
+      <ul>
+        <li>
+          (def runFiber runFiber*)
+        </li>
+      </ul>
+    </div>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference45.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference47.html">
+      <input type="button" value="&gt;"/>
+    </a>
+  </body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Bind Bind? IfBind? CaseVau DefCaseVau Case\ DefCase\ Match Cond
+    </title>
+    <style>
+      ul { list-style-type: none; }
+      a { text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference23.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference25.html">
+      <input type="button" value="&gt;"/>
+    </a>
+    <h2>
+      Bind Bind? IfBind? CaseVau DefCaseVau Case\ DefCase\ Match Cond
+    </h2>
+    <div>
+      <h3>
+        bind?
+      </h3>
+      <ul>
+        <li>
+          (def bind? %bind?)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        ifBind?
+      </h3>
+      <ul>
+        <li>
+          (defVau (ifBind? (pt exp) then . else) env
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        caseVau
+      </h3>
+      <ul>
+        <li>
+          (defVau (caseVau . clauses) env
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        defCaseVau
+      </h3>
+      <ul>
+        <li>
+          (defMacro (defCaseVau sym . clauses)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        case\
+      </h3>
+      <ul>
+        <li>
+          (defMacro (case\ . clauses)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        defCase\
+      </h3>
+      <ul>
+        <li>
+          (defMacro (defCase\ sym . clauses)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        match
+      </h3>
+      <ul>
+        <li>
+          (defMacro (match exp . clauses)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        cond
+      </h3>
+      <ul>
+        <li>
+          Multi-armed conditional.
+          Go through the CLAUSES in order.  Evaluate the TEST.
+          If it yields true, evaluate the FORMS as an implicit `begin'.
+          If it yields false, go to the next clause,
+          or return void if there are no more clauses.
+        </li>
+        <li>
+          $(syntax clauses (clause . clauses))
+        </li>
+        <li>
+          $(syntax clause (else . forms))
+        </li>
+        <li>
+          $(syntax clause (test-&gt;bool . forms))
+        </li>
+        <li>
+          $(syntax clause (test))
+        </li>
+        <li>
+          $(syntax clause (test =&gt; apv1))
+        </li>
+        <li>
+          $(syntax clause (test guard =&gt; apv1))
+        </li>
+      </ul>
+    </div>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference23.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference25.html">
+      <input type="button" value="&gt;"/>
+    </a>
+  </body>
+</html>
