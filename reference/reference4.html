@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Other Core Built-Ins
+    </title>
+    <style>
+      ul { list-style-type: none; }
+      a { text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference3.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference5.html">
+      <input type="button" value="&gt;"/>
+    </a>
+    <h2>
+      Other Core Built-Ins
+    </h2>
+    <div>
+      <h3>
+        apply*
+      </h3>
+      <ul>
+        <li>
+          Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
+        </li>
+        <li>
+          $(fn (fun . args)) 
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (apply fun args (newEnv)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        apply**
+      </h3>
+      <ul>
+        <li>
+          Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
+        </li>
+        <li>
+          $(fn (fun . args)) 
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (apply fun (apply list* args) (newEnv)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        set
+      </h3>
+      <ul>
+        <li>
+          Match the DEFINIEND-TREE against the VALUE in the ENVIRONMENT,
+          creating or updating existing bindings.  Unlike Common Lisp (or
+          Scheme), we have no `setq' (or `set!') that allows updating arbitrary
+          bindings -- you always need to know the environment a binding is in to
+          change it.  Therefore, we usually use boxes (see below) instead of
+          mutating bindings directly.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        set!
+      </h3>
+      <ul>
+        <li>
+          (def set! %set!)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        unwrap
+      </h3>
+      <ul>
+        <li>
+          Return the underlying operator of a FUNCTION.
+        </li>
+        <li>
+          $(fn (function))
+        </li>
+        <li>
+          $(type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        wrau
+      </h3>
+      <ul>
+        <li>
+          (defMacro (wrau pt ep . body)
+        </li>
+      </ul>
+    </div>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference3.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference5.html">
+      <input type="button" value="&gt;"/>
+    </a>
+  </body>
+</html>

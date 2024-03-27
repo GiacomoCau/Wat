@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Core Built-Ins for Macro and Definitions Forms
+    </title>
+    <style>
+      ul { list-style-type: none; }
+      a { text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference0.html">
+      <input type="button" value="&lt;" disabled/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference2.html">
+      <input type="button" value="&gt;"/>
+    </a>
+    <h2>
+      Core Built-Ins for Macro and Definitions Forms
+    </h2>
+    <div>
+      <h3>
+        vau
+      </h3>
+      <ul>
+        <li>
+          Construct a fexpr with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER, and FORMS.
+        </li>
+        <li>
+          $(fn (parameterTree environmentParameter . forms))
+        </li>
+        <li>
+          $(type fexpr)
+        </li>
+        <li>
+          $(derivation (vau (pt ep . forms) env (eval (list 'vau pt ep (cons 'begin forms)) env)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        \
+      </h3>
+      <ul>
+        <li>
+          Create an anonymous function with the given PARAMETER-TREE and FORMS.
+        </li>
+        <li>
+          $(fn (parameterTree . forms))
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (vau (parameterTree . forms) env (wrap (eval (list* 'vau parameterTree #ignore forms) env))))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        lambda
+      </h3>
+      <ul>
+        <li>
+          (def lambda \)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        wrap
+      </h3>
+      <ul>
+        <li>
+          Create a new function that wraps around an underlying OPERATOR, and
+          induces argument evaluation around it.
+        </li>
+        <li>
+          $(fn (operator))
+        </li>
+        <li>
+          $(type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        assert
+      </h3>
+      <ul>
+        <li>
+          (def assert %assert)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        apply
+      </h3>
+      <ul>
+        <li>
+          Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
+        </li>
+        <li>
+          $(fn (fun args . env))
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (eval (cons (unwrap fun) args) (if (null? env) (newEnv) (car! env)) ))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        begin
+      </h3>
+      <ul>
+        <li>
+          Sequentially evaluate FORMS, returning the value of the last one, or void if there are no forms.
+        </li>
+        <li>
+          $(fn forms)
+        </li>
+        <li>
+          $(type fexpr)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        car
+      </h3>
+      <ul>
+        <li>
+          Return the contents of the address part of the register.
+        </li>
+        <li>
+          $(fn (cons))
+        </li>
+        <li>
+          $(type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        cadr
+      </h3>
+      <ul>
+        <li>
+          Return the `car' of the `cdr' of the CONS.
+        </li>
+        <li>
+          $(derivation (car (cdr cons)))
+        </li>
+        <li>
+          $(derivation (\ ((#_ . (cadr . #_))) cadr))
+        </li>
+        <li>
+          $(derivation (\ ((#_ cadr . #_)) cadr))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        cdr
+      </h3>
+      <ul>
+        <li>
+          Return the contents of the decrement part of the register.
+        </li>
+        <li>
+          $(fn (cons))
+        </li>
+        <li>
+          $(type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        cons
+      </h3>
+      <ul>
+        <li>
+          Create a cons with the given CAR and CDR.
+        </li>
+        <li>
+          $(fn (car cdr))
+        </li>
+        <li>
+          $(type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        cons?
+      </h3>
+      <ul>
+        <li>
+          Return true if the OBJECT is a cons, false otherwise.
+        </li>
+        <li>
+          $(fn (object))
+        </li>
+        <li>
+          $(type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        eval
+      </h3>
+      <ul>
+        <li>
+          Evaluate the FORM in the ENVIRONMENT, returning its result.
+        </li>
+        <li>
+          $(fn (form environment))
+        </li>
+        <li>
+          $(type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        if
+      </h3>
+      <ul>
+        <li>
+          Evaluate the TEST which must yield a boolean.  Then evaluate either
+          the CONSEQUENT or ALTERNATIVE depending on whether the TEST yielded
+          true or false.
+        </li>
+        <li>
+          $(fn (test consequent . alternative))
+        </li>
+        <li>
+          $(fn (test1 consequent1 test2 consequent2 ... . alternative))
+        </li>
+        <li>
+          $(type fexpr)
+        </li>
+        <li>
+          $(derivation (vau (test then . else) env (if (eval then env) (eval then env) (null? else) #inert (null? (cdr else)) (eval (car else)) (apply if else env))))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        list
+      </h3>
+      <ul>
+        <li>
+          Return the list of evaluated ARGUMENTS.
+        </li>
+        <li>
+          $(fn arguments)
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (wrap (vau arguments #ignore arguments))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        list*
+      </h3>
+      <ul>
+        <li>
+          Create a list from the ARGUMENTS so that the last argument becomes
+          the `cdr' of the list.
+        </li>
+        <li>
+          $(fn arguments)
+        </li>
+        <li>
+          $(type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        newBox
+      </h3>
+      <ul>
+        <li>
+          (def newBox
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        quote
+      </h3>
+      <ul>
+        <li>
+          Return the unevaluated OPERAND.
+        </li>
+        <li>
+          $(fn (operand))
+        </li>
+        <li>
+          $(type fexpr)
+        </li>
+        <li>
+          $(derivation (vau (operand) #ignore operand))
+        </li>
+      </ul>
+    </div>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference0.html">
+      <input type="button" value="&lt;" disabled/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference2.html">
+      <input type="button" value="&gt;"/>
+    </a>
+  </body>
+</html>

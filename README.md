@@ -6,7 +6,7 @@ Java port of [wat-js](https://github.com/GiacomoCau/wat-js)
 with more then a shadow of [lispx](https://github.com/lispx/lispx)
 and the tco suggestion of [jscheme](https://github.com/chidiwilliams/jscheme)
 
-Questo il [reference](https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference.html)
+Questo il [reference](https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html)
 
 Queste le differenze rispetto a Wat/lispX
 * lispx è stato convertito da lisp-2 a lisp-1
