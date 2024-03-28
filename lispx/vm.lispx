@@ -45,6 +45,7 @@
 (%def Keyword &Wat.Vm$Keyword)
 (%def JFun &Wat.Vm$JFun)
 (%def List &Wat.Vm$List)
+(%def Long &java.lang.Long)
 (%def Math &java.lang.Math)
 (%def Number &java.lang.Number)
 (%def Object &java.lang.Object)

@@ -84,36 +84,6 @@
     </div>
     <div>
       <h3>
-        iota
-      </h3>
-      <ul>
-        <li>
-          (def\ (iota n) (reverse ((rec\ (ι n) (if (0? n) () (cons n (ι (1- n))))) n)))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        fork
-      </h3>
-      <ul>
-        <li>
-          (def\ (fork f l r) [_ (f (l _) (r _))])
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        hook
-      </h3>
-      <ul>
-        <li>
-          (def\ (hook l r) [_ (l _ (r _))])
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
         rec
       </h3>
       <ul>

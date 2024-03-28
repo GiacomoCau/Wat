@@ -1,6 +1,5 @@
 ;; comment -> html
 
-
 (ddef htmlDeep 0) 
 (ddef htmlWriter (.out System))
 
@@ -19,7 +18,15 @@
   (def\ (body b forms) (if b (cdr forms) forms))
   (macro forms
     (def at (&& (cons? forms) (cons? (car forms)) (== (caar forms) 'attr)))
-    `(begin (startTag ,ac ',name ,@(attr at forms)) (++ htmlDeep) (finally (begin ,@(body at forms)) (-- htmlDeep) ,@(if `,ac '(#inert) `((endTag ',name) #inert))) ) ))
+    `(begin
+       (startTag ,ac ',name ,@(attr at forms))
+       (+= htmlDeep 1)
+       (atEnd
+         ,(if `,ac '(-= htmlDeep 1) `(begin (-= htmlDeep 1) (endTag ',name)) )
+         ,@(body at forms)
+         ;; senza il seguente #inert (body (input)) andrebbe in errore (ma non (body (input 1)))
+         ;; perch� comporrebbe (atEnd (-= htmlDeep 1)) che vuole almeno un'altra epressione
+         #inert ))))
 
 (def\ (join lst) 
   (if (null? lst) ""
@@ -37,14 +44,6 @@
 #| TODO da definire altrove
 (def\ (join sep l) ((rec\ (f l) (if (null? l) "" ($ sep (car l) (f (cdr l))))) l))
 (def\ (join sep l) ((rec\ (f l) (if (null? l) "" (let1 (cdr (cdr l)) (if (null? cdr) ($ (car l)) ($ (car l) sep (f cdr)))))) l))
-(def\ (join sep lst)
-  (def\ (attr lst) 
-    (if (null? lst) ""
-      (let1 ((key value . lst) lst)
-        (if (type? value Boolean) 
-          (if value ($ sep key (attr lst)) (attr lst))
-          ($ sep key "=" (if (type? value String) ($ "\"" (encode value) "\"") value) (attr lst)) ))))
-  (attr lst) )
 |#
 
 (def html (tag 'html))
@@ -105,10 +104,10 @@
       (input (attr 'type "button" 'value "^")) )
     (a (attr 'href ($ base (1+ chapter#) ".html"))
       (input (attr 'type "button" 'value ">" 'disabled (== chapter# chapters))) ) )
-  (loop (set! l (@readLine r)) (until! (|| (null? l) (@startsWith l ";;;"))))
-  (loop (until! (null? l))
-    (++ chapter#)
-    ;(until! (> chapter# 3))
+  (loop (set! l (@readLine r)) (until? (|| (null? l) (@startsWith l ";;;"))))
+  (loop (until? (null? l))
+    (+= chapter# 1)
+    ;(until? (> chapter# 3))
     (print 'chapter chapter#)
     (def chapter (encode (@substring l 4)))
     (close1 (w (@new PrintWriter ($ "reference/reference" chapter# ".html") "utf-8")) 
@@ -125,13 +124,13 @@
             (h2 (pr chapter))
             (loop
               (set! l :rhs (@readLine r)) 
-              (if (|| (null? l) (@startsWith l ";;;")) (then (buttons) (continue- 1)))
-              (if (! (@startsWith l "\x28;def")) (continue))
+              (continue-? 1 (|| (null? l) (@startsWith l ";;;")) (buttons))
+              (continue? (! (@startsWith l "\x28;def")))
               (def l0 l)
               (loop
-                (++ def#)
+                (+= def# 1)
                 (set! l0 l)
-                (while! (@startsWith (set! l :rhs (@readLine r)) "\x28;def"))
+                (while? (@startsWith (set! l :rhs (@readLine r)) "\x28;def"))
                 (div
                   (h3 (pr (encode (nm l0))))
                   (ul (li (pr (encode l0)))) ))
@@ -142,12 +141,12 @@
                     (li
                       (loop 
                         (pr (encode (@substring l 4)))
-                        (until! (@startsWith (set! l :rhs (@readLine r)) "   |$"))
-                        (until! (@startsWith l "   |#")) ))
+                        (until? (@startsWith (set! l :rhs (@readLine r)) "   |$"))
+                        (until? (@startsWith l "   |#")) ))
                     (if (@startsWith l "   |$")
                       (loop
                         (li (pr (encode (@substring l 4))))
-                        (until! (@startsWith (def l :rhs (@readLine r)) "   |#")) )))) 
+                        (until? (@startsWith (def l :rhs (@readLine r)) "   |#")) )))) 
                 (div
                   (h3 (pr (encode (nm l0))))
                   (ul (li (pr (encode l0)))) )))) ))))

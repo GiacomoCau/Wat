@@ -19,6 +19,7 @@ import static Wat.Utility.or;
 import static Wat.Utility.read;
 import static Wat.Utility.reorg;
 import static Wat.Utility.stackDeep;
+import static Wat.Utility.system;
 import static Wat.Utility.toSource;
 import static Wat.Utility.uncked;
 import static Wat.Utility.BinOp.And;
@@ -129,6 +130,7 @@ public class Vm {
 	
 	static {
 		for (File file: new File("bin/Ext").listFiles()) file.delete();
+		//new File("bin/Ext").delete();
 	}
 	
 	boolean doTco = true; // do tco
@@ -1131,7 +1133,7 @@ public class Vm {
 							case Value val: throw val;
 							case Error err: throw err;
 							case InnerException ie when name.equals("%CheckO"): throw ie; 
-							default: return javaError("error executing: {member} with: {args}", thw, symbol(name), o, null);
+							default: return javaError("error executing: {member} with: {args}", thw, name == null ? null : symbol(name), o, null);
 						}
 					}
 				}
@@ -1808,6 +1810,7 @@ public class Vm {
 				"load", wrap(new JFun("Load", (Function<String, Object>) nf-> uncked(()-> loadText(nf)) )),
 				"read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> uncked(()-> toLispList(read(l == 0 ? 0 : o.<Integer>car()))) )),
 				"readString", wrap(new JFun("ReadString", (n,o)-> checkN(n, o, 1), (l,o)-> uncked(()-> toLispList(o.toString())) )),
+				"system", wrap(new JFun("System", (n,o)-> checkR(n, o, 1, 2, String.class, Boolean.class), (l,o)-> uncked(()-> system(l==1 ? false : o.<Boolean>car(1),  "cmd.exe", "/e:on", "/c", o.<String>car())) )),
 				// Config
 				"doTco", wrap(new JFun("DoTco", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doTco : inert(doTco=o.car()) )),
 				"doAsrt", wrap(new JFun("DoAsrt", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doAsrt : inert(doAsrt=o.car()) )),

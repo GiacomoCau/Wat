@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      Utility
+      Apl
     </title>
     <style>
       ul { list-style-type: none; }
@@ -17,18 +17,38 @@
       <input type="button" value="^"/>
     </a>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference50.html">
-      <input type="button" value="&gt;" disabled/>
+      <input type="button" value="&gt;"/>
     </a>
     <h2>
-      Utility
+      Apl
     </h2>
     <div>
       <h3>
-        time
+        iota
       </h3>
       <ul>
         <li>
-          (defVau (time times . forms) env
+          (def\ (iota n) (reverse ((rec\ (iota n) (if (0? n) () (cons n (iota (1- n))))) n)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        fork
+      </h3>
+      <ul>
+        <li>
+          (def\ (fork f l r) [_ (f (l _) (r _))])
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        hook
+      </h3>
+      <ul>
+        <li>
+          (def\ (hook l r) [_ (l _ (r _))])
         </li>
       </ul>
     </div>
@@ -39,7 +59,7 @@
       <input type="button" value="^"/>
     </a>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference50.html">
-      <input type="button" value="&gt;" disabled/>
+      <input type="button" value="&gt;"/>
     </a>
   </body>
 </html>

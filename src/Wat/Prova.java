@@ -1,11 +1,10 @@
 package Wat;
 
-import static Wat.Utility.apply;
 import static Wat.Utility.member;
-import static java.lang.Character.getName;
 import static java.lang.Character.isISOControl;
 import static java.lang.Integer.parseInt;
 import static java.lang.Integer.toHexString;
+import static java.lang.Runtime.getRuntime;
 import static java.lang.System.getProperty;
 import static java.lang.System.in;
 import static java.lang.System.out;
@@ -54,9 +53,27 @@ import Wat.Vm.Symbol;
 
 public class Prova {
 	
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws Exception {
+		process1();
+	}
+	public static void process1() throws InterruptedException, IOException {
+		//out.println(getRuntime().exec("cmd.exe /e:on /c dir").waitFor());
+		out.println(getRuntime().exec(new String[] {"cmd.exe", "/e:on", "/c", "dir"}).waitFor());
+	}
+	
+    public static void main2(String[] args) throws Exception {
+        ProcessBuilder builder = new ProcessBuilder("cmd.exe", "/e:on", "/c", "dir");
+        builder.redirectErrorStream(true);
+        Process p = builder.start();
+        BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
+        for (String line=null; (line = r.readLine()) != null; ) System.out.println(line);
+        out.println(p.exitValue());
+    }
+
+	public static void charcters() {
 		{
 			// to source
+			@SuppressWarnings("unused")
 			var names = false;
 			var p = Pattern.compile("[\\x00-\\x1f\\x7f-\\x9f]");
 			var sb = new StringBuffer();
@@ -125,7 +142,7 @@ public class Prova {
 		}
 	}
 	
-	private BiFunction<String,Integer, Double> xx =  null;
+	//private BiFunction<String,Integer, Double> xx =  null;
 	
 	public static void replaceAll() {
 		//out.println(Pattern.compile("\\|").matcher("\\|").quoteReplacement("|"));

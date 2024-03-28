@@ -1,4 +1,3 @@
-
 (def FileReader &java.io.FileReader)
 (def BufferedReader &java.io.BufferedReader)
 (def PrintWriter &java.io.PrintWriter)
@@ -14,11 +13,11 @@
       (loop
         (+= n 1)
         (print (nm l))
-        (while! (@startsWith (set! l :rhs (@readLine r)) "\x28;def")) )
+        (while? (@startsWith (set! l :rhs (@readLine r)) "\x28;def")) )
       (if (@startsWith l "  #|")
         (loop
           (print ($ #\x9 (@substring l 4)))
-          (until! (@startsWith (def l :rhs (@readLine r)) "   |#")
+          (until? (@startsWith (def l :rhs (@readLine r)) "   |#")
             ;(print l)
             ))))
   n)

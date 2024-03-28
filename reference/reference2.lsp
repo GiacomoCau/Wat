@@ -26,7 +26,7 @@
         (+= n 1)
         (set! l0 l)
         (print ($ "<h3>" (encode (nm l0)) "</h3>"))
-        (while! (@startsWith (set! l :rhs (@readLine r)) "\x28;def"))
+        (while? (@startsWith (set! l :rhs (@readLine r)) "\x28;def"))
         (print ($ "<ul><li>" (encode l0) "</ul></div>\n<div>")) )
       (if (@startsWith l "  #|")
         (then
@@ -34,7 +34,7 @@
           (loop
             (set! l (@substring l 4))
             (print ($ (if (@startsWith l "$") "<li>" "") (encode l)))
-            (until! (@startsWith (def l :rhs (@readLine r)) "   |#")) )
+            (until? (@startsWith (def l :rhs (@readLine r)) "   |#")) )
           (print "</ul>") )
         (print ($ "<ul><li>" (encode l0) "</ul></div>\n<div>")) )
       (print "</div>") )

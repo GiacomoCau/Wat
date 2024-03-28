@@ -5,7 +5,6 @@ import static java.lang.Character.toUpperCase;
 import static java.lang.Integer.parseInt;
 import static java.lang.Integer.toHexString;
 import static java.lang.System.arraycopy;
-import static java.lang.System.getProperty;
 import static java.lang.System.in;
 import static java.lang.System.out;
 import static java.lang.reflect.Array.newInstance;
@@ -17,6 +16,8 @@ import static java.util.Arrays.stream;
 import static java.util.Comparator.comparing;
 import static java.util.Map.of;
 
+import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -25,7 +26,6 @@ import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -47,13 +47,12 @@ public class Utility {
 		//out.println(toString("a\\nb"));
 		//out.println(toSource(toString("a\\nb")));
 		//out.println(toString(toSource("a\nb")));
-		out.println(Charset.defaultCharset());
-		out.println(getProperty("stdout.encoding"));
+		//out.println(Charset.defaultCharset());
+		//out.println(getProperty("stdout.encoding"));
 		//var isr = new InputStreamReader(in, forName("UTF-8"));
-		for(;;) {
-			var v = read(/*0, isr*/);
-			out.print(v);
-		}
+		//for(;;) { var v = read(/*0, isr*/); out.print(v); }
+		out.println(new File("reference/*.html").list().length);
+		//Files.exists(new Path(" "));
 	}
 	//*/
 	
@@ -148,6 +147,15 @@ public class Utility {
 		}
 	}
 	
+    public static int system(boolean b, String ... args) throws Exception {
+		ProcessBuilder builder = new ProcessBuilder(args);
+		builder.redirectErrorStream(true);
+		Process process = builder.start();
+		BufferedReader r = new BufferedReader(new InputStreamReader(process.getInputStream()));
+		for (String line=null; (line = r.readLine()) != null; ) if (b) System.out.println(line);
+		return process.exitValue();
+    }
+    
 	public static String getMessage(ParseException pe) {
 		return "ParseException " + pe.getMessage().replaceAll("\r\n", " ").replaceAll("\\.\\.\\.", "").replaceAll(" +", " ");
 	}	
@@ -396,6 +404,11 @@ public class Utility {
 				Executable bestMatch = null;
 				Float bestCost = Float.MAX_VALUE;
 				for (var executable: executables) {
+					if (bestMatch == null) {
+						bestMatch = executable;
+						bestCost = getTotalTransformationCost(executable, argumentsClass);
+						continue;
+					} 
 					var cost = getTotalTransformationCost(executable, argumentsClass);
 					if (cost > bestCost) continue;
 					if (cost == bestCost) {
@@ -430,7 +443,7 @@ public class Utility {
 			for (Executable executor: getExecutors(classe, constructors, publicMember)) {
 				if (!constructors && !executor.getName().equals(name)) continue;
 				if (trace) out.println("\t\tn: " + executor);
-				if (argumentsClass != null) {
+				if (argumentsClass != null && argumentsClass.length > 0) {
 					boolean isVarArgs = executor.isVarArgs();
 					Class [] parametersClass = executor.getParameterTypes();
 					if (!isVarArgs && argumentsClass.length != parametersClass.length || argumentsClass.length < parametersClass.length - 1) continue;

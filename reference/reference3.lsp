@@ -75,7 +75,7 @@
                 (loop
                   (+= n 1)
                   (set! l0 l)
-                  (while! (@startsWith (set! l :rhs (@readLine r)) "\x28;def"))
+                  (while? (@startsWith (set! l :rhs (@readLine r)) "\x28;def"))
                   (div
                     (h3 (pr (encode (nm l0))))
                     (ul (li (pr (encode l0)))) ))
@@ -86,12 +86,12 @@
                       (li
                         (loop 
                           (pr (encode (@substring l 4)))
-                          (until! (@startsWith (set! l :rhs (@readLine r)) "   |$"))
-                          (until! (@startsWith l "   |#")) ))
+                          (until? (@startsWith (set! l :rhs (@readLine r)) "   |$"))
+                          (until? (@startsWith l "   |#")) ))
                       (if (@startsWith l "   |$")
                         (loop
                           (li (pr (encode (@substring l 4))))
-                          (until! (@startsWith (def l :rhs (@readLine r)) "   |#")) )))) 
+                          (until? (@startsWith (def l :rhs (@readLine r)) "   |#")) )))) 
                   (div
                     (h3 (pr (encode (nm l0))))
                     (ul (li (pr (encode l0)))) )) )))))
