@@ -6,7 +6,7 @@
 
 ;; ``72. An adequate bootstrap is a contradiction in terms.''
 
-;;; Core Built-Ins for Macro and Definitions Forms
+;;; Core Built-Ins for Macro and Definition Forms
 
 (%def def
   %def)
@@ -93,7 +93,7 @@
     (list 'begin (list 'evalMacro #f) form) ))
 
 
-;;; Definitions Forms
+;;; Definition Forms
 
 ; defMacro defVau def\ def*\ rec\ let1\ let1rec\ let\ letrec\ permettono la definizione in due forme
 ;
@@ -840,7 +840,7 @@
 (assert (optDft* '(1 () 3) 1 2 3 4) '(1 2 3 4))
 
 (def\ optDft! (opt)
-  (optDft opt (simpleError "Option is nil")))
+  (optDft opt (simpleError "Option is #null")))
 
 
 ;;; OptValue Member Member? !Member? OptKey Assoc Member*?
@@ -1095,7 +1095,7 @@
                   :continue (macro forms (mkThrow 'continue forms)) 
                   :until? (macro (b . forms) (list 'if b (mkThrow 'break forms))) 
                   :while? (macro (b . forms) (list 'if b #inert (mkThrow 'break forms)))  ))) 
-            (if (check? forms (2 oo 'for ((2 3)) )) ;loop for
+            (if (check? forms (2 oo 'for ((2 3 Symbol)) )) ;loop for
               (let ( (for (cadr forms))
                      (forms (cons 'begin (cddr forms))) )
                 (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (optDft incr init)) for)))
@@ -1104,7 +1104,7 @@
                   (%loop
                     (catchTag continue (eval forms env) )
                     (eval increments env) )))
-              (if (check? forms (2 oo 'for1 (2 3))) ;loop for1
+              (if (check? forms (2 oo 'for1 (2 3 Symbol))) ;loop for1
                 (let ( ((pt init . incr) (cadr forms))
                        (forms (cons 'begin (cddr forms))) )
                   (def increment (list 'def pt (optDft incr init)))
@@ -1122,33 +1122,31 @@
 
 (def loop %loop)
 
-#|
+(defMacro (for1 binding cond . body)
+  (list* 'loop 'for1 binding
+    (if (%ignore? cond) body
+      (cons (list 'while? cond) body) )))
+
+
+(defMacro (for bindings cond . body)
+  (list* 'loop 'for bindings
+    (if (%ignore? cond) body
+      (cons (list 'while? cond) body) )))
+
 (let ()
-  (loop (break 3))
-  (loop (loop (break- 1 3)))
-  (loop for ((i 0 (1+ i)) (y 0 (-- y))) (while? (< i 3)) (log i y))
-  (loop for ((i 0 (1+ i))) (while? (< i 3)) (log "x" i) (loop for ((y 0 (1+ y))) (break? (> y 3)) (log "y" y) ))
-  (loop for1 (i 0 (1+ i)) (log i) (break) )
-  (loop for1 (i 0 (1+ i)) (while? (< i 3)) (log i))
-  (loop for1 (i 0 (1+ i)) (while? (< i 3)) (log "x" i) (loop for1 (y 0 (1+ y)) (break? (> y 3)) (log "y" y) ))
-  (loop for1 (i 0 (1+ i)) (while? (< i 3)) (log "x" i) (loop for1 (y 0 (1+ y)) (break-? 1 (> y 3)) (log "y" y) ))
+  (assert (loop (break 3)) 3)
+  (assert (loop (loop (break- 1 3))) 3)
+  (defMacro (+= n v) (list 'set! n :rhs (list '+ n v)) )
+  (defMacro (-= n v) (list 'set! n :rhs (list '- n v)) )
+  (assert (let1 (a 0) (loop for ((x 0 (1+ x)) (y 0 (1- y))) (while? (< x 3) a) (+= a (+ x y)))) 0)
+  (assert (let1 (a 0) (loop for ((x 0 (1+ x))) (while? (< x 3) a) (+= a (* x 10)) (loop for ((y 0 (1+ y))) (break? (> y 2)) (+= a y)) )) 39)
+  (assert (loop for1 (x 0 (1+ x)) (break x)) 0)
+  (assert (loop for1 (x 0 (1+ x)) (while? (< x 3) x)) 3)
+  (assert (let1 (a 0) (loop for1 (x 0 (1+ x)) (while? (< x 3) a) (+= a (* x 10)) (loop for1 (y 0 (1+ y)) (break? (> y 2)) (+= a y) ))) 39)
+  (assert (let1 (a 0) (loop for1 (x 0 (1+ x)) (while? (< x 3) a) (+= a (* x 10)) (loop for1 (y 0 (1+ y)) (break-? 1 (> y 3) a) (+= a y)))) 6)
+  (assert (let1 (a 0) (for1 (x 0 (1+ x)) (< x 3) (+= a (* x 10)) (for1 (y 0 (1+ y)) #ignore (break-? 1 (> y 3) a) (+= a y)))) 6) 
+  (assert (let1 (a 0) (for ((x 0 (1+ x)) (y 10 (1- y)) ) (< x 10) (+= a (+ x y))) a) 100) 
 )
-|#
-
-#| TODO sostituito dal seguente, eliminare
-(defMacro (for1 ((#! Symbol var) init cond . incr) . body)
-  (list* 'loop 'for1 (list* var init incr)
-    (if (%ignore? cond) body
-      (cons (list 'while? cond) body) )))
-
-;(for1 (i 0 (< i 3) (1+ i)) (log "x" i) (for1 (y 0 #ignore (1+ y)) (if (> y 3) (break- 1)) (log "y" y)))
-|#
-(defMacro (for1 ((#! Symbol var) init . incr) cond . body)
-  (list* 'loop 'for1 (list* var init incr)
-    (if (%ignore? cond) body
-      (cons (list 'while? cond) body) )))
-
-;(for1 (i 0 (1+ i)) (< i 3) (log "x" i) (for1 (y 0 (1+ y)) #ignore (if (> y 3) (break- 1)) (log "y" y)))
 
 (defMacro (while cond . forms)
   (list* 'loop (list 'while? cond) forms) )
@@ -1156,16 +1154,18 @@
 (defMacro until (cond . forms)
   (list* 'loop (list 'until? cond) forms) )
 
-;(let1 (i 0) (while (< i 3) (print i) (++ i)))
-
 (let ()
-  (defMacro (-- n) (list 'set! n :rhs (list '1- n)) )
   (defMacro (++ n) (list 'set! n :rhs (list '1+ n)) )
+  (defMacro (-- n) (list 'set! n :rhs (list '1- n)) )
+  (assert (let1 (i 0) (while (< i 3) (++ i)) i) 3)
+  (assert (let1 (i 0) (until (> i 2) (++ i)) i) 3)
   (assert (let1 (c 2) (while (> c 0) (-- c)) c) 0)
   (assert (let1 (c 2) (while #t (if (0? c) (break (+ c 5)) (-- c)))) 5)
   (assert (let1 (c 2) (loop (until? (0? c) (+ c 5)) (-- c))) 5)
-  (assert (let ((c 10) (r #null)) (while #t (if (0? c) (break r)) (if (0? (% (-- c) 2)) (continue)) (def r (cons c r)) )) '(1 3 5 7 9))
-  (assert (let ((c 10) (r #null)) (loop (until? (0? c) r) (if (0? (% (-- c) 2)) (continue)) (def r (cons c r)) )) '(1 3 5 7 9))
+  (assert (let ((c 10) (r #null)) (while #t (if (0? c) (break r)) (if (0? (% (-- c) 2)) (continue)) (set! r (cons c r)) )) '(1 3 5 7 9))
+  (assert (let ((c 10) (r #null)) (while #t (break? (0? c) r) (continue? (0? (% (-- c) 2))) (set! r (cons c r)) )) '(1 3 5 7 9))
+  (assert (let ((c 10) (r #null)) (loop (until? (0? c) r) (if (0? (% (-- c) 2)) (continue)) (set! r (cons c r)) )) '(1 3 5 7 9))
+  (assert (let ((c 10) (r #null)) (loop (until? (0? c) r) (continue? (0? (% (-- c) 2))) (set! r (cons c r)) )) '(1 3 5 7 9))
 )
  
 (defMacro doTimes ((var times . result) . body)
@@ -1185,11 +1185,21 @@
             ((#! (and Integer (> 0)) times) (eval times env))
             (env (newEnv env var 0)) )
       (loop (def result (apply begin forms env))
-        (if (>= (eval (list '++ var) env) times)
-          (break (if (null? ending) result (apply begin ending env))) )))
+        (break? (>= (eval (list 'set! var :rhs (list '1+ var)) env) times)
+          (if (null? ending) result (apply begin ending env)) )))
     (let1 ((#! (and Integer (> 0)) times) (eval times env))
       (loop (def result (apply begin forms env))
-        (if (0? (-- times)) (break result)) ))))
+        (break? (0? (set! times :rhs (1- times))) result) ))))
+
+(let ()
+  ;(defMacro (++ n) (list 'set! n :rhs (list '1+ n)) )
+  ;(defMacro (-- n) (list 'set! n :rhs (list '1- n)) )
+  (defMacro (+= n v) (list 'set! n :rhs (list '+ n v)) )
+  ;(defMacro (-= n v) (list 'set! n :rhs (list '- n v)) )
+  (assert (let1 (a 0) (repeat 4 (+= a 1)) a) 4)
+  (assert (let1 (a 0) (repeat (i 4) (+= a i)) a) 6)
+  (assert (let1 (a 0) (repeat (i 4 a) (+= a i))) 6)
+)
 
 (defMacro doTimes ((var times . result) . body)
   (list* 'repeat (list* var times result) body) )
@@ -1211,9 +1221,6 @@
 (defMacro doTimes ((var times . result) . body)
   (list* 'repeat (list* var times (if (null? result) (cons #inert) result)) body) )
 |#
-
-;(repeat 5 (log 'a))
-;(repeat (a 5 a) (log a))
 
 
 ;;; Lists
@@ -1347,7 +1354,7 @@
       (loop (min x (car a)) (max y (car a)) (cdr a)) )))
 
 
-;;;; Arrays
+;;; Arrays
 
 (def\ (array->list arr)
   (%array->list #t arr) )
@@ -1765,7 +1772,7 @@
   (lyticOp / 1) )
 
 
-;;;; Greatest Common Divisor e Lowest Common Multiple
+;;; Greatest Common Divisor e Lowest Common Multiple
 
 (def\ (gcd a b . more)
   (if (null? more)
@@ -1891,7 +1898,7 @@
 (def runFiber runFiber*)
 
 
-;;; Auto Increment/Decrement and Assignement Operator
+;;; Auto Increment/Decrement and Assignement Operators
 
 (defVau (++ plc . args) env
   (def val (eval plc env))

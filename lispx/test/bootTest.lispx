@@ -2808,7 +2808,7 @@
   (defTest getOpt.3
     (signalsError?
      (optDft! #null)
-     SimpleError :type 'simple @getMessage "Option is nil")))
+     SimpleError :type 'simple @getMessage "Option is #null")))
 
 (defSuite some
 

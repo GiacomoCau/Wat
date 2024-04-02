@@ -6,7 +6,7 @@
 
 ;; ``72. An adequate bootstrap is a contradiction in terms.''
 
-;;; Core Built-Ins for Macro and Definitions Forms
+;;; Core Built-Ins for Macro and Definition Forms
 
 (%def def
   #|Match the DEFINIEND-TREE against the VALUE and place resulting
@@ -173,7 +173,7 @@
     (list 'begin (list 'evalMacro #f) form) ))
 
 
-;;; Definitions Forms
+;;; Definition Forms
 
 ; defMacro defVau def\ def*\ rec\ let1\ let1rec\ let\ letrec\ permettono la definizione in due forme
 ;
@@ -1086,7 +1086,7 @@
 (def\ optDft! (opt)
   #|Returns the contents of the OPTION? or signals an error if it is nil.
    |#
-  (optDft opt (simpleError "Option is nil")))
+  (optDft opt (simpleError "Option is #null")))
 
 
 ;;; OptValue Member Member? !Member? OptKey Assoc Member*?
@@ -1343,7 +1343,7 @@
                   :continue (macro forms (mkThrow 'continue forms)) 
                   :until? (macro (b . forms) (list 'if b (mkThrow 'break forms))) 
                   :while? (macro (b . forms) (list 'if b #inert (mkThrow 'break forms)))  ))) 
-            (if (check? forms (2 oo 'for ((2 3)) )) ;loop for
+            (if (check? forms (2 oo 'for ((2 3 Symbol)) )) ;loop for
               (let ( (for (cadr forms))
                      (forms (cons 'begin (cddr forms))) )
                 (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (optDft incr init)) for)))
@@ -1352,7 +1352,7 @@
                   (%loop
                     (catchTag continue (eval forms env) )
                     (eval increments env) )))
-              (if (check? forms (2 oo 'for1 (2 3))) ;loop for1
+              (if (check? forms (2 oo 'for1 (2 3 Symbol))) ;loop for1
                 (let ( ((pt init . incr) (cadr forms))
                        (forms (cons 'begin (cddr forms))) )
                   (def increment (list 'def pt (optDft incr init)))
@@ -1370,14 +1370,13 @@
 
 (def loop %loop)
 
-#| TODO sostituito dal seguente, eliminare
-(defMacro (for1 ((#! Symbol var) init cond . incr) . body)
-  (list* 'loop 'for1 (list* var init incr)
+(defMacro (for1 binding cond . body)
+  (list* 'loop 'for1 binding
     (if (%ignore? cond) body
       (cons (list 'while? cond) body) )))
-|#
-(defMacro (for1 ((#! Symbol var) init . incr) cond . body)
-  (list* 'loop 'for1 (list* var init incr)
+
+(defMacro (for bindings cond . body)
+  (list* 'loop 'for bindings
     (if (%ignore? cond) body
       (cons (list 'while? cond) body) )))
 
@@ -1410,11 +1409,11 @@
             ((#! (and Integer (> 0)) times) (eval times env))
             (env (newEnv env var 0)) )
       (loop (def result (apply begin forms env))
-        (if (>= (eval (list '++ var) env) times)
-          (break (if (null? ending) result (apply begin ending env))) )))
+        (break? (>= (eval (list '++ var) env) times)
+          (if (null? ending) result (apply begin ending env)) )))
     (let1 ((#! (and Integer (> 0)) times) (eval times env))
       (loop (def result (apply begin forms env))
-        (if (0? (-- times)) (break result)) ))))
+        (break? (0? (-- times)) result) ))))
 
 (defMacro doTimes ((var times . result) . body)
   (list* 'repeat (list* var times result) body) )
@@ -1544,7 +1543,7 @@
       (loop (min x (car a)) (max y (car a)) (cdr a)) )))
 
 
-;;;; Arrays
+;;; Arrays
 
 (def\ (array->list arr)
   (%array->list #t arr) )
@@ -1973,7 +1972,7 @@
   (lyticOp / 1) )
 
 
-;;;; Greatest Common Divisor e Lowest Common Multiple
+;;; Greatest Common Divisor e Lowest Common Multiple
 
 (def\ (gcd a b . more)
   (if (null? more)
@@ -2116,7 +2115,7 @@
 (def runFiber runFiber*)
 
 
-;;; Auto Increment/Decrement and Assignement Operator
+;;; Auto Increment/Decrement and Assignement Operators
 
 (defVau (++ plc . args) env
   (def val (eval plc env))
