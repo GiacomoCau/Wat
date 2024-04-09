@@ -2,14 +2,17 @@
 <html>
   <head>
     <title>
-      Env
+      5. Env
     </title>
+    <meta charset="UTF-8"/>
     <style>
+      body { font-family: consolas; }
       ul { list-style-type: none; }
       a { text-decoration: none; }
     </style>
   </head>
   <body>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference4.html">
       <input type="button" value="&lt;"/>
     </a>
@@ -20,19 +23,111 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      Env
+      5. Env
     </h2>
+    <ul>
+      <li>
+        The Env are functions that encapsulates mutable values.
+      </li>
+      <li>
+        Calling the env:
+      </li>
+      <li>
+        - without arguments returns the env.
+      </li>
+      <li>
+        - with an attribute return the value of the attribute in the env.
+      </li>
+      <li>
+        - with couples of attribute and value defines or update the attribute with the value in the env.
+      </li>
+      <li>
+        - without bindResult or with bindResult #ignore use as bindResult (bndRes)
+      </li>
+      <li>
+        - with bindResult #inert return #inert
+      </li>
+      <li>
+        - with bindResult :rhs return the right side of the last binding
+      </li>
+      <li>
+        - with bindResult :prv return the previous value of the last binding
+      </li>
+      <li>
+        - with bindResult :obj return the env
+      </li>
+      <li>
+        - without bindType use the bindType :def
+      </li>
+      <li>
+        - with bindType :def define or update the bindings in the env
+      </li>
+      <li>
+        - with bindType :set! update the bindings in env, throws an error if the binding is not defined.
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        $(env)
+      </li>
+      <li>
+        $(env attribute)
+      </li>
+      <li>
+        $(env attribute value . attributes)
+      </li>
+      <li>
+        $(env bindType attribute value . attributes)
+      </li>
+      <li>
+        $(env bindResult attribute value . attributes)
+      </li>
+      <li>
+        $(env bindType bindResult attribute value . attributes)
+      </li>
+      <li>
+        $(syntax attributes (attribute value . attributes))
+      </li>
+      <li>
+        $(syntax attribute (or Symbol Keyword String))
+      </li>
+      <li>
+        $(syntax bindResult (or #ignore #inert :rhs :prv :obj))  
+      </li>
+      <li>
+        $(syntax bindType (or :def :set!))  
+      </li>
+    </ul>
     <div>
       <h3>
         newEnv
       </h3>
       <ul>
         <li>
-          Create a new environment with an optional PARENT-ENVIRONMENT? in
-          which bindings are looked up if they are not found.
+          Create a new environment with an optional PARENT environment in which bindings are looked up if they are not found.
+          <br/>
+            The BINDINGS must be of even length, and alternately contain bindings names (symbols, keywords or string) and values.
+          <br/>
+            When called with an obj the obj bindings also become env bindings.
         </li>
         <li>
-          $(fn parentEnvironment?)
+          $(fn)
+        </li>
+        <li>
+          $(fn parent . bindings)
+        </li>
+        <li>
+          $(fn parent obj)
+        </li>
+        <li>
+          $(syntax parent (or () Env))
+        </li>
+        <li>
+          $(syntax bindings (or () (attribute value . bindings)))
+        </li>
+        <li>
+          $(syntax attribute (or Symbol Keyword String))
         </li>
         <li>
           $(type function)
@@ -48,16 +143,17 @@
           Return the current environment.
         </li>
         <li>
-          $(fn parent?)
+          $(fn)
         </li>
         <li>
           $(type fexpr)
         </li>
         <li>
-          $(derivation (vau () environment environment)))
+          $(derivation (vau () environment environment))
         </li>
       </ul>
     </div>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference4.html">
       <input type="button" value="&lt;"/>
     </a>

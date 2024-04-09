@@ -140,6 +140,7 @@ public class Vm {
 	boolean prStk = false; // print stack
 	boolean prWrn = false; // print warning
 	boolean prMap = false; // print error map entry
+	boolean prInert = false; // print inert
 	boolean aQuote = true; // auto quote list
 	boolean hdlAny = true; // any value for catch hadler
 	
@@ -452,6 +453,7 @@ public class Vm {
 	// Box, Obj, Condition, Error
 	public class Box implements ArgsList {
 		Object value;
+		public Box () { this.value = boxDft; }
 		public Box (Object val) { this.value = val; }
 		@Override public Object apply(List o) { // () | (value) | (:key value)
 			var chk = checkR(this, o, 0, 2);
@@ -908,7 +910,7 @@ public class Vm {
 				if (tag != ignore && thw instanceof Value val && val.tag != tag) throw thw; 
 				if (hdl != ignore) return combine2(null, e, tag, hdl, thw);
 				if (thw instanceof Value val) return val.value;
-				throw thw instanceof Error err ? err : new Error("catch exception: " + Vm.this.toString(thw.getClass()), thw);
+				throw thw instanceof Condition cond ? cond : new Error("catch exception: " + Vm.this.toString(thw.getClass()), thw);
 			}
 		}
 		public Object combine2(Resumption r, Env e, Object tag, Object hdl, Throwable thw) {
@@ -1667,10 +1669,11 @@ public class Vm {
 				//"%obj?", wrap(new JFun("%Obj?", (Function<Object, Boolean>) obj-> obj instanceof Obj )),
 				"%new", wrap(new JFun("%New",
 					(n,o)-> checkM(n, o, 1,
-						or( list(2, Box.class),
+						or( list(1, 2, Box.class),
 							list(1, more, Obj.class,
 								or( list(or(Symbol.class, Keyword.class, String.class), Any.class),
-									list(1, more, Throwable.class, or(Symbol.class, Keyword.class, String.class), Any.class),
+									list(1, more, Throwable.class,
+										or(Symbol.class, Keyword.class, String.class), Any.class),
 									list(1, more, String.class,
 										or(	list(or(Symbol.class, Keyword.class, String.class), Any.class),
 											list(1, more, Throwable.class, or(Symbol.class, Keyword.class, String.class), Any.class) )))))),
@@ -1690,7 +1693,7 @@ public class Vm {
 				"%cddr", wrap(new JFun("%Cddr", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().cdr(1) )),
 				"%cons", wrap(new JFun("%Cons", (n,o)-> checkR(n, o, 1, 2), (l,o)-> cons(o.car, l == 1 ? null : o.car(1)) )),
 				"%null?", wrap(new JFun("%Null?", (Function<Object, Boolean>) obj-> obj == null)),
-				"%!null?", wrap(new JFun("%!Null?", (Function<Object, Boolean>) obj-> obj != null)),
+				//"%!null?", wrap(new JFun("%!Null?", (Function<Object, Boolean>) obj-> obj != null)),
 				"%cons?", wrap(new JFun("%Cons?", (Function<Object, Boolean>) obj-> obj instanceof Cons)),
 				//"%atom?", wrap(new JFun("%Cons?", (Function<Object, Boolean>) obj-> !(obj instanceof Cons))),
 				// List
@@ -1835,6 +1838,7 @@ public class Vm {
 				"prStk", wrap(new JFun("PrStk", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prStk : inert(prStk=o.car()) )),
 				"prWrn", wrap(new JFun("PrWrn", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prWrn : inert(prWrn=o.car()) )),
 				"prMap", wrap(new JFun("PrMap", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prMap : inert(prMap=o.car()) )),
+				"prInert", wrap(new JFun("PrInert", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prInert : inert(prInert=o.car()) )),
 				"hdlAny", wrap(new JFun("HdlAny", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? hdlAny : inert(hdlAny=o.car()) ))
 			)
 		);
@@ -1888,7 +1892,9 @@ public class Vm {
 				case "":
 					break loop;
 				case String exp: try {
-					print(eval(exp));
+					var val = eval(exp);
+					if (!prInert && val == inert) break;
+					print(val);
 				}
 				catch (Throwable thw) {
 					if (prStk)

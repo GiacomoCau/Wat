@@ -7,7 +7,7 @@
     (w (@new PrintWriter "reference.txt")) )
   (def n 0)
   (def print (let1 (print print) (\ (l) #;(print l) (@println w l))))
-  (for (l (@readLine r)) (!null? l)
+  (for (l (@readLine r)) (! (null? l))
       (if (@startsWith l ";;;") (then (print ($ "\n" l)) (continue)))
       (if (! (@startsWith l "\x28;def")) (continue))
       (loop

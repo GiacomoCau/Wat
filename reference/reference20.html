@@ -2,14 +2,17 @@
 <html>
   <head>
     <title>
-      Classes
+      20. Classes
     </title>
+    <meta charset="UTF-8"/>
     <style>
+      body { font-family: consolas; }
       ul { list-style-type: none; }
       a { text-decoration: none; }
     </style>
   </head>
   <body>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference19.html">
       <input type="button" value="&lt;"/>
     </a>
@@ -20,7 +23,7 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      Classes
+      20. Classes
     </h2>
     <div>
       <h3>
@@ -35,6 +38,9 @@
         </li>
         <li>
           $(type function)
+        </li>
+        <li>
+          $(derivation (symbol (@getSimpleName class)))) 
         </li>
       </ul>
     </div>
@@ -51,6 +57,9 @@
         </li>
         <li>
           $(type function)
+        </li>
+        <li>
+          $(derivation (if (null? object) #null (@getClass object))) 
         </li>
       </ul>
     </div>
@@ -71,13 +80,17 @@
       <ul>
         <li>
           Return true if the CLASS is a subclass of the SUPERCLASS, false otherwise.
-          A class is considered a subclass of itself.
+          <br/>
+            A class is considered a subclass of itself.
         </li>
         <li>
           $(fn (class superclass))
         </li>
         <li>
           $(type function)
+        </li>
+        <li>
+          $(derivation (@isAssignableFrom superClass class))) 
         </li>
       </ul>
     </div>
@@ -95,8 +108,12 @@
         <li>
           $(type function)
         </li>
+        <li>
+          $(derivation (if (null? class) (null? object) (null? object) #f (subClass? (classOf object) class))) 
+        </li>
       </ul>
     </div>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference19.html">
       <input type="button" value="&lt;"/>
     </a>

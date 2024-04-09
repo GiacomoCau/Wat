@@ -2,14 +2,17 @@
 <html>
   <head>
     <title>
-      Macro
+      2. Macro
     </title>
+    <meta charset="UTF-8"/>
     <style>
+      body { font-family: consolas; }
       ul { list-style-type: none; }
       a { text-decoration: none; }
     </style>
   </head>
   <body>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference1.html">
       <input type="button" value="&lt;"/>
     </a>
@@ -20,7 +23,7 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      Macro
+      2. Macro
     </h2>
     <div>
       <h3>
@@ -39,12 +42,15 @@
       <ul>
         <li>
           Create a macro from an EXPANDER operator.
-          A macro is an operator that receives an operand and produces a form
-          (by calling the expander with the operand as argument)
-          that is then evaluated in place of the operand.
+          <br/>
+            A macro is an operator that receives an operand and produces a form
+          <br/>
+            (by calling the expander with the operand as argument)
+          <br/>
+            that is then evaluated in place of the operand.
         </li>
         <li>
-          $(fn (expander))
+          $(fn expander)
         </li>
         <li>
           $(type function)
@@ -60,7 +66,7 @@
           Create an anonymous macro with the given PARAMETER-TREE and FORMS.
         </li>
         <li>
-          $(fn (parameterTree . forms))
+          $(fn parameterTree . forms)
         </li>
         <li>
           $(type macro)
@@ -73,10 +79,17 @@
       </h3>
       <ul>
         <li>
-          (def expand
+          Expands a macro rather than evaluates it.
+        </li>
+        <li>
+          $(fn form)
+        </li>
+        <li>
+          $(type macro)
         </li>
       </ul>
     </div>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference1.html">
       <input type="button" value="&lt;"/>
     </a>

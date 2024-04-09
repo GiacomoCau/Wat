@@ -2,14 +2,17 @@
 <html>
   <head>
     <title>
-      Obj
+      6. Obj
     </title>
+    <meta charset="UTF-8"/>
     <style>
+      body { font-family: consolas; }
       ul { list-style-type: none; }
       a { text-decoration: none; }
     </style>
   </head>
   <body>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference5.html">
       <input type="button" value="&lt;"/>
     </a>
@@ -20,8 +23,64 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      Obj
+      6. Obj
     </h2>
+    <ul>
+      <li>
+        The Obj are functions that encapsulates mutable values.
+      </li>
+      <li>
+        Calling the obj:
+      </li>
+      <li>
+        - without arguments returns the env.
+      </li>
+      <li>
+        - with an attribute return the value of the attribute in the obj.
+      </li>
+      <li>
+        - with couples of attribute and value defines or update the attribute with the value in the obj.
+      </li>
+      <li>
+        - without bindResult or with bindResult #ignore use as bindResult (bndRes)
+      </li>
+      <li>
+        - with bindResult #inert return #inert
+      </li>
+      <li>
+        - with bindResult :rhs return the right side of the last binding
+      </li>
+      <li>
+        - with bindResult :prv return the previous value of the last binding
+      </li>
+      <li>
+        - with bindResult :obj return the obj
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        $(obj)
+      </li>
+      <li>
+        $(obj attribute)
+      </li>
+      <li>
+        $(obj attribute value . attributes)
+      </li>
+      <li>
+        $(obj bindResult attribute value . attributes)
+      </li>
+      <li>
+        $(syntax attributes (attribute value . attributes))
+      </li>
+      <li>
+        $(syntax attribute (or Symbol Keyword String))
+      </li>
+      <li>
+        $(syntax bindResult (or #ignore #inert :rhs :prv :obj))  
+      </li>
+    </ul>
     <div>
       <h3>
         new
@@ -29,11 +88,29 @@
       <ul>
         <li>
           Create a new instance of CLASS (that must be a `standard-class').
-          The SLOT-INITS must be of even length, and alternately contain slot
-          names (symbols, typically keywords) and values.
+          <br/>
+            The BINDINGS must be of even length, and alternately contain bindings names (symbols, keywords or string) and values.
         </li>
         <li>
-          $(fn (class . slotInits))
+          $(fn boxClass)
+        </li>
+        <li>
+          $(fn boxClass value)
+        </li>
+        <li>
+          $(fn objClass . bindings)
+        </li>
+        <li>
+          $(fn objClass string . bindings)
+        </li>
+        <li>
+          $(fn objClass string throwableObject . bindings)
+        </li>
+        <li>
+          $(syntax bindings (or () (attribute value . bindings)))
+        </li>
+        <li>
+          $(syntax attribute (or Symbol Keyword String))
         </li>
       </ul>
     </div>
@@ -43,10 +120,35 @@
       </h3>
       <ul>
         <li>
-          (defMacro (defObj name class . attr)
+          Define a new instance of CLASS with the given NAME.
+        </li>
+        <li>
+          $(fn name boxClass)
+        </li>
+        <li>
+          $(fn name boxClass value)
+        </li>
+        <li>
+          $(fn name objClass . bindings)
+        </li>
+        <li>
+          $(fn name objClass string . bindings)
+        </li>
+        <li>
+          $(fn name objClass string throwableObject . bindings)
+        </li>
+        <li>
+          $(syntax bindings (or () (attribute value . bindings)))
+        </li>
+        <li>
+          $(syntax attribute (or Symbol Keyword String))
+        </li>
+        <li>
+          $(type macro)
         </li>
       </ul>
     </div>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference5.html">
       <input type="button" value="&lt;"/>
     </a>

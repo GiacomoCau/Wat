@@ -2,14 +2,17 @@
 <html>
   <head>
     <title>
-      Env &amp; Obj
+      7. Env &amp; Obj
     </title>
+    <meta charset="UTF-8"/>
     <style>
+      body { font-family: consolas; }
       ul { list-style-type: none; }
       a { text-decoration: none; }
     </style>
   </head>
   <body>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference6.html">
       <input type="button" value="&lt;"/>
     </a>
@@ -20,7 +23,7 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      Env &amp; Obj
+      7. Env &amp; Obj
     </h2>
     <div>
       <h3>
@@ -28,13 +31,22 @@
       </h3>
       <ul>
         <li>
-          Return true if the SYMBOL or KEYWORD is bound in the ENVIRONMENT or OBJ, false otherwise.
+          Return true if the SYMBOL or KEYWORD or STRING is bound in the ENVIRONMENT or OBJ, false otherwise.
         </li>
         <li>
-          $(fn (symbol environment))
+          $(fn attribute object)
+        </li>
+        <li>
+          $(syntax attribute (or Symbol Keyword String))
+        </li>
+        <li>
+          $(syntax object (or Env Obj))
         </li>
         <li>
           $(type function)
+        </li>
+        <li>
+          $(derivation (@isBound object attribute))
         </li>
       </ul>
     </div>
@@ -44,27 +56,22 @@
       </h3>
       <ul>
         <li>
-          (def value %value)
+          Return the value of SYMBOL or KEYWORD or STRING is bound in the ENVIRONMENT or OBJ, #null otherwise.
         </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        getSlot
-      </h3>
-      <ul>
         <li>
-          Return the value of the slot named SLOT-NAME of the OBJECT.
+          $(fn attribute object)
         </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        setSlot
-      </h3>
-      <ul>
         <li>
-          Set the value of the slot named SLOT-NAME of the OBJECT to VALUE.
+          $(syntax attribute (or Symbol Keyword String))
+        </li>
+        <li>
+          $(syntax object (or Env Obj))
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (@value object attribute))
         </li>
       </ul>
     </div>
@@ -74,10 +81,76 @@
       </h3>
       <ul>
         <li>
-          Return true if the slot named SLOT-NAME of the OBJECT is set, false otherwise.
+          Return true if the SYMBOL or KEYWORD or STRING is bound in the ENVIRONMENT or OBJ, false otherwise.
+        </li>
+        <li>
+          $(fn object attribute)
+        </li>
+        <li>
+          $(syntax object (or Env Obj))
+        </li>
+        <li>
+          $(syntax attribute (or Symbol Keyword String))
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (@isBound object attribute))
         </li>
       </ul>
     </div>
+    <div>
+      <h3>
+        getSlot
+      </h3>
+      <ul>
+        <li>
+          Return the value of SYMBOL or KEYWORD or STRING is bound in the ENVIRONMENT or OBJ, error otherwise.
+        </li>
+        <li>
+          $(fn object attribute)
+        </li>
+        <li>
+          $(syntax object (or Env Obj))
+        </li>
+        <li>
+          $(syntax attribute (or Symbol Keyword String))
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (object attribute))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        setSlot
+      </h3>
+      <ul>
+        <li>
+          Set the value of SYMBOL or KEYWORD or STRING in the ENVIRONMENT or OBJ to VALUE.
+        </li>
+        <li>
+          $(fn object attribute value)
+        </li>
+        <li>
+          $(syntax object (or Env Obj))
+        </li>
+        <li>
+          $(syntax attribute (or Symbol Keyword String))
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (object attribute value))
+        </li>
+      </ul>
+    </div>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference6.html">
       <input type="button" value="&lt;"/>
     </a>

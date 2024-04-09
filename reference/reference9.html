@@ -2,14 +2,17 @@
 <html>
   <head>
     <title>
-      List
+      9. List
     </title>
+    <meta charset="UTF-8"/>
     <style>
+      body { font-family: consolas; }
       ul { list-style-type: none; }
       a { text-decoration: none; }
     </style>
   </head>
   <body>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference8.html">
       <input type="button" value="&lt;"/>
     </a>
@@ -20,7 +23,7 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      List
+      9. List
     </h2>
     <div>
       <h3>
@@ -28,13 +31,16 @@
       </h3>
       <ul>
         <li>
-          Append two lists.  The first one must be proper and is copied.  The
-          second one is not copied (and doesn't even have to be a list). It
-          becomes the `cdr' of the final cons of the first list, or is returned
-          directly if the first list is empty.
+          Append two lists. The first one must be proper and is copied.
+          <br/>
+            The second one is not copied (and doesn't even have to be a list).
+          <br/>
+            It becomes the `cdr' of the final cons of the first list,
+          <br/>
+            or is returned directly if the first list is empty.
         </li>
         <li>
-          $(fn (list1 list2))
+          $(fn list1 list2)
         </li>
         <li>
           $(type function)
@@ -47,7 +53,13 @@
       </h3>
       <ul>
         <li>
-          (def len %len)
+          Return the number of elements in the LIST.
+        </li>
+        <li>
+          $(fn list)
+        </li>
+        <li>
+          $(type function)
         </li>
       </ul>
     </div>
@@ -60,10 +72,13 @@
           Return true if the OBJECT is a list, false otherwise.
         </li>
         <li>
-          $(fn (object))
+          $(fn object)
         </li>
         <li>
           $(type function)
+        </li>
+        <li>
+          $(derivation (\ (object) (type? object Keyword)))
         </li>
       </ul>
     </div>
@@ -76,13 +91,14 @@
           Reverse the LIST.
         </li>
         <li>
-          $(fn (list))
+          $(fn list)
         </li>
         <li>
           $(type function)
         </li>
       </ul>
     </div>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference8.html">
       <input type="button" value="&lt;"/>
     </a>

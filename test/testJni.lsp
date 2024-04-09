@@ -125,6 +125,12 @@ cls
 (%def get (getMethod &Wat.Prova$Cls "get"))
 (get cls)
 
+
+;get method and constructor senza specificare gli argomenti
+(@getExecutable &Wat.Utility &java.lang.Float "new" &java.lang.String)
+(@getExecutable &Wat.Utility &java.lang.Integer "compare")
+(@getField &Wat.Utility &java.lang.Integer "MAX_VALUE")
+
 (@remove (%theEnv) 'a)
 
 ;(prTrc 0)

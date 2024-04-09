@@ -697,20 +697,39 @@
     (eq? "foo" (symbolName 'foo)))
 
   (defTest symbolName.2
-    (eq? "foo" (symbolName 'foo)))
+    (signalsError?
+      (eq? "foo" (symbolName :foo))
+      Error :type 'type :datum :foo :expected 'Symbol))
+
+  (defTest symbolName.3
+    (signalsError?
+      (symbolName)
+      Error :type 'match :operands# +1))
 
   (defTest symbolName.4
-    (eq? "foo" (symbolName :foo)))
-
-  (defTest symbolName.5
     (signalsError?
-     (symbolName)
-     Error :type 'match :operands# +1))
+      (symbolName 12)
+      Error :type 'type :datum 12 :expected 'Symbol)) )
 
-  (defTest symbolName.6
+(defSuite keywordName
+
+  (defTest keywordName.1
+    (eq? "foo" (keywordName :foo)))
+
+  (defTest keywordName.2
     (signalsError?
-     (symbolName 12)
-     Error :type 'type :datum 12 :expected 'Intern)))
+      (eq? "foo" (keywordName 'foo))
+      Error :type 'type :datum 'foo :expected 'Keyword))
+
+  (defTest keywordName.3
+    (signalsError?
+      (keywordName)
+      Error :type 'match :operands# +1))
+
+  (defTest keywordName.4
+    (signalsError?
+      (keywordName 12)
+      Error :type 'type :datum 12 :expected 'Keyword)) )
 
 (defSuite wrap
 
@@ -2357,17 +2376,17 @@
   (defTest obj.3
     (signalsError?
      (new 3)
-     Error :type 'type :datum '(3) :expected '(or (2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) ))
+     Error :type 'type :datum '(3) :expected '(or (1 2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) ))
 
   (defTest obj.4
     (signalsError?
      (new Object)
-     Error :type 'type :datum '(&java.lang.Object) :expected '(or (2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) ))
+     Error :type 'type :datum '(&java.lang.Object) :expected '(or (1 2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) ))
 
   (defTest obj.5
     (signalsError?
      (new Obj :x)
-     Error :type 'type :datum '(&Wat.Vm$Obj :x) :expected '(or (2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) )) )
+     Error :type 'type :datum '(&Wat.Vm$Obj :x) :expected '(or (1 2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) )) )
 
 (defSuite slots
 

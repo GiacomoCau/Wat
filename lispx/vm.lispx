@@ -77,12 +77,12 @@
 
 (%def %nth
   (%\ ([#! (and Integer (>= 0)) i] [#! (or () Cons) lst])
-    (%if (%!null? lst) (@car lst i)
+    (%if (%cons? lst) (@car lst i)
       (error (%new Error "cannot get car" :type 'outOfBounds))) ))
 (%def %nthCdr
   (%\ ([#! (and Integer (>= 0)) i] [#! (or () Cons) lst])
     (%if (%0? i) lst
-      (%if (%!null? lst) (@cdr lst (%- i 1))
+      (%if (%cons? lst) (@cdr lst (%- i 1))
         (error (%new Error "cannot get cdr" :type 'outOfBounds)) ))))
 (%def %take
   (%\ ([#! (and Integer (>= 0)) i] [#! (or () Cons) lst])

@@ -60,3 +60,4 @@
 (def a (tag 'a))
 (def form (tag 'form))
 (def input (tag 'input #t))
+(def meta (tag 'meta #t))

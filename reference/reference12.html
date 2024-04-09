@@ -2,14 +2,17 @@
 <html>
   <head>
     <title>
-      Boolean
+      12. Boolean
     </title>
+    <meta charset="UTF-8"/>
     <style>
+      body { font-family: consolas; }
       ul { list-style-type: none; }
       a { text-decoration: none; }
     </style>
   </head>
   <body>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference11.html">
       <input type="button" value="&lt;"/>
     </a>
@@ -20,7 +23,7 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      Boolean
+      12. Boolean
     </h2>
     <div>
       <h3>
@@ -31,7 +34,7 @@
           Invert the BOOLEAN.
         </li>
         <li>
-          $(fn (boolean))
+          $(fn boolean)
         </li>
         <li>
           $(type function)
@@ -47,7 +50,7 @@
       </h3>
       <ul>
         <li>
-          (def not !)
+          Alias of !.
         </li>
       </ul>
     </div>
@@ -57,10 +60,20 @@
       </h3>
       <ul>
         <li>
-          (def !! %!!)
+          convert a VALUE to BOOLEAN when tTrue != 0.
+        </li>
+        <li>
+          $(fn value)
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (if value #t #f))
         </li>
       </ul>
     </div>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference11.html">
       <input type="button" value="&lt;"/>
     </a>

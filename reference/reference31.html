@@ -2,14 +2,17 @@
 <html>
   <head>
     <title>
-      Block Loop For While Until DoTimes Repeat
+      31. Block Loop For While Until Repeat DoTimes
     </title>
+    <meta charset="UTF-8"/>
     <style>
+      body { font-family: consolas; }
       ul { list-style-type: none; }
       a { text-decoration: none; }
     </style>
   </head>
   <body>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference30.html">
       <input type="button" value="&lt;"/>
     </a>
@@ -20,7 +23,7 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      Block Loop For While Until DoTimes Repeat
+      31. Block Loop For While Until Repeat DoTimes
     </h2>
     <div>
       <h3>
@@ -29,10 +32,14 @@
       <ul>
         <li>
           Establish a block named BLOCK-NAME and evaluate the FORMS as an
-          implicit `begin' inside it.  The forms may use `returnFrom' to
-          nonlocally exit from the block.
-          Note that unlike in Common Lisp, there is no separate namespace for
-          block names; a block is named in the normal variable namespace.
+          <br/>
+            implicit `begin' inside it.  The forms may use `returnFrom' to
+          <br/>
+            nonlocally exit from the block.
+          <br/>
+            Note that unlike in Common Lisp, there is no separate namespace for
+          <br/>
+            block names; a block is named in the normal variable namespace.
         </li>
       </ul>
     </div>
@@ -43,8 +50,10 @@
       <ul>
         <li>
           Abort evaluation and return the optional VALUE? (which lsts to
-          void) from the block named BLOCK-NAME.  It is an error to return from
-          a block whose dynamic extent has ended.
+          <br/>
+            void) from the block named BLOCK-NAME.  It is an error to return from
+          <br/>
+            a block whose dynamic extent has ended.
         </li>
         <li>
           $(fn (blockName . value?))
@@ -58,16 +67,6 @@
       <ul>
         <li>
           Evaluate FORMS while TEST-FORM evaluates to true.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        %loop
-      </h3>
-      <ul>
-        <li>
-          (def %loop
         </li>
       </ul>
     </div>
@@ -97,17 +96,17 @@
       </h3>
       <ul>
         <li>
-          (defMacro (for1 ((#! Symbol var) init cond . incr) . body)
+          (defMacro (for1 binding cond . body)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        for1
+        for
       </h3>
       <ul>
         <li>
-          (defMacro (for1 ((#! Symbol var) init . incr) cond . body)
+          (defMacro (for bindings cond . body)
         </li>
       </ul>
     </div>
@@ -161,26 +160,7 @@
         </li>
       </ul>
     </div>
-    <div>
-      <h3>
-        repeat
-      </h3>
-      <ul>
-        <li>
-          (defVau (repeat times . forms) env
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        doTimes
-      </h3>
-      <ul>
-        <li>
-          (defMacro doTimes ((var times . result) . body)
-        </li>
-      </ul>
-    </div>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference30.html">
       <input type="button" value="&lt;"/>
     </a>

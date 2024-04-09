@@ -2,14 +2,17 @@
 <html>
   <head>
     <title>
-      Other Core Built-Ins
+      4. Other Core Built-Ins
     </title>
+    <meta charset="UTF-8"/>
     <style>
+      body { font-family: consolas; }
       ul { list-style-type: none; }
       a { text-decoration: none; }
     </style>
   </head>
   <body>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference3.html">
       <input type="button" value="&lt;"/>
     </a>
@@ -20,7 +23,7 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      Other Core Built-Ins
+      4. Other Core Built-Ins
     </h2>
     <div>
       <h3>
@@ -31,7 +34,7 @@
           Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
         </li>
         <li>
-          $(fn (fun . args)) 
+          $(fn fun . args) 
         </li>
         <li>
           $(type function)
@@ -50,7 +53,7 @@
           Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
         </li>
         <li>
-          $(fn (fun . args)) 
+          $(fn fun . args)
         </li>
         <li>
           $(type function)
@@ -66,12 +69,19 @@
       </h3>
       <ul>
         <li>
-          Match the DEFINIEND-TREE against the VALUE in the ENVIRONMENT,
-          creating or updating existing bindings.  Unlike Common Lisp (or
-          Scheme), we have no `setq' (or `set!') that allows updating arbitrary
-          bindings -- you always need to know the environment a binding is in to
-          change it.  Therefore, we usually use boxes (see below) instead of
-          mutating bindings directly.
+          Match the DEFINIEND-TREE against the VALUE in the ENVIRONMENT, creating or updating existing bindings.
+          <br/>
+            Unlike Common Lisp `setq' (or Scheme `set!') that allows updating arbitrary bindings
+          <br/>
+            you always need to know the environment where a binding is in to change it.
+          <br/>
+            Therefore, we usually use boxes instead of mutating bindings directly.
+        </li>
+        <li>
+          $(fn ep dt value)
+        </li>
+        <li>
+          $(type fexpr)
         </li>
       </ul>
     </div>
@@ -81,7 +91,31 @@
       </h3>
       <ul>
         <li>
-          (def set! %set!)
+          Update the bindings defined of the environment, throws an error if the binding is not defined.
+          <br/>
+            So 'def' match the DEFINIEND-TREE against the VALUE and update the resulting bindings into environment if exist.
+          <br/>
+            without bindResult or with bindResult #ignore use as bindResult (bndRes)
+          <br/>
+            with bindResult #inert return #inert
+          <br/>
+            with bindResult :rhs return the right side of the last binding
+          <br/>
+            with bindResult :prv return the previous value of the last binding
+          <br/>
+            with bindResult :obj return the env
+        </li>
+        <li>
+          $(fn definiendTree value)
+        </li>
+        <li>
+          $(fn definiendTree bindResult value)
+        </li>
+        <li>
+          $(syntax bindResult (or #ignore #inert :rhs :prv))  
+        </li>
+        <li>
+          $(type fexpr)
         </li>
       </ul>
     </div>
@@ -94,7 +128,7 @@
           Return the underlying operator of a FUNCTION.
         </li>
         <li>
-          $(fn (function))
+          $(fn function)
         </li>
         <li>
           $(type function)
@@ -107,10 +141,21 @@
       </h3>
       <ul>
         <li>
-          (defMacro (wrau pt ep . body)
+          Create an anonymous function with the given PARAMETER-TREE and FORMS
+          <br/>
+            which accesses the execution environment rather than the definition environment.
+          <br/>
+            Useful for defining the primitive for dynamically-scoped variables.
+        </li>
+        <li>
+          $(fn pt ep . forms)
+        </li>
+        <li>
+          $(type function)
         </li>
       </ul>
     </div>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference3.html">
       <input type="button" value="&lt;"/>
     </a>

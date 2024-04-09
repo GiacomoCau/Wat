@@ -2,14 +2,17 @@
 <html>
   <head>
     <title>
-      Delimited-Control Operators
+      18. Delimited-Control Operators
     </title>
+    <meta charset="UTF-8"/>
     <style>
+      body { font-family: consolas; }
       ul { list-style-type: none; }
       a { text-decoration: none; }
     </style>
   </head>
   <body>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference17.html">
       <input type="button" value="&lt;"/>
     </a>
@@ -20,8 +23,13 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      Delimited-Control Operators
+      18. Delimited-Control Operators
     </h2>
+    <ul>
+      <li>
+        These operators follow the API put forth in the delimcc library at URL `http://okmij.org/ftp/continuations/implementations.html'.
+      </li>
+    </ul>
     <div>
       <h3>
         takeSubcont
@@ -29,8 +37,10 @@
       <ul>
         <li>
           Abort outwards to the PROMPT.  When the prompt is reached, evaluate
-          the FORMS with NAME bound to the captured continuation (which does not
-          include the prompt).
+          <br/>
+            the FORMS with NAME bound to the captured continuation (which does not
+          <br/>
+            include the prompt).
         </li>
         <li>
           $(fn (prompt symbol . forms))
@@ -47,7 +57,8 @@
       <ul>
         <li>
           Push the PROMPT and evaluate the FORMS inside the prompt.  This
-          delimits the continuation.
+          <br/>
+            delimits the continuation.
         </li>
         <li>
           $(fn (prompt . forms))
@@ -64,7 +75,8 @@
       <ul>
         <li>
           Push the PROMPT and compose the previously captured CONTINUATION
-          inside it.  The FORMS are then evaluated inside the new continuation.
+          <br/>
+            inside it.  The FORMS are then evaluated inside the new continuation.
         </li>
         <li>
           $(fn (prompt continuation . forms))
@@ -81,7 +93,8 @@
       <ul>
         <li>
           We don't have `pushSubcont' but for these tests we can emulate it
-          with a `pushDelimSubcont' that pushes an unused prompt.
+          <br/>
+            with a `pushDelimSubcont' that pushes an unused prompt.
         </li>
         <li>
           $(fn (continuation . forms))
@@ -98,7 +111,8 @@
       <ul>
         <li>
           Push a continuation barrier that prevents the FORMS from capturing
-          any continuations to the outside.
+          <br/>
+            any continuations to the outside.
         </li>
         <li>
           $(fn forms)
@@ -108,6 +122,7 @@
         </li>
       </ul>
     </div>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference17.html">
       <input type="button" value="&lt;"/>
     </a>

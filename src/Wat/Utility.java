@@ -15,9 +15,9 @@ import static java.util.Arrays.copyOfRange;
 import static java.util.Arrays.stream;
 import static java.util.Comparator.comparing;
 import static java.util.Map.of;
+import static java.util.regex.Pattern.compile;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -28,8 +28,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map.Entry;
-import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -51,10 +50,28 @@ public class Utility {
 		//out.println(getProperty("stdout.encoding"));
 		//var isr = new InputStreamReader(in, forName("UTF-8"));
 		//for(;;) { var v = read(/*0, isr*/); out.print(v); }
-		out.println(new File("reference/*.html").list().length);
+		//out.println(new File("reference/*.html").list().length);
 		//Files.exists(new Path(" "));
+		stdCtrl();
 	}
 	//*/
+	
+	public static void stdCtrl() {
+		var str = "aa\\n\\\\rx\\rc\\c\\td\\\"f";
+		out.println(str);
+		
+		// toString
+		var pat1 = compile("\\\\[\"nrtbf\\\\]");
+		var map1 = of("\\\"", "\"", "\\n","\n", "\\r","\r", "\\t","\t", "\\b","\b", "\\f","\f", "\\\\", "\\\\\\\\");
+		var res = pat1.matcher(str).replaceAll(mr-> map1.get(mr.group()));
+		out.println(res);
+		
+		//toSource
+		var pat2 = compile("[\"\n\r\t\b\f\\\\]");
+		var map2 = of("\"","\"", "\n","n", "\r","r", "\t","t", "\b","b", "\f","f", "\\","");
+		var org = pat2.matcher(res).replaceAll(mr-> "\\\\" + map2.get(mr.group()));
+		out.println(org);
+	}
 	
 	public static int more = Integer.MAX_VALUE;
 	
@@ -168,21 +185,12 @@ public class Utility {
 		return stream(objects).toList();
 	}
 	
-	private static Set<Entry<String,String>> control = of("\"", "\\\\\"", "\n", "\\\\n", "\t", "\\\\t", "\r", "\\\\r", "\b", "\\\\b", "\f", "\\\\f", "\\\\", "\\\\\\\\").entrySet();
-	private static Pattern isoControl = Pattern.compile("[\\x00-\\x1f\\x7f-\\x9f]");
+	private static Pattern pat1 = compile("\\\\[\"nrtbf\\\\]");
+	private static Map<String,String> map1 = of("\\\"", "\"", "\\n","\n", "\\r","\r", "\\t","\t", "\\b","\b", "\\f","\f", "\\\\", "\\\\\\\\");
 	private static Pattern xEscape = Pattern.compile("\\\\x([0-9a-bA-b]{1,4});");
 	
-	public static String toSource(String s) {
-		for (Entry<String,String> e: control) s = s.replaceAll(e.getKey(), e.getValue());
-		var m = isoControl.matcher(s);
-		if (!m.find()) return s;
-		var sb = new StringBuffer();
-		do m.appendReplacement(sb, "\\\\x" + toHexString(m.group().charAt(0)) + ";"); while (m.find()); 
-		return m.appendTail(sb).toString();
-	}
-	
 	public static String toString(String s) {
-		for (Entry<String,String> e: control) s = s.replaceAll(e.getValue(), e.getKey());
+		s = pat1.matcher(s).replaceAll(mr-> map1.get(mr.group()));
 		var m = xEscape.matcher(s);
 		if (!m.find()) return s;
 		var sb = new StringBuffer();
@@ -190,11 +198,26 @@ public class Utility {
 		return m.appendTail(sb).toString();
 	}
 	
+	private static Pattern pat2 = compile("[\"\n\r\t\b\f\\\\]");
+	private static Map<String,String> map2 = of("\"","\"", "\n","n", "\r","r", "\t","t", "\b","b", "\f","f", "\\","");
+	private static Pattern isoControl = Pattern.compile("[\\x00-\\x1f\\x7f-\\x9f]");
+	
+	public static String toSource(String s) {
+		s = pat2.matcher(s).replaceAll(mr-> "\\\\" + map2.get(mr.group()));
+		var m = isoControl.matcher(s);
+		if (!m.find()) return s;
+		var sb = new StringBuffer();
+		do m.appendReplacement(sb, "\\\\x" + toHexString(m.group().charAt(0)) + ";"); while (m.find()); 
+		return m.appendTail(sb).toString();
+	}
+	
 	public static String encode(String a) {
 		if (a == null) return "";
 		char c;
 		StringBuffer sb = new StringBuffer(2*a.length());
-		for (int i = 0, end = a.length(); i < end; i++) {
+		int i = 0, end = a.length();
+		for (; i < end && (c = a.charAt(i)) == ' '; i++) sb.append("&nbsp;");
+		for (; i < end; i++) {
 			switch (c = a.charAt(i)) {
 				case '<': sb.append("&lt;"); break;
 				case '>': sb.append("&gt;"); break;
@@ -209,6 +232,7 @@ public class Utility {
 	}
 
 	enum BinOp {
+		//  Integer         Long            BigInteger                           Double                   BigDecimal 
 		Pls((a, b)-> a+b,   (a, b)-> a+b,   (a, b)-> a.add(b),                   (a, b)-> a+b,            (a, b)-> a.add(b)            ),
 		Mns((a, b)-> a-b,   (a, b)-> a-b,   (a, b)-> a.subtract(b),              (a, b)-> a-b,            (a, b)-> a.subtract(b)       ),
 		Pwr((a, b)-> a*b,   (a, b)-> a*b,   (a, b)-> a.multiply(b),              (a, b)-> a*b,            (a, b)-> a.multiply(b)       ),
@@ -252,6 +276,10 @@ public class Utility {
 	
 	public static boolean isInstance(Object o, Class ... cs) {
 		for (Class c: cs) if (c.isInstance(o)) return true;
+		return false;
+	}
+	public static boolean isSubclass(Class c0, Class ... cs) {
+		for (Class c: cs) if (c.isAssignableFrom(c0)) return true;
 		return false;
 	}
 	
@@ -671,6 +699,9 @@ public class Utility {
 				else if (inUSymbol) switch (c) {
 					case '\\'-> inEscape = true;
 					case '|'-> inUSymbol = false;
+					/*default-> {
+						if (c <= 32) inUSymbol = false;
+					}*/
 				}
 				else if (inComment) switch (c) {
 					case '"'-> inString = true;

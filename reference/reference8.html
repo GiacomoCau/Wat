@@ -2,14 +2,17 @@
 <html>
   <head>
     <title>
-      Cons
+      8. Cons
     </title>
+    <meta charset="UTF-8"/>
     <style>
+      body { font-family: consolas; }
       ul { list-style-type: none; }
       a { text-decoration: none; }
     </style>
   </head>
   <body>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference7.html">
       <input type="button" value="&lt;"/>
     </a>
@@ -20,18 +23,8 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      Cons
+      8. Cons
     </h2>
-    <div>
-      <h3>
-        car!
-      </h3>
-      <ul>
-        <li>
-          Return the contents of the address part of the register if decrement part of the register is null, else error.
-        </li>
-      </ul>
-    </div>
     <div>
       <h3>
         caar
@@ -39,6 +32,18 @@
       <ul>
         <li>
           Return the `car' of the `car' of the CONS.
+        </li>
+        <li>
+          $(fn cons)
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (\ (((caar . #_) . #_)) caar))
+        </li>
+        <li>
+          $(derivation (car (car cons)))
         </li>
       </ul>
     </div>
@@ -50,6 +55,15 @@
         <li>
           Return the `car' of the `cdr' of the CONS if 'cddr' is null, else error.
         </li>
+        <li>
+          $(fn cons)
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (\ ((#_ cadr)) cadr))
+        </li>
       </ul>
     </div>
     <div>
@@ -59,6 +73,18 @@
       <ul>
         <li>
           Return the `cdr' of the `car' of the CONS.
+        </li>
+        <li>
+          $(fn cons)
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (\ (((#_ . cdar) . #_)) cdar))
+        </li>
+        <li>
+          $(derivation (cdr (car cons)))
         </li>
       </ul>
     </div>
@@ -71,13 +97,19 @@
           Return the `cdr' of the `cdr' of the CONS.
         </li>
         <li>
-          $(derivation (cdr (cdr cons)))
+          $(fn cons)
         </li>
         <li>
-          $(derivation (\ ((#_ . (#_ . cddr))) cddr))
+          $(type function)
         </li>
         <li>
           $(derivation (\ ((#_ #_ . cddr)) cddr))
+        </li>
+        <li>
+          $(derivation (cdr (cdr cons)))
+        </li>
+        <li>
+          $(derivation (@cdr cons 1))
         </li>
       </ul>
     </div>
@@ -87,33 +119,16 @@
       </h3>
       <ul>
         <li>
-          (def\ (cons! car) (cons car))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        null?
-      </h3>
-      <ul>
-        <li>
-          Return true if the OBJECT is nil, false otherwise.
+          Create a cons with the given CAR and #null.
         </li>
         <li>
-          $(fn (object))
+          $(fn car)
         </li>
         <li>
           $(type function)
         </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        !null?
-      </h3>
-      <ul>
         <li>
-          (def !null? %!null?)
+          $(derivarion (cons car))
         </li>
       </ul>
     </div>
@@ -126,7 +141,7 @@
           Return element number N of LIST, where the `car' is element zero.
         </li>
         <li>
-          $(fn (n list))
+          $(fn n list)
         </li>
         <li>
           $(type function)
@@ -142,13 +157,14 @@
           Returns the tail of LIST that would be obtained by calling `cdr' N times in succession.
         </li>
         <li>
-          $(fn (n list))
+          $(fn n list)
         </li>
         <li>
           $(type function)
         </li>
       </ul>
     </div>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference7.html">
       <input type="button" value="&lt;"/>
     </a>

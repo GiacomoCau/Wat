@@ -2,14 +2,17 @@
 <html>
   <head>
     <title>
-      Syntetic Expression
+      35. Syntetic Expression
     </title>
+    <meta charset="UTF-8"/>
     <style>
+      body { font-family: consolas; }
       ul { list-style-type: none; }
       a { text-decoration: none; }
     </style>
   </head>
   <body>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference34.html">
       <input type="button" value="&lt;"/>
     </a>
@@ -20,18 +23,46 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      Syntetic Expression
+      35. Syntetic Expression
     </h2>
+    <ul>
+      <li>
+        &nbsp;stolen from Anarki :-)
+      </li>
+    </ul>
     <div>
       <h3>
         %´
       </h3>
       <ul>
         <li>
-          (defMacro %´ ((#! (or Symbol List) x))
+          !
+          <br/>
+            ´a;b -&gt; (compose a b c)
+          <br/>
+            ´a;b;c -&gt; (compose* a b c)
+          <br/>
+            ´!a -&gt; (compose ! a)
+          <br/>
+            ´a…b -&gt; (a b)
+          <br/>
+            ´a…'b -&gt; (a 'b)
+          <br/>
+            ´a…'b…c -&gt; (a 'b c)
+          <br/>
+            ´a,b -&gt; (curry a b)
+          <br/>
+            ´a,'b,c -&gt; (curry* a 'b c) 
+          <br/>
+            ´a,_,'b,c -&gt; (\ (_) (a _ 'b c))
+          <br/>
+            ´dd,_c,1,_b,&quot;a&quot;,_a,_a,'c,_,:ff,_* -&gt; (\ (_ _a _b _c . _*) (dd _c 1 _b &quot;a&quot; _a _a 'c _ :ff _*))
+          <br/>
+            ´(dd _c 1 _b &quot;a&quot; _a _a 'c _ :ff _*) -&gt; (\ (_ _a _b _c . _*) (dd _c 1 _b &quot;a&quot; _a _a 'c _ :ff _*))
         </li>
       </ul>
     </div>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference34.html">
       <input type="button" value="&lt;"/>
     </a>

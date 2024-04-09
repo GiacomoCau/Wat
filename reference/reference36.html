@@ -2,14 +2,17 @@
 <html>
   <head>
     <title>
-      Box
+      36. Box
     </title>
+    <meta charset="UTF-8"/>
     <style>
+      body { font-family: consolas; }
       ul { list-style-type: none; }
       a { text-decoration: none; }
     </style>
   </head>
   <body>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference35.html">
       <input type="button" value="&lt;"/>
     </a>
@@ -20,24 +23,67 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      Box
+      36. Box
     </h2>
+    <ul>
+      <li>
+        The Box are functions that encapsulates a mutable value.
+      </li>
+      <li>
+        Calling the box:
+      </li>
+      <li>
+        - without arguments returns the value in the box.
+      </li>
+      <li>
+        - with an attribute update the value in the box.
+      </li>
+      <li>
+        - without bindResult or with bindResult #ignore use as bindResult (bndRes)
+      </li>
+      <li>
+        - with bindResult #inert return #inert
+      </li>
+      <li>
+        - with bindResult :rhs return the right side of the last binding
+      </li>
+      <li>
+        - with bindResult :prv return the previous value of the last binding
+      </li>
+      <li>
+        - with bindResult :obj return the box
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        $(box)
+      </li>
+      <li>
+        $(box value)
+      </li>
+      <li>
+        $(box bindResult value)
+      </li>
+      <li>
+        $(syntax bindResult (or #ignore #inert :rhs :prv :obj))  
+      </li>
+    </ul>
     <div>
       <h3>
         newBox
       </h3>
       <ul>
         <li>
-          Create a new box with the optional INITIAL-VALUE?.  A box is a
-          function that encapsulates a mutable value.  Calling the box without
-          arguments returns the value.  Calling the box with an argument sets
-          the value.
+          Create a new box with the optional VALUE.
+          <br/>
+            without VALUE use as VALUE (boxDft).
         </li>
         <li>
-          $(fn initialValue?)
+          $(fn)
         </li>
         <li>
-          $(type function)
+          $(fn value)
         </li>
       </ul>
     </div>
@@ -51,6 +97,7 @@
         </li>
       </ul>
     </div>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference35.html">
       <input type="button" value="&lt;"/>
     </a>

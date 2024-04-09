@@ -2,14 +2,17 @@
 <html>
   <head>
     <title>
-      Lexical Bindings
+      22. Lexical Bindings
     </title>
+    <meta charset="UTF-8"/>
     <style>
+      body { font-family: consolas; }
       ul { list-style-type: none; }
       a { text-decoration: none; }
     </style>
   </head>
   <body>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference21.html">
       <input type="button" value="&lt;"/>
     </a>
@@ -20,7 +23,7 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      Lexical Bindings
+      22. Lexical Bindings
     </h2>
     <div>
       <h3>
@@ -139,7 +142,8 @@
       <ul>
         <li>
           Establish BINDINGS serially during the evaluation of FORMS, so that
-          every binding can refer to previous ones.
+          <br/>
+            every binding can refer to previous ones.
         </li>
         <li>
           $(syntax bindings ((definiendTree value) . bindings))
@@ -153,11 +157,16 @@
       <ul>
         <li>
           Labelled recursive loop, analogous to Scheme's named `let'.
-          Lexically bind a function named NAME with one PARAMETER for every
-          INITIALIZER and the FORMS as body.  Then immediately apply the
-          function to a list containing one VALUE for every INITIALIZER and
-          return the result.  The function is bound per `labels' so it can
-          recursively refer to itself.
+          <br/>
+            Lexically bind a function named NAME with one PARAMETER for every
+          <br/>
+            INITIALIZER and the FORMS as body.  Then immediately apply the
+          <br/>
+            function to a list containing one VALUE for every INITIALIZER and
+          <br/>
+            return the result.  The function is bound per `labels' so it can
+          <br/>
+            recursively refer to itself.
         </li>
         <li>
           $(fn (initializers . body))
@@ -177,7 +186,8 @@
       <ul>
         <li>
           Establish BINDINGS parallelly during the evaluation of FORMS, so
-          that no binding can refer to the other ones.
+          <br/>
+            that no binding can refer to the other ones.
         </li>
         <li>
           $(fn (bindings . body))
@@ -197,7 +207,8 @@
       <ul>
         <li>
           Establish FUNCTION-BINDINGS parallelly during evaluation of FORMS,
-          so that no function can refer to the other ones.
+          <br/>
+            so that no function can refer to the other ones.
         </li>
         <li>
           $(syntax functionBinding (name parameterTree . forms))
@@ -211,7 +222,8 @@
       <ul>
         <li>
           Utility to establish BINDINGS recursively during the evaluation of
-          FORMS.  Used by `labels'.
+          <br/>
+            FORMS.  Used by `labels'.
         </li>
       </ul>
     </div>
@@ -232,13 +244,15 @@
       <ul>
         <li>
           Establish FUNCTION-BINDINGS recursively during evaluation of FORMS,
-          so that every function can refer to the other ones.
+          <br/>
+            so that every function can refer to the other ones.
         </li>
         <li>
           $(syntax functionBinding (name parameterTree . forms))
         </li>
       </ul>
     </div>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference21.html">
       <input type="button" value="&lt;"/>
     </a>

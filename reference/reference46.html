@@ -2,14 +2,17 @@
 <html>
   <head>
     <title>
-      Fibers
+      46. Fibers
     </title>
+    <meta charset="UTF-8"/>
     <style>
+      body { font-family: consolas; }
       ul { list-style-type: none; }
       a { text-decoration: none; }
     </style>
   </head>
   <body>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference45.html">
       <input type="button" value="&lt;"/>
     </a>
@@ -20,8 +23,19 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      Fibers
+      46. Fibers
     </h2>
+    <ul>
+      <li>
+        The following implementation of fibers follows the one at URL `http://okmij.org/ftp/continuations/implementations.html#dget-wind'
+      </li>
+      <li>
+        We're calling them fibers instead of coroutines so as to not conflict with the built-in coroutine operators.
+      </li>
+      <li>
+        We use it for testing that built-in operators properly suspend and resume.
+      </li>
+    </ul>
     <div>
       <h3>
         fiberPrompt
@@ -89,7 +103,8 @@
       <ul>
         <li>
           Get all values yielded by a fiber, and its final result, and collect them in a list.
-          Uses the optional list of values to sent to the fiber with `fiberResume'.
+          <br/>
+            Uses the optional list of values to sent to the fiber with `fiberResume'.
         </li>
       </ul>
     </div>
@@ -133,6 +148,7 @@
         </li>
       </ul>
     </div>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference45.html">
       <input type="button" value="&lt;"/>
     </a>

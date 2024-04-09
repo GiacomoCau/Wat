@@ -2,14 +2,17 @@
 <html>
   <head>
     <title>
-      Symbol &amp; Keyword
+      10. Symbol &amp; Keyword
     </title>
+    <meta charset="UTF-8"/>
     <style>
+      body { font-family: consolas; }
       ul { list-style-type: none; }
       a { text-decoration: none; }
     </style>
   </head>
   <body>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference9.html">
       <input type="button" value="&lt;"/>
     </a>
@@ -20,18 +23,41 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      Symbol &amp; Keyword
+      10. Symbol &amp; Keyword
     </h2>
+    <ul>
+      <li>
+        Symbol and Keyword extends Intern
+      </li>
+    </ul>
     <div>
       <h3>
         intern
       </h3>
       <ul>
         <li>
-          Get or create the unique symbol with STRING as name.
+          Get or create the unique symbol or keyword with STRING as name.
+          <br/>
+            Keyword if STRING start with ':', symbol otherwise
         </li>
         <li>
-          $(fn (string))
+          $(fn string)
+        </li>
+        <li>
+          $(type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        name
+      </h3>
+      <ul>
+        <li>
+          Return the name of the SYMBOL or KEYWORD as a string.
+        </li>
+        <li>
+          $(fn intern)
         </li>
         <li>
           $(type function)
@@ -44,7 +70,13 @@
       </h3>
       <ul>
         <li>
-          (def keyword %keyword)
+          Get or create the unique keyword with STRING as name.
+        </li>
+        <li>
+          $(fn string)
+        </li>
+        <li>
+          $(type function)
         </li>
       </ul>
     </div>
@@ -54,7 +86,16 @@
       </h3>
       <ul>
         <li>
-          (def keyword? %keyword?)
+          Return true if the OBJECT is a keyword, false otherwise.
+        </li>
+        <li>
+          $(fn object)
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (\ (object) (type? object Keyword)))
         </li>
       </ul>
     </div>
@@ -64,7 +105,13 @@
       </h3>
       <ul>
         <li>
-          (def keywordName %name)
+          Return the name of the KEYWORD as a string.
+        </li>
+        <li>
+          $(fn keyword)
+        </li>
+        <li>
+          $(type function)
         </li>
       </ul>
     </div>
@@ -74,7 +121,13 @@
       </h3>
       <ul>
         <li>
-          (def symbol %symbol)
+          Get or create the unique symbol with STRING as name.
+        </li>
+        <li>
+          $(fn string)
+        </li>
+        <li>
+          $(type function)
         </li>
       </ul>
     </div>
@@ -84,7 +137,16 @@
       </h3>
       <ul>
         <li>
-          (def symbol? %symbol?)
+          Return true if the OBJECT is a symbol, false otherwise.
+        </li>
+        <li>
+          $(fn object)
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (\ (object) (type? object Symbol)))
         </li>
       </ul>
     </div>
@@ -97,13 +159,14 @@
           Return the name of the SYMBOL as a string.
         </li>
         <li>
-          $(fn (symbol))
+          $(fn symbol)
         </li>
         <li>
           $(type function)
         </li>
       </ul>
     </div>
+    <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference9.html">
       <input type="button" value="&lt;"/>
     </a>

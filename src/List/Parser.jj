@@ -154,8 +154,8 @@ TOKEN:	// separators
 
 TOKEN:	// reserved words
 {	< Nil: "()" >
-|	< True: "#t" >
-|	< False: "#f" >
+|	< True: "#t" | "#true" >
+|	< False: "#f" | "#false" >
 |	< SheBang: "#!" >
 | 	< Null: "#null" >
 |	< Inert: "#inert" >
@@ -178,10 +178,10 @@ TOKEN:	// literals
 |	< Double: <Dec> ( "d" | "D" )?  >
 |	< # Dec: (( "+" | "-" )? ("0" | <Nat>)) ( "." ( ("_")? <d09> )+ )? (<exp>)?  >
 |	< # exp: ["e","E"] <Int> >
-// isoControl ,"\u0000"-"\u001f", "\u007f"-"\u009f"
+//| < isoCtrl: ["\u0000"-"\u001f", "\u007f"-"\u009f"] >
 //|	< String: "\"" ("\\" ["\\","\"","n","r","f","b","t"] | ~["\\","\"","\n","\r","\f","\b","\t"])* "\"" >
-|	< String: "\"" ( "\\\\" | "\\\"" | ~["\""] )* "\"" >
-|	< USym:	"|" ( "\\\\" | "\\|" | ~["|"] )+ "|" >
+|	< String: "\"" ( "\\\\" | "\\\"" | ~["\"" /*, "\\"*/] )* "\"" >
+|	< USym:	"|" ( "\\\\" | "\\|" | ~["|" /*, "\\", "\u0000"-"\u001f", "\u007f"-"\u009f"*/] )+ "|" >
 }
 
 TOKEN:	// identifiers
@@ -202,6 +202,7 @@ TOKEN:	// identifiers
 |   < # unicode: [ "\u00a1" - "\u00b3" ] // latin1 supplement
 			|	 [ "\u00b5" - "\u00ff" ] // latin1 supplement
 			|	 [ "\u0370" - "\u03ff" ] // greek and coptic
+			|    [ "\u2026"            ] // general puntation: ellipsis 
 			|	 [ "\u2070" - "\u209f" ] // superscripts and subscripts
 			|	 [ "\u20a0" - "\u20bf" ] // currency
 			|	 [ "\u2100" - "\u214f" ] // letterlike symbols

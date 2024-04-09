@@ -17,7 +17,7 @@
   (def n 0)
   (def print (let1 (print print) (\ (l) #;(print l) (@println w l))))
   (print "<!DOCTYPE html>\n<html><head><title>Reference</title><style>ul { list-style-type: none; }</style></head>")
-  (for1 (l (@readLine r)) (!null? l)
+  (for1 (l (@readLine r)) (! (null? l))
       (if (@startsWith l ";;;") (then (print ($ "\n<h2>" (encode (@substring l 4)) "</h2>" )) (continue)))
       (if (! (@startsWith l "\x28;def")) (continue))
       (print "<div>")

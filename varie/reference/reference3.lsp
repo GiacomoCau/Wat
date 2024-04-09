@@ -66,7 +66,7 @@
         (title (pr "Wat/Lispx Reference"))
         (style (pr "ul { list-style-type: none; }")) )
       (body  
-        (for1 (l (@readLine r)) (!null? l)
+        (for1 (l (@readLine r)) (! (null? l))
           (cond  
             ( (@startsWith l ";;;")
                 (h2 (pr (encode (@substring l 4)))) )
