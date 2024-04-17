@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      37. Dynamic Binding
+      37. Dynamic Bindings
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,8 +23,13 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      37. Dynamic Binding
+      37. Dynamic Bindings
     </h2>
+    <ul>
+      <li>
+        DVar estends Box
+      </li>
+    </ul>
     <div>
       <h3>
         newDVar
@@ -51,9 +56,7 @@
       </h3>
       <ul>
         <li>
-          Define a new or update an existing dynamic variable with the given
-          <br/>
-            NAME and optDft default VALUE.
+          Define a new or update an existing dynamic variable with the given NAME and optDft default VALUE.
         </li>
         <li>
           $(fn (name))
@@ -99,11 +102,15 @@
       </h3>
       <ul>
         <li>
-          Evaluate the FORMS with the dynamic variables specified by BINDINGS
+          Evaluate the FORMS as an implicit `begin' with the dynamic variables specified by BINDINGS temporarily bound to new VALUES, and return the result.
           <br/>
-            temporarily bound to new values.  Bindings are established parallely
-          <br/>
-            as per `let'.
+            Bindings are established parallely as per `let'.
+        </li>
+        <li>
+          $(fn binding . forms)
+        </li>
+        <li>
+          $(type macro)
         </li>
         <li>
           $(syntax binding (dynamicVariable value))
@@ -116,11 +123,9 @@
       </h3>
       <ul>
         <li>
-          Evaluate the FORMS with the list of DYNAMIC-VARIABLES temporarily
+          Evaluate the FORMS as an implicit `begin' with the dynamic variables specified by DYNAMIC-VARIABLES temporarily bound to new VALUES, and return the result.
           <br/>
-            bound to new VALUES.  The DYNAMIC-VARIABLES and VALUES lists must have
-          <br/>
-            the same length.
+            The DYNAMIC-VARIABLES and VALUES lists must have the same length.
         </li>
       </ul>
     </div>
@@ -130,11 +135,9 @@
       </h3>
       <ul>
         <li>
-          Evaluate the FORMS with the dynamic variables specified by BINDINGS
+          Evaluate the FORMS as an implicit `begin' with the dynamic variables specified by BINDINGS temporarily bound to new VALUES, and return the result.
           <br/>
-            temporarily bound to new values.  Bindings are established serially as
-          <br/>
-            per `let*'.
+            Bindings are established serially as per `let*'.
         </li>
       </ul>
     </div>

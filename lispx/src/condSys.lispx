@@ -1,91 +1,92 @@
-;;;                                                     -*- Lisp -*-
+;;                                                     -*- Lisp -*-
 ;;; LispX Condition System
-;;;
+;;
 
 ;; Copyright (c) 2021, 2022 Manuel J. Simoni
 
-;; This file implements a condition system in the style of Common
-;; Lisp.
-;;
-;; Implementation Notes
-;; --------------------
-;;
-;; Condition handling and restart handling share some similarities
-;; while also being quite different in other respects.
-;;
-;; The main similarities between condition and restart handling are:
-;;
-;; * Both condition and restart handlers are arranged in
-;;   dynamically-bound handler chains, consisting of individual
-;;   handler frames.  Each frame binds a number of handlers.  We use
-;;   two dynamic variables, `*conditionHandlerFrame?*' and
-;;   `*restartHandlerFrame?*', to point at the innermost frame of
-;;   each chain.  Note that the variables hold options, as indicated
-;;   by the question mark.
-;;
-;; * Signalling a condition and invoking a restart are very similar
-;;   operations, in that a handler is looked up in the chain, and
-;;   then its handler function is invoked.
-;;
-;; The main differences:
-;;
-;; * Conditions are classes organized in a type hierarchy
-;;   (e.g. `type-error' as subtype of `error'), whereas restarts are
-;;   plain names (e.g. `abort' and `continue').
-;;
-;; * A condition handler function always receives only a single
-;;   argument, the condition, whereas a restart handler function
-;;   receives any number of arguments passed to `invokeRestart'.
-;;
-;; * A condition handler function may decline handling a condition by
-;;   returning normally instead of performing a nonlocal exit; this
-;;   causes the search for a handler to continue.  In contrast, if a
-;;   restart handler function returns normally, the restart is
-;;   considered handled, and its result value is returned from
-;;   `invokeRestart'.
-;;
-;; * A restart handler may optionally have an interactive function
-;;   that prompts the user for arguments when the restart is invoked
-;;   by `invokeRestartInteractively'.
-;;
-;; * A restart handler may optionally be associated with a list of
-;;   conditions, to tell apart restarts belonging to different,
-;;   concurrently signalled conditions.
-;;
-;; We follow the Common Lisp condition system quite closely (including
-;; details like the condition firewall), with some minor differences:
-;;
-;; 1) For simplicity, the syntaxes of `handlerCase' and
-;;    `restartCase' are equal to the syntaxes of the lower-level
-;;    `handlerBind' and `restartBind' functions.  There is no extra
-;;    "user interface" processing for the higher-level functions.
-;;
-;;    Likewise, `signal' and `error' do not support creating simple
-;;    conditions from formatting strings and arguments, you must
-;;    always pass in a fully formed condition yourself.
-;;
-;; 2) There is no `with-condition-restarts'.  Instead there is an
-;;    additional keyword, `:associatedConditions', in the
-;;    handlerSpecs of `restartBind' and `restartCase' that
-;;    establishes the associations.
-;;
-;;    Alternatively, `signal' and `error' also support the
-;;    establishment of restart handlers associated with the signalled
-;;    condition.
-;;
-;;    A call to `signal' (or `error') with restart handler specs like:
-;;
-;;    (signal some-condition
-;;      (continue (\ () ...)))
-;;
-;;    is equivalent to:
-;;
-;;    (restartCase ((continue (\ () ...)
-;;                             :associatedConditions (list some-condition)))
-;;      (signal some-condition))
-;;
-;; 3) Every restart must have a non-nil name; anonymous restarts
-;;    are not supported.
+#|!
+ |This file implements a condition system in the style of Common Lisp.
+ |
+ |Implementation Notes
+ |--------------------
+ |
+ |Condition handling and restart handling share some similarities
+ |while also being quite different in other respects.
+ |
+ |The main similarities between condition and restart handling are:
+ |
+ |* Both condition and restart handlers are arranged in
+ |  dynamically-bound handler chains, consisting of individual
+ |  handler frames.  Each frame binds a number of handlers.  We use
+ |  two dynamic variables, `*conditionHandlerFrame?*' and
+ |  `*restartHandlerFrame?*', to point at the innermost frame of
+ |  each chain.  Note that the variables hold options, as indicated
+ |  by the question mark.
+ |
+ |* Signalling a condition and invoking a restart are very similar
+ |  operations, in that a handler is looked up in the chain, and
+ |  then its handler function is invoked.
+ |
+ |The main differences:
+ |
+ |* Conditions are classes organized in a type hierarchy
+ |  (e.g. `type-error' as subtype of `error'), whereas restarts are
+ |  plain names (e.g. `abort' and `continue').
+ |
+ |* A condition handler function always receives only a single
+ |  argument, the condition, whereas a restart handler function
+ |  receives any number of arguments passed to `invokeRestart'.
+ |
+ |* A condition handler function may decline handling a condition by
+ |  returning normally instead of performing a nonlocal exit; this
+ |  causes the search for a handler to continue.  In contrast, if a
+ |  restart handler function returns normally, the restart is
+ |  considered handled, and its result value is returned from
+ |  `invokeRestart'.
+ |
+ |* A restart handler may optionally have an interactive function
+ |  that prompts the user for arguments when the restart is invoked
+ |  by `invokeRestartInteractively'.
+ |
+ |* A restart handler may optionally be associated with a list of
+ |  conditions, to tell apart restarts belonging to different,
+ |  concurrently signalled conditions.
+ |
+ |We follow the Common Lisp condition system quite closely (including
+ |details like the condition firewall), with some minor differences:
+ |
+ |1) For simplicity, the syntaxes of `handlerCase' and
+ |   `restartCase' are equal to the syntaxes of the lower-level
+ |   `handlerBind' and `restartBind' functions.  There is no extra
+ |   "user interface" processing for the higher-level functions.
+ |
+ |   Likewise, `signal' and `error' do not support creating simple
+ |   conditions from formatting strings and arguments, you must
+ |   always pass in a fully formed condition yourself.
+ |
+ |2) There is no `with-condition-restarts'.  Instead there is an
+ |   additional keyword, `:associatedConditions', in the
+ |   handlerSpecs of `restartBind' and `restartCase' that
+ |   establishes the associations.
+ |
+ |   Alternatively, `signal' and `error' also support the
+ |   establishment of restart handlers associated with the signalled
+ |   condition.
+ |
+ |   A call to `signal' (or `error') with restart handler specs like:
+ |
+ |   (signal some-condition
+ |     (continue (\ () ...)))
+ |
+ |   is equivalent to:
+ |
+ |   (restartCase ((continue (\ () ...)
+ |                            :associatedConditions (list some-condition)))
+ |     (signal some-condition))
+ |
+ |3) Every restart must have a !null name; anonymous restarts
+ |   are not supported.
+ |#
 
 (defClass HandlerFrame ()
   #|Instances of this class make up the condition and
@@ -221,17 +222,17 @@
 
 (def\ _signal_ (condition)
   #|Utility to signal the CONDITION.  If the signal is unhandled,
-   |return void.  See `signal'.
+   |return #inert.  See `signal'.
    |#
   (let1 signal (handlerFrame? (dget *conditionHandlerFrame?*))
-    ;; Payload to `lispx::findHandler?' is always nil for condition handlers.
+    ;; Payload to `lispx::findHandler?' is always #null for condition handlers.
     (ifOpt ((handler frame) (lispx::findHandler? condition handlerFrame? #null))
       (begin
         ;; Handler found; call it, passing along frame.
         (lispx::callConditionHandler handler frame condition)
         ;; Signal unhandled: continue search for handlers.
         (signal (getSlot frame 'parentFrame?)))
-      ;; No handler found, return void.
+      ;; No handler found, return #inert.
       #inert )))
 
 (def\ lispx::callConditionHandler (handler handlerFrame condition)
@@ -272,7 +273,7 @@
               env )))))
 
 (def signal
-  #|Signal the CONDITION.  If the signal is unhandled, return void.
+  #|Signal the CONDITION.  If the signal is unhandled, return #inert.
    |Restart handlers that are associated with the condition can be bound
    |as per `restartCase'.  The handlers should not specify the
    |`:associatedConditions' property, as it will be set automatically.
@@ -341,7 +342,7 @@
    |
    |The PAYLOAD? parameter can be used to pass in an optional condition if
    |we are looking for a restart handler (see `findRestart?').  If we are
-   |looking for a condition handler, it is always nil.
+   |looking for a condition handler, it is always #null.
    |#
   (whenOpt (handlerFrame handlerFrame?)
     (block found
@@ -363,7 +364,7 @@
   #|Return true if a condition or restart HANDLER is
    |applicable, false otherwise.  The OBJECT can be a condition or a
    |restart name.  The PAYLOAD? is only used for restart handlers, and
-   |always nil for condition handlers.
+   |always #null for condition handlers.
    |#)
 
 (defMethod lispx::handlerApplicable? ((handler ConditionHandler) condition #null)

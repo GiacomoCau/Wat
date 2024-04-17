@@ -27,7 +27,7 @@
     </h2>
     <ul>
       <li>
-        An option is either nil (&quot;none&quot;), or a one-element list (&quot;some&quot;).
+        An option is either null (&quot;none&quot;), or a one-element list (&quot;some&quot;).
       </li>
     </ul>
     <div>
@@ -37,6 +37,8 @@
       <ul>
         <li>
           Create a one-element list from the VALUE.
+          <br/>
+            Alias of cons!. 
         </li>
       </ul>
     </div>
@@ -46,11 +48,19 @@
       </h3>
       <ul>
         <li>
-          Destructure the OPTION?.  If it's non-nil, evaluate the THEN form
+          Single-value OPTION destructuring.
           <br/>
-            with the NAME bound to the contents of the option.  If it's nil,
+            If the evaluation of OPTION it's not null, evaluate the THEN form with the NAME bound to the contents of the OPTION.
           <br/>
-            evaluate the ELSE form.
+            Otherwise, evaluate the ELSE forms as an implicit `begin'.
+          <br/>
+            Idea from Taylor R. Campbell's blag. https://mumble.net/~campbell/blag.txt
+        </li>
+        <li>
+          $(fn (name option) then . else)
+        </li>
+        <li>
+          $(type fexpr)
         </li>
       </ul>
     </div>
@@ -60,7 +70,14 @@
       </h3>
       <ul>
         <li>
-          (defVau (ifOpt* (pt opt) then . else) env
+          Multi-valued OPTION destructuring.
+          <br/>
+            If the evaluation of OPTION it's not null, evaluate THEN form with the DEFINIEND-TREE bound to OPTION value .
+          <br/>
+            Otherwise, evaluate the ELSE forms as an implicit `begin'.
+        </li>
+        <li>
+          $(fn (definiendTree option) then . else)
         </li>
       </ul>
     </div>
@@ -70,9 +87,17 @@
       </h3>
       <ul>
         <li>
-          Destructure the OPTION?.  If it's non-nil, evaluate the FORMS with
+          Destructure the OPTION.
           <br/>
-            the NAME bound to the contents of the option.  If it's nil, return nil.
+            If the evaluation of OPTION it's not null, evaluate the FORMS as an implicit `begin'. Otherwise, return null
+          <br/>
+            with the NAME bound to the contents of the option, and return the result.
+        </li>
+        <li>
+          $(fn (name option) . forms)
+        </li>
+        <li>
+          $(type fexpr)
         </li>
       </ul>
     </div>
@@ -82,9 +107,15 @@
       </h3>
       <ul>
         <li>
-          Destructure the OPTION?.  If it's nil, evaluate the FORMS.  If it's
+          Destructure the OPTION.
           <br/>
-            non-nil, return nil.
+            If the evaluation of OPTION it's null, evaluate the FORMS as an implicit `begin'. Otherwise, return null.
+        </li>
+        <li>
+          $(fn option . forms)
+        </li>
+        <li>
+          $(type fexpr)
         </li>
       </ul>
     </div>
@@ -94,7 +125,32 @@
       </h3>
       <ul>
         <li>
-          (defVau (caseOpt opt . clauses) env
+          Multi-armed ifOpt.
+          <br/>
+            Evaluate OPTION and go through the CLAUSES in order.
+          <br/>
+            If CLAUSES in null return null.
+          <br/>
+            If car of CLAUSE is else evaluate FORMS as an implicit `begin'.
+          <br/>
+            If the OPTION match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
+          <br/>
+            Otherwise go to the next CLAUSE.
+        </li>
+        <li>
+          $(fn option . clauses)
+        </li>
+        <li>
+          $(type fexpr)
+        </li>
+        <li>
+          $(syntax clauses (or () (clause . clauses)))
+        </li>
+        <li>
+          $(syntax clause (else . forms))
+        </li>
+        <li>
+          $(syntax clause (definiendTree . forms))
         </li>
       </ul>
     </div>
@@ -104,11 +160,17 @@
       </h3>
       <ul>
         <li>
-          Return the contents of the OPTION?, or the DEFAULT? if the option
+          Return the contents of the OPTION, or the DEFAULT if the option is null.
           <br/>
-            is nil.  The default itself defaults to void.  The DEFAULT? is
+            The default itself defaults to #inert.
           <br/>
-            evaluated lazily, only when the OPTION? is nil.
+            The DEFAULT is evaluated lazily, only when the OPTION is null.
+        </li>
+        <li>
+          $(fn option . default)
+        </li>
+        <li>
+          $(type fexpr)
         </li>
       </ul>
     </div>
@@ -118,11 +180,17 @@
       </h3>
       <ul>
         <li>
-          Similar to `opt', but provides DEFAULTS for any number of
+          Similar to `opt', but provides DEFAULTS for any number of elements of LIST.
           <br/>
-            elements of LIST.  This is useful for implementing functions that take
+            This is useful for implementing functions that take multiple optDft arguments.
           <br/>
-            multiple optDft arguments.  Each default is evaluated lazily, only when needed.
+            Each default is evaluated lazily, only when needed.
+        </li>
+        <li>
+          $(fn list . defaults)
+        </li>
+        <li>
+          $(type fexpr)
         </li>
       </ul>
     </div>
@@ -132,7 +200,13 @@
       </h3>
       <ul>
         <li>
-          Returns the contents of the OPTION? or signals an error if it is nil.
+          Returns the contents of the OPTION or signals an error if it is null.
+        </li>
+        <li>
+          $(fn option)
+        </li>
+        <li>
+          $(type fexpr)
         </li>
       </ul>
     </div>

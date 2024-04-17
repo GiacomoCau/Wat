@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      42. Thetic &amp; Lytic
+      42. Thetics &amp; Lytics
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,7 +23,7 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      42. Thetic &amp; Lytic
+      42. Thetics &amp; Lytics
     </h2>
     <ul>
       <li>
@@ -37,6 +37,12 @@
       <ul>
         <li>
           Utility to create an n-ary thetic operator from a BINARY-OPERATOR and INITIAL-VALUE.
+        </li>
+        <li>
+          $(fn binOp unit)
+        </li>
+        <li>
+          $(type function)
         </li>
       </ul>
     </div>
@@ -54,6 +60,9 @@
         <li>
           $(type function)
         </li>
+        <li>
+          $(derivation (tethicOp + 0))
+        </li>
       </ul>
     </div>
     <div>
@@ -69,6 +78,9 @@
         </li>
         <li>
           $(type function)
+        </li>
+        <li>
+          $(derivation (tethicOp * 1))
         </li>
       </ul>
     </div>
@@ -86,6 +98,9 @@
         <li>
           $(type function)
         </li>
+        <li>
+          $(derivation (tethicOp $ &quot;&quot;))
+        </li>
       </ul>
     </div>
     <div>
@@ -96,6 +111,12 @@
         <li>
           Utility to create an n-ary lytic operator from a BINARY-OPERATOR and INITIAL-VALUE.
         </li>
+        <li>
+          $(fn binOp unit)
+        </li>
+        <li>
+          $(type function)
+        </li>
       </ul>
     </div>
     <div>
@@ -104,17 +125,18 @@
       </h3>
       <ul>
         <li>
-          If only one number is supplied in the ARGUMENTS, return the
+          If only one number is supplied in the ARGUMENTS, return the negation of that number.
           <br/>
-            negation of that number. If more than one number is supplied, subtract
-          <br/>
-            all of the later ones from the first one and return the result.
+            If more than one number is supplied, subtract all of the later ones from the first one and return the result.
         </li>
         <li>
           $(fn arguments)
         </li>
         <li>
           $(type function)
+        </li>
+        <li>
+          $(derivation (lithicOp - 0))
         </li>
       </ul>
     </div>
@@ -124,17 +146,18 @@
       </h3>
       <ul>
         <li>
-          If only one number is supplied in the ARGUMENTS, return the
+          If only one number is supplied in the ARGUMENTS, return the reciprocal of that number.
           <br/>
-            reciprocal of that number.  If more than one number is supplied,
-          <br/>
-            divide the first one by all of the later ones and return the result.
+            If more than one number is supplied, divide the first one by all of the later ones and return the result.
         </li>
         <li>
           $(fn arguments)
         </li>
         <li>
           $(type function)
+        </li>
+        <li>
+          $(derivation (lithicOp / 1))
         </li>
       </ul>
     </div>

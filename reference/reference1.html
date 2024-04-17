@@ -31,7 +31,7 @@
       </h3>
       <ul>
         <li>
-          Match the DEFINIEND-TREE against the VALUE and place resulting bindings into the current environment.
+          Match the DEFINIEND-TREE against the VALUE and define resulting bindings into the current environment, throws an error otherwise.
           <br/>
             without bindResult or with bindResult #ignore use as bindResult (bndRes)
           <br/>
@@ -63,7 +63,7 @@
       </h3>
       <ul>
         <li>
-          Construct a fexpr with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER, and FORMS.
+          Return a anonymous fexpr with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER and FORMS as body.
         </li>
         <li>
           $(fn parameterTree environmentParameter . forms)
@@ -82,7 +82,7 @@
       </h3>
       <ul>
         <li>
-          Create an anonymous function with the given PARAMETER-TREE and FORMS.
+          Return an anonymous function with the given PARAMETER-TREE and FORMS as body.
         </li>
         <li>
           $(fn parameterTree . forms)
@@ -111,7 +111,7 @@
       </h3>
       <ul>
         <li>
-          Create a new function that wraps around an underlying OPERATOR, and induces argument evaluation around it.
+          Return a new function that wraps around an underlying OPERATOR, and induces argument evaluation around it.
         </li>
         <li>
           $(fn operator)
@@ -133,7 +133,7 @@
           <br/>
             - VALUE is not present and the EXPRESSION does not throws
           <br/>
-            - EXPRESSION throws or returns an object and the object is not of the same CLASS with the ATTRIBUTES of the specified VALUE.
+            - EXPRESSION throws or returns an object and the object is not of the same CLASS with the ATTRIBUTES of the given VALUE.
         </li>
         <li>
           $(fn expression value)
@@ -180,7 +180,7 @@
       </h3>
       <ul>
         <li>
-          Sequentially evaluate FORMS, returning the value of the last one, or void if there are no forms.
+          Sequentially evaluate FORMS returning the value of the last one or #inert if FORMS is null.
         </li>
         <li>
           $(fn . forms)
@@ -286,7 +286,7 @@
       </h3>
       <ul>
         <li>
-          Create a cons with the given CAR and CDR.
+          Return a cons with the given CAR and CDR.
         </li>
         <li>
           $(fn car cdr)
@@ -345,9 +345,9 @@
         <li>
           Evaluate the TEST which must yield a boolean.
           <br/>
-            Then evaluate either the THEN or ELSE expression
+            Then evaluate either the THEN or ELSE expression depending on whether the TEST yielded true or false.
           <br/>
-            depending on whether the TEST yielded true or false.
+            Idea stolen from Anarki https://github.com/arclanguage/anarki :-) 
         </li>
         <li>
           $(fn test then . forms)
@@ -388,7 +388,7 @@
       </h3>
       <ul>
         <li>
-          Create a list of evaluated ARGUMENTS so that
+          Return a list of evaluated ARGUMENTS so that
           <br/>
             the last argument becomes the `cdr' of the list.
         </li>
@@ -406,7 +406,7 @@
       </h3>
       <ul>
         <li>
-          Create a new box with the optional VALUE.
+          Return a new box with the optional VALUE.
           <br/>
             The Box are functions that encapsulates a mutable value.
           <br/>
@@ -431,7 +431,7 @@
       </h3>
       <ul>
         <li>
-          Return true if the OBJECT is nil, false otherwise.
+          Return true if the OBJECT is #null, false otherwise.
         </li>
         <li>
           $(fn object)

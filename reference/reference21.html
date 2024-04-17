@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      21. Basic Functions and Macro
+      21. Basic Functions and Macros
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,7 +23,7 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      21. Basic Functions and Macro
+      21. Basic Functions and Macros
     </h2>
     <div>
       <h3>
@@ -32,6 +32,12 @@
       <ul>
         <li>
           Identity function.
+        </li>
+        <li>
+          $(fn object)
+        </li>
+        <li>
+          $(type function)
         </li>
       </ul>
     </div>
@@ -43,25 +49,52 @@
         <li>
           &quot;Implicit&quot; Argument Lambda.
         </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        curry
-      </h3>
-      <ul>
         <li>
-          (def\ (curry f v)
+          $(fn . forms)
+        </li>
+        <li>
+          $(type macro)
+        </li>
+        <li>
+          $(derivation (list* '\ '(_) forms))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        curry*
+        peval
       </h3>
       <ul>
         <li>
-          (def\ (curry* f . v*)
+          Single arg partial evaluation.
+        </li>
+        <li>
+          $(fn f v)
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (\ args (apply f (cons v args))))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        peval*
+      </h3>
+      <ul>
+        <li>
+          Multiple args partial evaluation.
+        </li>
+        <li>
+          $(fn f v*)
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (\ args (apply f (append v* args))))
         </li>
       </ul>
     </div>
@@ -71,7 +104,16 @@
       </h3>
       <ul>
         <li>
-          Compose two functions, creating a new function equivalent to (G (F ...)).
+          Compose two functions, creating a new function equivalent to (f (g . args)).
+        </li>
+        <li>
+          $(fn f g)
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(derivation (\ args (f (apply g args))))
         </li>
       </ul>
     </div>
@@ -81,7 +123,13 @@
       </h3>
       <ul>
         <li>
-          (def\ (compose* . f*)
+          Compose multiple functions, creating a new function equivalent to (f1 (f2 (... (fn . args)))).
+        </li>
+        <li>
+          $(fn . f*)
+        </li>
+        <li>
+          $(type function)
         </li>
       </ul>
     </div>
@@ -91,7 +139,15 @@
       </h3>
       <ul>
         <li>
-          (defMacro (rec lhs . rhs)
+          Return VALUE, after lexically bind NAME with #inert,
+          <br/>
+            and update NAME with VALUE so that it can reference itself.
+        </li>
+        <li>
+          $(fn name value)
+        </li>
+        <li>
+          $(type macro)
         </li>
       </ul>
     </div>
@@ -101,7 +157,7 @@
       </h3>
       <ul>
         <li>
-          (def label rec)
+          Alias of rec.
         </li>
       </ul>
     </div>
@@ -111,7 +167,18 @@
       </h3>
       <ul>
         <li>
-          (defMacro (rec\ lhs . rhs)
+          Return the function with given PARAMETER-TREE and FORMS as body, after lexically bind NAME with #inert,
+          <br/>
+            and updated NAME with the function so that it can reference to itself.
+        </li>
+        <li>
+          $(fn name parameterTree . forms)
+        </li>
+        <li>
+          $(fn (name . parameterTree) . forms)
+        </li>
+        <li>
+          $(type macro)
         </li>
       </ul>
     </div>
@@ -121,7 +188,7 @@
       </h3>
       <ul>
         <li>
-          (def label\ rec\)
+          Alias of rec\.
         </li>
       </ul>
     </div>
@@ -131,7 +198,16 @@
       </h3>
       <ul>
         <li>
-          Create a new list by applying the FUNCTION to every element of the LIST.
+          Return a new list by applying the FUNCTION to each element of the LIST or the LISTS which must be of the same length
+        </li>
+        <li>
+          $(fn function list)
+        </li>
+        <li>
+          $(fn function list1 list2 ... listN)
+        </li>
+        <li>
+          $(type function)
         </li>
       </ul>
     </div>
@@ -141,7 +217,36 @@
       </h3>
       <ul>
         <li>
-          (defMacro (def*\ lhs* . rhs*)
+          Define multiple named functions with given PARAMETER-TREES and FORMS as body.
+          <br/>
+            Match the DEFINIEND-TREES against the BODIES and define resulting bindings into the current environment.
+        </li>
+        <li>
+          $(fn definiendTrees . bodies)
+        </li>
+        <li>
+          $(fn ((name parameterTree) . definiendTrees) . (forms . bodies))
+        </li>
+        <li>
+          $(fn (name . definiendTrees) . ((parameterTree . forms) . bodies))
+        </li>
+        <li>
+          $(syntax definiendTrees ((name parameterTree) . definiendTrees)
+        </li>
+        <li>
+          $(syntax bodies (forms . bodies)
+        </li>
+        <li>
+          $(syntax definiendTrees (name . definiendTrees)
+        </li>
+        <li>
+          $(syntax bodies ((parameterTree . forms) . bodies)
+        </li>
+        <li>
+          $(type macro)
+        </li>
+        <li>
+          $(example (def*\ ((f a) g) ((1+ a)) ((a) (1+ a))) )
         </li>
       </ul>
     </div>

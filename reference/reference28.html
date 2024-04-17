@@ -63,13 +63,11 @@
         <li>
           Multi-armed type test.
           <br/>
-            Evaluate the KEYFORM.  Go through the CLAUSES.  If the result of
+            Evaluate the KEYFORM. Go through the CLAUSES.
           <br/>
-            evaluating KEYFORM is an instance of the class named by CLASS-NAME,
+            If the result of evaluating KEYFORM is an instance of the class named by CLASS-NAME, evaluate the FORMS as an implicit `begin', and return the result.
           <br/>
-            evaluate the FORMS as an implicit `begin'.  Otherwise go to the next
-          <br/>
-            clause, or return void if there are no more clauses.
+            Return #inert if there are no more clauses, go to the next clause otherwise. 
         </li>
         <li>
           $(fn (key . clauses))
@@ -85,16 +83,6 @@
         </li>
         <li>
           $(syntax clause ((className . slotSpecs) . forms))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        caseType\
-      </h3>
-      <ul>
-        <li>
-          (defMacro (caseType\ (#! Symbol key) . clauses)
         </li>
       </ul>
     </div>

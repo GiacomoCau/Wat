@@ -25,6 +25,14 @@
     <h2>
       41. Relational Operators
     </h2>
+    <ul>
+      <li>
+        Note that unlike in Common Lisp, these operators currently require at least two arguments.  
+      </li>
+      <li>
+        This will be improved in the future.
+      </li>
+    </ul>
     <div>
       <h3>
         relationalOp
@@ -32,6 +40,12 @@
       <ul>
         <li>
           Utility to create an n-ary relational operator from a BINARY-OPERATOR.
+        </li>
+        <li>
+          $(fn binop)
+        </li>
+        <li>
+          $(type function)
         </li>
       </ul>
     </div>
@@ -41,15 +55,16 @@
       </h3>
       <ul>
         <li>
-          Return true if the ARGUMENTS are in monotonically increasing order,
-          <br/>
-            false otherwise.
+          Return true if the ARGUMENTS are in monotonically increasing order, false otherwise.
         </li>
         <li>
           $(fn arguments)
         </li>
         <li>
           $(type function)
+        </li>
+        <li>
+          $(derivation (relationalOp &lt;))
         </li>
       </ul>
     </div>
@@ -59,15 +74,16 @@
       </h3>
       <ul>
         <li>
-          Return true if the ARGUMENTS are in monotonically decreasing order,
-          <br/>
-            false otherwise.
+          Return true if the ARGUMENTS are in monotonically decreasing order, false otherwise.
         </li>
         <li>
           $(fn arguments)
         </li>
         <li>
           $(type function)
+        </li>
+        <li>
+          $(derivation (relationalOp &gt;))
         </li>
       </ul>
     </div>
@@ -77,15 +93,16 @@
       </h3>
       <ul>
         <li>
-          Return true if the ARGUMENTS are in monotonically nondecreasing
-          <br/>
-            order, false otherwise.
+          Return true if the ARGUMENTS are in monotonically nondecreasing order, false otherwise.
         </li>
         <li>
           $(fn arguments)
         </li>
         <li>
           $(type function)
+        </li>
+        <li>
+          $(derivation (relationalOp &lt;=))
         </li>
       </ul>
     </div>
@@ -95,15 +112,16 @@
       </h3>
       <ul>
         <li>
-          Return true if the ARGUMENTS are in monotonically nonincreasing
-          <br/>
-            order, false otherwise.
+          Return true if the ARGUMENTS are in monotonically nonincreasing order, false otherwise.
         </li>
         <li>
           $(fn arguments)
         </li>
         <li>
           $(type function)
+        </li>
+        <li>
+          $(derivation (relationalOp &gt;=))
         </li>
       </ul>
     </div>
@@ -121,6 +139,9 @@
         <li>
           $(type function)
         </li>
+        <li>
+          $(derivation (relationalOp eq?))
+        </li>
       </ul>
     </div>
     <div>
@@ -137,6 +158,9 @@
         <li>
           $(type function)
         </li>
+        <li>
+          $(derivation (relationalOp eq?))
+        </li>
       </ul>
     </div>
     <div>
@@ -145,7 +169,7 @@
       </h3>
       <ul>
         <li>
-          Return true if all ARGUMENTS are ==, false otherwise.
+          Return false if all ARGUMENTS are ==, true otherwise.
         </li>
         <li>
           $(fn arguments)
@@ -164,7 +188,10 @@
           Return true if all ARGUMENTS are distinct, false otherwise.
         </li>
         <li>
-          $(fn arguments)
+          $(fn argument . arguments)
+        </li>
+        <li>
+          $(type function)
         </li>
       </ul>
     </div>

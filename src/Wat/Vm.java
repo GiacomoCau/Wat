@@ -781,7 +781,7 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			var chk = checkM(this, o, 2); // o = (pt ep . forms)
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			var pt = o.car;
 			var ep = o.car(1);
 			var msg = checkPt(cons(this, o), pt, ep); if (msg != null) return msg;
@@ -848,7 +848,7 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			var chk = checkR(this, o, 2, more); // o = (test then . else) 
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			return combine(null, e, o);
 		}
 		Object combine(Resumption r, Env e, List o) {
@@ -879,7 +879,7 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			var chk = checkM(this, o, 1); // o = (form . forms)
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			return combine(null, e, o);
 		}
 		public Object combine(Resumption r, Env e, List o) {
@@ -898,7 +898,7 @@ public class Vm {
 			// (catchTagWth tag hdl . forms) -> (%CatchTagWth tag hdl . forms)
 			var chk = !ctApv ? checkM(this, o, 2) : checkN(this, o, 3, Any.class, hdlAny ? Any.class : or(ignore, Apv1.class), Apv0.class);
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			return pipe(dbg(e, this, o), ()-> ctApv ? o.car : getTco(evaluate(e, o.car)), tag-> combine(null, e, tag, o.car(1), o.cdr(1)) ); 
 		}
 		private Object combine(Resumption r, Env e, Object tag, Object hdl, List xs) {
@@ -942,7 +942,7 @@ public class Vm {
 		public Object combine(Resumption r, Env e, List o) {
 			var chk = checkM(this, o, 2); // o = (cln form . forms)
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			var cln = o.car;
 			try {
 				var res = r != null ? r.resume() : pipe(dbg(e, this, o), ()-> getTco(begin.combine(e, o.cdr())), v-> cleanup(cln, e, true, v));
@@ -968,7 +968,7 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			var chk = checkM(this, o, 2, Any.class, or(ignore, Symbol.class)); // o = (prp (or #ignore symbol) . forms)
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			var hdl = lambda(e, list(o.<Object>car(1)), o.cdr(1));
 			return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, o.car)),
 				prp-> new Suspension(prp, hdl).suspend(dbg(e, this, prp, hdl), rr-> Vm.this.combine(e, rr.s, null)))
@@ -980,7 +980,7 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			var chk = checkM(this, o, 1); // o = (prp . forms)
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			var dbg = dbg(e, this, o);
 			return pipe(dbg, ()-> getTco(evaluate(e, o.car)), prp-> pushPrompt(null, e, dbg, prp, ()-> getTco(begin.combine(e, o.cdr()))));
 		}
@@ -990,7 +990,7 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			var chk = checkM(this, o, 2); // o = (prp k . forms)
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			var dbg = dbg(e, this, o);
 			return pipe(dbg,
 				()-> getTco(evaluate(e, o.car)),
@@ -1095,11 +1095,11 @@ public class Vm {
 				case LenList ll-> o-> pipe(null, ()-> check.apply(name, o),
 					obj-> obj instanceof Integer len ? ll.apply(len, o)	: resumeError(obj, symbol("Integer")));   
 				case Supplier sp-> o-> pipe(null, ()-> checkN(name, o, 0),
-					obj-> obj instanceof Integer len? sp.get() : resumeError(obj, symbol("Integer")));  
+					obj-> obj instanceof Integer /*len*/ ? sp.get() : resumeError(obj, symbol("Integer")));  
 				case Function f-> o-> pipe(null, ()-> checkN(name, o, 1),
-					obj-> obj instanceof Integer len ? f.apply(o.car) : resumeError(obj, symbol("Integer")));  
+					obj-> obj instanceof Integer /*len*/ ? f.apply(o.car) : resumeError(obj, symbol("Integer")));  
 				case BiFunction f-> o-> pipe(null, ()-> checkN(name, o, 2),
-					obj-> obj instanceof Integer len ? f.apply(o.car, o.car(1)) : resumeError(obj, symbol("Integer")));
+					obj-> obj instanceof Integer /*len*/ ? f.apply(o.car, o.car(1)) : resumeError(obj, symbol("Integer")));
 				case Field f-> o-> pipe(null, ()-> checkR(name, o, 1, 2), obj->{
 						if (!(obj instanceof Integer len)) return resumeError(obj, symbol("Integer"));
 						if (len == 1) return uncked(()-> f.get(o.car));
@@ -1110,7 +1110,7 @@ public class Vm {
 					var pc = mt.getParameterCount();
 					return pipe(null,
 						()-> !mt.isVarArgs() ? checkN(name, o, pc+1) : checkM(name, o, pc),
-						obj-> obj instanceof Integer len
+						obj-> obj instanceof Integer /*len*/
 							? uncked(()-> mt.invoke(o.car, reorg(mt, array(o.cdr()))))
 							: resumeError(obj, symbol("Integer"))
 					);
@@ -1118,7 +1118,7 @@ public class Vm {
 				case Constructor c-> o->
 					pipe(null,
 						()-> checkN(name, o, c.getParameterCount()),
-						obj-> obj instanceof Integer len 
+						obj-> obj instanceof Integer /*len*/ 
 							? uncked(()-> c.newInstance(reorg(c, array(o))))
 							: resumeError(obj, symbol("Integer"))
 					);
@@ -1158,7 +1158,7 @@ public class Vm {
 			@Override public Object apply(List o) {
 				var chk = checkM("At", o, 1, Object.class);
 				if (chk instanceof Suspension s) return s;
-				if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+				if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 				Object o0 = o.car;
 				Object[] args = array(o, 1);
 				// (@new class . objects)            -> class.getConstructor(getClasses(objects)).newInstance(objects) -> constructor.newInstance(objects)
@@ -1504,7 +1504,7 @@ public class Vm {
 		public Object combine(Env env, List o) {
 			if (!doAsrt) return true;
 			var chk = checkM(this, o, 1); // o = (x . v)
-			if (!(chk instanceof Integer len)) return chk;
+			if (!(chk instanceof Integer /*len*/)) return chk;
 			return test.combine(env, cons(null, o));
 		}
 		public String toString() { return "%Assert"; }

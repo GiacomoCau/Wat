@@ -72,7 +72,7 @@
         $(obj bindResult attribute value . attributes)
       </li>
       <li>
-        $(syntax attributes (attribute value . attributes))
+        $(syntax attributes (or () (attribute value . attributes)))
       </li>
       <li>
         $(syntax attribute (or Symbol Keyword String))
@@ -87,7 +87,7 @@
       </h3>
       <ul>
         <li>
-          Create a new instance of CLASS (that must be a `standard-class').
+          Return a new instance of CLASS (that must be a `standard-class').
           <br/>
             The BINDINGS must be of even length, and alternately contain bindings names (symbols, keywords or string) and values.
         </li>
@@ -120,7 +120,7 @@
       </h3>
       <ul>
         <li>
-          Define a new instance of CLASS with the given NAME.
+          Define a new instance of CLASS with the given NAME into the current environment.
         </li>
         <li>
           $(fn name boxClass)

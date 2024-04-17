@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      23. Simple Control
+      23. Simple Controls
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,7 +23,7 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      23. Simple Control
+      23. Simple Controls
     </h2>
     <div>
       <h3>
@@ -31,7 +31,13 @@
       </h3>
       <ul>
         <li>
-          Evaluate FORM and any additional FORMS, and return the result of FORM.
+          Evaluate FORM and return the result after evaluate any additional FORMS as an implicit `begin'.
+        </li>
+        <li>
+          $(fn form . forms)
+        </li>
+        <li>
+          $(type fexpr)
         </li>
       </ul>
     </div>
@@ -41,7 +47,13 @@
       </h3>
       <ul>
         <li>
-          If TEST yields true, evaluate the FORMS as an implicit `begin'. Otherwise, return inert.
+          If TEST yields true, evaluate the FORMS as an implicit `begin', inert otherwise.
+        </li>
+        <li>
+          $(fn test . forms)
+        </li>
+        <li>
+          $(type macro)
         </li>
       </ul>
     </div>
@@ -51,7 +63,13 @@
       </h3>
       <ul>
         <li>
-          If TEST yields false, evaluate the FORMS as an implicit `begin'. Otherwise, return inert.
+          If TEST yields false, evaluate the FORMS as an implicit `begin', inert otherwise.
+        </li>
+        <li>
+          $(fn test . forms)
+        </li>
+        <li>
+          $(type macro)
         </li>
       </ul>
     </div>
@@ -67,6 +85,12 @@
           <br/>
             If there are no operands, return false.
         </li>
+        <li>
+          $(fn . operands)
+        </li>
+        <li>
+          $(type fexpr)
+        </li>
       </ul>
     </div>
     <div>
@@ -75,7 +99,7 @@
       </h3>
       <ul>
         <li>
-          (def and &amp;&amp;)
+          Alias of &amp;&amp;.
         </li>
       </ul>
     </div>
@@ -91,6 +115,12 @@
           <br/>
             If there are no operands, return true.
         </li>
+        <li>
+          $(fn . operands)
+        </li>
+        <li>
+          $(type fexpr)
+        </li>
       </ul>
     </div>
     <div>
@@ -99,7 +129,7 @@
       </h3>
       <ul>
         <li>
-          (def or ||)
+          Alias of ||.
         </li>
       </ul>
     </div>
@@ -109,7 +139,19 @@
       </h3>
       <ul>
         <li>
-          (def\ &amp;&amp;f fs
+          Return a function the return true if all FUNCTIONS evaluate to true when applied to the arguments, false otherwise.
+          <br/>
+            If an function evaluates to false, later FUNCTIONS are not evaluated.
+          <br/>
+            If there are no FUNCTIONS, when applied return false.
+          <br/>
+            Idea stolen from Anarki https://github.com/arclanguage/anarki :-)
+        </li>
+        <li>
+          $(fn . functions)
+        </li>
+        <li>
+          $(type function)
         </li>
       </ul>
     </div>
@@ -119,7 +161,19 @@
       </h3>
       <ul>
         <li>
-          (def\ ||f fs
+          Return a function the return true if one FUNCTIONS evaluate to true when applied the the arguments, false otherwise.
+          <br/>
+            If an function evaluates to true, later FUNCTIONS are not evaluated.
+          <br/>
+            If there are no FUNCTIONS, when applied return true.
+          <br/>
+            Idea stolen from Anarki https://github.com/arclanguage/anarki :-)
+        </li>
+        <li>
+          $(fn . functions)
+        </li>
+        <li>
+          $(type function)
         </li>
       </ul>
     </div>

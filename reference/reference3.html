@@ -51,7 +51,7 @@
       </h3>
       <ul>
         <li>
-          Define a macro with the given NAME, PARAMETER-TREE, and FORMS.
+          Defines the named macro NAME with the given PARAMETER-TREE and FORMS as body into the current environment.
         </li>
         <li>
           $(fn name parameterTree . forms)
@@ -70,7 +70,7 @@
       </h3>
       <ul>
         <li>
-          Define a fexpr with the given NAME, PARAMETER-TREE, ENVIRONMENT-PARAMETER, and FORMS.
+          Defines the named fexpr NAME with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER and FORMS as body into the current environment.
         </li>
         <li>
           $(fn name parameterTree . forms)
@@ -89,7 +89,7 @@
       </h3>
       <ul>
         <li>
-          Define a constant with the given NAME and VALUE.
+          Define a constant with the given NAME and VALUE into the current environment.
           <br/>
             This is mostly for documentation purposes, as constants are still mutable.
           <br/>
@@ -103,7 +103,7 @@
       </h3>
       <ul>
         <li>
-          Match the DEFINIEND-TREE against the VALUES and place resulting bindings into the current environment.
+          Match the DEFINIEND-TREE against the VALUES and define resulting bindings into the current environment.
         </li>
         <li>
           $(fn definiendTree . values)
@@ -119,7 +119,7 @@
       </h3>
       <ul>
         <li>
-          Define a function with the given NAME, PARAMETER-TREE, and FORMS.
+          Defines the named function NAME with the given PARAMETER-TREE and FORMS as body into the current environment.
         </li>
         <li>
           $(fn name parameterTree . forms)

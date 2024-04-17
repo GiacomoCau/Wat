@@ -31,15 +31,13 @@
       </h3>
       <ul>
         <li>
-          Establish a block named BLOCK-NAME and evaluate the FORMS as an
+          Establish a block named BLOCK-NAME and evaluate the FORMS as an implicit `begin', and return the result.
           <br/>
-            implicit `begin' inside it.  The forms may use `returnFrom' to
+            The forms may use `returnFrom' to nonlocally exit from the block.
           <br/>
-            nonlocally exit from the block.
+            Note that unlike in Common Lisp, there is no separate namespace for block names;
           <br/>
-            Note that unlike in Common Lisp, there is no separate namespace for
-          <br/>
-            block names; a block is named in the normal variable namespace.
+            a block is named in the normal variable namespace.
         </li>
       </ul>
     </div>
@@ -49,11 +47,9 @@
       </h3>
       <ul>
         <li>
-          Abort evaluation and return the optional VALUE? (which lsts to
+          Abort evaluation and return the optional VALUE? (which lsts to #inert) from the block named BLOCK-NAME.
           <br/>
-            void) from the block named BLOCK-NAME.  It is an error to return from
-          <br/>
-            a block whose dynamic extent has ended.
+            It is an error to return from a block whose dynamic extent has ended.
         </li>
         <li>
           $(fn (blockName . value?))
@@ -66,7 +62,7 @@
       </h3>
       <ul>
         <li>
-          Evaluate FORMS while TEST-FORM evaluates to true.
+          Evaluate FORMS as an implicit `begin' while TEST-FORM evaluates to true.
         </li>
       </ul>
     </div>
@@ -96,7 +92,7 @@
       </h3>
       <ul>
         <li>
-          (defMacro (for1 binding cond . body)
+          (defMacro (for1 binding cond . forms)
         </li>
       </ul>
     </div>
@@ -106,7 +102,7 @@
       </h3>
       <ul>
         <li>
-          (defMacro (for bindings cond . body)
+          (defMacro (for bindings cond . forms)
         </li>
       </ul>
     </div>
@@ -116,7 +112,7 @@
       </h3>
       <ul>
         <li>
-          Evaluate FORMS while TEST-FORM evaluates to true.
+          Evaluate FORMS as an implicit `begin' while TEST-FORM evaluates to true.
         </li>
       </ul>
     </div>
@@ -126,7 +122,7 @@
       </h3>
       <ul>
         <li>
-          Evaluate FORMS until TEST-FORM evaluates to true.
+          Evaluate FORMS as an implicit `begin' until TEST-FORM evaluates to true.
         </li>
       </ul>
     </div>
@@ -156,7 +152,7 @@
       </h3>
       <ul>
         <li>
-          (defMacro doTimes ((var times . result) . body)
+          (defMacro doTimes ((var times . result) . forms)
         </li>
       </ul>
     </div>

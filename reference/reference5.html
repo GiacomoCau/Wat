@@ -87,7 +87,7 @@
         $(env bindType bindResult attribute value . attributes)
       </li>
       <li>
-        $(syntax attributes (attribute value . attributes))
+        $(syntax attributes (or () (attribute value . attributes)))
       </li>
       <li>
         $(syntax attribute (or Symbol Keyword String))
@@ -105,7 +105,7 @@
       </h3>
       <ul>
         <li>
-          Create a new environment with an optional PARENT environment in which bindings are looked up if they are not found.
+          Return a new environment with an optional PARENT environment in which bindings are looked up if they are not found.
           <br/>
             The BINDINGS must be of even length, and alternately contain bindings names (symbols, keywords or string) and values.
           <br/>

@@ -61,7 +61,18 @@
       </h3>
       <ul>
         <li>
-          (defMacro (wth1 dt value . forms)
+          Establish the BINDING, before the evaluation of FORMS as an implicit `begin'.
+          <br/>
+            Idea stolen from Anarki https://github.com/arclanguage/anarki :-) 
+        </li>
+        <li>
+          $(fn binding . forms)
+        </li>
+        <li>
+          $(type macro)
+        </li>
+        <li>
+          $(syntax binding . (definiendTree initForm))
         </li>
       </ul>
     </div>
@@ -71,7 +82,20 @@
       </h3>
       <ul>
         <li>
-          (defMacro (wth* bindings . forms)
+          Establish BINDINGS serially, so that every binding can refer to previous one,
+          <br/>
+            before the evaluation of FORMS as an implicit `begin'.
+          <br/>
+            Idea stolen from Anarki https://github.com/arclanguage/anarki :-)
+        </li>
+        <li>
+          $(fn bindings . forms)
+        </li>
+        <li>
+          $(type macro)
+        </li>
+        <li>
+          $(syntax bindings (or () (definiendTree intiForm . bindings)))
         </li>
       </ul>
     </div>
@@ -81,7 +105,23 @@
       </h3>
       <ul>
         <li>
-          (defMacro (wth b* . forms)
+          Establish BINDINGS parallelly, so that no binding can refer to itself or the other ones,
+          <br/>
+            before the evaluation of FORMS as an implicit `begin'.
+          <br/>
+            Idea stolen from Anarki https://github.com/arclanguage/anarki :-)
+        </li>
+        <li>
+          $(fn bindings . forms)
+        </li>
+        <li>
+          $(fn name bindings . forms)
+        </li>
+        <li>
+          $(type macro)
+        </li>
+        <li>
+          $(syntax bindings (or () (definiendTree initForm . bindings))
         </li>
       </ul>
     </div>
@@ -91,7 +131,27 @@
       </h3>
       <ul>
         <li>
-          (defMacro (let1Loop lhs . rhs)
+          Labelled recursive loop.
+          <br/>
+            Lexically bind NAME with the function with the specified PARAMETER-TREE and FORMS as body,
+          <br/>
+            so that it can recursively refer to itself.
+          <br/>
+            The function is immediately applied to the list containing the value of the INIT_FORMS evaluate as an implicit `begin',
+          <br/>
+            and then FORMS is evaluate as an implicit `begin'.
+        </li>
+        <li>
+          $(fn name binding . forms)
+        </li>
+        <li>
+          $(fn (name . binding) . forms)
+        </li>
+        <li>
+          $(type macro)
+        </li>
+        <li>
+          $(syntax binding (parameterTree . initForms))
         </li>
       </ul>
     </div>
@@ -101,7 +161,23 @@
       </h3>
       <ul>
         <li>
-          (defMacro (let1 lhs . rhs)
+          Establishes the BINDING, before the evaluation of FORMS as an implicit `begin'.
+          <br/>
+            The INIT_FORMS is evaluate as an implicit `begin'.
+          <br/>
+            If the first argument is a symbol is like 'let1Loop'.
+        </li>
+        <li>
+          $(fn binding . forms)
+        </li>
+        <li>
+          $(fn name binding . forms)
+        </li>
+        <li>
+          $(type macro)
+        </li>
+        <li>
+          $(syntax binding (definiendTree . initForms))
         </li>
       </ul>
     </div>
@@ -111,7 +187,19 @@
       </h3>
       <ul>
         <li>
-          (defMacro (let1\ binding . body)
+          Establishes the FUNCTION-BINDINGS, before the evaluation of FORMS as an implicit `begin'.
+        </li>
+        <li>
+          $(fn functionBinding . forms)
+        </li>
+        <li>
+          $(type macro)
+        </li>
+        <li>
+          $(syntax functionBinding (name parameterTree . bodyForms))
+        </li>
+        <li>
+          $(syntax functionBinding ((name . parameterTree) . bodyForms))
         </li>
       </ul>
     </div>
@@ -121,7 +209,20 @@
       </h3>
       <ul>
         <li>
-          (defMacro (let1rec binding . body)
+          Establishes the BINDING recursively so that the binding can recursively refer to itself,
+          <br/>
+            before the evaluation of FORMS as an implicit `begin'.
+          <br/>
+            The binding is initializated to #inert before evaluating INIT_FORMS as an implicit `begin'. 
+        </li>
+        <li>
+          $(fn binding . forms)
+        </li>
+        <li>
+          $(type macro)
+        </li>
+        <li>
+          $(syntax binding (name . intForms))
         </li>
       </ul>
     </div>
@@ -131,7 +232,23 @@
       </h3>
       <ul>
         <li>
-          (defMacro (let1rec\ binding . body)
+          Establishes the FUNCTION-BINDING recursively, so that the function can refer to itself,
+          <br/>
+            before the evaluation of FORMS as an implicit `begin'.
+          <br/>
+            The binding is initializated to #inert before the bind of the function. 
+        </li>
+        <li>
+          $(fn functionBinding . forms)
+        </li>
+        <li>
+          $(type macro)
+        </li>
+        <li>
+          $(syntax functionBinding (name parameterTree . bodyForms))
+        </li>
+        <li>
+          $(syntax functionBinding ((name . parameterTree) . bodyForms))
         </li>
       </ul>
     </div>
@@ -141,12 +258,20 @@
       </h3>
       <ul>
         <li>
-          Establish BINDINGS serially during the evaluation of FORMS, so that
+          Establishes BINDINGS serially, so that every binding can refer to previous one,
           <br/>
-            every binding can refer to previous ones.
+            before the evaluation of FORMS as an implicit `begin'.
+          <br/>
+            The INIT_FORMS are evaluate as an implicit `begin'.
         </li>
         <li>
-          $(syntax bindings ((definiendTree value) . bindings))
+          $(fn bindings . forms)
+        </li>
+        <li>
+          $(type macro)
+        </li>
+        <li>
+          $(syntax bindings (or () ((definiendTree . intiForms) . bindings)))
         </li>
       </ul>
     </div>
@@ -156,26 +281,27 @@
       </h3>
       <ul>
         <li>
-          Labelled recursive loop, analogous to Scheme's named `let'.
+          Labelled recursive loop.
           <br/>
-            Lexically bind a function named NAME with one PARAMETER for every
+            Lexically bind NAME with the function with the specified multiple PARAMETER-TREES and FORMS as body,
           <br/>
-            INITIALIZER and the FORMS as body.  Then immediately apply the
+            so that it can recursively refer to itself. 
           <br/>
-            function to a list containing one VALUE for every INITIALIZER and
+            The function is immediately applied to the list containing the values of INIT_FORM evaluate as an implicit `begin',
           <br/>
-            return the result.  The function is bound per `labels' so it can
-          <br/>
-            recursively refer to itself.
+            and then FORMS is evaluate as an implicit `begin'.
         </li>
         <li>
-          $(fn (initializers . body))
+          $(fn name bindings . forms)
         </li>
         <li>
-          $(fn (name initializers . body))
+          $(fn (name . bindings) . forms)
         </li>
         <li>
-          $(syntax initializers ((parameter value) . initializers)
+          $(type macro)
+        </li>
+        <li>
+          $(syntax bindings (or () ((parameterTree . initForms) . bindings)))
         </li>
       </ul>
     </div>
@@ -185,18 +311,25 @@
       </h3>
       <ul>
         <li>
-          Establish BINDINGS parallelly during the evaluation of FORMS, so
+          Establishes the BINDINGS parallelly, so that no binding can refer to itself or the other ones,
           <br/>
-            that no binding can refer to the other ones.
+            before the evaluation of FORMS as an implicit `begin'.
+          <br/>
+            The INIT_FORMS are evaluate as an implicit `begin'.
+          <br/>
+            If the first argument is a symbol is like 'letLoop'.
         </li>
         <li>
-          $(fn (bindings . body))
+          $(fn bindings . forms)
         </li>
         <li>
-          $(fn (name bindings . body))
+          $(fn name bindings . forms)
         </li>
         <li>
-          $(syntax bindings ((parameter value) . bindings)
+          $(type macro)
+        </li>
+        <li>
+          $(syntax bindings (or () ((definiendTree . initForms) . bindings))
         </li>
       </ul>
     </div>
@@ -206,12 +339,24 @@
       </h3>
       <ul>
         <li>
-          Establish FUNCTION-BINDINGS parallelly during evaluation of FORMS,
+          Establishes the FUNCTION-BINDINGS parallelly, so that no function can refer to itself or the other ones,
           <br/>
-            so that no function can refer to the other ones.
+            before the evaluation evaluation of FORMS as an implicit `begin'.
         </li>
         <li>
-          $(syntax functionBinding (name parameterTree . forms))
+          $(fn functionBindings . forms)
+        </li>
+        <li>
+          $(type macro)
+        </li>
+        <li>
+          $(syntax functionBindings (or () (functionBinding . functionBindings)))
+        </li>
+        <li>
+          $(syntax functionBinding (name parameterTree . bodyForms))
+        </li>
+        <li>
+          $(syntax functionBinding ((name . parameterTree) . bodyForms))
         </li>
       </ul>
     </div>
@@ -221,9 +366,20 @@
       </h3>
       <ul>
         <li>
-          Utility to establish BINDINGS recursively during the evaluation of
+          Establishes the BINDINGS recursively, so that the bindings can refer to itself and the other ones,
           <br/>
-            FORMS.  Used by `labels'.
+            before the evaluation of FORMS as an implicit `begin'.
+          <br/>
+            The bindings are initializated to #inert before evaluating the INIT_FORMS as an implicit `begin'.
+        </li>
+        <li>
+          $(fn bindings . forms)
+        </li>
+        <li>
+          $(type macro)
+        </li>
+        <li>
+          $(syntax bindings (or () ((name . intForms) . bindings)))
         </li>
       </ul>
     </div>
@@ -233,7 +389,26 @@
       </h3>
       <ul>
         <li>
-          (defMacro (letrec\ bindings . body)
+          Establishes the FUNCTION-BINDINGS recursively, so that the functions can refer to itself and the other ones,
+          <br/>
+            before the evaluation of FORMS as an implicit `begin'.
+          <br/>
+            The bindings are initializated to #inert before the bind of the functions.
+        </li>
+        <li>
+          $(fn functionBindings . forms)
+        </li>
+        <li>
+          $(type macro)
+        </li>
+        <li>
+          $(syntax functionBindings (or () (functionBinding . functionBindings)))
+        </li>
+        <li>
+          $(syntax functionBinding ((name parameterTree . bodyForms) . functionBindings))
+        </li>
+        <li>
+          $(syntax functionBinding (((name . parameterTree) . bodyForms) . functionBindings))
         </li>
       </ul>
     </div>
@@ -243,12 +418,7 @@
       </h3>
       <ul>
         <li>
-          Establish FUNCTION-BINDINGS recursively during evaluation of FORMS,
-          <br/>
-            so that every function can refer to the other ones.
-        </li>
-        <li>
-          $(syntax functionBinding (name parameterTree . forms))
+          Alias of letrec\.
         </li>
       </ul>
     </div>

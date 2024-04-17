@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      19. Error
+      19. Errors
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,7 +23,7 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      19. Error
+      19. Errors
     </h2>
     <div>
       <h3>
@@ -31,7 +31,7 @@
       </h3>
       <ul>
         <li>
-          (def rootPrompt %rootPrompt)
+          The prompt used for delimiting all.
         </li>
       </ul>
     </div>
@@ -41,7 +41,13 @@
       </h3>
       <ul>
         <li>
-          (def\ makeTypeError (datum expected)
+          Return a new type error with DATUM and EXPECTED.
+        </li>
+        <li>
+          $(fn datum expected)
+        </li>
+        <li>
+          $(type function)
         </li>
       </ul>
     </div>
@@ -51,7 +57,13 @@
       </h3>
       <ul>
         <li>
-          (def\ typeError (datum expected)
+          Signal a type error with DATUM and EXPECTED.
+        </li>
+        <li>
+          $(fn datum expected)
+        </li>
+        <li>
+          $(type function)
         </li>
       </ul>
     </div>

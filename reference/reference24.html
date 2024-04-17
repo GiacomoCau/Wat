@@ -27,11 +27,33 @@
     </h2>
     <div>
       <h3>
+        bind
+      </h3>
+      <ul>
+        <li>
+          return #inert if VALUE match the DEFINIEND-TREE and define resulting bindings into ENVIRONMENT, throws an error otherwise.
+        </li>
+        <li>
+          $(fn environment definiendTree value)
+        </li>
+        <li>
+          $(type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         bind?
       </h3>
       <ul>
         <li>
-          (def bind? %bind?)
+          return true if VALUE match the DEFINIEND-TREE and define resulting bindings into ENVIRONMENT, false otherwise. 
+        </li>
+        <li>
+          $(fn environment definiendTree value)
+        </li>
+        <li>
+          $(type function)
         </li>
       </ul>
     </div>
@@ -41,7 +63,13 @@
       </h3>
       <ul>
         <li>
-          (defVau (ifBind? (pt exp) then . else) env
+          return the evaluation of THEN into resulting ENVIRONMENT if VALUE match the DEFINIEND-TREE, inert otherwise. 
+        </li>
+        <li>
+          $(fn (definiendTree value) then . forms)
+        </li>
+        <li>
+          $(type fexpr)
         </li>
       </ul>
     </div>
@@ -51,7 +79,39 @@
       </h3>
       <ul>
         <li>
-          (defVau (caseVau . clauses) env
+          Multi-armed vau.
+          <br/>
+            Go through the CLAUSES in order.
+          <br/>
+            If CLAUSES in null return #inert.
+          <br/>
+            If car of CLAUSE is else
+          <br/>
+            &nbsp;&nbsp;if the cadr of CLAUSES is =&gt;, evaluate caddr of CLAUSE and apply it to the operands,
+          <br/>
+            &nbsp;&nbsp;otherwise evaluate FORMS as an implicit `begin'.
+          <br/>
+            If the operands match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
+          <br/>
+            Otherwise go to the next CLAUSE.
+        </li>
+        <li>
+          $(fn . clauses)
+        </li>
+        <li>
+          $(type fexpr)
+        </li>
+        <li>
+          $(syntax clauses (or () (clause . clauses)))
+        </li>
+        <li>
+          $(syntax clause (else . forms))
+        </li>
+        <li>
+          $(syntax clause (else =&gt; apv1))
+        </li>
+        <li>
+          $(syntax clause (definiendTree . forms))
         </li>
       </ul>
     </div>
@@ -61,7 +121,16 @@
       </h3>
       <ul>
         <li>
-          (defMacro (defCaseVau sym . clauses)
+          Defines the named caseVau NAME with the given CLAUSES into the current environment.
+        </li>
+        <li>
+          $(fn name . clauses)
+        </li>
+        <li>
+          $(type fexpr)
+        </li>
+        <li>
+          $(derivation (list 'def name (cons 'caseVau clauses)))
         </li>
       </ul>
     </div>
@@ -71,7 +140,42 @@
       </h3>
       <ul>
         <li>
-          (defMacro (case\ . clauses)
+          Multi-armed \.
+          <br/>
+            Go through the CLAUSES in order.
+          <br/>
+            If CLAUSES in null return #inert.
+          <br/>
+            If car of CLAUSE is else
+          <br/>
+            &nbsp;&nbsp;if the cadr of CLAUSES is =&gt;, evaluate caddr of CLAUSE and apply it to the arguments,
+          <br/>
+            &nbsp;&nbsp;otherwise evaluate FORMS as an implicit `begin'.
+          <br/>
+            If the arguments match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
+          <br/>
+            Otherwise go to the next CLAUSE.
+        </li>
+        <li>
+          $(fn . clauses)
+        </li>
+        <li>
+          $(type function)
+        </li>
+        <li>
+          $(syntax clauses (or () (clause . clauses)))
+        </li>
+        <li>
+          $(syntax clause (else . forms))
+        </li>
+        <li>
+          $(syntax clause (else =&gt; apv1))
+        </li>
+        <li>
+          $(syntax clause (definiendTree . forms))
+        </li>
+        <li>
+          $(derivation (list 'wrap (cons 'caseVau clauses)))
         </li>
       </ul>
     </div>
@@ -81,7 +185,16 @@
       </h3>
       <ul>
         <li>
-          (defMacro (defCase\ sym . clauses)
+          Defines the named case\ NAME with the given CLAUSES into the current environment.
+        </li>
+        <li>
+          $(fn name . clauses)
+        </li>
+        <li>
+          $(type fexpr)
+        </li>
+        <li>
+          $(derivation (list 'def name (cons 'case\ clauses)))
         </li>
       </ul>
     </div>
@@ -91,7 +204,40 @@
       </h3>
       <ul>
         <li>
-          (defMacro (match exp . clauses)
+          Evaluates VALUE and go through the CLAUSES in order.
+          <br/>
+            If CLAUSES in null return #inert.
+          <br/>
+            If car of CLAUSE is else
+          <br/>
+            &nbsp;&nbsp;if the cadr of CLAUSES is =&gt;, evaluate caddr of CLAUSE and apply it to the arguments,
+          <br/>
+            &nbsp;&nbsp;otherwise evaluate FORMS as an implicit `begin'.
+          <br/>
+            If VALUE match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
+          <br/>
+            Otherwise go to the next CLAUSE.
+        </li>
+        <li>
+          $(fn value . clauses)
+        </li>
+        <li>
+          $(type fexpr)
+        </li>
+        <li>
+          $(syntax clauses (or () (clause . clauses)))
+        </li>
+        <li>
+          $(syntax clause (else . forms))
+        </li>
+        <li>
+          $(syntax clause (else =&gt; apv1))
+        </li>
+        <li>
+          $(syntax clause (definiendTree . forms))
+        </li>
+        <li>
+          $(derivation (list 'wrap (cons 'caseVau clauses)))
         </li>
       </ul>
     </div>
@@ -103,13 +249,34 @@
         <li>
           Multi-armed conditional.
           <br/>
-            Go through the CLAUSES in order.  Evaluate the TEST.
+            Go through the CLAUSES in order.
           <br/>
-            If it yields true, evaluate the FORMS as an implicit `begin'.
+            If CLAUSES is null return #inert.
           <br/>
-            If it yields false, go to the next clause,
+            If car of CLAUSE is else evaluate FORMS as an implicit `begin'.
           <br/>
-            or return void if there are no more clauses.
+            Otherwise evaluate the TEST.
+          <br/>
+            If TEST is a boolean
+          <br/>
+            &nbsp;&nbsp;if is true, evaluate the FORMS as an implicit `begin',
+          <br/>
+            &nbsp;&nbsp;otherwise go to the next CLAUSE.
+          <br/>
+            If FORMS is null return TEST.
+          <br/>
+            If car di FORMS is =&gt; evaluate the cadr of FORMS and apply it to TEST.
+          <br/>
+            If cadr di FORMS is =&gt; evaluate car of FORMS
+          <br/>
+            &nbsp;&nbsp;if is true evaluate the caddr of FORMS and apply it to TEST
+          <br/>
+            &nbsp;&nbsp;otherwise go to the next CLAUSE.
+          <br/>
+            Otherwise go to the next CLAUSE.
+        </li>
+        <li>
+          $(fn . clauses)
         </li>
         <li>
           $(syntax clauses (clause . clauses))

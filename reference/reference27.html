@@ -31,11 +31,7 @@
       </h3>
       <ul>
         <li>
-          Search for the KEYWORD in the property list LST
-          <br/>
-            (a list of alternating keywords and values)
-          <br/>
-            and return the found value as an option.
+          Search for the KEYWORD in the property list LST (a list of alternating keywords and values) and return the found value as an option.
         </li>
       </ul>
     </div>
@@ -45,13 +41,11 @@
       </h3>
       <ul>
         <li>
-          Search for ITEM in the LIST according to the TEST predicate
+          Search for ITEM in the LIST according to the TEST predicate (defaults to `==').
           <br/>
-            (defaults to `==').  Return the tail of the list starting with
+            Return the tail of the list starting withITEM if found, #null otherwise.
           <br/>
-            ITEM if found, nil otherwise.  The KEY function is applied to
-          <br/>
-            each list element before comparison (defaults to `idf').
+            The KEY function is applied to each list element before comparison (defaults to `idf').
         </li>
         <li>
           $(fn (item list &amp;key test key))

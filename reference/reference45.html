@@ -41,7 +41,7 @@
       </h3>
       <ul>
         <li>
-          Evaluate the FORMS in a context in which `yield' can be used to pause execution.
+          Evaluate the FORMS as an implicit `begin' in a context in which `yield' can be used to pause execution.
         </li>
       </ul>
     </div>
@@ -51,13 +51,13 @@
       </h3>
       <ul>
         <li>
-          Pause the current coroutine.  In the place where the enclosing
+          Pause the current coroutine.
           <br/>
-            `coroutine' (or `resume') was called, evaluate the FORMS with NAME
+            In the place where the enclosing `coroutine' (or `resume') was called,
           <br/>
-            bound to the paused coroutine.  `resume' can later be used to restart
+            evaluate the FORMS as an implicit `begin' with NAME bound to the paused coroutine, and return the result.
           <br/>
-            execution inside the coroutine.
+            `resume' can later be used to restart execution inside the coroutine.
         </li>
       </ul>
     </div>
@@ -67,9 +67,7 @@
       </h3>
       <ul>
         <li>
-          Resume the paused coroutine K and evaluate FORMS in the place where
-          <br/>
-            `yield' was called in the coroutine.
+          Resume the paused coroutine K and evaluate FORMS as an implicit `begin' in the place where `yield' was called in the coroutine, and return the result.
         </li>
       </ul>
     </div>
