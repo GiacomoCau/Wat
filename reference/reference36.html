@@ -30,6 +30,9 @@
         The Box are functions that encapsulates a mutable value.
       </li>
       <li>
+        &nbsp;
+      </li>
+      <li>
         Calling the box:
       </li>
       <li>
@@ -66,7 +69,10 @@
         $(box bindResult value)
       </li>
       <li>
-        $(syntax bindResult (or #ignore #inert :rhs :prv :obj))  
+        $(type function)
+      </li>
+      <li>
+        $(syntax bindResult (or #ignore #inert :rhs :prv :obj))
       </li>
     </ul>
     <div>
@@ -75,15 +81,19 @@
       </h3>
       <ul>
         <li>
-          Create a new box with the optional VALUE.
+          Return a new box with the optional VALUE.
           <br/>
-            without VALUE use as VALUE (boxDft).
+            The Box are functions that encapsulates a mutable value.
+          <br/>
+            Without VALUE use as VALUE (boxDft).
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn)
+          (newBox . value)
         </li>
         <li>
-          $(fn value)
+          (type function)
         </li>
       </ul>
     </div>
@@ -93,7 +103,17 @@
       </h3>
       <ul>
         <li>
-          (defMacro (defBox name . value?)
+          Defines the named box NAME the optional VALUE.
+          <br/>
+            Without VALUE use as VALUE (boxDft).
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (defBox name . value)
+        </li>
+        <li>
+          (type macro)
         </li>
       </ul>
     </div>

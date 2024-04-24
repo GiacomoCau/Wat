@@ -1,96 +1,112 @@
 # Wat
 
-### Java Wat Kernel
+### Java Kernel Wat LispX
 
 Java port of [wat-js](https://github.com/GiacomoCau/wat-js)
 with more then a shadow of [lispx](https://github.com/lispx/lispx)
 and the tco suggestion of [jscheme](https://github.com/chidiwilliams/jscheme)
 
-Qui il [language reference](https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html)
+Now Wat and LispX have essentially the same boot except for the different error handling,
+simple throw and catch for Wat and similar to Common Lisp for LispX.
 
-Queste le differenze rispetto a Wat/lispX
-* lispx è stato convertito da lisp-2 a lisp-1
-* il #nil di lispx è stato convertito in `#null`
-* `#null` e `()` sono uguali ed implementati con il null java
-* il #void di lispx è stato convertito in `#inert`
-* `#ignore` e `#_` sono due forme per la stessa cosa
-* la nomenclatura è stata camellizata eliminando i trattini
-* le liste proprie ed improprie sono distinte (`List` <: `Cons`)
-* le liste improprie, terminano con un cdr diverso da `#null`, sono literal
-* le liste proprie, terminano con cdr uguale a `#null`, sono espressioni valutabili
-* le liste proprie dove la valutazione del car non è un `Combinable` sono literal `(autoquote (or #t #f))`
-* le liste possono essere delimitate sia da `()` che da `[]`
-* l'operatore __if__ può avere più forme test then
-* true può essere #t, !#f, !(or #f #null), !(or #f #null #inert) o !(or #f #null #inert 0) `(typeT (or 0 1 2 3 4))`
-* l'operatote __def__ può restituire:  
-	`#inert`, il valore assegnato (`:rhs`) o il valore precedente (`:prv`) dell'ultima bind effettuata  
-	specificandolo direttamente nell'espressione `(def symbol (or #inert :rhs :prv) value)`  
-	o indirettamente per l'impostazione di `(bndRes (or #inert :rhs :prv))`
-* gli `Obj` possono essere definiti con coppie key valore che diventeranno coppie slot valore dell'obj `(new Obj key value ...)`
-* gli `Obj` sono `Combinable` e combinati con
-	* una key ritornano il valore associato a quella key `(obj key)`
-	* coppie key valore
-		* queste coppie diventeranno coppie slot valore dell'obj `(obj key value ...)`
-		* possono restituire `#inert`, il valore assegnato (`:rhs`) o il valore precedente (`:prv`) dell'ultimo slot assegnato, o l'oggetto stesso (`:obj`)  
-		specificandolo direttamente nell'espressione `(obj (or #inert :rhs :prv :obj) key value ...)`  
-		o indirettamente per l'impostazione di `(bndRes (or #inert :rhs :prv))`
-* gli `Env` possono essere definiti anche con un env parent e
-	* coppie key valore che diventeranno coppie simbolo valore del nuovo env `(newEnv env key value ...)`
-	* un `Obj` le cui coppie slot valore diventeranno coppie simbolo valore del nuovo env `(newEnv env obj)`  
-* gli `Env` sono `Combinable` e combinati con
-	* una key ritornano il valore associato a quella key `(env key)`
-	* coppie key valore
-		* queste coppie diventeranno coppie simbolo valore dell'env `(env key value ...)`
-		* possono restituire `#inert`, il valore assegnato (`:rhs`) o il valore precedente (`:prv`) dell'ultimo simbolo binded, o l'oggetto stesso (`:obj`)  
-		specificandolo direttamente nell'espressione `(env (or #inert :rhs :prv :obj) key value ...)`  
-		o indirettamente per l'impostazione di `(bndRes (or #inert :rhs :prv))`
-		* precedute da `:def` per bindare nell'ultimo frame o `:set!` per bindare nel frame dove la singola key è presente `(env (or :def :set!) (or #inert :rhs :prv :obj) key value ...)` 
-* le key utilizzate per le assegnazioni degli `Obj` e le bind degli `Env` possono essere `(or Keyword Symbol String)`
-* la funzione __eval__ può essere chiamata con la sola espressione da valutare, l'`Env` sarà quello corrente `(eval exp)`
-* l'operatore __vau__ (ovvero __\\__ o __lambda__) permette il controllo su tipo e valore dei parametri.  
-	Al posto del singolo parametro `symbol` potrà essere specificata l'espressione `(#! check symbol)`  
-	dove `check` può essere: un `value`, la classe `Any`, una `Class`, una `List` con uno o due `Integer` o un `Integer` e `oo` seguiti da 0 o più `check`, 	una `List` con car `or` o `and` seguiti da più `check`, un `List` con car `<` `<=` `>=` o `>` seguita da un `Comparable`.  
-	Se il `check` è
-	* un `value` il parametro deve essere uguale a quel `value`
-	* la classe `Any` il parametro può essere qualunque valore
-	* una `Class` il parametro può essere una istanza di quella `Class` o una classe che estende quella `Class`
-	* una `List` il parametro deve essere una `List` dove	
-		* il primo `Integer` indica il numero minimo di elementi, se assente vale `0`
-		* il secondo `Integer` indica il numero massimo di elementi, se assente vale `oo` ovvero `Integer.maxValue`
-		* se il numero degli argomenti `check` della lista è
-			* minore del minimo, gli elementi del parametro eccedenti il minimo potranno essere `Any` ovvero qualunque valore
-			* maggiore del minimo, gli elementi del parametro eccedenti il minimo verranno controllati usando ciclicamente gli argomenti `check` eccedenti il minimo
-		* se il primo elemento della lista è
-			* `or` il parametro dovrà corrispondere ad uno degli argomenti `check` della `or`
-			* `and` il parametro dovrà corrispondere a tutti gli argomenti `check` della `and`
-			* `<` `<=` `>=` `>` il parametro dovrà essere rispettivamente `<` `<=` `>=` `>` dell'argomento `Comparable` della lista
-* le `Box` sono oggetti diversi dagli `Obj`
-* le `Box` sono `Combinable` e combinate con
- 	* `()` ritornano il valore associato `(box)`
-	* un valore
-		* questo diventerà il valore della box `(box value)`
-		* possono restituire `#inert`, il valore assegnato (`:rhs`) o il valore precedente (`:prv`), o l'oggetto stesso (`:obj`)  
-		specificandolo direttamente nell'espressione `(box (or #inert :rhs :prv :obj) value)`  
-		o indirettamente per l'impostazione di `(bndRes (or #inert :rhs :prv))`
-* le `DVar` ovvero le dinamic variables estendono le `Box`
-* le `DVar` sono gestite da una unico operatore `(%d\\ (#! (Symbol) symbols) . body)`  
-	che permette di implementare come macro i vari operatori per le dynamic variables __ddef__ __ddef*__ __progv__ __dlet__ __dlet*__
-	* se `body` è
-		* `()` assegnarà i valori con cui è combinato, convertiti in `DVar`, ai corrispettivi simboli nel corrente `Env` `((d\\ symbols) . values)`
-		* una `List` assegnerà i valori con cui è combinato alle `DVar` associate ai simboli, eseguirà le forms nel corrente `Env` ed alla fine ripristinerà i valori delle
-		`DVar` a quelli precedenti l'assegnazione `((d\\ symbols form . forms) . values)`
-	* se è combinato con `()` utilizzerà come valore da assegnare quello ottenibile da `(boxDft)`
-* __catchTagWth__ e __throwTag__ possono essere indifferentemente operatori (`Opv`) o funzioni (`Apv`) in dipendenza di `(ctApv (or #t #f))`
-* l'handler di __catchTagWth__ può essere oltre che una funzione di un argomento (`Apv1`) anche un qualunque valore che verrà tornato in caso un `Error` venga catched 
-* l'operatore __finally__ è derivato come macro dall'operatore __atEnd__ `(atEnd (#! Apv0 cleaner) form . forms)`
-* __takeSubcont__ __pushPrompt__ __pushDelimSubcont__ e __pushSubcontDelim__ sono operatori e non necessitano di completamento
-* `Supplier` `Function` `BiFunction` `Executable` e `Field`, genericamente java function, sono implicitamente considerate funzioni `Apv`
-* __wrap__ non wrappa gli `Apv` e le java function ma wrappa i restanti `Combinator`
-* __unwrap__ unwrappa gli `Apv`, wrappa le java function in una `JFun` e non unwrappa i restanti `Combinator`
-* le `String` possono essere interned con `(intStr (or #f #t))`, se interned possono essere confrontate con `==`
-* __defMacro__ __defVau__ __def\\__ __def*\\__ __rec\\__ __let1\\__ __let1rec\\__ __let\\__ __letrec\\__ permettono la definizione dei `Combinable` con due forme equivalenti
+Here the [language reference](https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html)
+
+These are the differences compared to the original Wat/LispX
+* LispX was converted from lisp-2 to lisp-1
+* LispX's `#nil` has been converted to `#null`
+* `#null` and `()` are the same value and implemented with `null` java
+* Lispx `#void` has been converted to `#inert`
+* `#ignore` and `#_` are two forms of the same valore
+* the nomenclature has been changed by eliminating the hyphens and camelizing
+* Proper and improper lists are distinct (`List` <: `Cons`)
+* Proper lists, ending with cdr equal to `#null`, are evaluable expressions
+* Improper lists, ending with a cdr other than `#null`, are literal
+* Proper lists where the car evaluation is not a `Combinable` are literal `(autoquote (or #t #f))`
+* Lists can be delimited by either `()` or `[]`
+* The __if__ operator can have multiple `test` and `then` forms
+* The expressions can be true if are equals to #t, !#f, !(or #f #null), !(or #f #null #inert) or !(or #f #null #inert 0) by setting `(typeT (or 0 1 2 3 4))`
+* The __def__ operator can return:
+	`#inert`, the assigned value (`:rhs`) or the previous value (`:prv`) of the last bind made
+	specifying it directly in the expression `(def symbol (or #inert :rhs :prv) value)`
+	or indirectly by setting `(bndRes (or #inert :rhs :prv))`
+* The `Obj` can be defined with key value pairs which will become attribute value pairs of the new obj `(new Obj key value ...)`
+* The `Obj` are `Combinable` and combined with
+	* a key return the value associated with that key `(obj key)`
+	* key value pairs
+		* these pairs will become obj attribute value pairs `(obj key value ...)`
+		* can return `#inert`, the assigned value (`:rhs`) or the previous value (`:prv`) of the last assigned attribute, or the object itself (`:obj`)
+		specifying it directly in the expression `(obj (or #inert :rhs :prv :obj) key value ...)`
+		or indirectly by setting `(bndRes (or #inert :rhs :prv))`
+* The `Env` can also be defined with an env parent `(newEnv)` `(newEnv parentEnv) and
+	* key value pairs which will become symbol value pairs of the new env `(newEnv env key value ...)`
+	* an `Obj` whose attribute value pairs will become symbol value pairs of the new env `(newEnv env obj)`
+* The `Env` are `Combinable` and combined with
+	* a key return the value associated with that key `(env key)`
+	* key value pairs
+		* these pairs will become value symbol pairs of the env `(env key value ...)`
+		* can return `#inert`, the assigned value (`:rhs`) or previous value (`:prv`) of the last bound symbol, or the object itself (`:obj`)
+		specifying it directly in the expression `(env (or #inert :rhs :prv :obj) key value ...)`
+		or indirectly by setting `(bndRes (or #inert :rhs :prv))`
+		* preceded by `:def` to bind in the last frame or `:set!` to bind in the frame where the single key is present `(env (or :def :set!) (or #inert :rhs :prv :obj ) key value ...)`
+* The keys used for `Obj` assignments and `Env` bindings can be `(or Keyword Symbol String)`
+* The __eval__ function can be called with only the expression to evaluate, the `Env` will be the current one `(eval exp)`
+* The __vau__ operator (i.e. __\\__ or __lambda__) allows control over the type and value of parameters.
+
+	Instead of the single `symbol` parameter, the expression `(#! check symbol)` can be specified,
+	
+	where `check` can be:
+	* a `value`,
+	* the `Any` class,
+	* a `Class`,
+	* a `List` with zero, one or two `Integers` followed by zero or more `checks`,
+	* a `List` with an `Integer` and the symbol `oo` followed by zero or more `checks`,
+	* a `List` with car equals `or` followed by two or more `check`,
+	* a `List` with car equals `and` followed by two or more `check`,
+	* a `List` with car `Apv` followed by zero o more arguments.
+
+	When the `check` is:
+	* a `value`: the parameter value must be equal to that `value`
+	* the `Any` class: the parameter can be any value
+	* a `Class`: the parameter value can be an instance of that `Class` or a class that extends that `Class`
+	* a `List`: the parameter value must be a `List` where, in the `check` `List`,
+		* the first `Integer` indicates the minimum number of elements, default is `0`
+		* the second `Integer` indicates the maximum number of elements
+		  default is the value of the first `Integer` if present, otherwise `oo` for `Integer.maxValue`
+		  for the second `Integer` can be also specified the symbol `oo` for `Integer.maxValue`.
+		* if the number of `check` arguments in the list is
+			* less than the minimum: parameters value that exceed the minimum can have any value
+			* greater than the minimum: the parameters values exceeding the minimum will be checked cyclically using `check` arguments exceeding the minimum 
+		* if the first element of the list is:
+			* `or`: the parameter value must match one of the `check` arguments of the `or`
+			* `and`: the parameter value must match all the `check` arguments of the `and`
+			* `Apv`: applying `Apv` to the cons of the parameter value and the remaining arguments must return `#true`
+* The `Box` are different objects from `Objs`
+* The `Box` are `Combinable` and combined with
+	* `()` return the associated value `(box)`
+	* a value
+		* this will become the value of the box `(box value)` 
+		* can return `#inert`, the assigned value (`:rhs`), the previous value (`:prv`), or the object itself (`:obj`)
+		specifying it directly in the expression `(box (or #inert :rhs :prv :obj) value)`
+		or indirectly by setting `(bndRes (or #inert :rhs :prv))`
+* The `DVars` or dynamic variables extend the `Boxes`
+* The `DVars` are managed by a single operator `(%d\\ (#! (Symbol) symbols) . body)`
+	which allows you to implement the various operators for dynamic variables as macros __ddef__ __ddef*__ __progv__ __dlet__ __dlet*__
+	* if `body` is
+		* `()` will assign the values ​​it is combined with, converted to `DVar`, to the corresponding symbols in the current `Env` `((d\\ symbols) . values)`
+		* a `List` will assign the values ​​with which it is combined to the `DVars` associated with the symbols, execute the forms in the current `Env` and finally restore the values ​​of the
+		`DVar` to those preceding the assignment `((d\\ symbols form . forms) . values)`
+	* if it is combined with `()` it will use the value obtainable from `(boxDft)` as the value to be assigned
+* __catchTagWth__ and __throwTag__ can be either operators (`Opv`) or functions (`Apv`) depending on `(ctApv (or #t #f))`
+* The __catchTagWth__ handler, can be not only a function of an argument (`Apv1`), but also any value that will be returned if an `Error` is caught
+* The __finally__ operator is derived, as a macro, from the __atEnd__ operator `(atEnd (#! Apv0 cleaner) form . forms)`
+* __takeSubcont__, __pushPrompt__, __pushDelimSubcont__ and __pushSubcontDelim__ are operators and do not require completion
+* `Supplier` `Function` `BiFunction` `Executable` and `Field`, generically java functions, are implicitly considered `Apv` functions
+* __wrap__ does not wrap the `Apv` and the java functions, but wraps the remaining `Combinator`
+* __unwrap__ unwraps the `Apv`, wraps the java functions in a `JFun` and does not unwrap the remaining `Combinator`
+* `String` can be interned with `(intStr (or #f #t))`, if interned they can be compared with `==`
+* __defMacro__, __defVau__, __def\\__, __def*\\__, __rec\\__, __let1\\__, __let1rec\\__, __let\\__ and __letrec\\__ allow the definition of `Combinable` with two equivalent forms
 	* `(___ name parameters . body)`
 	* `(___ (name . parameters) . body)`
-* __rec__ __rec\\__ __let1rec__ __let1rec\\__ __letrec__ __letrec\\__ inizializzano a `#inert` le definizioni prima della valutazione
-* unificate le varie tipologie di commenti interni alle definizioni di lispx con il solo commento multiriga #| ... |#
-* possibilità di attivare e disattivare la Tail Call Ottimization `(doTco (or #t #f))`
+* __rec__, __rec\\__, __let1rec__, __let1rec\\__, __letrec__ and __letrec\\__ initialize definitions to `#inert` before evaluation
+* Unified the various types of comments internal to LispX definitions with only the multiline comment `#| ... |#`
+* Ability to enable and disable Tail Call Optimization `(doTco (or #t #f))`

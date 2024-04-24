@@ -32,21 +32,23 @@
       <ul>
         <li>
           Return true if the SYMBOL or KEYWORD or STRING is bound in the ENVIRONMENT or OBJ, false otherwise.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn attribute object)
+          (bound? attribute object)
         </li>
         <li>
-          $(syntax attribute (or Symbol Keyword String))
+          (syntax attribute (or Symbol Keyword String))
         </li>
         <li>
-          $(syntax object (or Env Obj))
+          (syntax object (or Env Obj))
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (@isBound object attribute))
+          (derivation (@isBound object attribute))
         </li>
       </ul>
     </div>
@@ -57,21 +59,23 @@
       <ul>
         <li>
           Return the value of SYMBOL or KEYWORD or STRING is bound in the ENVIRONMENT or OBJ, #null otherwise.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn attribute object)
+          (value attribute object)
         </li>
         <li>
-          $(syntax attribute (or Symbol Keyword String))
+          (syntax attribute (or Symbol Keyword String))
         </li>
         <li>
-          $(syntax object (or Env Obj))
+          (syntax object (or Env Obj))
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (@value object attribute))
+          (derivation (@value object attribute))
         </li>
       </ul>
     </div>
@@ -82,21 +86,23 @@
       <ul>
         <li>
           Return true if the SYMBOL or KEYWORD or STRING is bound in the ENVIRONMENT or OBJ, false otherwise.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn object attribute)
+          (slotBound? object attribute)
         </li>
         <li>
-          $(syntax object (or Env Obj))
+          (syntax object (or Env Obj))
         </li>
         <li>
-          $(syntax attribute (or Symbol Keyword String))
+          (syntax attribute (or Symbol Keyword String))
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (@isBound object attribute))
+          (derivation (@isBound object attribute))
         </li>
       </ul>
     </div>
@@ -106,22 +112,24 @@
       </h3>
       <ul>
         <li>
-          Return the value of SYMBOL or KEYWORD or STRING is bound in the ENVIRONMENT or OBJ, throws an error otherwise.
+          Return the value of SYMBOL or KEYWORD or STRING is bound in the ENVIRONMENT or OBJ, signals an error otherwise.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn object attribute)
+          (getSlot object attribute)
         </li>
         <li>
-          $(syntax object (or Env Obj))
+          (syntax object (or Env Obj))
         </li>
         <li>
-          $(syntax attribute (or Symbol Keyword String))
+          (syntax attribute (or Symbol Keyword String))
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (object attribute))
+          (derivation (object attribute))
         </li>
       </ul>
     </div>
@@ -132,21 +140,23 @@
       <ul>
         <li>
           Update the value of SYMBOL or KEYWORD or STRING in the ENVIRONMENT or OBJ to VALUE.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn object attribute value)
+          (setSlot object attribute value)
         </li>
         <li>
-          $(syntax object (or Env Obj))
+          (syntax object (or Env Obj))
         </li>
         <li>
-          $(syntax attribute (or Symbol Keyword String))
+          (syntax attribute (or Symbol Keyword String))
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (object attribute value))
+          (derivation (object attribute value))
         </li>
       </ul>
     </div>

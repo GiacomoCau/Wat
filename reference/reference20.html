@@ -32,15 +32,17 @@
       <ul>
         <li>
           Return the name symbol of the CLASS.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn class)
+          (className class)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (symbol (@getSimpleName class)))) 
+          (derivation (symbol (@getSimpleName class))))
         </li>
       </ul>
     </div>
@@ -51,15 +53,17 @@
       <ul>
         <li>
           Return the class of the OBJECT.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn object)
+          (classOf object)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (if (null? object) #null (@getClass object))) 
+          (derivation (if (null? object) #null (@getClass object)))
         </li>
       </ul>
     </div>
@@ -69,7 +73,15 @@
       </h3>
       <ul>
         <li>
-          (def instanceOf? %instanceOf?)
+          Return true if OBJECT is instaceof CLASS.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (instanceOf? object class)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -82,15 +94,17 @@
           Return true if the CLASS is a subclass of the SUPERCLASS, false otherwise.
           <br/>
             A class is considered a subclass of itself.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn class superclass)
+          (subClass? class superclass)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (@isAssignableFrom superClass class))) 
+          (derivation (@isAssignableFrom superClass class)))
         </li>
       </ul>
     </div>
@@ -101,15 +115,20 @@
       <ul>
         <li>
           Return true if the OBJECT is an instance of the CLASS, false otherwise.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn object class)
+          (type? object class)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (if (null? class) (null? object) (null? object) #f (subClass? (classOf object) class))) 
+          (derivation (if (null? class) (null? object) (null? object) #f (subClass? (classOf object) class)))
+        </li>
+        <li>
+          (derivation (if (null? class) (null? object) (instanceOf object class)))
         </li>
       </ul>
     </div>

@@ -632,7 +632,7 @@
   ;;; Test that `signal' (and `error' likewise) associates the
   ;;; restarts it binds with the signalled error.
   (defTest signal.associations
-    (dolist (signal-operator (list signal error) #t)
+    (doList (signal-operator (list signal error) #t)
       (block ok ; so that the test doesn't fail when testing `error'.
         (handlerBind ((SimpleError
                         (\ (e)

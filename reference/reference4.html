@@ -32,15 +32,17 @@
       <ul>
         <li>
           Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn fun . args) 
+          (apply* fun . args)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (apply fun args (newEnv)))
+          (derivation (apply fun args (newEnv)))
         </li>
       </ul>
     </div>
@@ -51,15 +53,17 @@
       <ul>
         <li>
           Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn fun . args)
+          (apply** fun . args)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (apply fun (apply list* args) (newEnv)))
+          (derivation (apply fun (apply list* args) (newEnv)))
         </li>
       </ul>
     </div>
@@ -69,19 +73,21 @@
       </h3>
       <ul>
         <li>
-          Match the DEFINIEND-TREE against the VALUE in the ENVIRONMENT, creating or updating existing bindings.
+          Match the DEFINIEND-TREE against the VALUE in the ENVIRONMENT-PARAMETER, creating or updating existing bindings.
           <br/>
             Unlike Common Lisp `setq' (or Scheme `set!') that allows updating arbitrary bindings
           <br/>
             you always need to know the environment where a binding is in to change it.
           <br/>
             Therefore, we usually use boxes instead of mutating bindings directly.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn ep dt value)
+          (set environmentParameter definiendTree value)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -91,7 +97,7 @@
       </h3>
       <ul>
         <li>
-          Update the bindings defined of the environment, throws an error if the binding is not defined.
+          Update the bindings defined of the environment, signals an error if the binding is not defined.
           <br/>
             So 'def' match the DEFINIEND-TREE against the VALUE and update the resulting bindings into environment if exist.
           <br/>
@@ -103,19 +109,19 @@
           <br/>
             with bindResult :prv return the previous value of the last binding
           <br/>
-            with bindResult :obj return the env
+            &nbsp;
         </li>
         <li>
-          $(fn definiendTree value)
+          (set! definiendTree value)
         </li>
         <li>
-          $(fn definiendTree bindResult value)
+          (set! definiendTree bindResult value)
         </li>
         <li>
-          $(syntax bindResult (or #ignore #inert :rhs :prv))  
+          (syntax bindResult (or #ignore #inert :rhs :prv))
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -126,12 +132,14 @@
       <ul>
         <li>
           Return the underlying operator of a FUNCTION.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn function)
+          (unwrap function)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
       </ul>
     </div>
@@ -146,12 +154,14 @@
             which accesses the execution environment rather than the definition environment.
           <br/>
             Useful for defining the primitive for dynamically-scoped variables.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn pt ep . forms)
+          (wrau pt ep . forms)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
       </ul>
     </div>

@@ -213,6 +213,7 @@ public class Utility {
 	
 	public static String encode(String a) {
 		if (a == null) return "";
+		if (a.trim().length() == 0) return "&nbsp;";
 		char c;
 		StringBuffer sb = new StringBuffer(2*a.length());
 		int i = 0, end = a.length();

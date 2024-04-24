@@ -27,7 +27,10 @@
     </h2>
     <ul>
       <li>
-        An option is either null (&quot;none&quot;), or a one-element list (&quot;some&quot;).
+        An option is either #null (&quot;none&quot;), or a one-element list (&quot;some&quot;).
+      </li>
+      <li>
+        Idea from Taylor R. Campbell's blag. https://mumble.net/~campbell/blag.txt
       </li>
     </ul>
     <div>
@@ -38,7 +41,7 @@
         <li>
           Create a one-element list from the VALUE.
           <br/>
-            Alias of cons!. 
+            Alias of cons!.
         </li>
       </ul>
     </div>
@@ -50,17 +53,17 @@
         <li>
           Single-value OPTION destructuring.
           <br/>
-            If the evaluation of OPTION it's not null, evaluate the THEN form with the NAME bound to the contents of the OPTION.
+            If the evaluation of OPTION it's not #null, evaluate the THEN form with the NAME bound to the contents of the OPTION.
           <br/>
             Otherwise, evaluate the ELSE forms as an implicit `begin'.
           <br/>
-            Idea from Taylor R. Campbell's blag. https://mumble.net/~campbell/blag.txt
+            &nbsp;
         </li>
         <li>
-          $(fn (name option) then . else)
+          (ifOpt (name option) then . else)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -72,12 +75,14 @@
         <li>
           Multi-valued OPTION destructuring.
           <br/>
-            If the evaluation of OPTION it's not null, evaluate THEN form with the DEFINIEND-TREE bound to OPTION value .
+            If the evaluation of OPTION it's not #null, evaluate THEN form with the DEFINIEND-TREE bound to OPTION value.
           <br/>
             Otherwise, evaluate the ELSE forms as an implicit `begin'.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn (definiendTree option) then . else)
+          (ifOpt* (definiendTree option) then . else)
         </li>
       </ul>
     </div>
@@ -89,15 +94,17 @@
         <li>
           Destructure the OPTION.
           <br/>
-            If the evaluation of OPTION it's not null, evaluate the FORMS as an implicit `begin'. Otherwise, return null
+            If the evaluation of OPTION it's #null, return #null.
           <br/>
-            with the NAME bound to the contents of the option, and return the result.
+            Otherwise, evaluate the FORMS as an implicit `begin' with the NAME bound to the contents of the OPTION.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn (name option) . forms)
+          (whenOpt (name option) . forms)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -109,13 +116,17 @@
         <li>
           Destructure the OPTION.
           <br/>
-            If the evaluation of OPTION it's null, evaluate the FORMS as an implicit `begin'. Otherwise, return null.
+            If the evaluation of OPTION it's #null, evaluate the FORMS as an implicit `begin'.
+          <br/>
+            Otherwise, return #null.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn option . forms)
+          (unlessOpt option . forms)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -129,28 +140,32 @@
           <br/>
             Evaluate OPTION and go through the CLAUSES in order.
           <br/>
-            If CLAUSES in null return null.
+            If OPTION is #null return #null.
+          <br/>
+            If CLAUSES is #null return #null.
           <br/>
             If car of CLAUSE is else evaluate FORMS as an implicit `begin'.
           <br/>
             If the OPTION match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
           <br/>
             Otherwise go to the next CLAUSE.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn option . clauses)
+          (caseOpt option . clauses)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
         <li>
-          $(syntax clauses (or () (clause . clauses)))
+          (syntax clauses (or () (clause . clauses)))
         </li>
         <li>
-          $(syntax clause (else . forms))
+          (syntax clause (else . forms))
         </li>
         <li>
-          $(syntax clause (definiendTree . forms))
+          (syntax clause (definiendTree . forms))
         </li>
       </ul>
     </div>
@@ -160,17 +175,19 @@
       </h3>
       <ul>
         <li>
-          Return the contents of the OPTION, or the DEFAULT if the option is null.
+          Return the contents of the OPTION, or the DEFAULT if the option is #null.
           <br/>
             The default itself defaults to #inert.
           <br/>
-            The DEFAULT is evaluated lazily, only when the OPTION is null.
+            The DEFAULT is evaluated lazily, only when the OPTION is #null.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn option . default)
+          (optDft option . default)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -185,12 +202,14 @@
             This is useful for implementing functions that take multiple optDft arguments.
           <br/>
             Each default is evaluated lazily, only when needed.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn list . defaults)
+          (optDft* list . defaults)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -200,13 +219,15 @@
       </h3>
       <ul>
         <li>
-          Returns the contents of the OPTION or signals an error if it is null.
+          Returns the contents of the OPTION or signals an error if it is #null.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn option)
+          (optDft! option)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>

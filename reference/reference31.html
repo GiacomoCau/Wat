@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      31. Block Loop For While Until Repeat DoTimes
+      31. Block ReturnFrom Loop For While Until Repeat DoTimes
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,7 +23,7 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      31. Block Loop For While Until Repeat DoTimes
+      31. Block ReturnFrom Loop For While Until Repeat DoTimes
     </h2>
     <div>
       <h3>
@@ -38,6 +38,14 @@
             Note that unlike in Common Lisp, there is no separate namespace for block names;
           <br/>
             a block is named in the normal variable namespace.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (block blockName . forms)
+        </li>
+        <li>
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -47,12 +55,17 @@
       </h3>
       <ul>
         <li>
-          Abort evaluation and return the optional VALUE? (which lsts to #inert) from the block named BLOCK-NAME.
+          Abort evaluation and return the optional VALUE (which defaults to #inert) from the block named BLOCK-NAME.
           <br/>
             It is an error to return from a block whose dynamic extent has ended.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn (blockName . value?))
+          (returnFrom (blockName . value))
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -63,6 +76,16 @@
       <ul>
         <li>
           Evaluate FORMS as an implicit `begin' while TEST-FORM evaluates to true.
+          <br/>
+            Defined using block and returnFrom.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (while testForm . forms)
+        </li>
+        <li>
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -72,7 +95,63 @@
       </h3>
       <ul>
         <li>
-          (def %loop
+          Redefine the primitive %loop to add the clauses :for and :for1 and the forms break, continue, while and until.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (%loop . forms)
+        </li>
+        <li>
+          (%loop :for1 binding . forms)
+        </li>
+        <li>
+          (%loop :for bindings . forms)
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+        <li>
+          (syntax bindings (binding . bindings))
+        </li>
+        <li>
+          (syntax binding (symbol initForm . incrFrom))
+        </li>
+        <li>
+          (syntax forms (form . forms) )
+        </li>
+        <li>
+          (syntax form (break . forms))
+        </li>
+        <li>
+          (syntax form (break- n . forms))
+        </li>
+        <li>
+          (syntax form (break? testForm . forms))
+        </li>
+        <li>
+          (syntax form (break-? n testForm . forms))
+        </li>
+        <li>
+          (syntax form (continue . forms))
+        </li>
+        <li>
+          (syntax form (continue- n . forms))
+        </li>
+        <li>
+          (syntax form (continue? testForm . forms))
+        </li>
+        <li>
+          (syntax form (continue-? n testForm . forms))
+        </li>
+        <li>
+          (syntax form (while? testForm . forms))
+        </li>
+        <li>
+          (syntax form (until? testForm . forms))
+        </li>
+        <li>
+          (syntax form ...)
         </li>
       </ul>
     </div>
@@ -82,7 +161,7 @@
       </h3>
       <ul>
         <li>
-          (def loop %loop)
+          Alias of %loop.
         </li>
       </ul>
     </div>
@@ -92,7 +171,18 @@
       </h3>
       <ul>
         <li>
-          (defMacro (for1 binding cond . forms)
+          Single variabile for loop.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (for1 binding whileForm . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+        <li>
+          (syntax binding (symbol initForm . incrFrom))
         </li>
       </ul>
     </div>
@@ -102,7 +192,21 @@
       </h3>
       <ul>
         <li>
-          (defMacro (for bindings cond . forms)
+          Multile variabiles for loop.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (for bindings whileForm . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+        <li>
+          (syntax bindings (binding . bindings))
+        </li>
+        <li>
+          (syntax binding (symbol initForm . incrFrom))
         </li>
       </ul>
     </div>
@@ -112,7 +216,15 @@
       </h3>
       <ul>
         <li>
-          Evaluate FORMS as an implicit `begin' while TEST-FORM evaluates to true.
+          Evaluate FORMS as an implicit `begin' while WHILE-FORM evaluates to true.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (while whileForm . forms)
+        </li>
+        <li>
+          (type macro)
         </li>
       </ul>
     </div>
@@ -122,7 +234,36 @@
       </h3>
       <ul>
         <li>
-          Evaluate FORMS as an implicit `begin' until TEST-FORM evaluates to true.
+          Evaluate FORMS as an implicit `begin' until UNTIL-FORM evaluates to false.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (until whileForm . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        repeat
+      </h3>
+      <ul>
+        <li>
+          Evaluate FORMS as an implicit `begin' TIMES times.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (repeat times . forms)
+        </li>
+        <li>
+          (repeat (symbol times . endForms) . forms)
+        </li>
+        <li>
+          (type macro)
         </li>
       </ul>
     </div>
@@ -133,26 +274,32 @@
       <ul>
         <li>
           Cf. Common Lisp's DOTIMES.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (doTimes (symbol times . endForm) . forms)
+        </li>
+        <li>
+          (type macro)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        repeat
+        doList
       </h3>
       <ul>
         <li>
-          (defVau (repeat times . forms) env
+          Cf. Common Lisp's DOLIST.
+          <br/>
+            &nbsp;
         </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        doTimes
-      </h3>
-      <ul>
         <li>
-          (defMacro doTimes ((var times . result) . forms)
+          (doList symbol list . forms)
+        </li>
+        <li>
+          (type macro)
         </li>
       </ul>
     </div>

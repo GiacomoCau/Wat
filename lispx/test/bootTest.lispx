@@ -1731,56 +1731,56 @@
     (maplist (\ (x) (list (+ x 10) 'x)) '(1 2 3 4))
     '(11 x 12 x 13 x 14 x)))
 
-(defSuite dolist
+(defSuite doList
 
-  (defTest dolist.1
+  (defTest doList.1
     (signalsError?
-     (dolist)
+     (doList)
      Error :type 'match :operands# +1))
 
-  (defTest dolist.2
+  (defTest doList.2
     (signalsError?
-     (dolist ())
+     (doList ())
      Error :type 'match :operands# +2))
 
-  (defTest dolist.3
+  (defTest doList.3
     (signalsError?
-     (dolist (x))
+     (doList (x))
      Error :type 'match :operands# +1))
 
-  (defTest dolist.4
-    (dolist (x '(1 2 3)))
+  (defTest doList.4
+    (doList (x '(1 2 3)))
     #inert)
 
-  (defTest dolist.5
+  (defTest doList.5
     (signalsError?
-     (dolist (x "not-a-list"))
+     (doList (x "not-a-list"))
      Error :type 'type :datum "not-a-list" :expected 'Cons))
 
-  (defTest dolist.6
+  (defTest doList.6
     (signalsError?
-     (dolist ("not-a-symbol" '(1 2 3)))
+     (doList ("not-a-symbol" '(1 2 3)))
     Error :type 'type :datum '("not-a-symbol") :expected '(or () #ignore Symbol)))
 
-  (defTest dolist.7
+  (defTest doList.7
     (let ((ct 0))
       (def env (theEnv))
-      (assert#t (eq? #inert (dolist (x '(1 2 3 4))
+      (assert#t (eq? #inert (doList (x '(1 2 3 4))
                          'bla
                          (set env ct (+ ct x)))))
       ct)
     10)
 
-  (defTest dolist.8
+  (defTest doList.8
     (let ((ct 0))
       (def env (theEnv))
-      (dolist (x '(1 2 3 4) (+ ct 100))
+      (doList (x '(1 2 3 4) (+ ct 100))
         'bla
         (set env ct (+ ct x))))
     110)
 
-  (defTest dolist.9
-    (dolist (x '(1 2 3) x))
+  (defTest doList.9
+    (doList (x '(1 2 3) x))
     '()))
 
 (defSuite nth

@@ -1,10 +1,10 @@
-;;                                                     -*- Lisp -*-
+;;;                                                     -*- Lisp -*-
 ;;; LispX Condition System
-;;
+;;;
 
-;; Copyright (c) 2021, 2022 Manuel J. Simoni
+;;; Copyright (c) 2021, 2022 Manuel J. Simoni
 
-#|!
+#|! LispX Condition System
  |This file implements a condition system in the style of Common Lisp.
  |
  |Implementation Notes
@@ -18,8 +18,8 @@
  |* Both condition and restart handlers are arranged in
  |  dynamically-bound handler chains, consisting of individual
  |  handler frames.  Each frame binds a number of handlers.  We use
- |  two dynamic variables, `*conditionHandlerFrame?*' and
- |  `*restartHandlerFrame?*', to point at the innermost frame of
+ |  two dynamic variables, `*conditionHandlerFrame*' and
+ |  `*restartHandlerFrame*', to point at the innermost frame of
  |  each chain.  Note that the variables hold options, as indicated
  |  by the question mark.
  |
@@ -115,12 +115,12 @@
    |#
   (restartName handlerFunction interactiveFunction? associatedConditions) )
 
-(ddef *conditionHandlerFrame?*
+(ddef *conditionHandlerFrame*
   #|An option holding the innermost condition handler frame.
    |#
   #null )
 
-(ddef *restartHandlerFrame?*
+(ddef *restartHandlerFrame*
   #|An option holding the innermost restart handler frame.
    |#
   #null )
@@ -158,7 +158,7 @@
              (if (cons? className) (eval (cons 'list className) env) (eval className env)) )
         :handlerFunction
            (the Function (eval functionForm env)) ))
-    *conditionHandlerFrame?* ))
+    *conditionHandlerFrame* ))
 
 (def restartBind
   #|Establish restart handlers specified by HANDLER-SPECS around FORMS.
@@ -179,7 +179,7 @@
            (whenOpt (iFnForm (optValue :interactiveFunction properties)) (some (the Function (eval iFnForm env))))
         :associatedConditions
            (whenOpt (aCnForm (optValue :associatedConditions properties)) (the List (eval aCnForm env))) ))
-    *restartHandlerFrame?* ))
+    *restartHandlerFrame* ))
 
 
 (def\ lispx::makeHandlerCaseOperator (handlerBindOperator)
@@ -224,7 +224,7 @@
   #|Utility to signal the CONDITION.  If the signal is unhandled,
    |return #inert.  See `signal'.
    |#
-  (let1 signal (handlerFrame? (dget *conditionHandlerFrame?*))
+  (let1 signal (handlerFrame? (dget *conditionHandlerFrame*))
     ;; Payload to `lispx::findHandler?' is always #null for condition handlers.
     (ifOpt ((handler frame) (lispx::findHandler? condition handlerFrame? #null))
       (begin
@@ -242,7 +242,7 @@
    |This is the so-called "condition firewall".  The chain gets passed
    |in as the value of HANDLER-FRAME.
    |#
-  (dlet ((*conditionHandlerFrame?* (getSlot handlerFrame 'parentFrame?)))
+  (dlet ((*conditionHandlerFrame* (getSlot handlerFrame 'parentFrame?)))
     (lispx::applyHandlerFunction handler (list condition)) ))
 
 (def\ lispx::applyHandlerFunction (handler arguments)
@@ -346,7 +346,7 @@
    |#
   (whenOpt (handlerFrame handlerFrame?)
     (block found
-      (dolist (handler (getSlot handlerFrame 'handlers))
+      (doList (handler (getSlot handlerFrame 'handlers))
         (when (lispx::handlerApplicable? handler object payload?)
           (returnFrom found (some (list handler handlerFrame)))))
       (lispx::findHandler? object (getSlot handlerFrame 'parentFrame?) payload?))))
@@ -357,7 +357,7 @@
    |#
   (whenOpt
     ( (handler #ignore)
-        (lispx::findHandler? name (dget *restartHandlerFrame?*) condition?) )
+        (lispx::findHandler? name (dget *restartHandlerFrame*) condition?) )
     (some handler) ))
 
 (defGeneric lispx::handlerApplicable? (handler object payload?)
@@ -408,9 +408,9 @@
    |explicitly associated with the supplied CONDITION? or not associated
    |with any condition.
    |#
-  (let computeRestarts 
+  (let computeRestarts
     ( (restarts '())
-      (handlerFrame? (dget *restartHandlerFrame?*)) )
+      (handlerFrame? (dget *restartHandlerFrame*)) )
     (ifOpt (handlerFrame handlerFrame?)
       (computeRestarts
         (append restarts
@@ -419,6 +419,7 @@
             (getSlot handlerFrame 'handlers) ))
         (getSlot handlerFrame 'parentFrame?) )
       restarts )))
+
 
 (defClass RestartError (Error)
   #|Signalled when no handler for RESTART-NAME is found.

@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      28. Case MatchObj? CaseType CaseType\
+      28. Case MatchObj? MatchObj*? CaseType CaseType\
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,7 +23,7 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      28. Case MatchObj? CaseType CaseType\
+      28. Case MatchObj? MatchObj*? CaseType CaseType\
     </h2>
     <div>
       <h3>
@@ -31,7 +31,51 @@
       </h3>
       <ul>
         <li>
-          (defVau (case exp . clauses) env
+          Multi-armed value test.
+          <br/>
+            Evaluate KEY and Go through the CLAUSES.
+          <br/>
+            If CLAUSES is #null return #inert.
+          <br/>
+            If car of CLAUSE is else or 'eq?' KEY VALUE or 'member? :cmp eq?' KEY VALUES
+          <br/>
+            &nbsp;&nbsp;if car FORMS is =&gt; apply evaluate cadr FORMS to VALUE
+          <br/>
+            &nbsp;&nbsp;otherwise evaluate FORMS as an implicit `begin'.
+          <br/>
+            Otherwise go to the next CLAUSE.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (case (key . clauses))
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+        <li>
+          (syntax clauses (clause . clauses))
+        </li>
+        <li>
+          (syntax clause (else . forms))
+        </li>
+        <li>
+          (syntax clause (else =&gt; apv1))
+        </li>
+        <li>
+          (syntax clause (value . forms))
+        </li>
+        <li>
+          (syntax clause (value =&gt; apv1))
+        </li>
+        <li>
+          (syntax clause (values . forms))
+        </li>
+        <li>
+          (syntax clause (values =&gt; apv1))
+        </li>
+        <li>
+          (syntax values (value . values))
         </li>
       </ul>
     </div>
@@ -41,7 +85,18 @@
       </h3>
       <ul>
         <li>
-          (def matchObj? %matchObj?)
+          Return true if OBJECT is an instance of CLASE and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (matchObj? object (class . attributes))
+        </li>
+        <li>
+          (syntax attributes (or () (attribute value . attributes)))
+        </li>
+        <li>
+          (syntax attribute (or Symbol Keyword String .Field @Method))
         </li>
       </ul>
     </div>
@@ -51,7 +106,18 @@
       </h3>
       <ul>
         <li>
-          (def\ (matchObj*? obj class . slots) 
+          Return true if OBJECT is an instance of CLASE and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (matchObj*? object (class . attributes))
+        </li>
+        <li>
+          (syntax attributes (or () (attribute value . attributes)))
+        </li>
+        <li>
+          (syntax attribute (or Symbol Keyword String .Field @Method))
         </li>
       </ul>
     </div>
@@ -63,26 +129,36 @@
         <li>
           Multi-armed type test.
           <br/>
-            Evaluate the KEYFORM. Go through the CLAUSES.
+            Evaluate the OBJECT and Go through the CLAUSES.
           <br/>
-            If the result of evaluating KEYFORM is an instance of the class named by CLASS-NAME, evaluate the FORMS as an implicit `begin', and return the result.
+            If CLAUSES is #null return #inert.
           <br/>
-            Return #inert if there are no more clauses, go to the next clause otherwise. 
+            If OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, evaluate the FORMS as an implicit `begin'.
+          <br/>
+            Otherwise go to the next CLAUSE.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn (key . clauses))
+          (caseType (object . clauses))
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
         <li>
-          $(syntax clauses (clause . clauses))
+          (syntax clauses (clause . clauses))
         </li>
         <li>
-          $(syntax clause (className . forms))
+          (syntax clause (class . forms))
         </li>
         <li>
-          $(syntax clause ((className . slotSpecs) . forms))
+          (syntax clause ((class . attributes) . forms))
+        </li>
+        <li>
+          (syntax attributes (or () (attribute value . attributes)))
+        </li>
+        <li>
+          (syntax attribute (or Symbol Keyword String .Field @Method))
         </li>
       </ul>
     </div>
@@ -92,7 +168,21 @@
       </h3>
       <ul>
         <li>
-          (defMacro (caseType\ (#! (1 Symbol) key) . clauses)
+          Return a sigle argument function for multi-armed type test, useful as a catch handler.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (caseType\ (symbol) . clauses))
+        </li>
+        <li>
+          (type macro)
+        </li>
+        <li>
+          (derivation (list '\ (symbol) (list* 'caseType symbol clauses))
+        </li>
+        <li>
+          (use (catchWth (caseType\ (e) ...) ...)
         </li>
       </ul>
     </div>

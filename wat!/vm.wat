@@ -42,6 +42,7 @@
 (%def Math &java.lang.Math)
 (%def Number &java.lang.Number)
 (%def Object &java.lang.Object)
+(%def Object[] &java.lang.Object[])
 (%def Opv &Wat.Vm$Opv)
 (%def Keyword &Wat.Vm$Keyword)
 (%def Obj &Wat.Vm$Obj)

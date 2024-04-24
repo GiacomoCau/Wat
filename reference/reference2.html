@@ -31,7 +31,7 @@
       </h3>
       <ul>
         <li>
-          (def evalMacro (newBox #t))
+          the box to discriminate when to evaluate or simply expand a macro.
         </li>
       </ul>
     </div>
@@ -48,12 +48,14 @@
             (by calling the expander with the operand as argument)
           <br/>
             that is then evaluated in place of the operand.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn expander)
+          (makeMacro expander)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
       </ul>
     </div>
@@ -64,12 +66,14 @@
       <ul>
         <li>
           Return an anonymous macro with the given PARAMETER-TREE and FORMS as body.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn parameterTree . forms)
+          (macro parameterTree . forms)
         </li>
         <li>
-          $(type macro)
+          (type macro)
         </li>
       </ul>
     </div>
@@ -80,12 +84,14 @@
       <ul>
         <li>
           Expands a macro rather than evaluates it.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn form)
+          (expand form)
         </li>
         <li>
-          $(type macro)
+          (type macro)
         </li>
       </ul>
     </div>

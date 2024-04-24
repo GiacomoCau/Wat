@@ -30,6 +30,9 @@
         The Env are functions that encapsulates mutable values.
       </li>
       <li>
+        &nbsp;
+      </li>
+      <li>
         Calling the env:
       </li>
       <li>
@@ -63,7 +66,7 @@
         - with bindType :def define or update the bindings in the env
       </li>
       <li>
-        - with bindType :set! update the bindings in env, throws an error if the binding is not defined.
+        - with bindType :set! update the bindings in env, signals an error if the binding is not defined.
       </li>
       <li>
         &nbsp;
@@ -93,10 +96,10 @@
         $(syntax attribute (or Symbol Keyword String))
       </li>
       <li>
-        $(syntax bindResult (or #ignore #inert :rhs :prv :obj))  
+        $(syntax bindResult (or #ignore #inert :rhs :prv :obj))
       </li>
       <li>
-        $(syntax bindType (or :def :set!))  
+        $(syntax bindType (or :def :set!))
       </li>
     </ul>
     <div>
@@ -110,27 +113,29 @@
             The BINDINGS must be of even length, and alternately contain bindings names (symbols, keywords or string) and values.
           <br/>
             When called with an obj the obj bindings also become env bindings.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn)
+          (newEnv)
         </li>
         <li>
-          $(fn parent . bindings)
+          (newEnv parent . bindings)
         </li>
         <li>
-          $(fn parent obj)
+          (newEnv parent obj)
         </li>
         <li>
-          $(syntax parent (or () Env))
+          (syntax parent (or () Env))
         </li>
         <li>
-          $(syntax bindings (or () (attribute value . bindings)))
+          (syntax bindings (or () (attribute value . bindings)))
         </li>
         <li>
-          $(syntax attribute (or Symbol Keyword String))
+          (syntax attribute (or Symbol Keyword String))
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
       </ul>
     </div>
@@ -141,15 +146,17 @@
       <ul>
         <li>
           Return the current environment.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn)
+          (theEnv)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
         <li>
-          $(derivation (vau () environment environment))
+          (derivation (vau () environment environment))
         </li>
       </ul>
     </div>

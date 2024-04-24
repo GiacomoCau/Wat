@@ -30,6 +30,9 @@
         The Obj are functions that encapsulates mutable values.
       </li>
       <li>
+        &nbsp;
+      </li>
+      <li>
         Calling the obj:
       </li>
       <li>
@@ -78,7 +81,7 @@
         $(syntax attribute (or Symbol Keyword String))
       </li>
       <li>
-        $(syntax bindResult (or #ignore #inert :rhs :prv :obj))  
+        $(syntax bindResult (or #ignore #inert :rhs :prv :obj))
       </li>
     </ul>
     <div>
@@ -90,27 +93,29 @@
           Return a new instance of CLASS (that must be a `standard-class').
           <br/>
             The BINDINGS must be of even length, and alternately contain bindings names (symbols, keywords or string) and values.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn boxClass)
+          (new boxClass)
         </li>
         <li>
-          $(fn boxClass value)
+          (new boxClass value)
         </li>
         <li>
-          $(fn objClass . bindings)
+          (new objClass . bindings)
         </li>
         <li>
-          $(fn objClass string . bindings)
+          (new objClass string . bindings)
         </li>
         <li>
-          $(fn objClass string throwableObject . bindings)
+          (new objClass string throwableObject . bindings)
         </li>
         <li>
-          $(syntax bindings (or () (attribute value . bindings)))
+          (syntax bindings (or () (attribute value . bindings)))
         </li>
         <li>
-          $(syntax attribute (or Symbol Keyword String))
+          (syntax attribute (or Symbol Keyword String))
         </li>
       </ul>
     </div>
@@ -121,30 +126,32 @@
       <ul>
         <li>
           Define a new instance of CLASS with the given NAME into the current environment.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn name boxClass)
+          (defObj name boxClass)
         </li>
         <li>
-          $(fn name boxClass value)
+          (defObj name boxClass value)
         </li>
         <li>
-          $(fn name objClass . bindings)
+          (defObj name objClass . bindings)
         </li>
         <li>
-          $(fn name objClass string . bindings)
+          (defObj name objClass string . bindings)
         </li>
         <li>
-          $(fn name objClass string throwableObject . bindings)
+          (defObj name objClass string throwableObject . bindings)
         </li>
         <li>
-          $(syntax bindings (or () (attribute value . bindings)))
+          (syntax bindings (or () (attribute value . bindings)))
         </li>
         <li>
-          $(syntax attribute (or Symbol Keyword String))
+          (syntax attribute (or Symbol Keyword String))
         </li>
         <li>
-          $(type macro)
+          (type macro)
         </li>
       </ul>
     </div>

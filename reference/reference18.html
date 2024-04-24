@@ -39,12 +39,14 @@
           Abort outwards to the PROMPT.
           <br/>
             When the prompt is reached, evaluate the FORMS as an implicit `begin' with SYMBOL bound to the captured continuation (which does not include the prompt) and return its result.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn prompt symbol . forms)
+          (takeSubcont prompt symbol . forms)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -57,12 +59,14 @@
           Push the PROMPT and evaluate the FORMS as an implicit `begin' inside the prompt and return its result.
           <br/>
             This delimits the continuation.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn prompt . forms)
+          (pushPrompt prompt . forms)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -72,15 +76,17 @@
       </h3>
       <ul>
         <li>
-          Push the PROMPT and compose the previously captured CONTINUATION inside it 
+          Push the PROMPT and compose the previously captured CONTINUATION inside it
           <br/>
             before evaluated the FORMS as an implicit `begin' inside the new continuation and return its result.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn prompt continuation . forms)
+          (pushDelimSubcont prompt continuation . forms)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -91,15 +97,17 @@
       <ul>
         <li>
           We don't have `pushSubcont' but we can emulate it with a `pushDelimSubcont' that pushes an #ignore prompt.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn continuation . forms)
+          (pushSubcont continuation . forms)
         </li>
         <li>
-          $(type macro)
+          (type macro)
         </li>
         <li>
-          $(derivation (list* 'pushDelimSubcont #ignore continuation forms))
+          (derivation (list* 'pushDelimSubcont #ignore continuation forms))
         </li>
       </ul>
     </div>
@@ -112,12 +120,14 @@
           Push a continuation barrier that prevents the FORMS from capturing any continuations to the outside,
           <br/>
             before evaluated the FORMS as an implicit `begin'
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn . forms)
+          (pushSubcontBarrier . forms)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>

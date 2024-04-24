@@ -31,7 +31,18 @@
       </h3>
       <ul>
         <li>
-          (defVau (provide symbols . forms) env
+          Defines SYMBOLS in the current environment with values generated evaluating the FORMS as an implicit `begin'.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (provide symbols . forms)
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+        <li>
+          (syntax symbols (symbol . symbols))
         </li>
       </ul>
     </div>
@@ -41,7 +52,18 @@
       </h3>
       <ul>
         <li>
-          (defVau (module exports . forms) env
+          Return an environment where SYMBOLS are defined with values generated evaluating the FORMS as an implicit `begin'.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (module symbols . forms)
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+        <li>
+          (syntax symbols (symbol . symbols))
         </li>
       </ul>
     </div>
@@ -51,7 +73,18 @@
       </h3>
       <ul>
         <li>
-          (defMacro (defModule name exports . forms)
+          Define a `environment' with the given NAME, where SYMBOLS are defined with values generated evaluating the FORMS as an implicit `begin'.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (defModule name symbols . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+        <li>
+          (syntax symbols (symbol . symbols))
         </li>
       </ul>
     </div>
@@ -61,7 +94,18 @@
       </h3>
       <ul>
         <li>
-          (defVau (import module imports) env
+          Define in the current environment the SYMBOLS defined in MODULE.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (import module symbols)
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+        <li>
+          (syntax symbols (symbol . symbols))
         </li>
       </ul>
     </div>

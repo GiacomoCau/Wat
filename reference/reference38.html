@@ -32,6 +32,14 @@
       <ul>
         <li>
           Look up a class based on its NAME symbol (evaluated) in the given ENVIRONMENT.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (findClass name environment)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -41,14 +49,25 @@
       </h3>
       <ul>
         <li>
-          Define a new `StandardClass' with the given NAME, optional SUPERCLASS?, and SLOT-SPECS.
+          Define a new `ObjClass' with the given NAME, optional SUPERCLASS, and ATTRIBUTES.
           <br/>
-            The superclass defaults to `standard-object'.
+            The SUPERCLASS defaults to `Obj'.
           <br/>
-            The SLOT-SPECS and PROPERTIES are currently ignored.
+            The ATTRIBUTES and PROPERTIES are currently ignored.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(syntax slotSpec symbol)
+          (defClass (or () (superclass)) environment)
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+        <li>
+          (syntax superclass (or () (symbol)))
+        </li>
+        <li>
+          (syntax attributes (symbol . attributes))
         </li>
       </ul>
     </div>

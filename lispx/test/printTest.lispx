@@ -6,17 +6,17 @@
     (&& (type? *print-escape* DVar)
         (type? (dget *print-escape*) Boolean))))
 
-(defSuite *print-level?*
+(defSuite *print-level*
 
-  (defTest *print-level?*.defined
-    (&& (type? *print-level?* DVar)
-        (type? (dget *print-level?*) List)))
+  (defTest *print-level*.defined
+    (&& (type? *print-level* DVar)
+        (type? (dget *print-level*) List)))
 
   (def\ write-with-level (object level)
-    (dlet ((*print-level?* (some level)))
+    (dlet ((*print-level* (some level)))
       (with-standard-output-to-string (write object))))
 
-  (defTest *print-level?*.cons
+  (defTest *print-level*.cons
     (begin
       (def a '(1 (2 (3 (4 (5 (6)))))))
       (assert#t (eq? "#" (write-with-level a 0)))
@@ -29,7 +29,7 @@
       (assert#t (eq? "(1 (2 (3 (4 (5 (6))))))" (write-with-level a 7)))
       #t))
 
-  (defTest *print-level?*.standard-object
+  (defTest *print-level*.standard-object
     (begin
       (defClass a () (slot))
       (def\ make-a (slot) (new A :slot slot))

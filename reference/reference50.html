@@ -31,7 +31,51 @@
       </h3>
       <ul>
         <li>
-          (defVau (time times . forms) env
+          Evaluate n times FORMS as implicit `begin` and return the elapsed time in milliseconds
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (time n . forms)
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        make*\
+      </h3>
+      <ul>
+        <li>
+          Returns a function that applies FUNCTION with the arguments from n placed in a list.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (make*\ n function)
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        minMax
+      </h3>
+      <ul>
+        <li>
+          Returns a cons with the min and the max of the VALUES.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (minMax . values)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>

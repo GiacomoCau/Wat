@@ -32,12 +32,14 @@
       <ul>
         <li>
           Evaluate FORM and return the result after evaluate any additional FORMS as an implicit `begin'.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn form . forms)
+          (prog1 form . forms)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -48,12 +50,14 @@
       <ul>
         <li>
           If TEST yields true, evaluate the FORMS as an implicit `begin', inert otherwise.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn test . forms)
+          (when test . forms)
         </li>
         <li>
-          $(type macro)
+          (type macro)
         </li>
       </ul>
     </div>
@@ -64,12 +68,14 @@
       <ul>
         <li>
           If TEST yields false, evaluate the FORMS as an implicit `begin', inert otherwise.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn test . forms)
+          (unless test . forms)
         </li>
         <li>
-          $(type macro)
+          (type macro)
         </li>
       </ul>
     </div>
@@ -84,12 +90,14 @@
             If an operand evaluates to false, later operands are not evaluated.
           <br/>
             If there are no operands, return false.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn . operands)
+          (&amp;&amp; . operands)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -114,12 +122,14 @@
             If an operand evaluates to true, later operands are not evaluated.
           <br/>
             If there are no operands, return true.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn . operands)
+          (|| . operands)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -145,13 +155,15 @@
           <br/>
             If there are no FUNCTIONS, when applied return false.
           <br/>
-            Idea stolen from Anarki https://github.com/arclanguage/anarki :-)
+            Idea stolen from Anarki https://github.com/arclanguage/anarki
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn . functions)
+          (&amp;&amp;f . functions)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
       </ul>
     </div>
@@ -161,19 +173,21 @@
       </h3>
       <ul>
         <li>
-          Return a function the return true if one FUNCTIONS evaluate to true when applied the the arguments, false otherwise.
+          Return a function the return true if one FUNCTIONS evaluate to true when applied to the arguments, false otherwise.
           <br/>
             If an function evaluates to true, later FUNCTIONS are not evaluated.
           <br/>
             If there are no FUNCTIONS, when applied return true.
           <br/>
-            Idea stolen from Anarki https://github.com/arclanguage/anarki :-)
+            Idea stolen from Anarki https://github.com/arclanguage/anarki
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn . functions)
+          (||f . functions)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
       </ul>
     </div>

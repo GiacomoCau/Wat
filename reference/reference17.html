@@ -42,12 +42,14 @@
       <ul>
         <li>
           Evaluate the FORMS as an implicit `begin' in an infinite loop.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn . forms)
+          (loop . forms)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -62,12 +64,14 @@
             Regardless of whether the protected form returns normally, or via a nonlocal exit or panic,
           <br/>
             the CLEANUP-FORM are evaluated after the protected forms.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn cleanupForm . protectedForms)
+          (atEnd cleanupForm . protectedForms)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -82,15 +86,17 @@
             Regardless of whether the protected form returns normally, or via a nonlocal exit, or panic,
           <br/>
             the CLEANUP-FORMS are evaluated as an implicit `begin' after the protected forms.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn protectedForm . cleanupForms)
+          (finally protectedForm . cleanupForms)
         </li>
         <li>
-          $(type macro)
+          (type macro)
         </li>
         <li>
-          $(derivation (list 'atEnd (cons 'begin cleanupForms) protectedForm)
+          (derivation (list 'atEnd (cons 'begin cleanupForms) protectedForm)
         </li>
       </ul>
     </div>
@@ -101,12 +107,14 @@
       <ul>
         <li>
           Abort to a nesting catch TAG established by `catch', evaluate FORMS as an implicit `begin' and return its result.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn tag . forms)
+          (throwTag tag . forms)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -117,15 +125,17 @@
       <ul>
         <li>
           Abort to a nesting generic catch, evaluate FORMS as an implicit `begin' and return its result.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn . forms)
+          (throw . forms)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
         <li>
-          $(derivation (list* 'throwTag #ignore forms))
+          (derivation (list* 'throwTag #ignore forms))
         </li>
       </ul>
     </div>
@@ -140,12 +150,14 @@
             The FORMS may use `throw' to nonlocally exit from the TAG. if FORMS throw and HANDLER is a value, value will be the result of `catchTagWth'
           <br/>
             otherwise the value of the `throw' is passed to the HANDLER and the value returned by the HANDLER will be the result of the `catchTagWth'
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn tag handler . forms)
+          (catchTagWth tag handler . forms)
         </li>
         <li>
-          $(type (if (ctApv) macro fexpr))
+          (type (if (ctApv) macro fexpr))
         </li>
       </ul>
     </div>
@@ -160,15 +172,17 @@
             The FORMS may use `throw' to nonlocally exit. if FORMS throw and HANDLER is a value, value will be the result of `catchWth'
           <br/>
             otherwise the value of the `throw' is passed to the HANDLER and the value returned by the HANDLER will be the result of the `catchWth'
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn handler . forms)
+          (catchWth handler . forms)
         </li>
         <li>
-          $(type macro)
+          (type macro)
         </li>
         <li>
-          $(derivation (list* 'catchTagWth #ignore handler forms))
+          (derivation (list* 'catchTagWth #ignore handler forms))
         </li>
       </ul>
     </div>
@@ -181,15 +195,17 @@
           Establish a catch TAG without handler and evaluate FORMS as an implicit `begin' and return its result.
           <br/>
             The FORMS may use `throw' to nonlocally exit from the tag. if FORMS throw the value returned by the `throw' will be the result of the `catchTag'
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn tag . forms)
+          (catchTag tag . forms)
         </li>
         <li>
-          $(type macro)
+          (type macro)
         </li>
         <li>
-          $(derivation (list* 'catchTagWth tag #ignore forms))
+          (derivation (list* 'catchTagWth tag #ignore forms))
         </li>
       </ul>
     </div>
@@ -202,15 +218,17 @@
           Establish an generic catch all without handler and evaluate FORMS as an implicit `begin' and return its result.
           <br/>
             The FORMS may use `throw' to nonlocally exit. if FORMS throw the value returned by the `throw' will be the result of the `catch'
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn . forms)
+          (catch . forms)
         </li>
         <li>
-          $(type macro)
+          (type macro)
         </li>
         <li>
-          $(derivation (list* 'catchTagWth #ignore #ignore forms))
+          (derivation (list* 'catchTagWth #ignore #ignore forms))
         </li>
       </ul>
     </div>

@@ -62,7 +62,15 @@
       </h3>
       <ul>
         <li>
-          Create a new yield record with the given yielded value and resume continuation.
+          Create a new yield record with the given yielded VALUE and resume CONTINUATION.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (makeYieldRecord value continuation)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -72,7 +80,15 @@
       </h3>
       <ul>
         <li>
-          Yield a value (which defaults to #inert).
+          Yield a VALUE (which defaults to #inert).
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (fiberYield . value)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -82,7 +98,15 @@
       </h3>
       <ul>
         <li>
-          Resume a suspended fiber with a value (which defaults to #inert).
+          Resume a suspended fiber YIELD-RECORD with a VALUE (which defaults to #inert).
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (fiberResume yieldRecord . value)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -93,48 +117,14 @@
       <ul>
         <li>
           Evaluate the forms expressions as a fiber.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        runFiber*
-      </h3>
-      <ul>
-        <li>
-          Get all values yielded by a fiber, and its final result, and collect them in a list.
           <br/>
-            Uses the optional list of values to sent to the fiber with `fiberResume'.
+            &nbsp;
         </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        runFiberWithValues
-      </h3>
-      <ul>
         <li>
-          (defMacro (runFiberWithValues f args) (list 'eval (list 'list* 'runFiber* f args))) 
+          (fiber . forms)
         </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        runFiberWithValues
-      </h3>
-      <ul>
         <li>
-          (defMacro (runFiberWithValues f args) (list 'apply 'runFiber* (list 'cons f args))) 
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        runFiberWithValues
-      </h3>
-      <ul>
-        <li>
-          (defMacro (runFiberWithValues f args) (list 'apply** 'runFiber* f args)) 
+          (type macro)
         </li>
       </ul>
     </div>
@@ -144,7 +134,27 @@
       </h3>
       <ul>
         <li>
-          (def runFiber runFiber*)
+          Get all values yielded by a fiber, and its final result, and collect them in a list.
+          <br/>
+            Uses the optional list of values to sent to the fiber with `fiberResume'.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (runFiber thunk . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        runFiberWithValues
+      </h3>
+      <ul>
+        <li>
+          (defMacro (runFiberWithValues f args) (list 'apply** 'runFiber f args))
         </li>
       </ul>
     </div>

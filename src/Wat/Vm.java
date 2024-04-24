@@ -1206,6 +1206,7 @@ public class Vm {
 				var o0 = o.car;
 				// (.<name> object)       -> object.getclass().getField(name).get(object) -> field.get(object) 
 				// (.<name> object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
+				//TODO (.<name> object (or #ignore #inert :rhs :prv :obj) value) 
 				Field field = getField(o0 instanceof Class ? (Class) o0 : o0.getClass(), name);
 				if (field == null) return unboundFieldError("field: {field} not found in: {object}", name, o0 instanceof Class cl ? cl : o0.getClass());
 				try {
@@ -1280,7 +1281,7 @@ public class Vm {
 			if (p == null || p == ignore) { if (ep != null) syms.add(p); return null; }
 			if (p instanceof Symbol) { return syms.add(p) ? null : syntaxError("invalid parameter tree syntax, not a unique symbol: {datum} in: " + pt + " of: {expr}", p, exp); }
 			if (!(p instanceof Cons c)) return null;
-			if (c.car instanceof Symbol sym && member(sym.name, "%'", "quote")) return len(c) == 2 ? null : syntaxError("invalid parameter tree #' syntax: {datum} in: {expr}", c, exp);
+			if (c.car instanceof Symbol sym && member(sym.name, "%'", "quote")) return len(c) == 2 ? null : syntaxError("invalid parameter tree %' syntax: {datum} in: {expr}", c, exp);
 			if (c.car == sheBang) return len(c) == 3 && c.car(2) instanceof Symbol? check(c.car(2)) : syntaxError("invalid parameter tree #! syntax: {datum} in: {expr}", c, exp);
 			var msg = check(c.car); if (msg != null) return msg;
 			return c.cdr() == null ? null : check(c.cdr());

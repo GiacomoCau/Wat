@@ -31,17 +31,33 @@
       </h3>
       <ul>
         <li>
-          (def\ (any? f lst . lst*)
+          Return true if the apply of the FUNCTION to every first elements of the LISTS return true, false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (any? function . lists).
+        </li>
+        <li>
+          (type function).
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        any?*
+        any*?
       </h3>
       <ul>
         <li>
-          (defMacro (any?* f . lst) (list 'any? f lst))
+          Return true if the apply of the FUNCTION to every element of VALUES return true, false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (any*? function . values).
+        </li>
+        <li>
+          (type function).
         </li>
       </ul>
     </div>
@@ -51,17 +67,33 @@
       </h3>
       <ul>
         <li>
-          (def\ (all? f lst . lst*)
+          Return true if the apply of the FUNCTION to one first elements of the LISTS return true, false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (all? function . lists).
+        </li>
+        <li>
+          (type function).
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        all?*
+        all*?
       </h3>
       <ul>
         <li>
-          (defMacro (all?* f . lst) (list 'all? f lst))
+          Return true if the apply of the FUNCTION to one element of VALUES return true, false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (all*? function . values).
+        </li>
+        <li>
+          (type function).
         </li>
       </ul>
     </div>
@@ -71,7 +103,15 @@
       </h3>
       <ul>
         <li>
-          Apply the FUNCTION to every element of the LIST for effect. Return the #inert.
+          Return #inert after applies the FUNCTION to every first elements of the LISTS.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (forEach# function . lists).
+        </li>
+        <li>
+          (type function).
         </li>
       </ul>
     </div>
@@ -81,7 +121,15 @@
       </h3>
       <ul>
         <li>
-          Apply the FUNCTION to every element of the LIST for effect. Return the list.
+          Return LISTS after applies the FUNCTION to every first elements of the LISTS.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (forEach function . lists).
+        </li>
+        <li>
+          (type function).
         </li>
       </ul>
     </div>
@@ -91,11 +139,17 @@
       </h3>
       <ul>
         <li>
-          Apply the FUNCTION, which must return a list, to every element of the
+          Return the list of the results of apply the FUNCTION, which must return a list, to every first elements of the LISTS.
           <br/>
-            LIST, and append the results.  (Note: this currently uses `append',
+            (Note: this currently uses `append', but might be changed to use `nconc' in the future, like Common Lisp.)
           <br/>
-            but might be changed to use `nconc' in the future, like Common Lisp.)
+            &nbsp;
+        </li>
+        <li>
+          (maplist function . lists).
+        </li>
+        <li>
+          (type function).
         </li>
       </ul>
     </div>
@@ -105,7 +159,17 @@
       </h3>
       <ul>
         <li>
-          (def\ (filter f lst . lst*)
+          Returns the list of the first elements of the LISTS for which the application of the FUNCTION returns true.
+          <br/>
+            (Note: this currently uses `append', but might be changed to use `nconc' in the future, like Common Lisp.)
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (filter function . lists).
+        </li>
+        <li>
+          (type function).
         </li>
       </ul>
     </div>
@@ -115,7 +179,15 @@
       </h3>
       <ul>
         <li>
-          Return a new list from which the elements that satisfy the TEST have been removed.
+          Returns the list of the first elements of the LIST without those for which the application of the FUNCTION returns true.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (remove function . lists).
+        </li>
+        <li>
+          (type function).
         </li>
       </ul>
     </div>
@@ -125,9 +197,17 @@
       </h3>
       <ul>
         <li>
-          Use the binary FUNCTION to combine the elements of the LIST.
+          Use the FUNCTION to combine the elements of the LIST from first element.
           <br/>
-            The INITIAL-VALUE is logically placed before the list.
+            The INITIAL-VALUE is logically placed before the first element of the LIST.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (reduceL function  init . lists).
+        </li>
+        <li>
+          (type function).
         </li>
       </ul>
     </div>
@@ -147,7 +227,17 @@
       </h3>
       <ul>
         <li>
-          (def\ (reduceR f init lst . lst*)
+          Use the FUNCTION to combine the elements of the LIST from last element.
+          <br/>
+            The INITIAL-VALUE is logically placed before the last element of the LIST.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (reduceR function  init . list).
+        </li>
+        <li>
+          (type function).
         </li>
       </ul>
     </div>
@@ -157,7 +247,17 @@
       </h3>
       <ul>
         <li>
-          (def\ (foldL f init lst . lst*)
+          Use the FUNCTION to combine the elements of the LIST from first element.
+          <br/>
+            The INITIAL-VALUE is logically placed after the last element of the LIST.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (foldL function  init . list).
+        </li>
+        <li>
+          (type function).
         </li>
       </ul>
     </div>
@@ -167,37 +267,35 @@
       </h3>
       <ul>
         <li>
-          (def\ (foldR f init lst . lst*)
+          Use the FUNCTION to combine the elements of the LIST from last element.
+          <br/>
+            The INITIAL-VALUE is logically placed after the last element of the LIST.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (foldR function  init . list).
+        </li>
+        <li>
+          (type function).
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        dolist
+        doList
       </h3>
       <ul>
         <li>
           Cf. Common Lisp's DOLIST.
+          <br/>
+            &nbsp;
         </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        make\*
-      </h3>
-      <ul>
         <li>
-          (def\ (make\* n f)
+          (doList symbol list . forms)
         </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        minMax
-      </h3>
-      <ul>
         <li>
-          (def\ (minMax a . b)
+          (type macro)
         </li>
       </ul>
     </div>

@@ -32,12 +32,14 @@
       <ul>
         <li>
           Identity function.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn object)
+          (idf object)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
       </ul>
     </div>
@@ -48,15 +50,17 @@
       <ul>
         <li>
           &quot;Implicit&quot; Argument Lambda.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn . forms)
+          (_ . forms)
         </li>
         <li>
-          $(type macro)
+          (type macro)
         </li>
         <li>
-          $(derivation (list* '\ '(_) forms))
+          (derivation (list* '\ '(_) forms))
         </li>
       </ul>
     </div>
@@ -67,15 +71,17 @@
       <ul>
         <li>
           Single arg partial evaluation.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn f v)
+          (peval f v)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (\ args (apply f (cons v args))))
+          (derivation (\ args (apply f (cons v args))))
         </li>
       </ul>
     </div>
@@ -86,15 +92,17 @@
       <ul>
         <li>
           Multiple args partial evaluation.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn f v*)
+          (peval* f v*)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (\ args (apply f (append v* args))))
+          (derivation (\ args (apply f (append v* args))))
         </li>
       </ul>
     </div>
@@ -105,15 +113,17 @@
       <ul>
         <li>
           Compose two functions, creating a new function equivalent to (f (g . args)).
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn f g)
+          (compose f g)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (\ args (f (apply g args))))
+          (derivation (\ args (f (apply g args))))
         </li>
       </ul>
     </div>
@@ -124,12 +134,14 @@
       <ul>
         <li>
           Compose multiple functions, creating a new function equivalent to (f1 (f2 (... (fn . args)))).
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn . f*)
+          (compose* . f*)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
       </ul>
     </div>
@@ -142,12 +154,14 @@
           Return VALUE, after lexically bind NAME with #inert,
           <br/>
             and update NAME with VALUE so that it can reference itself.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn name value)
+          (rec name value)
         </li>
         <li>
-          $(type macro)
+          (type macro)
         </li>
       </ul>
     </div>
@@ -170,15 +184,17 @@
           Return the function with given PARAMETER-TREE and FORMS as body, after lexically bind NAME with #inert,
           <br/>
             and updated NAME with the function so that it can reference to itself.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn name parameterTree . forms)
+          (rec\ name parameterTree . forms)
         </li>
         <li>
-          $(fn (name . parameterTree) . forms)
+          (rec\ (name . parameterTree) . forms)
         </li>
         <li>
-          $(type macro)
+          (type macro)
         </li>
       </ul>
     </div>
@@ -199,18 +215,37 @@
       <ul>
         <li>
           Return a new list by applying the FUNCTION to each element of the LIST or the LISTS which must be of the same length
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn function list)
+          (map function list)
         </li>
         <li>
-          $(fn function list1 list2 ... listN)
+          (map function list1 list2 ... listN)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
       </ul>
     </div>
+    <ul>
+      <li>
+        Some importanti equivalences with eval apply list and map:
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        apply: (eval (cons opv args) env) &lt;=&gt; (apply opv args env)
+      </li>
+      <li>
+        apply: (eval (cons apv args) env) &lt;=&gt; (apply apv (evlis env args) env)
+      </li>
+      <li>
+        evlis: (eval (cons 'list args) env) &lt;=&gt; (map (\ (arg) (eval arg env)) args)
+      </li>
+    </ul>
     <div>
       <h3>
         def*\
@@ -220,33 +255,35 @@
           Define multiple named functions with given PARAMETER-TREES and FORMS as body.
           <br/>
             Match the DEFINIEND-TREES against the BODIES and define resulting bindings into the current environment.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn definiendTrees . bodies)
+          (def*\ definiendTrees . bodies)
         </li>
         <li>
-          $(fn ((name parameterTree) . definiendTrees) . (forms . bodies))
+          (def*\ ((name parameterTree) . definiendTrees) . (forms . bodies))
         </li>
         <li>
-          $(fn (name . definiendTrees) . ((parameterTree . forms) . bodies))
+          (def*\ (name . definiendTrees) . ((parameterTree . forms) . bodies))
         </li>
         <li>
-          $(syntax definiendTrees ((name parameterTree) . definiendTrees)
+          (syntax definiendTrees ((name parameterTree) . definiendTrees)
         </li>
         <li>
-          $(syntax bodies (forms . bodies)
+          (syntax bodies (forms . bodies)
         </li>
         <li>
-          $(syntax definiendTrees (name . definiendTrees)
+          (syntax definiendTrees (name . definiendTrees)
         </li>
         <li>
-          $(syntax bodies ((parameterTree . forms) . bodies)
+          (syntax bodies ((parameterTree . forms) . bodies)
         </li>
         <li>
-          $(type macro)
+          (type macro)
         </li>
         <li>
-          $(example (def*\ ((f a) g) ((1+ a)) ((a) (1+ a))) )
+          (example (def*\ ((f a) g) ((1+ a)) ((a) (1+ a))) )
         </li>
       </ul>
     </div>

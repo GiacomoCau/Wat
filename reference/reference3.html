@@ -52,15 +52,17 @@
       <ul>
         <li>
           Defines the named macro NAME with the given PARAMETER-TREE and FORMS as body into the current environment.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn name parameterTree . forms)
+          (defMacro name parameterTree . forms)
         </li>
         <li>
-          $(fn (name parameterTree) . forms)
+          (defMacro (name parameterTree) . forms)
         </li>
         <li>
-          $(type macro)
+          (type macro)
         </li>
       </ul>
     </div>
@@ -71,15 +73,17 @@
       <ul>
         <li>
           Defines the named fexpr NAME with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER and FORMS as body into the current environment.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn name parameterTree . forms)
+          (defVau name parameterTree . forms)
         </li>
         <li>
-          $(fn (name parameterTree) . forms)
+          (defVau (name parameterTree) . forms)
         </li>
         <li>
-          $(type macro)
+          (type macro)
         </li>
       </ul>
     </div>
@@ -93,7 +97,7 @@
           <br/>
             This is mostly for documentation purposes, as constants are still mutable.
           <br/>
-            alias for def.
+            Alias for def.
         </li>
       </ul>
     </div>
@@ -104,12 +108,20 @@
       <ul>
         <li>
           Match the DEFINIEND-TREE against the VALUES and define resulting bindings into the current environment.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn definiendTree . values)
+          (def* definiendTree . values)
         </li>
         <li>
-          $(type macro)
+          (def* definiendTree bindResult . values)
+        </li>
+        <li>
+          (syntax bindResult (or #ignore #inert :rhs :prv))
+        </li>
+        <li>
+          (type macro)
         </li>
       </ul>
     </div>
@@ -120,15 +132,17 @@
       <ul>
         <li>
           Defines the named function NAME with the given PARAMETER-TREE and FORMS as body into the current environment.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn name parameterTree . forms)
+          (def\ name parameterTree . forms)
         </li>
         <li>
-          $(fn (name parameterTree) . forms)
+          (def\ (name parameterTree) . forms)
         </li>
         <li>
-          $(type macro)
+          (type macro)
         </li>
       </ul>
     </div>

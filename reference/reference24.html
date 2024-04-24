@@ -31,13 +31,15 @@
       </h3>
       <ul>
         <li>
-          return #inert if VALUE match the DEFINIEND-TREE and define resulting bindings into ENVIRONMENT, throws an error otherwise.
+          return #inert if VALUE match the DEFINIEND-TREE and define resulting bindings into ENVIRONMENT, signals an error otherwise.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn environment definiendTree value)
+          (bind environment definiendTree value)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
       </ul>
     </div>
@@ -47,13 +49,15 @@
       </h3>
       <ul>
         <li>
-          return true if VALUE match the DEFINIEND-TREE and define resulting bindings into ENVIRONMENT, false otherwise. 
+          return true if VALUE match the DEFINIEND-TREE and define resulting bindings into ENVIRONMENT, false otherwise.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn environment definiendTree value)
+          (bind? environment definiendTree value)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
       </ul>
     </div>
@@ -63,13 +67,15 @@
       </h3>
       <ul>
         <li>
-          return the evaluation of THEN into resulting ENVIRONMENT if VALUE match the DEFINIEND-TREE, inert otherwise. 
+          return the evaluation of THEN into resulting ENVIRONMENT if VALUE match the DEFINIEND-TREE, inert otherwise.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn (definiendTree value) then . forms)
+          (ifBind? (definiendTree value) then . forms)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -81,9 +87,9 @@
         <li>
           Multi-armed vau.
           <br/>
-            Go through the CLAUSES in order.
+            When applied go through the CLAUSES in order.
           <br/>
-            If CLAUSES in null return #inert.
+            If CLAUSES is #null return #inert.
           <br/>
             If car of CLAUSE is else
           <br/>
@@ -94,24 +100,26 @@
             If the operands match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
           <br/>
             Otherwise go to the next CLAUSE.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn . clauses)
+          (caseVau . clauses)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
         <li>
-          $(syntax clauses (or () (clause . clauses)))
+          (syntax clauses (or () (clause . clauses)))
         </li>
         <li>
-          $(syntax clause (else . forms))
+          (syntax clause (else . forms))
         </li>
         <li>
-          $(syntax clause (else =&gt; apv1))
+          (syntax clause (else =&gt; apv1))
         </li>
         <li>
-          $(syntax clause (definiendTree . forms))
+          (syntax clause (definiendTree . forms))
         </li>
       </ul>
     </div>
@@ -122,15 +130,17 @@
       <ul>
         <li>
           Defines the named caseVau NAME with the given CLAUSES into the current environment.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn name . clauses)
+          (defCaseVau name . clauses)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
         <li>
-          $(derivation (list 'def name (cons 'caseVau clauses)))
+          (derivation (list 'def name (cons 'caseVau clauses)))
         </li>
       </ul>
     </div>
@@ -142,9 +152,9 @@
         <li>
           Multi-armed \.
           <br/>
-            Go through the CLAUSES in order.
+            When applied go through the CLAUSES in order.
           <br/>
-            If CLAUSES in null return #inert.
+            If CLAUSES is #null return #inert.
           <br/>
             If car of CLAUSE is else
           <br/>
@@ -155,27 +165,29 @@
             If the arguments match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
           <br/>
             Otherwise go to the next CLAUSE.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn . clauses)
+          (case\ . clauses)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(syntax clauses (or () (clause . clauses)))
+          (syntax clauses (or () (clause . clauses)))
         </li>
         <li>
-          $(syntax clause (else . forms))
+          (syntax clause (else . forms))
         </li>
         <li>
-          $(syntax clause (else =&gt; apv1))
+          (syntax clause (else =&gt; apv1))
         </li>
         <li>
-          $(syntax clause (definiendTree . forms))
+          (syntax clause (definiendTree . forms))
         </li>
         <li>
-          $(derivation (list 'wrap (cons 'caseVau clauses)))
+          (derivation (list 'wrap (cons 'caseVau clauses)))
         </li>
       </ul>
     </div>
@@ -186,15 +198,17 @@
       <ul>
         <li>
           Defines the named case\ NAME with the given CLAUSES into the current environment.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn name . clauses)
+          (defCase\ name . clauses)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
         <li>
-          $(derivation (list 'def name (cons 'case\ clauses)))
+          (derivation (list 'def name (cons 'case\ clauses)))
         </li>
       </ul>
     </div>
@@ -206,7 +220,7 @@
         <li>
           Evaluates VALUE and go through the CLAUSES in order.
           <br/>
-            If CLAUSES in null return #inert.
+            If CLAUSES is #null return #inert.
           <br/>
             If car of CLAUSE is else
           <br/>
@@ -217,27 +231,29 @@
             If VALUE match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
           <br/>
             Otherwise go to the next CLAUSE.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn value . clauses)
+          (match value . clauses)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
         <li>
-          $(syntax clauses (or () (clause . clauses)))
+          (syntax clauses (or () (clause . clauses)))
         </li>
         <li>
-          $(syntax clause (else . forms))
+          (syntax clause (else . forms))
         </li>
         <li>
-          $(syntax clause (else =&gt; apv1))
+          (syntax clause (else =&gt; apv1))
         </li>
         <li>
-          $(syntax clause (definiendTree . forms))
+          (syntax clause (definiendTree . forms))
         </li>
         <li>
-          $(derivation (list 'wrap (cons 'caseVau clauses)))
+          (derivation (list 'wrap (cons 'caseVau clauses)))
         </li>
       </ul>
     </div>
@@ -251,7 +267,7 @@
           <br/>
             Go through the CLAUSES in order.
           <br/>
-            If CLAUSES is null return #inert.
+            If CLAUSES is #null return #inert.
           <br/>
             If car of CLAUSE is else evaluate FORMS as an implicit `begin'.
           <br/>
@@ -263,7 +279,7 @@
           <br/>
             &nbsp;&nbsp;otherwise go to the next CLAUSE.
           <br/>
-            If FORMS is null return TEST.
+            If FORMS is #null return TEST.
           <br/>
             If car di FORMS is =&gt; evaluate the cadr of FORMS and apply it to TEST.
           <br/>
@@ -274,27 +290,29 @@
             &nbsp;&nbsp;otherwise go to the next CLAUSE.
           <br/>
             Otherwise go to the next CLAUSE.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn . clauses)
+          (cond . clauses)
         </li>
         <li>
-          $(syntax clauses (clause . clauses))
+          (syntax clauses (clause . clauses))
         </li>
         <li>
-          $(syntax clause (else . forms))
+          (syntax clause (else . forms))
         </li>
         <li>
-          $(syntax clause (test-&gt;bool . forms))
+          (syntax clause (test-&gt;bool . forms))
         </li>
         <li>
-          $(syntax clause (test))
+          (syntax clause (test))
         </li>
         <li>
-          $(syntax clause (test =&gt; apv1))
+          (syntax clause (test =&gt; apv1))
         </li>
         <li>
-          $(syntax clause (test guard =&gt; apv1))
+          (syntax clause (test guard =&gt; apv1))
         </li>
       </ul>
     </div>

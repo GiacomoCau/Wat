@@ -32,18 +32,20 @@
       <ul>
         <li>
           Return the `car' of the `car' of the CONS.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn cons)
+          (caar cons)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (\ (((caar . #_) . #_)) caar))
+          (derivation (\ (((caar . #_) . #_)) caar))
         </li>
         <li>
-          $(derivation (car (car cons)))
+          (derivation (car (car cons)))
         </li>
       </ul>
     </div>
@@ -53,16 +55,18 @@
       </h3>
       <ul>
         <li>
-          Return the `car' of the `cdr' of the CONS if 'cddr' is null, else error.
+          Return the `car' of the `cdr' of the CONS if 'cddr' is #null, signals an error otherwise.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn cons)
+          (cadr! cons)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (\ ((#_ cadr)) cadr))
+          (derivation (\ ((#_ cadr)) cadr))
         </li>
       </ul>
     </div>
@@ -73,18 +77,20 @@
       <ul>
         <li>
           Return the `cdr' of the `car' of the CONS.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn cons)
+          (cdar cons)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (\ (((#_ . cdar) . #_)) cdar))
+          (derivation (\ (((#_ . cdar) . #_)) cdar))
         </li>
         <li>
-          $(derivation (cdr (car cons)))
+          (derivation (cdr (car cons)))
         </li>
       </ul>
     </div>
@@ -95,21 +101,23 @@
       <ul>
         <li>
           Return the `cdr' of the `cdr' of the CONS.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn cons)
+          (cddr cons)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (\ ((#_ #_ . cddr)) cddr))
+          (derivation (\ ((#_ #_ . cddr)) cddr))
         </li>
         <li>
-          $(derivation (cdr (cdr cons)))
+          (derivation (cdr (cdr cons)))
         </li>
         <li>
-          $(derivation (@cdr cons 1))
+          (derivation (@cdr cons 1))
         </li>
       </ul>
     </div>
@@ -120,15 +128,17 @@
       <ul>
         <li>
           Return a cons with the given CAR and #null.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn car)
+          (cons! car)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivarion (cons car))
+          (derivarion (cons car))
         </li>
       </ul>
     </div>
@@ -139,12 +149,14 @@
       <ul>
         <li>
           Return element number N of LIST, where the `car' is element zero.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn n list)
+          (nth n list)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
       </ul>
     </div>
@@ -155,12 +167,14 @@
       <ul>
         <li>
           Returns the tail of LIST that would be obtained by calling `cdr' N times in succession.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn n list)
+          (nthCdr n list)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
       </ul>
     </div>

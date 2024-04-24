@@ -33,11 +33,11 @@
       (body
         (h2 (pr "Wat/Lispx Reference"))
         (ol
-          (dolist (file files)
+          (doList (file files)
             (close1 (r (@new BufferedReader (@new FileReader file)))
               (log file)
               (for1 (l (@readLine r)) (! (null? l)) 
-                (continue? (! (@startsWith l ";;;")))
+                (continue? (! (@startsWith l "#|!")))
                 (+= chapters 1)
                 (def chapter (encode (subSeq l 4)))
                 (li (a (attr 'href ($ base chapters ".html")) (pr chapter))) ))) ))) ))
@@ -55,13 +55,14 @@
   (a (attr 'href ($ base (1+ chapter#) ".html"))
     (input (attr 'type "button" 'value ">" 'disabled (== chapter# chapters))) ) )
     
-(dolist (file files)
+(doList (file files)
   (close1 (r (@new BufferedReader (@new FileReader file)))
     (log file)
-    (loop (set! l (@readLine r)) (until? (|| (null? l) (@startsWith l ";;;"))))
+    (loop (set! l (@readLine r)) (until? (|| (null? l) (@startsWith l "#|!"))))
     (loop (until? (null? l))
       (+= chapter# 1)
       ;(until? (> chapter# 3))
+      ;(log l)
       (def chapter ($ chapter# ". " (subSeq l 4)))
       (log 'chapter chapter)
       (def chapter (encode chapter))
@@ -79,12 +80,14 @@
             (body
               (buttons)
               (h2 (pr chapter))
+              (unless (@startsWith (set! l :rhs (@readLine r)) " |#")
+                (ul (loop (li (pr (encode (subSeq l 2))) (until? (@startsWith (set! l :rhs (@readLine r)) " |#")) ))))
               (loop
                 (set! l :rhs (@readLine r)) 
-                (continue-? 1 (|| (null? l) (@startsWith l ";;;")) (buttons))
+                (continue-? 1 (|| (null? l) (@startsWith l "#|!")) (buttons))
                 (continue? (@startsWith l ";;!") (ul (li (pr (encode (subSeq l 3))))))
-                (continue? (@startsWith l "#|!") (ul (until (@startsWith (set! l :rhs (@readLine r)) " |#") (li (pr (if (0? (length (set! l :rhs (subSeq l 2)))) "&nbsp;" (encode l)))))))
-                (continue? (@startsWith l "#|") (until (@startsWith (set! l :rhs (@readLine r)) "|#")))
+                (continue? (@startsWith l "  #|!") (ul (until (@startsWith (set! l :rhs (@readLine r)) "   |#") (li (pr (encode (subSeq l 4)))) )))
+                (continue? (@startsWith l "#|") (until (or (@startsWith (set! l :rhs (@readLine r)) "|#") (@startsWith l "  |#")) ))
                 (continue? (! (|| (@startsWith l "\x28;def") (@startsWith l "\x28;%def"))))
                 (def l0 l)
                 (loop
@@ -96,7 +99,7 @@
                     (ul (li (pr (encode l0)))) ))
                 (if (@startsWith l "  #|")
                   (div
-                    (h3 (pr (encode (nm l0))))
+                    (h3 (pr (encode (def name :rhs (nm l0)))))
                     (ul
                       (li
                         (pr (encode (subSeq l 4)))
@@ -106,7 +109,7 @@
                           (br (pr (encode (subSeq l 4)))) ))
                       (if (@startsWith l "   |$")
                         (loop
-                          (li (pr (encode (subSeq l 4))))
+                          (li (pr (encode (@replace (subSeq l 5) "fn" name))))
                           (until? (@startsWith (def l :rhs (@readLine r)) "   |#")) )))) 
                   (div
                     (h3 (pr (encode (nm l0))))

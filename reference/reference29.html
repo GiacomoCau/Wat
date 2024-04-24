@@ -31,7 +31,15 @@
       </h3>
       <ul>
         <li>
-          (def\ (sort lst . opt)
+          Return the sorted LIST, getting the key with the :key function (defaults to 'idf') and up or down with key :up or :dn (defaults to :up).
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (sort list . (#! 0 3 (or (2 :key function) (1 (or :up :dn)) )))
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>

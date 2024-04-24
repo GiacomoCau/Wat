@@ -31,7 +31,15 @@
       </h3>
       <ul>
         <li>
-          (def\ (array-&gt;list arr)
+          Array to proper list.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (array-&gt;list array)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -41,7 +49,15 @@
       </h3>
       <ul>
         <li>
-          (def\ (array-&gt;cons arr)
+          Array to improper list.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (array-&gt;cons array)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -51,7 +67,15 @@
       </h3>
       <ul>
         <li>
-          (def list-&gt;array %list-&gt;array)
+          List to array.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (list-&gt;array list)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -61,17 +85,15 @@
       </h3>
       <ul>
         <li>
-          (def\ (array . args) (list-&gt;array args))
+          List to array.
+          <br/>
+            &nbsp;
         </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        Object[]
-      </h3>
-      <ul>
         <li>
-          (def Object[] &amp;java.lang.Object[])
+          (array . list)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -81,7 +103,15 @@
       </h3>
       <ul>
         <li>
-          (def\ (arrayMap fun (#! Object[] arr))
+          Return a new array by applying the FUNCTION to each element of the ARRAY.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (arrayMap function array)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -91,7 +121,15 @@
       </h3>
       <ul>
         <li>
-          (def\ (arrayFilter pred (#! Object[] arr))
+          Returns a new array with the elements of the ARRAY for which the application of the FUNCTION returns true.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (arrayFilter function array)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -101,7 +139,15 @@
       </h3>
       <ul>
         <li>
-          (def\ (newInstance class dim . dims)
+          Returns a new array with the elements of CLASS tipe and the specified DIMENSIONS.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (newInstance class . dimensions)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -111,7 +157,15 @@
       </h3>
       <ul>
         <li>
-          (def\ (arrayGet array index)
+          Returns the element at INDEX position int the ARRAY.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (arrayGet array index)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -121,7 +175,15 @@
       </h3>
       <ul>
         <li>
-          (def\ (arrayGet* array . indexes)
+          Returns the element at INDEXES position int the multi-dimensions ARRAY.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (arrayGet* array . indexes)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -131,7 +193,15 @@
       </h3>
       <ul>
         <li>
-          (def\ (arraySet array index value)
+          Returns the ARRAY after update the element at INDEX position with VALUE.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (arraySet array index value)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -141,7 +211,15 @@
       </h3>
       <ul>
         <li>
-          (def\ (arraySet* array0 value . indexes)
+          Returns the multi-dimensions ARRAY after update the element at INDEXES position with VALUE.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (arraySet* array value . indexes)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>

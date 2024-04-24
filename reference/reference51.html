@@ -66,10 +66,10 @@
         &nbsp;&nbsp;handler frames.  Each frame binds a number of handlers.  We use
       </li>
       <li>
-        &nbsp;&nbsp;two dynamic variables, `*conditionHandlerFrame?*' and
+        &nbsp;&nbsp;two dynamic variables, `*conditionHandlerFrame*' and
       </li>
       <li>
-        &nbsp;&nbsp;`*restartHandlerFrame?*', to point at the innermost frame of
+        &nbsp;&nbsp;`*restartHandlerFrame*', to point at the innermost frame of
       </li>
       <li>
         &nbsp;&nbsp;each chain.  Note that the variables hold options, as indicated
@@ -353,13 +353,13 @@
           Establish condition handlers specified by HANDLER-SPECS around FORMS.
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
         <li>
-          $(fn (handlerSpecs . forms))
+          (handlerBind (handlerSpecs . forms))
         </li>
         <li>
-          $(syntax handlerSpecs (conditionClass handlerFunction))
+          (syntax handlerSpecs (conditionClass handlerFunction))
         </li>
       </ul>
     </div>
@@ -374,16 +374,16 @@
             You should usually prefer `restartCase'.
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
         <li>
-          $(fn (handlerSpecs . forms))
+          (restartBind (handlerSpecs . forms))
         </li>
         <li>
-          $(syntax handlerSpecs (restartName handlerFunction . properties))
+          (syntax handlerSpecs (restartName handlerFunction . properties))
         </li>
         <li>
-          $(syntax properties (&amp;key interactiveFunction associatedConditions))
+          (syntax properties (&amp;key interactiveFunction associatedConditions))
         </li>
       </ul>
     </div>
@@ -418,10 +418,10 @@
           Like `handlerBind', but the stack is unwound before a handler function is called.
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
         <li>
-          $(fn (handlerSpecs . forms))
+          (handlerCase (handlerSpecs . forms))
         </li>
       </ul>
     </div>
@@ -434,10 +434,10 @@
           Like `restartBind', but the stack is unwound before a handler function is called.
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
         <li>
-          $(fn (handlerSpecs . forms))
+          (restartCase (handlerSpecs . forms))
         </li>
       </ul>
     </div>
@@ -524,10 +524,10 @@
             `:associatedConditions' property, as it will be set automatically.
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
         <li>
-          $(fn (condition . handlerSpecs))
+          (signal (condition . handlerSpecs))
         </li>
       </ul>
     </div>
@@ -548,10 +548,10 @@
             `:associatedConditions' property, as it will be set automatically.
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
         <li>
-          $(fn (condition . handlerSpecs))
+          (error (condition . handlerSpecs))
         </li>
       </ul>
     </div>
@@ -613,7 +613,7 @@
           <br/>
             (always the innermost handler frame at the start of the search).
           <br/>
-            
+            &nbsp;
           <br/>
             Return an option of the found handler and the frame establishing it as
           <br/>
@@ -623,7 +623,7 @@
           <br/>
             `lispx::callConditionHandler').
           <br/>
-            
+            &nbsp;
           <br/>
             The PAYLOAD? parameter can be used to pass in an optional condition if
           <br/>

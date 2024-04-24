@@ -31,7 +31,17 @@
       </h3>
       <ul>
         <li>
-          Search for the KEYWORD in the property list LST (a list of alternating keywords and values) and return the found value as an option.
+          Search for the KEYWORD in the property LIST (a list of alternating keywords and values)
+          <br/>
+            and return the next value as an option if found it, #null otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (optValue keyword list)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -41,14 +51,19 @@
       </h3>
       <ul>
         <li>
-          Search for ITEM in the LIST according to the TEST predicate (defaults to `==').
+          Search for ITEM in the LIST according to the CMP predicate (defaults to `==').
           <br/>
-            Return the tail of the list starting withITEM if found, #null otherwise.
+            Return, if found it, the tail of the list starting with ITEM after apply the GET function (defaults to 'idf'), #null otherwise.
           <br/>
             The KEY function is applied to each list element before comparison (defaults to `idf').
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn (item list &amp;key test key))
+          (member item list &amp;Value cmp key ret))
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -58,7 +73,15 @@
       </h3>
       <ul>
         <li>
-          (def\ (member? key lst . keywords)
+          Return true if the ITEM is in the LIST, false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (member? (item list &amp;key cmp key ret))
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -68,7 +91,15 @@
       </h3>
       <ul>
         <li>
-          (def\ (!member? key lst . keywords)
+          Return false if the ITEM is in the LIST, true otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (!member? (item list &amp;key cmp key ret))
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -78,7 +109,17 @@
       </h3>
       <ul>
         <li>
-          (def\ (optKey key lst)
+          Return ITEM if the ITEM is in the LIST, true otherwise.
+          <br/>
+            ITEM can be an sigle element or a list of element
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (optKey (item list))
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -88,7 +129,15 @@
       </h3>
       <ul>
         <li>
-          (def\ (assoc k lst) 
+          Return the car of a assoc LIST (a list of lists of keywords and values) is ITEM is the caar if == to ITEM, #null otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (assoc (item list))
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
@@ -98,7 +147,15 @@
       </h3>
       <ul>
         <li>
-          (def\ (member*? key . lst)
+          Return true if the ITEM is in the LIST, false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (member*? (item . list))
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>

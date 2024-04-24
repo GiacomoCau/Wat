@@ -33,7 +33,18 @@
         <li>
           Define a new generic function with the given NAME.
           <br/>
-            The RECEIVER-NAME, PARAMETERS, and PROPERTIES are currently ignored.
+            RECEIVER-NAME, PARAMETERS, and PROPERTIES are currently ignored.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (defGeneric name receiverName . parameters)
+        </li>
+        <li>
+          (defGeneric (name receiverName) . parameters)
+        </li>
+        <li>
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -43,7 +54,18 @@
       </h3>
       <ul>
         <li>
-          Add a new method to the generic function named by NAME specialized for the class named by CLASS-NAME.
+          Define a new method for the generic function NAME specialized for CLASS.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (defMethod ((name (receiverName class) . parameters) . forms))
+        </li>
+        <li>
+          (defMethod (name ((receiverName class) . parameters) . forms))
+        </li>
+        <li>
+          (type fexpr)
         </li>
       </ul>
     </div>

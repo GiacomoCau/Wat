@@ -31,7 +31,7 @@
       </h3>
       <ul>
         <li>
-          Match the DEFINIEND-TREE against the VALUE and define resulting bindings into the current environment, throws an error otherwise.
+          Match the DEFINIEND-TREE against the VALUE and define resulting bindings into the current environment, signals an error otherwise.
           <br/>
             without bindResult or with bindResult #ignore use as bindResult (bndRes)
           <br/>
@@ -41,19 +41,19 @@
           <br/>
             with bindResult :prv return the previous value of the last binding
           <br/>
-            with bindResult :obj return the env
+            &nbsp;
         </li>
         <li>
-          $(fn definiendTree value)
+          (def definiendTree value)
         </li>
         <li>
-          $(fn definiendTree bindResult value)
+          (def definiendTree bindResult value)
         </li>
         <li>
-          $(syntax bindResult (or #ignore #inert :rhs :prv))  
+          (syntax bindResult (or #ignore #inert :rhs :prv))
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -64,15 +64,17 @@
       <ul>
         <li>
           Return a anonymous fexpr with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER and FORMS as body.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn parameterTree environmentParameter . forms)
+          (vau parameterTree environmentParameter . forms)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
         <li>
-          $(derivation (vau (pt ep . forms) env (eval (list 'vau pt ep (cons 'begin forms)) env)))
+          (derivation (vau (pt ep . forms) env (eval (list 'vau pt ep (cons 'begin forms)) env)))
         </li>
       </ul>
     </div>
@@ -83,15 +85,17 @@
       <ul>
         <li>
           Return an anonymous function with the given PARAMETER-TREE and FORMS as body.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn parameterTree . forms)
+          (\ parameterTree . forms)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (vau (parameterTree . forms) env (wrap (eval (list* 'vau parameterTree #ignore forms) env))))
+          (derivation (vau (parameterTree . forms) env (wrap (eval (list* 'vau parameterTree #ignore forms) env))))
         </li>
       </ul>
     </div>
@@ -101,7 +105,7 @@
       </h3>
       <ul>
         <li>
-          alias for \ :-)
+          alias for \ :-).
         </li>
       </ul>
     </div>
@@ -112,12 +116,14 @@
       <ul>
         <li>
           Return a new function that wraps around an underlying OPERATOR, and induces argument evaluation around it.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn operator)
+          (wrap operator)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
       </ul>
     </div>
@@ -127,31 +133,33 @@
       </h3>
       <ul>
         <li>
-          Reports an error if:
+          Signals an error if:
           <br/>
             - EXPRESSION does not equal VALUE
           <br/>
             - VALUE is not present and the EXPRESSION does not throws
           <br/>
             - EXPRESSION throws or returns an object and the object is not of the same CLASS with the ATTRIBUTES of the given VALUE.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn expression value)
+          (assert expression value)
         </li>
         <li>
-          $(fn expression)
+          (assert expression)
         </li>
         <li>
-          $(fn expression class attribute value . attributes)
+          (assert expression class attribute value . attributes)
         </li>
         <li>
-          $(syntax attributes (or () (attribute value . attributes)))
+          (syntax attributes (or () (attribute value . attributes)))
         </li>
         <li>
-          $(syntax attribute (or Symbol Keyword String .Field @Method))
+          (syntax attribute (or Symbol Keyword String .Field @Method))
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -162,15 +170,17 @@
       <ul>
         <li>
           Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn fun args . env)
+          (apply fun args . env)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (eval (cons (unwrap fun) args) (if (null? env) (newEnv) (car! env)) ))
+          (derivation (eval (cons (unwrap fun) args) (if (null? env) (newEnv) (car! env)) ))
         </li>
       </ul>
     </div>
@@ -180,13 +190,15 @@
       </h3>
       <ul>
         <li>
-          Sequentially evaluate FORMS returning the value of the last one or #inert if FORMS is null.
+          Sequentially evaluate FORMS returning the value of the last one or #inert if FORMS is #null.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn . forms)
+          (begin . forms)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
       </ul>
     </div>
@@ -197,18 +209,20 @@
       <ul>
         <li>
           Return the contents of the address part of the register.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn cons)
+          (car cons)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (\ ((car . #_)) car))
+          (derivation (\ ((car . #_)) car))
         </li>
         <li>
-          $(derivation (@car cons))
+          (derivation (@car cons))
         </li>
       </ul>
     </div>
@@ -220,16 +234,18 @@
         <li>
           Return the contents of the address part of the register
           <br/>
-            if decrement part of the register is null, else error.
+            if decrement part of the register is #null, signals an error otherwise.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn cons)
+          (car! cons)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (\ ((car)) car))
+          (derivation (\ ((car)) car))
         </li>
       </ul>
     </div>
@@ -240,21 +256,23 @@
       <ul>
         <li>
           Return the `car' of the `cdr' of the CONS.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn cons)
+          (cadr cons)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (\ ((#_ cadr . #_)) cadr))
+          (derivation (\ ((#_ cadr . #_)) cadr))
         </li>
         <li>
-          $(derivation (car (cdr cons)))
+          (derivation (car (cdr cons)))
         </li>
         <li>
-          $(derivation (@car cons 1))
+          (derivation (@car cons 1))
         </li>
       </ul>
     </div>
@@ -265,18 +283,20 @@
       <ul>
         <li>
           Return the contents of the decrement part of the register.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn cons)
+          (cdr cons)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (\ ((#_ . cdr)) cdr))
+          (derivation (\ ((#_ . cdr)) cdr))
         </li>
         <li>
-          $(derivation (@cdr cons))
+          (derivation (@cdr cons))
         </li>
       </ul>
     </div>
@@ -287,15 +307,17 @@
       <ul>
         <li>
           Return a cons with the given CAR and CDR.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn car cdr)
+          (cons car cdr)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (@new vm Cons car cdr))
+          (derivation (@new vm Cons car cdr))
         </li>
       </ul>
     </div>
@@ -306,15 +328,17 @@
       <ul>
         <li>
           Return true if the OBJECT is a cons, false otherwise.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn object)
+          (cons? object)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (\ (object) (type? object Cons)))
+          (derivation (\ (object) (type? object Cons)))
         </li>
       </ul>
     </div>
@@ -325,15 +349,17 @@
       <ul>
         <li>
           Evaluate the FORM in the ENVIRONMENT, returning its result.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn form . environment)
+          (eval form . environment)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (eval (if (null? environment) ((vau () env env)) (car! environment))))
+          (derivation (eval (if (null? environment) ((vau () env env)) (car! environment))))
         </li>
       </ul>
     </div>
@@ -347,19 +373,21 @@
           <br/>
             Then evaluate either the THEN or ELSE expression depending on whether the TEST yielded true or false.
           <br/>
-            Idea stolen from Anarki https://github.com/arclanguage/anarki :-) 
+            Idea stolen from Anarki https://github.com/arclanguage/anarki
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn test then . forms)
+          (if test then . forms)
         </li>
         <li>
-          $(syntax forms (or () (else) (test then . forms)))
+          (syntax forms (or () (else) (test then . forms)))
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
         <li>
-          $(derivation (vau (test then . forms) env (if (eval test env) (eval then env) (null? forms) #inert (null? (cdr forms)) (eval (car forms) env) (apply if forms env))))
+          (derivation (vau (test then . forms) env (if (eval test env) (eval then env) (null? forms) #inert (null? (cdr forms)) (eval (car forms) env) (apply if forms env))))
         </li>
       </ul>
     </div>
@@ -370,15 +398,17 @@
       <ul>
         <li>
           Return the list of evaluated ARGUMENTS.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn . arguments)
+          (list . arguments)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (wrap (vau arguments #ignore arguments)))
+          (derivation (wrap (vau arguments #ignore arguments)))
         </li>
       </ul>
     </div>
@@ -390,13 +420,15 @@
         <li>
           Return a list of evaluated ARGUMENTS so that
           <br/>
+            &nbsp;
+          <br/>
             the last argument becomes the `cdr' of the list.
         </li>
         <li>
-          $(fn . arguments)
+          (list* . arguments)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
       </ul>
     </div>
@@ -410,18 +442,19 @@
           <br/>
             The Box are functions that encapsulates a mutable value.
           <br/>
+            Without VALUE use as VALUE (boxDft).
+          <br/>
             Calling the box without arguments returns the value in the box.
           <br/>
-            Calling the box with an attribute update the value in the box.
+            Calling the box with an argument update the value in the box.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn)
+          (newBox . value)
         </li>
         <li>
-          $(fn value)
-        </li>
-        <li>
-          $(type function)
+          (type function)
         </li>
       </ul>
     </div>
@@ -432,15 +465,17 @@
       <ul>
         <li>
           Return true if the OBJECT is #null, false otherwise.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn object)
+          (null? object)
         </li>
         <li>
-          $(type function)
+          (type function)
         </li>
         <li>
-          $(derivation (\ (object) (type? object Null)))
+          (derivation (\ (object) (type? object Null)))
         </li>
       </ul>
     </div>
@@ -451,15 +486,17 @@
       <ul>
         <li>
           Return the unevaluated OPERAND.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          $(fn operand)
+          (quote operand)
         </li>
         <li>
-          $(type fexpr)
+          (type fexpr)
         </li>
         <li>
-          $(derivation (vau (operand) #ignore operand))
+          (derivation (vau (operand) #ignore operand))
         </li>
       </ul>
     </div>

@@ -54,6 +54,7 @@
 (%def Obj &Wat.Vm$Obj)
 (%def ObjEnv &Wat.Vm$ObjEnv)
 (%def Object &java.lang.Object)
+(%def Object[] &java.lang.Object[])
 (%def Opv &Wat.Vm$Opv)
 (%def Symbol &Wat.Vm$Symbol)
 (%def System &java.lang.System)
