@@ -91,11 +91,133 @@
     </div>
     <div>
       <h3>
+        mkTag
+      </h3>
+      <ul>
+        <li>
+          Return a tag for the throws forms by joining TAG and N.
+          <br/>
+            Get the %deep of the enhanced loop form in the dynamic environment.
+          <br/>
+            Used from break, continue, until and while forms for the enhanced loops.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (mkTag tag n)
+        </li>
+        <li>
+          (type dynamic function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        break
+      </h3>
+      <ul>
+        <li>
+          (defMacro (break . forms) (list* 'throwTag (list 'mkTag &quot;break&quot; 0) forms))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        break-
+      </h3>
+      <ul>
+        <li>
+          (defMacro (break- n . forms) (list* 'throwTag (list 'mkTag &quot;break&quot; n) forms))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        break?
+      </h3>
+      <ul>
+        <li>
+          (defMacro (break? b . forms) (list 'if b (list* 'throwTag (list 'mkTag &quot;break&quot; 0) forms)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        break-?
+      </h3>
+      <ul>
+        <li>
+          (defMacro (break-? n b . forms) (list 'if b (list* 'throwTag (list 'mkTag &quot;break&quot; n) forms)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        continue
+      </h3>
+      <ul>
+        <li>
+          (defMacro (continue . forms) (list* 'throwTag (list 'mkTag &quot;continue&quot; 0) forms))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        continue-
+      </h3>
+      <ul>
+        <li>
+          (defMacro (continue- n . forms) (list* 'throwTag (list 'mkTag &quot;continue&quot; n) forms))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        continue?
+      </h3>
+      <ul>
+        <li>
+          (defMacro (continue? b . forms) (list 'if b (list* 'throwTag (list 'mkTag &quot;continue&quot; 0) forms)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        continue-?
+      </h3>
+      <ul>
+        <li>
+          (defMacro (continue-? n b . forms) (list 'if b (list* 'throwTag (list 'mkTag &quot;continue&quot; n) forms)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        until?
+      </h3>
+      <ul>
+        <li>
+          (defMacro (until? b . forms) (list 'if b        (list* 'throwTag (list 'mkTag &quot;break&quot; 0) forms)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        while?
+      </h3>
+      <ul>
+        <li>
+          (defMacro (while? b . forms) (list 'if b #inert (list* 'throwTag (list 'mkTag &quot;break&quot; 0) forms)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         %loop
       </h3>
       <ul>
         <li>
-          Redefine the primitive %loop to add the clauses :for and :for1 and the forms break, continue, while and until.
+          Redefine the primitive %loop to add the clauses for and for1 and the forms break, continue, while and until.
           <br/>
             &nbsp;
         </li>
@@ -103,10 +225,10 @@
           (%loop . forms)
         </li>
         <li>
-          (%loop :for1 binding . forms)
+          (%loop for1 binding . forms)
         </li>
         <li>
-          (%loop :for bindings . forms)
+          (%loop for bindings . forms)
         </li>
         <li>
           (type fexpr)

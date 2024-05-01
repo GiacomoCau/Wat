@@ -89,7 +89,7 @@ These are the differences compared to the original Wat/LispX
 		specifying it directly in the expression `(box (or #inert :rhs :prv :obj) value)`
 		or indirectly by setting `(bndRes (or #inert :rhs :prv))`
 * The `DVars` or dynamic variables extend the `Boxes`
-* The `DVars` are managed by a single operator `(%d\\ (#! (Symbol) symbols) . body)`
+* The `DVars` are managed by a single operator `(%dv\\ (#! (Symbol) symbols) . body)`
 	which allows you to implement the various operators for dynamic variables as macros __ddef__ __ddef*__ __progv__ __dlet__ __dlet*__
 	* if `body` is
 		* `()` will assign the values ​​it is combined with, converted to `DVar`, to the corresponding symbols in the current `Env` `((d\\ symbols) . values)`

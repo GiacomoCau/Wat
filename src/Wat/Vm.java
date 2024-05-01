@@ -670,8 +670,7 @@ public class Vm {
 	}
 	Object bind(Resumption r, Dbg dbg, boolean def, int bndRes, Env e, Object lhs, Object rhs) {
 		try {
-			var res = bind(def, bndRes, e, lhs, rhs);
-			return bndRes == 0 ? inert : res;
+			return bind(def, bndRes, e, lhs, rhs);
 		}
 		catch (InnerException ie) {
 			return error(
@@ -683,6 +682,10 @@ public class Vm {
 		}
 	}
 	Object bind(boolean def, int bndRes, Env e, Object lhs, Object rhs) {
+		var res = bind0(def, bndRes, e, lhs, rhs);
+		return switch (bndRes) { case 0-> inert; case 3-> e; default-> res; };
+	}
+	Object bind0(boolean def, int bndRes, Env e, Object lhs, Object rhs) {
 		return switch (lhs) {
 			case Ignore i-> rhs;
 			case Symbol s-> { var v = def ? e.def(s, rhs) : e.set(s, rhs); yield bndRes == 2 ? v : rhs; }  
@@ -1030,7 +1033,7 @@ public class Vm {
 	
 	// Dynamic Variables
 	class DVar extends Box { DVar(Object val) { super(val); }}
-	class DLambda implements Combinable {
+	class DVLambda implements Combinable {
 		public Object combine(Env e, List o) { return combine(null, e, o); }
 		public Object combine(Resumption r, Env e, List o) {
 			var chk = checkM(this, o, 1, list(Symbol.class)); // o = ((symbol . symbols) . forms)
@@ -1661,7 +1664,7 @@ public class Vm {
 				//"%env?", wrap(new JFun("%Env?", (Function<Object, Boolean>) obj-> obj instanceof Env )),
 				"%vmEnv", wrap(new JFun("%VmEnv", (n,o)-> checkN(n, o, 0), (l,o)-> vmEnv() )),
 				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, or(null, list(2, or(null, Env.class), Obj.class), list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class, String.class), Any.class))), (l,o)-> l==0 ? env() : l==2 ? env(o.car(), o.<Obj>car(1)) : env(o.car(), array(o.cdr())) )),
-				"%bind", wrap(new JFun("%Bind", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> bind(true, 0, o.<Env>car(), o.car(1), o.car(2)) )),
+				"%bind", wrap(new JFun("%Bind", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> bind(true, 3, o.<Env>car(), o.car(1), o.car(2)) )),
 				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (InnerException ie) { return false; }} )),
 				"%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } )),
 				"%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnv = env(theEnv))),
@@ -1765,7 +1768,7 @@ public class Vm {
 				//"%dVar?", wrap(new JFun("%DVar?", (Function<Object, Boolean>) obj-> obj instanceof DVar )),
 				"%newDVar", wrap(new JFun("%NewDVar", (n,o)-> checkR(n, o, 0, 1), (l,o)-> new DVar(l == 0 ? boxDft : o.car))),
 				"%dVal", wrap(new JFun("%DVal", (n,o)-> checkR(n, o, 1, 2, DVar.class), (l,o)-> apply(dv-> l == 1 ? dv.value : (dv.value=o.car(1)), o.<DVar>car()) )),
-				"%d\\", new DLambda(),
+				"%dv\\", new DVLambda(),
 				// Errors
 				"%rootPrompt", rootPrompt,
 				"%error", wrap(new JFun("%Error", (ArgsList) o-> ((ArgsList) at("error")).apply(cons(this, o)))),
@@ -1799,9 +1802,9 @@ public class Vm {
 				"%`", opv(vmEnv, list(symbol("arg")), ignore, list(symbol("arg"))),
 				"%´", opv(vmEnv, list(symbol("arg")), ignore, list(symbol("arg"))),
 				"%\\", opv(vmEnv,
-					cons(symbol("formals"), symbol("body")),
+					cons(symbol("formals"), symbol("forms")),
 					symbol("env"),
-					uncked(()-> toLispList("(%wrap (%eval (%list* %vau formals #ignore body) env))")) ),
+					uncked(()-> toLispList("(%wrap (%eval (%list* %vau formals #ignore forms) env))")) ),
 				// Extra
 				"vm", this,
 				"%test", test,
@@ -1811,7 +1814,7 @@ public class Vm {
 				"log", wrap(new JFun("Log", (ArgsList) o-> log(array(o)) )),
 				"print", wrap(new JFun("Print", (ArgsList) o-> print(array(o)) )),
 				"write", wrap(new JFun("Write", (ArgsList) o-> write(array(o)) )),
-				"load", wrap(new JFun("Load", (Function<String, Object>) nf-> uncked(()-> loadText(nf)) )),
+				"load", wrap(new JFun("Load", (n,o)-> checkR(n, o, 1, 2, String.class, Env.class), (l,o)-> uncked(()-> loadText(l==1 ? theEnv : o.<Env>car(1), o.<String>car())) )),
 				"read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> uncked(()-> toLispList(read(l == 0 ? 0 : o.<Integer>car()))) )),
 				"readString", wrap(new JFun("ReadString", (n,o)-> checkN(n, o, 1), (l,o)-> uncked(()-> toLispList(o.toString())) )),
 				"system", wrap(new JFun("System", (n,o)-> checkR(n, o, 1, 2, String.class, Boolean.class), (l,o)-> uncked(()-> system(l==1 ? false : o.<Boolean>car(1),  "cmd.exe", "/e:on", "/c", o.<String>car())) )),
@@ -1847,17 +1850,17 @@ public class Vm {
 	
 	
 	// API
-	public Object exec(Object bytecode) {
-		return pushSubcontBarrier.combine(theEnv, pushRootPrompt(cons(cons(new Begin(true), toLispExpr(bytecode)))));
+	public Object exec(Env env, Object bytecode) {
+		return pushSubcontBarrier.combine(env, pushRootPrompt(cons(cons(new Begin(true), toLispExpr(bytecode)))));
 	}
 	public Object call(String funName, Object ... args) {
-		return exec($(funName, ".", $(args)));
+		return exec(theEnv, $(funName, ".", $(args)));
 	}
 	public Object get(String varName) {
-		return exec(symbol(varName));
+		return exec(theEnv, symbol(varName));
 	}
-	public Object eval(String exp) throws Exception {
-		return exec(toByteCode(exp));
+	public Object eval(Env env, String exp) throws Exception {
+		return exec(env, toByteCode(exp));
 	}
 	public String readText(String fileName) throws IOException {
 		return Files.readString(Paths.get(fileName), Charset.forName("UTF-8"));
@@ -1875,15 +1878,15 @@ public class Vm {
 			return ois.readObject();
 		}
 	}
-	public Object loadText(String fileName) throws Exception {
+	public Object loadText(Env env, String fileName) throws Exception {
 		if (prTrc >= 1) print("\n--------: " + fileName);
-		var v = eval(readText(fileName));
+		var v = eval(env, readText(fileName));
 		if (prTrc > 1) print("--------: " + fileName + " end");
 		return v;
 	}
 	public Object loadBytecode(String fileName) throws Exception {
 		if (prTrc >= 1) print("\n--------: " + fileName);
-		var v = exec(readBytecode(fileName));
+		var v = exec(theEnv, readBytecode(fileName));
 		if (prTrc > 1) print("--------: "  + fileName + " end");
 		return v;
 	}
@@ -1893,7 +1896,7 @@ public class Vm {
 				case "":
 					break loop;
 				case String exp: try {
-					var val = eval(exp);
+					var val = eval(theEnv, exp);
 					if (!prInert && val == inert) break;
 					print(val);
 				}
@@ -1933,7 +1936,7 @@ public class Vm {
 	public void main(String file) throws Exception {
 		if (new File(file).exists()) {
 			var milli = currentTimeMillis();
-			var res = loadText(file);
+			var res = loadText(theEnv, file);
 			print("start time: " + (currentTimeMillis() - milli));
 			if (res != ignore) print(res);
 		}

@@ -149,19 +149,68 @@
       </h3>
       <ul>
         <li>
-          Return an anonymous function with the given PARAMETER-TREE and FORMS as body.
+          Return an anonymous function with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER and FORMS as body.
           <br/>
-            which accesses the execution environment rather than the definition environment.
+            which may accesses the execution environment rather than the definition environment.
           <br/>
-            Useful for defining the primitive for dynamically-scoped variables.
+            Used for defining the dynamic environment lambda de\ and the dynamic variables lambda dv\.
           <br/>
             &nbsp;
         </li>
         <li>
-          (wrau pt ep . forms)
+          (wrau parameterTree environmentParameter . forms)
         </li>
         <li>
           (type function)
+        </li>
+        <li>
+          (derivation (list 'wrap (list* 'vau pt ep forms)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        de\
+      </h3>
+      <ul>
+        <li>
+          Return an anonymous function with the given PARAMETER-TREE and FORMS as body,
+          <br/>
+            which accesses the execution environment rather than the definition environment.
+          <br/>
+            The classic lambda of the first type, before the Scheme static lambda.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (de\ parameterTree . forms)
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+        <li>
+          (derivation (wrau args env (apply begin forms (bind (newEnv env) parameterTree args))))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        defDe\
+      </h3>
+      <ul>
+        <li>
+          Defines the named dynamic environment function NAME with the given PARAMETER-TREE and FORMS as body into the current environment.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (defDe\ name parameterTree . forms)
+        </li>
+        <li>
+          (defDe\ (name parameterTree) . forms)
+        </li>
+        <li>
+          (type macro)
         </li>
       </ul>
     </div>

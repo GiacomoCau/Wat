@@ -218,7 +218,8 @@
  |#
 
 (def evalMacro
-  #|the box to discriminate when to evaluate or simply expand a macro.
+  #|A box to discriminate when to evaluate or simply expand a macro.
+   |Used from expand and makeMacro. 
    |#
   (newBox #t))
 
@@ -259,12 +260,12 @@
 
 
 #|! Definition Forms
- |defMacro defVau def\ def*\ rec\ let1\ let1rec\ let\ and letrec\ have two equivalent forms
+ |The forms defMacro defVau def\ defDe\ def*\ rec\ let1\ let1rec\ let\ and letrec\ have two equivalent syntax
  |
  |    (_ name parameterTree . forms)
  |    (_ (name . parameterTree) . forms)
  |
- |rec rec\ let1rec let1rec\ letrec and letrec\ pre-initialize all bindings to #inert before evaluating values.
+ |The forms rec rec\ let1rec let1rec\ letrec and letrec\ pre-initialize all bindings to #inert before evaluating and binding the values.
  |#
 
 (def defMacro
@@ -386,29 +387,45 @@
   %unwrap )
 
 (defMacro (wrau pt ep . forms)
-  #|Return an anonymous function with the given PARAMETER-TREE and FORMS as body.
-   |which accesses the execution environment rather than the definition environment.
-   |Useful for defining the primitive for dynamically-scoped variables.
+  #|Return an anonymous function with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER and FORMS as body.
+   |which may accesses the execution environment rather than the definition environment.
+   |Used for defining the dynamic environment lambda de\ and the dynamic variables lambda dv\.
    |
-   |$(fn pt ep . forms)
+   |$(fn parameterTree environmentParameter . forms)
    |$(type function)
+   |$(derivation (list 'wrap (list* 'vau pt ep forms)))
    |#
   (list 'wrap (list* 'vau pt ep forms)) )
 
 (assert (expand (wrau pt env a b c)) '(wrap (vau pt env a b c)))
+;(assert (let* ((a 1) (a 2)) ((wrap (vau (b) #_ (list a b))) (+ 1 2))) '(2 3))
+;(assert (let* ((a 1) (a 2)) ((wrau (b) #_ (list a b)) (+ 1 2))) '(2 3))
 
+(def de\
+  #|Return an anonymous function with the given PARAMETER-TREE and FORMS as body,
+   |which accesses the execution environment rather than the definition environment.
+   |The classic lambda of the first type, before the Scheme static lambda.
+   |
+   |$(fn parameterTree . forms)
+   |$(type fexpr)
+   |$(derivation (wrau args env (apply begin forms (bind (newEnv env) parameterTree args))))
+   |#
+  (vau (pt . forms) #_
+    (wrau args env (apply begin forms (bind (newEnv env) pt args)))))
 
-;(def \ (vau (parameterTree . forms) env (wrap (eval (list* 'vau parameterTree #ignore forms) env))))
-;(def dEnv\ (macro (parameterTree . forms) (list 'wrap (list 'vau parameterTree 'env (list 'apply 'begin forms 'env)))))
-;(def dEnv\ (vau (parameterTree . forms) env (wrap (eval (list 'vau parameterTree 'env (list 'apply 'begin forms 'env)) env))))
-;(def dEnv\ (vau (parameterTree . forms) env (wrap (eval (list 'vau parameterTree 'env 'env) env))))
-;(def xx (dEnv\ (a) (+ a b))) (let1 (b 2) (xx 2))
-;(let1 (b 2) (dEnv\ () b))
-;(def dEnv\ (wrap (vau (parameterTree . forms) env (apply begin forms env))))
+;(assert (let* ((f (de\ () a)) (a 1) (a 2)) (f)) 2) 
 
-;(assert (let* ((b 3) (f (vau () env (apply begin '((1+ b)) env))) (b 4)) (f)) 5) ; ok!
-;(assert (let* ((b 3) (f (vau (a) env (eval '(+ a b) (newEnv env :a a)))) (b 4)) (f 1)) 5) ; ok!
-;(assert (let* ((b 3) (f (vau (a) env (eval '(+ a b) ((theEnv) :obj :parent env)))) (b 4)) (f 1)) 5) ; ok!
+(defMacro (defDe\ lhs . rhs)
+  #|Defines the named dynamic environment function NAME with the given PARAMETER-TREE and FORMS as body into the current environment.
+   |
+   |$(fn name parameterTree . forms)
+   |$(fn (name parameterTree) . forms)
+   |$(type macro)
+   |#
+  (if (cons? lhs)
+    (list 'def (car lhs) (list* 'de\ (cdr lhs) rhs))
+    (list 'def lhs (cons 'de\ rhs)) ))
+
 
 #|! Env
  |The Env are functions that encapsulates mutable values.
@@ -562,7 +579,7 @@
   (%getSlot object attribute) )
 
 (def\ setSlot (object attribute value)
-  #|Update the value of SYMBOL or KEYWORD or STRING in the ENVIRONMENT or OBJ to VALUE.
+  #|Update or define with VALUE the SYMBOL or KEYWORD or STRING in the ENVIRONMENT or OBJ.
    |
    |$(fn object attribute value)
    |$(syntax object (or Env Obj))
@@ -2482,12 +2499,13 @@
           (eval forms env)
           (returnFrom exit #inert)) ))))
 
+#|TODO sostituito dai successivi, eliminare dopo verifica
 (def %loop
-  #|Redefine the primitive %loop to add the clauses :for and :for1 and the forms break, continue, while and until.
+  #|Redefine the primitive %loop to add the clauses for and for1 and the forms break, continue, while and until.
    |
    |$(fn . forms)
-   |$(fn :for1 binding . forms)
-   |$(fn :for bindings . forms)
+   |$(fn for1 binding . forms)
+   |$(fn for bindings . forms)
    |$(type fexpr)
    |$(syntax bindings (binding . bindings))
    |$(syntax binding (symbol initForm . incrFrom))
@@ -2546,6 +2564,215 @@
                     (%loop
                       (catchTag continue
                         (eval forms env) )))) )))))) ))
+|#
+
+#|TODO sostituito dai successivi, eliminare dopo verifica
+(defVau (mkTag tag n) env
+  (let1 (%deep (env '%deep))
+    (list 'quote (symbol ($ tag (- %deep (the+ (and Integer (>= 0) (<= %deep)) n))))) ))
+
+(defVau (break . forms) env (eval (list* 'throwTag (eval (list 'mkTag 'break 0) env) forms) env))
+(defVau (break- n . forms) env (eval (list* 'throwTag (eval (list 'mkTag 'break n) env) n forms) env))
+(defVau (break? b . forms) env (eval (list 'if b (list* 'throwTag (eval (list 'mkTag 'break 0) env) forms)) env))
+(defVau (break-? n b . forms) env (eval (list 'if b (list* 'throwTag (eval (list 'mkTag 'break n) env) forms)) env))
+
+(defVau (continue . forms) env (eval (list* 'throwTag (eval (list 'mkTag 'continue 0) env) forms) env))
+(defVau (continue- n . forms) env (eval (list* 'throwTag (eval (list 'mkTag 'continue n) env) n forms) env))
+(defVau (continue? b . forms) env (eval (list 'if b (list* 'throwTag (eval (list 'mkTag 'continue 0) env) forms)) env))
+(defVau (continue-? n b . forms) env (eval (list 'if b (list* 'throwTag (eval (list 'mkTag 'continue n) env) forms)) env))
+
+(defVau (until? b . forms) env (eval (list 'if b (list* 'throwTag (eval (list 'mkTag 'break 0) env) forms)) env))
+(defVau (while? b . forms) env (eval (list 'if b #inert (list* 'throwTag (eval (list 'mkTag 'break 0) env) forms)) env))
+
+(def %loop
+  #|Redefine the primitive %loop to add the clauses for and for1 and the forms break, continue, while and until.
+   |
+   |$(fn . forms)
+   |$(fn for1 binding . forms)
+   |$(fn for bindings . forms)
+   |$(type fexpr)
+   |$(syntax bindings (binding . bindings))
+   |$(syntax binding (symbol initForm . incrFrom))
+   |$(syntax forms (form . forms) )
+   |$(syntax form (break . forms))
+   |$(syntax form (break- n . forms))
+   |$(syntax form (break? testForm . forms))
+   |$(syntax form (break-? n testForm . forms))
+   |$(syntax form (continue . forms))
+   |$(syntax form (continue- n . forms))
+   |$(syntax form (continue? testForm . forms))
+   |$(syntax form (continue-? n testForm . forms))
+   |$(syntax form (while? testForm . forms))
+   |$(syntax form (until? testForm . forms))
+   |$(syntax form ...)
+   |#
+  (let1 (%loop ((.parent (theEnv)) '%loop))
+    (vau forms env
+      (let1 (%deep (let1 (%deep (value :%deep env)) (if (null? %deep) 0 (1+ %deep))))
+        (let ( (break (symbol ($ 'break %deep)))
+               (continue (symbol ($ 'continue %deep))) )
+          (let1 (env (newEnv (newEnv env :%deep %deep)))
+            (if (check? forms (2 oo 'for ((2 3 Symbol)) )) ;loop for
+              (let ( (for (cadr forms))
+                     (forms (cons 'begin (cddr forms))) )
+                (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (optDft incr init)) for)))
+                (catchTag break
+                  (eval (list* 'def* (map car for) (map cadr for)) env)
+                  (%loop
+                    (catchTag continue (eval forms env) )
+                    (eval increments env) )))
+              (if (check? forms (2 oo 'for1 (2 3 Symbol))) ;loop for1
+                (let ( ((pt init . incr) (cadr forms))
+                       (forms (cons 'begin (cddr forms))) )
+                  (def increment (list 'def pt (optDft incr init)))
+                  (catchTag break
+                    (eval (list 'def pt init) env)
+                    (%loop
+                      (catchTag continue (eval forms env) )
+                      (eval increment env) )))
+                (let1 (forms (cons 'begin forms)) ;loop
+                  (catchTag break
+                    (%loop
+                      (catchTag continue
+                        (eval forms env) )))) )))))) ))
+|#
+
+#|TODO sostituito dai successivi, eliminare dopo verifica
+(def\ (mk'Tag tag n env)
+  #|Return a quoted tag for throws forms by joining TAG and N.
+   |ENVIRONMENT is used to get the %deep of the enhanced loop form and evaluate N.
+   |Used from break, continue, until and while forms of the enhanced loops.
+   |
+   |$(fn tag n environment)
+   |#
+  (let1 (%deep (env '%deep))
+    (list 'quote (symbol ($ tag (- %deep (the+ (and Integer (>= 0) (<= %deep)) n))))) ))
+
+(defVau (break . forms) env (eval (list* 'throwTag (mk'Tag 'break 0 env) forms) env))
+(defVau (break- n . forms) env (eval (list* 'throwTag (mk'Tag 'break (eval n env) env) forms) env))
+(defVau (break? b . forms) env (eval (list 'if b (list* 'throwTag (mk'Tag 'break 0 env) forms)) env))
+(defVau (break-? n b . forms) env (eval (list 'if b (list* 'throwTag (mk'Tag 'break (eval n env) env) forms)) env))
+
+(defVau (continue . forms) env (eval (list* 'throwTag (mk'Tag 'continue 0 env) forms) env))
+(defVau (continue- n . forms) env (eval (list* 'throwTag (mk'Tag 'continue (eval n env) env) forms) env))
+(defVau (continue? b . forms) env (eval (list 'if b (list* 'throwTag (mk'Tag 'continue 0 env) forms)) env))
+(defVau (continue-? n b . forms) env (eval (list 'if b (list* 'throwTag (mk'Tag 'continue (eval n env) env) forms)) env))
+
+(defVau (until? b . forms) env (eval (list 'if b (list* 'throwTag (mk'Tag 'break 0 env) forms)) env))
+(defVau (while? b . forms) env (eval (list 'if b #inert (list* 'throwTag (mk'Tag 'break 0 env) forms)) env))
+|#
+
+#|TODO sostituito dai successivi, eliminare dopo verifica
+
+(defDe\ (mk'Tag tag (#! (and Integer (>= 0) (<= %deep)) n))
+  #|Return a quoted tag for the throws forms by joining TAG and N.
+   |Get the %deep of the enhanced loop form in the dynamic environment.
+   |Used from break, continue, until and while forms of the enhanced loops.
+   |
+   |$(fn tag n)
+   |$(type dynamic function)
+   |#
+  (list 'quote (symbol ($ tag (- %deep n)))) )
+
+(defVau (break . forms)       env (eval             (list* 'throwTag (apply mk'Tag (list "break" 0) env) forms) env))
+(defVau (break? b . forms)    env (eval (list 'if b (list* 'throwTag (apply mk'Tag (list "break" 0) env) forms)) env))
+(defVau (break- n . forms)    env (eval             (list* 'throwTag (apply mk'Tag (list "break" (eval n env)) env) forms) env))
+(defVau (break-? n b . forms) env (eval (list 'if b (list* 'throwTag (apply mk'Tag (list "break" (eval n env)) env) forms)) env))
+
+(defVau (continue . forms)       env (eval             (list* 'throwTag (apply mk'Tag (list "continue" 0) env) forms) env))
+(defVau (continue? b . forms)    env (eval (list 'if b (list* 'throwTag (apply mk'Tag (list "continue" 0) env) forms)) env))
+(defVau (continue- n . forms)    env (eval             (list* 'throwTag (apply mk'Tag (list "continue" (eval n env)) env) forms) env))
+(defVau (continue-? n b . forms) env (eval (list 'if b (list* 'throwTag (apply mk'Tag (list "continue" (eval n env)) env) forms)) env))
+
+(defVau (until? b . forms) env (eval (list 'if b        (list* 'throwTag (apply mk'Tag (list "break" 0) env) forms)) env))
+(defVau (while? b . forms) env (eval (list 'if b #inert (list* 'throwTag (apply mk'Tag (list "break" 0) env) forms)) env))
+|#
+
+#|TODO test de\
+(let ((%deep 1)) (break- 1)) 
+(loop (break- 0 5))
+(loop (loop (break- 1 5)))
+(loop (loop (break- (+ 1 0) 5)))
+(load "wat!/vm.wat")
+(load "varie/reference/reference.lsp")
+|#
+
+(defDe\ (mkTag tag (#! (and Integer (>= 0) (<= %deep)) n))
+  #|Return a tag for the throws forms by joining TAG and N.
+   |Get the %deep of the enhanced loop form in the dynamic environment.
+   |Used from break, continue, until and while forms for the enhanced loops.
+   |
+   |$(fn tag n)
+   |$(type dynamic function)
+   |#
+  (symbol ($ tag (- %deep n))) )
+
+(defMacro (break . forms) (list* 'throwTag (list 'mkTag "break" 0) forms))
+(defMacro (break- n . forms) (list* 'throwTag (list 'mkTag "break" n) forms))
+(defMacro (break? b . forms) (list 'if b (list* 'throwTag (list 'mkTag "break" 0) forms)))
+(defMacro (break-? n b . forms) (list 'if b (list* 'throwTag (list 'mkTag "break" n) forms)))
+
+(defMacro (continue . forms) (list* 'throwTag (list 'mkTag "continue" 0) forms))
+(defMacro (continue- n . forms) (list* 'throwTag (list 'mkTag "continue" n) forms))
+(defMacro (continue? b . forms) (list 'if b (list* 'throwTag (list 'mkTag "continue" 0) forms)))
+(defMacro (continue-? n b . forms) (list 'if b (list* 'throwTag (list 'mkTag "continue" n) forms)))
+
+(defMacro (until? b . forms) (list 'if b        (list* 'throwTag (list 'mkTag "break" 0) forms)))
+(defMacro (while? b . forms) (list 'if b #inert (list* 'throwTag (list 'mkTag "break" 0) forms)))
+
+(def %loop
+  #|Redefine the primitive %loop to add the clauses for and for1 and the forms break, continue, while and until.
+   |
+   |$(fn . forms)
+   |$(fn for1 binding . forms)
+   |$(fn for bindings . forms)
+   |$(type fexpr)
+   |$(syntax bindings (binding . bindings))
+   |$(syntax binding (symbol initForm . incrFrom))
+   |$(syntax forms (form . forms) )
+   |$(syntax form (break . forms))
+   |$(syntax form (break- n . forms))
+   |$(syntax form (break? testForm . forms))
+   |$(syntax form (break-? n testForm . forms))
+   |$(syntax form (continue . forms))
+   |$(syntax form (continue- n . forms))
+   |$(syntax form (continue? testForm . forms))
+   |$(syntax form (continue-? n testForm . forms))
+   |$(syntax form (while? testForm . forms))
+   |$(syntax form (until? testForm . forms))
+   |$(syntax form ...)
+   |#
+  (let1 (%loop ((.parent (theEnv)) '%loop))
+    (vau forms env
+      (let1 (%deep (let1 (%deep (value :%deep env)) (if (null? %deep) 0 (1+ %deep))))
+        (let ( (break (symbol ($ 'break %deep)))
+               (continue (symbol ($ 'continue %deep))) )
+          (let1 (env (newEnv (newEnv env :%deep %deep)))
+            (if 
+              (check? forms (2 oo 'for ((2 3 Symbol)) )) ;loop for
+                (let ( (for (cadr forms))
+                       (forms (cddr forms)) )
+                  (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (optDft incr init)) for)))
+                  (catchTag break
+                    (eval (list* 'def* (map car for) (map cadr for)) env)
+                    (%loop
+                      (catchTag continue
+                        (apply begin forms env) )
+                      (eval increments env) )))
+              (check? forms (2 oo 'for1 (2 3 Symbol))) ;loop for1
+                (let ( ((pt init . incr) (cadr forms))
+                       (forms (cddr forms)) )
+                  (def increment (list 'def pt (optDft incr init)))
+                  (catchTag break
+                    (eval (list 'def pt init) env)
+                    (%loop
+                      (catchTag continue
+                        (apply begin forms env) )
+                      (eval increment env) )))
+              (catchTag break ;simple loop
+                (%loop
+                  (catchTag continue
+                    (apply begin forms env) ))) ))))) ))
 
 (def loop
   #|Alias of %loop.
@@ -3246,7 +3473,7 @@
    |$(fn name . value)
    |$(type macro)
    |#
-  (list* (list '%d\ (list var)) val) )
+  (list* (list '%dv\ (list var)) val) )
 
 (defMacro (ddef* var* . val*)
   #|Define a new or update an existing dynamic variable with the given NAMES and optional default VALUES.
@@ -3254,7 +3481,7 @@
    |$(fn (names) . values)
    |$(type macro)
    |#
-  (list* (list '%d\ var*) val*) )
+  (list* (list '%dv\ var*) val*) )
 
 (def\ (dget dvar)
   #|Return the current value of the DYNAMIC-VARIABLE.
@@ -3280,7 +3507,7 @@
    |$(type macro)
    |$(syntax bindings ((name value) . bindings))
    |#
-  (cons (list* '%d\ (map car bindings) form forms) (map cadr bindings)) )
+  (cons (list* '%dv\ (map car bindings) form forms) (map cadr bindings)) )
 
 (defMacro (progv var* val* exp . exps)
   #|With the dynamic variables specified by NAMES temporarily bound to new VALUES, evaluate the FORMS as an implicit `begin'.
@@ -3291,7 +3518,7 @@
    |$(syntax values (value . values))
    |$(type macro)
    |#
-  (cons (list* '%d\ var* exp exps) val*) )
+  (cons (list* '%dv\ var* exp exps) val*) )
 
 (defMacro (dlet* bindings . forms)
   #|With the dynamic variables specified by NAMES temporarily bound to new VALUES, evaluate the FORMS as an implicit `begin'.
@@ -3309,10 +3536,10 @@
 
 (let ()
 	(def a (newDVar 1))
-	(assert (expand (ddef a 1)) '((%d\ (a)) 1) )
-	(assert (expand (ddef* (a b) 1 2)) '((%d\ (a b)) 1 2) )
-	(assert (expand (progv (a b) (3 4)  (+ (a) (b)))) '((%d\ (a b) (+ (a) (b))) 3 4) )
-	(assert (expand (dlet ((a 3) (b 4)) (+ (a) (b)))) '((%d\ (a b) (+ (a) (b))) 3 4) )
+	(assert (expand (ddef a 1)) '((%dv\ (a)) 1) )
+	(assert (expand (ddef* (a b) 1 2)) '((%dv\ (a b)) 1 2) )
+	(assert (expand (progv (a b) (3 4)  (+ (a) (b)))) '((%dv\ (a b) (+ (a) (b))) 3 4) )
+	(assert (expand (dlet ((a 3) (b 4)) (+ (a) (b)))) '((%dv\ (a b) (+ (a) (b))) 3 4) )
 	(ddef* (a b) 1 2)
 	(assert (progv (a b) (3 4)  (+ (a) (b))) 7)
 	(assert (dlet ((a 3) (b 4)) (+ (a) (b))) 7)
