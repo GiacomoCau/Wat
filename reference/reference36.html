@@ -54,7 +54,7 @@
         - with bindResult :prv return the previous value of the last binding
       </li>
       <li>
-        - with bindResult :obj return the box
+        - with bindResult :cnt return the box
       </li>
       <li>
         &nbsp;
@@ -72,7 +72,7 @@
         $(type function)
       </li>
       <li>
-        $(syntax bindResult (or #ignore #inert :rhs :prv :obj))
+        $(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
       </li>
     </ul>
     <div>
@@ -103,7 +103,7 @@
       </h3>
       <ul>
         <li>
-          Defines the named box NAME the optional VALUE.
+          Defines into the current environment the named box NAME with the optional VALUE.
           <br/>
             Without VALUE use as VALUE (boxDft).
           <br/>

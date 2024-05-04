@@ -10,11 +10,13 @@
  |#
 
 (%def def
-  #|Match the DEFINIEND-TREE against the VALUE and define resulting bindings into the current environment, signals an error otherwise.
+  #|Defines into the current environment the resulting bindings from the Match of the DEFINIEND-TREE against VALUE, signals an error otherwise.
+   |
    |without bindResult or with bindResult #ignore use as bindResult (bndRes)
    |with bindResult #inert return #inert
    |with bindResult :rhs return the right side of the last binding
    |with bindResult :prv return the previous value of the last binding
+   |with bindResult :cnt return the env
    |
    |$(fn definiendTree value)
    |$(fn definiendTree bindResult value)
@@ -28,18 +30,21 @@
    |
    |$(fn parameterTree environmentParameter . forms)
    |$(type fexpr)
-   |$(derivation (vau (pt ep . forms) env (eval (list 'vau pt ep (cons 'begin forms)) env)))
+   |$(derivation (vau (parameterTree environmentParameter . forms) env (eval (vau parameterTree environmentParameter (begin . forms)) env)))
    |#
   %vau )
 
 (def \
-  #|Return an anonymous function with the given PARAMETER-TREE and FORMS as body.
+  #|Return an anonymous function with the given PARAMETER-TREE and FORMS as body,
+   |which accesses to the definition environment for the values of free variables.
+   |The classic Scheme static lambda.
    |
    |$(fn parameterTree . forms)
    |$(type function)
    |$(derivation (vau (parameterTree . forms) env (wrap (eval (list* 'vau parameterTree #ignore forms) env))))
    |#
   %\ )
+
 (def lambda
   #|alias for \ :-).
    |#
@@ -90,7 +95,7 @@
    |
    |$(fn cons)
    |$(type function)
-   |$(derivation (\ ((car . #_)) car))
+   |$(derivation ((\ ((car . #_)) car)) cons)
    |$(derivation (@car cons))
    |#
   %car )
@@ -101,7 +106,7 @@
    |
    |$(fn cons)
    |$(type function)
-   |$(derivation (\ ((car)) car))
+   |$(derivation ((\ ((car)) car)) cons)
    |#
   (\ ((car)) car) )
 
@@ -110,7 +115,7 @@
    |
    |$(fn cons)
    |$(type function)
-   |$(derivation (\ ((#_ cadr . #_)) cadr))
+   |$(derivation ((\ ((#_ cadr . #_)) cadr)) cons)
    |$(derivation (car (cdr cons)))
    |$(derivation (@car cons 1))
    |#
@@ -121,7 +126,7 @@
    |
    |$(fn cons)
    |$(type function)
-   |$(derivation (\ ((#_ . cdr)) cdr))
+   |$(derivation ((\ ((#_ . cdr)) cdr)) cons)
    |$(derivation (@cdr cons))
    |#
   %cdr )
@@ -140,7 +145,7 @@
    |
    |$(fn object)
    |$(type function)
-   |$(derivation (\ (object) (type? object Cons)))
+   |$(derivation (type? object Cons))
    |#
   %cons? )
 
@@ -149,7 +154,7 @@
    |
    |$(fn form . environment)
    |$(type function)
-   |$(derivation (eval (if (null? environment) ((vau () env env)) (car! environment))))
+   |$(derivation (eval form (if (null? environment) ((vau () env env)) (car! environment))))
    |#
   %eval )
 
@@ -176,8 +181,8 @@
 
 (def list*
   #|Return a list of evaluated ARGUMENTS so that
-   |
    |the last argument becomes the `cdr' of the list.
+   |
    |$(fn . arguments)
    |$(type function)
    |#
@@ -187,6 +192,7 @@
   #|Return a new box with the optional VALUE.
    |The Box are functions that encapsulates a mutable value.
    |Without VALUE use as VALUE (boxDft).
+   |
    |Calling the box without arguments returns the value in the box.
    |Calling the box with an argument update the value in the box.
    |
@@ -200,7 +206,7 @@
    |
    |$(fn object)
    |$(type function)
-   |$(derivation (\ (object) (type? object Null)))
+   |$(derivation (type? object Null))
    |#
   %null? )
 
@@ -250,7 +256,7 @@
       (list 'makeMacro (list* 'vau pt #ignore forms)) )))
 
 (def expand
-  #|Expands a macro rather than evaluates it.
+  #|Expands a macro call rather than evaluates it.
    |
    |$(fn form)
    |$(type macro)
@@ -260,16 +266,16 @@
 
 
 #|! Definition Forms
- |The forms defMacro defVau def\ defDe\ def*\ rec\ let1\ let1rec\ let\ and letrec\ have two equivalent syntax
+ |The forms defMacro defVau def\ defde\ def*\ rec\ let1\ let1rec\ let\ and letrec\ have two equivalent syntax
  |
  |    (_ name parameterTree . forms)
  |    (_ (name . parameterTree) . forms)
  |
- |The forms rec rec\ let1rec let1rec\ letrec and letrec\ pre-initialize all bindings to #inert before evaluating and binding the values.
+ |The forms rec rec\ let1rec let1rec\ letrec and letrec\ pre-initialize all bindings to #inert before evaluating and binding the values ot functions.
  |#
 
 (def defMacro
-  #|Defines the named macro NAME with the given PARAMETER-TREE and FORMS as body into the current environment.
+  #|Defines into the current environment the named macro NAME with the given PARAMETER-TREE and FORMS as body.
    |
    |$(fn name parameterTree . forms)
    |$(fn (name parameterTree) . forms)
@@ -284,7 +290,7 @@
 (assert (expand (defMacro succ (n) (list '+ n 1))) '(def succ (macro (n) (list (%' +) n 1))))
 
 (defMacro (defVau lhs . rhs)
-  #|Defines the named fexpr NAME with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER and FORMS as body into the current environment.
+  #|Defines into the current environment the named fexpr NAME with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER and FORMS as body.
    |
    |$(fn name parameterTree . forms)
    |$(fn (name parameterTree) . forms)
@@ -298,14 +304,14 @@
 (assert (expand (defVau succ (n) env (eval (list '+ n 1) env))) '(def succ (vau (n) env (eval (list (%' +) n 1) env))))
 
 (def defConstant
-  #|Define a constant with the given NAME and VALUE into the current environment.
+  #|Defines into the current environment the named constant NAME with the given VALUE.
    |This is mostly for documentation purposes, as constants are still mutable.
    |Alias for def.
    |#
   def )
 
 (defMacro (def* lhs . rhs)
-  #|Match the DEFINIEND-TREE against the VALUES and define resulting bindings into the current environment.
+  #|Defines into the current environment the resulting bindings from the match of the DEFINIEND-TREE against VALUES, signals an error otherwise.
    |
    |$(fn definiendTree . values)
    |$(fn definiendTree bindResult . values)
@@ -315,7 +321,7 @@
   (list 'def lhs (cons 'list rhs)) )
 
 (defMacro (def\ lhs . rhs)
-  #|Defines the named function NAME with the given PARAMETER-TREE and FORMS as body into the current environment.
+  #|Defines into the current environment the named function NAME with the given PARAMETER-TREE and FORMS as body.
    |
    |$(fn name parameterTree . forms)
    |$(fn (name parameterTree) . forms)
@@ -370,6 +376,7 @@
    |with bindResult #inert return #inert
    |with bindResult :rhs return the right side of the last binding
    |with bindResult :prv return the previous value of the last binding
+   |with bindResult :cnt return the env
    |
    |$(fn definiendTree value)
    |$(fn definiendTree bindResult value)
@@ -387,13 +394,13 @@
   %unwrap )
 
 (defMacro (wrau pt ep . forms)
-  #|Return an anonymous function with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER and FORMS as body.
-   |which may accesses the execution environment rather than the definition environment.
-   |Used for defining the dynamic environment lambda de\ and the dynamic variables lambda dv\.
+  #|Return an anonymous function with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER and FORMS as body,
+   |which may use the execution environment in the ENVIRONMENT-PARAMETER rather than the definition environment for evaluate FORMS.
+   |Used for defining the dynamic environment and variable lambda de\ and dv\.
    |
    |$(fn parameterTree environmentParameter . forms)
    |$(type function)
-   |$(derivation (list 'wrap (list* 'vau pt ep forms)))
+   |$(derivation (wrap (vau parameterTree environmentParameter . forms))
    |#
   (list 'wrap (list* 'vau pt ep forms)) )
 
@@ -403,7 +410,7 @@
 
 (def de\
   #|Return an anonymous function with the given PARAMETER-TREE and FORMS as body,
-   |which accesses the execution environment rather than the definition environment.
+   |which accesses to the execution environment, rather than the definition environment, for the values of free variables.
    |The classic lambda of the first type, before the Scheme static lambda.
    |
    |$(fn parameterTree . forms)
@@ -415,8 +422,8 @@
 
 ;(assert (let* ((f (de\ () a)) (a 1) (a 2)) (f)) 2) 
 
-(defMacro (defDe\ lhs . rhs)
-  #|Defines the named dynamic environment function NAME with the given PARAMETER-TREE and FORMS as body into the current environment.
+(defMacro (defde\ lhs . rhs)
+  #|Defines into the current environment the named dynamic environment function NAME with the given PARAMETER-TREE and FORMS as body.
    |
    |$(fn name parameterTree . forms)
    |$(fn (name parameterTree) . forms)
@@ -438,7 +445,7 @@
  |- with bindResult #inert return #inert
  |- with bindResult :rhs return the right side of the last binding
  |- with bindResult :prv return the previous value of the last binding
- |- with bindResult :obj return the env
+ |- with bindResult :cnt return the env
  |- without bindType use the bindType :def
  |- with bindType :def define or update the bindings in the env
  |- with bindType :set! update the bindings in env, signals an error if the binding is not defined.
@@ -451,7 +458,7 @@
  |$(env bindType bindResult attribute value . attributes)
  |$(syntax attributes (or () (attribute value . attributes)))
  |$(syntax attribute (or Symbol Keyword String))
- |$(syntax bindResult (or #ignore #inert :rhs :prv :obj))
+ |$(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
  |$(syntax bindType (or :def :set!))
  |#
 
@@ -491,7 +498,7 @@
  |- with bindResult #inert return #inert
  |- with bindResult :rhs return the right side of the last binding
  |- with bindResult :prv return the previous value of the last binding
- |- with bindResult :obj return the obj
+ |- with bindResult :cnt return the obj
  |
  |$(obj)
  |$(obj attribute)
@@ -499,7 +506,7 @@
  |$(obj bindResult attribute value . attributes)
  |$(syntax attributes (or () (attribute value . attributes)))
  |$(syntax attribute (or Symbol Keyword String))
- |$(syntax bindResult (or #ignore #inert :rhs :prv :obj))
+ |$(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
  |#
 
 (def new
@@ -517,7 +524,7 @@
   %new )
 
 (defMacro (defObj name class . attr)
-  #|Define a new instance of CLASS with the given NAME into the current environment.
+  #|Defines into the current environment a named instance NAME of the given CLASS.
    |
    |$(fn name boxClass)
    |$(fn name boxClass value)
@@ -556,7 +563,7 @@
    |#
   %value )
 
-(def\ slotBound? (object attribute)
+(def\ (slotBound? object attribute)
   #|Return true if the SYMBOL or KEYWORD or STRING is bound in the ENVIRONMENT or OBJ, false otherwise.
    |
    |$(fn object attribute)
@@ -567,7 +574,7 @@
    |#
   (%slotBound? object attribute) )
 
-(def\ getSlot (object attribute)
+(def\ (getSlot object attribute)
   #|Return the value of SYMBOL or KEYWORD or STRING is bound in the ENVIRONMENT or OBJ, signals an error otherwise.
    |
    |$(fn object attribute)
@@ -578,7 +585,7 @@
    |#
   (%getSlot object attribute) )
 
-(def\ setSlot (object attribute value)
+(def\ (setSlot object attribute value)
   #|Update or define with VALUE the SYMBOL or KEYWORD or STRING in the ENVIRONMENT or OBJ.
    |
    |$(fn object attribute value)
@@ -598,7 +605,7 @@
    |
    |$(fn cons)
    |$(type function)
-   |$(derivation (\ (((caar . #_) . #_)) caar))
+   |$(derivation ((\ (((caar . #_) . #_)) caar)) cons)
    |$(derivation (car (car cons)))
    |#
   (car (car x)) )
@@ -608,7 +615,7 @@
    |
    |$(fn cons)
    |$(type function)
-   |$(derivation (\ ((#_ cadr)) cadr))
+   |$(derivation ((\ ((#_ cadr)) cadr)) cons)
    |#
   cadr)
 
@@ -617,7 +624,7 @@
    |
    |$(fn cons)
    |$(type function)
-   |$(derivation (\ (((#_ . cdar) . #_)) cdar))
+   |$(derivation ((\ (((#_ . cdar) . #_)) cdar)) cons)
    |$(derivation (cdr (car cons)))
    |#
   (cdr (car x)) )
@@ -627,7 +634,7 @@
    |
    |$(fn cons)
    |$(type function)
-   |$(derivation (\ ((#_ #_ . cddr)) cddr))
+   |$(derivation ((\ ((#_ #_ . cddr)) cddr)) cons)
    |$(derivation (cdr (cdr cons)))
    |$(derivation (@cdr cons 1))
    |#
@@ -638,7 +645,7 @@
    |
    |$(fn car)
    |$(type function)
-   |$(derivarion (cons car))
+   |$(derivarion ((\ (car) (cons car)) car))
    |#
   (cons car))
 
@@ -686,7 +693,7 @@
    |
    |$(fn object)
    |$(type function)
-   |$(derivation (\ (object) (type? object Keyword)))
+   |$(derivation (type? object Keyword))
    |#
   %list?)
 
@@ -733,7 +740,7 @@
    |
    |$(fn object)
    |$(type function)
-   |$(derivation (\ (object) (type? object Keyword)))
+   |$(derivation (type? object Keyword))
    |#
   %keyword?)
 
@@ -758,7 +765,7 @@
    |
    |$(fn object)
    |$(type function)
-   |$(derivation (\ (object) (type? object Symbol)))
+   |$(derivation (type? object Symbol))
    |#
   %symbol?)
 
@@ -838,7 +845,7 @@
    |
    |$(fn object)
    |$(type function)
-   |$(derivation (\ (object) (type? object Number)))
+   |$(derivation (type? object Number))
    |#
   %number?)
 
@@ -904,7 +911,7 @@
    |
    |$(fn object)
    |$(type function)
-   |$(derivation (\ (object) (type? object String)))
+   |$(derivation (type? object String))
    |#
   %string?)
 
@@ -1049,7 +1056,7 @@
    |
    |$(fn protectedForm . cleanupForms)
    |$(type macro)
-   |$(derivation (list 'atEnd (cons 'begin cleanupForms) protectedForm)
+   |$(derivation (atEnd (begin . cleanupForms) protectedForm))
    |#
   (list 'atEnd (cons 'begin cleanUp) protected) )
 
@@ -1066,7 +1073,7 @@
    |
    |$(fn . forms)
    |$(type fexpr)
-   |$(derivation (list* 'throwTag #ignore forms))
+   |$(derivation (throwTag #ignore forms))
    |#
   (list* 'throwTag #_ forms) )
 
@@ -1090,7 +1097,7 @@
    |
    |$(fn handler . forms)
    |$(type macro)
-   |$(derivation (list* 'catchTagWth #ignore handler forms))
+   |$(derivation (catchTagWth #ignore handler . forms))
    |#
   (list* 'catchTagWth #_ hdl forms))
 
@@ -1100,7 +1107,7 @@
    |
    |$(fn tag . forms)
    |$(type macro)
-   |$(derivation (list* 'catchTagWth tag #ignore forms))
+   |$(derivation (catchTagWth tag #ignore . forms))
    |#
   (list* 'catchTagWth tag #_ forms) )
 
@@ -1110,7 +1117,7 @@
    |
    |$(fn . forms)
    |$(type macro)
-   |$(derivation (list* 'catchTagWth #ignore #ignore forms))
+   |$(derivation (catchTagWth #ignore #ignore . forms))
    |#
   (list* 'catchTagWth #_ #_ forms))
 
@@ -1158,7 +1165,7 @@
    |
    |$(fn continuation . forms)
    |$(type macro)
-   |$(derivation (list* 'pushDelimSubcont #ignore continuation forms))
+   |$(derivation (pushDelimSubcont #ignore continuation . forms))
    |#
   (list* 'pushDelimSubcont #_ continuation forms) )
 
@@ -1288,7 +1295,7 @@
    |
    |$(fn . forms)
    |$(type macro)
-   |$(derivation (list* '\ '(_) forms))
+   |$(derivation (\ (_) . forms))
    |#
   (list* '\ '(_) forms) )
 
@@ -1394,8 +1401,7 @@
    |#
 
 (defMacro (def*\ lhs* . rhs*)
-  #|Define multiple named functions with given PARAMETER-TREES and FORMS as body.
-   |Match the DEFINIEND-TREES against the BODIES and define resulting bindings into the current environment.
+  #|Defines into the current environment the named functions NAMES with given PARAMETER-TREES and FORMS as body. 
    |
    |$(fn definiendTrees . bodies)
    |$(fn ((name parameterTree) . definiendTrees) . (forms . bodies))
@@ -1774,6 +1780,7 @@
    |
    |$(fn environment definiendTree value)
    |$(type function)
+   |$(derivation (eval (list 'def :cnt definiendTree value) environment))
    |#
   %bind)
 
@@ -1782,6 +1789,7 @@
    |
    |$(fn environment definiendTree value)
    |$(type function)
+   |$(derivation (catch #f (bind environment definiendTree value) #t))
    |#
   %bind?)
 
@@ -1828,11 +1836,11 @@
                 (loop clauses) ))))))))
 
 (defMacro (defCaseVau name . clauses)
-  #|Defines the named caseVau NAME with the given CLAUSES into the current environment.
+  #|Defines into the current environment the named caseVau NAME with the given CLAUSES.
    |
    |$(fn name . clauses)
    |$(type fexpr)
-   |$(derivation (list 'def name (cons 'caseVau clauses)))
+   |$(derivation (def name (caseVau . clauses)))
    |#
   (list 'def name (cons 'caseVau clauses)) )
 
@@ -1852,16 +1860,16 @@
    |$(syntax clause (else . forms))
    |$(syntax clause (else => apv1))
    |$(syntax clause (definiendTree . forms))
-   |$(derivation (list 'wrap (cons 'caseVau clauses)))
+   |$(derivation (wrap (caseVau . clauses)))
    |#
   (list 'wrap (cons 'caseVau clauses)) )
 
 (defMacro (defCase\ name . clauses)
-  #|Defines the named case\ NAME with the given CLAUSES into the current environment.
+  #|Defines into the current environment the named case\ NAME with the given CLAUSES.
    |
    |$(fn name . clauses)
    |$(type fexpr)
-   |$(derivation (list 'def name (cons 'case\ clauses)))
+   |$(derivation (def name (case\ . clauses)))
    |#
   (list 'def name (cons 'case\ clauses)) )
 
@@ -1884,7 +1892,7 @@
    |$(syntax clause (else . forms))
    |$(syntax clause (else => apv1))
    |$(syntax clause (definiendTree . forms))
-   |$(derivation (list 'wrap (cons 'caseVau clauses)))
+   |$(derivation (wrap (caseVau . clauses)))
    |#
   (list (cons 'case\ (map (\ ((a . b)) (list* (if (== a 'else) a (list a)) b)) clauses)) exp) )
 
@@ -2173,7 +2181,7 @@
   (null? (apply** member key lst keywords)) )
 
 (assert (member 'b '(a b c d)) '(b c d))
-;(assert (member "b" '("a" "b" "c" "d")) '("b" "c" "d")) ; solo se String interned!
+(if (intStr) (assert (member "b" '("a" "b" "c" "d")) '("b" "c" "d")))
 
 (def\ (optKey key lst)
   #|Return ITEM if the ITEM is in the LIST, true otherwise.
@@ -2303,7 +2311,7 @@
    |
    |$(fn (symbol) . clauses))
    |$(type macro)
-   |$(derivation (list '\ (symbol) (list* 'caseType symbol clauses))
+   |$(derivation (\ (symbol) (caseType symbol . clauses)))
    |$(use (catchWth (caseType\ (e) ...) ...)
    |#
   (list '\ key (list* 'caseType (car key) clauses) ))
@@ -2499,205 +2507,7 @@
           (eval forms env)
           (returnFrom exit #inert)) ))))
 
-#|TODO sostituito dai successivi, eliminare dopo verifica
-(def %loop
-  #|Redefine the primitive %loop to add the clauses for and for1 and the forms break, continue, while and until.
-   |
-   |$(fn . forms)
-   |$(fn for1 binding . forms)
-   |$(fn for bindings . forms)
-   |$(type fexpr)
-   |$(syntax bindings (binding . bindings))
-   |$(syntax binding (symbol initForm . incrFrom))
-   |$(syntax forms (form . forms) )
-   |$(syntax form (break . forms))
-   |$(syntax form (break- n . forms))
-   |$(syntax form (break? testForm . forms))
-   |$(syntax form (break-? n testForm . forms))
-   |$(syntax form (continue . forms))
-   |$(syntax form (continue- n . forms))
-   |$(syntax form (continue? testForm . forms))
-   |$(syntax form (continue-? n testForm . forms))
-   |$(syntax form (while? testForm . forms))
-   |$(syntax form (until? testForm . forms))
-   |$(syntax form ...)
-   |#
-  (let1 (%loop ((.parent (theEnv)) '%loop))
-    (vau forms env
-      (let1 (%deep (let1 (%deep (value :%deep env)) (if (null? %deep) 0 (1+ %deep))))
-        (let ( (break (symbol ($ 'break %deep)))
-               (continue (symbol ($ 'continue %deep))) )
-          (def\ (mkThrow tag (#! (and Integer (>= 0) (<= %deep)) n) forms)
-            (list* 'throwTag (list 'quote (symbol ($ tag (- %deep n)))) forms) )
-          (let1 (env (newEnv (newEnv env
-                  :%deep %deep
-                  :break (macro forms (mkThrow 'break 0 forms))
-                  :break- (macro (n . forms) (mkThrow 'break n forms))
-                  :break? (macro (b . forms) (list 'if b (mkThrow 'break 0 forms)))
-                  :break-? (macro (n b . forms) (list 'if b (mkThrow 'break n forms)))
-                  :continue (macro forms (mkThrow 'continue 0 forms))
-                  :continue- (macro (n . forms) (mkThrow 'continue n forms))
-                  :continue? (macro (b . forms) (list 'if b (mkThrow 'continue 0 forms)))
-                  :continue-? (macro (n b . forms) (list 'if b (mkThrow 'continue n forms)))
-                  :until? (macro (b . forms) (list 'if b (mkThrow 'break 0 forms))) ;same of break?.
-                  :while? (macro (b . forms) (list 'if b #inert (mkThrow 'break 0 forms))) )))
-            (if (check? forms (2 oo 'for ((2 3 Symbol)) )) ;loop for
-              (let ( (for (cadr forms))
-                     (forms (cons 'begin (cddr forms))) )
-                (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (optDft incr init)) for)))
-                (catchTag break
-                  (eval (list* 'def* (map car for) (map cadr for)) env)
-                  (%loop
-                    (catchTag continue (eval forms env) )
-                    (eval increments env) )))
-              (if (check? forms (2 oo 'for1 (2 3 Symbol))) ;loop for1
-                (let ( ((pt init . incr) (cadr forms))
-                       (forms (cons 'begin (cddr forms))) )
-                  (def increment (list 'def pt (optDft incr init)))
-                  (catchTag break
-                    (eval (list 'def pt init) env)
-                    (%loop
-                      (catchTag continue (eval forms env) )
-                      (eval increment env) )))
-                (let1 (forms (cons 'begin forms)) ;loop
-                  (catchTag break
-                    (%loop
-                      (catchTag continue
-                        (eval forms env) )))) )))))) ))
-|#
-
-#|TODO sostituito dai successivi, eliminare dopo verifica
-(defVau (mkTag tag n) env
-  (let1 (%deep (env '%deep))
-    (list 'quote (symbol ($ tag (- %deep (the+ (and Integer (>= 0) (<= %deep)) n))))) ))
-
-(defVau (break . forms) env (eval (list* 'throwTag (eval (list 'mkTag 'break 0) env) forms) env))
-(defVau (break- n . forms) env (eval (list* 'throwTag (eval (list 'mkTag 'break n) env) n forms) env))
-(defVau (break? b . forms) env (eval (list 'if b (list* 'throwTag (eval (list 'mkTag 'break 0) env) forms)) env))
-(defVau (break-? n b . forms) env (eval (list 'if b (list* 'throwTag (eval (list 'mkTag 'break n) env) forms)) env))
-
-(defVau (continue . forms) env (eval (list* 'throwTag (eval (list 'mkTag 'continue 0) env) forms) env))
-(defVau (continue- n . forms) env (eval (list* 'throwTag (eval (list 'mkTag 'continue n) env) n forms) env))
-(defVau (continue? b . forms) env (eval (list 'if b (list* 'throwTag (eval (list 'mkTag 'continue 0) env) forms)) env))
-(defVau (continue-? n b . forms) env (eval (list 'if b (list* 'throwTag (eval (list 'mkTag 'continue n) env) forms)) env))
-
-(defVau (until? b . forms) env (eval (list 'if b (list* 'throwTag (eval (list 'mkTag 'break 0) env) forms)) env))
-(defVau (while? b . forms) env (eval (list 'if b #inert (list* 'throwTag (eval (list 'mkTag 'break 0) env) forms)) env))
-
-(def %loop
-  #|Redefine the primitive %loop to add the clauses for and for1 and the forms break, continue, while and until.
-   |
-   |$(fn . forms)
-   |$(fn for1 binding . forms)
-   |$(fn for bindings . forms)
-   |$(type fexpr)
-   |$(syntax bindings (binding . bindings))
-   |$(syntax binding (symbol initForm . incrFrom))
-   |$(syntax forms (form . forms) )
-   |$(syntax form (break . forms))
-   |$(syntax form (break- n . forms))
-   |$(syntax form (break? testForm . forms))
-   |$(syntax form (break-? n testForm . forms))
-   |$(syntax form (continue . forms))
-   |$(syntax form (continue- n . forms))
-   |$(syntax form (continue? testForm . forms))
-   |$(syntax form (continue-? n testForm . forms))
-   |$(syntax form (while? testForm . forms))
-   |$(syntax form (until? testForm . forms))
-   |$(syntax form ...)
-   |#
-  (let1 (%loop ((.parent (theEnv)) '%loop))
-    (vau forms env
-      (let1 (%deep (let1 (%deep (value :%deep env)) (if (null? %deep) 0 (1+ %deep))))
-        (let ( (break (symbol ($ 'break %deep)))
-               (continue (symbol ($ 'continue %deep))) )
-          (let1 (env (newEnv (newEnv env :%deep %deep)))
-            (if (check? forms (2 oo 'for ((2 3 Symbol)) )) ;loop for
-              (let ( (for (cadr forms))
-                     (forms (cons 'begin (cddr forms))) )
-                (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (optDft incr init)) for)))
-                (catchTag break
-                  (eval (list* 'def* (map car for) (map cadr for)) env)
-                  (%loop
-                    (catchTag continue (eval forms env) )
-                    (eval increments env) )))
-              (if (check? forms (2 oo 'for1 (2 3 Symbol))) ;loop for1
-                (let ( ((pt init . incr) (cadr forms))
-                       (forms (cons 'begin (cddr forms))) )
-                  (def increment (list 'def pt (optDft incr init)))
-                  (catchTag break
-                    (eval (list 'def pt init) env)
-                    (%loop
-                      (catchTag continue (eval forms env) )
-                      (eval increment env) )))
-                (let1 (forms (cons 'begin forms)) ;loop
-                  (catchTag break
-                    (%loop
-                      (catchTag continue
-                        (eval forms env) )))) )))))) ))
-|#
-
-#|TODO sostituito dai successivi, eliminare dopo verifica
-(def\ (mk'Tag tag n env)
-  #|Return a quoted tag for throws forms by joining TAG and N.
-   |ENVIRONMENT is used to get the %deep of the enhanced loop form and evaluate N.
-   |Used from break, continue, until and while forms of the enhanced loops.
-   |
-   |$(fn tag n environment)
-   |#
-  (let1 (%deep (env '%deep))
-    (list 'quote (symbol ($ tag (- %deep (the+ (and Integer (>= 0) (<= %deep)) n))))) ))
-
-(defVau (break . forms) env (eval (list* 'throwTag (mk'Tag 'break 0 env) forms) env))
-(defVau (break- n . forms) env (eval (list* 'throwTag (mk'Tag 'break (eval n env) env) forms) env))
-(defVau (break? b . forms) env (eval (list 'if b (list* 'throwTag (mk'Tag 'break 0 env) forms)) env))
-(defVau (break-? n b . forms) env (eval (list 'if b (list* 'throwTag (mk'Tag 'break (eval n env) env) forms)) env))
-
-(defVau (continue . forms) env (eval (list* 'throwTag (mk'Tag 'continue 0 env) forms) env))
-(defVau (continue- n . forms) env (eval (list* 'throwTag (mk'Tag 'continue (eval n env) env) forms) env))
-(defVau (continue? b . forms) env (eval (list 'if b (list* 'throwTag (mk'Tag 'continue 0 env) forms)) env))
-(defVau (continue-? n b . forms) env (eval (list 'if b (list* 'throwTag (mk'Tag 'continue (eval n env) env) forms)) env))
-
-(defVau (until? b . forms) env (eval (list 'if b (list* 'throwTag (mk'Tag 'break 0 env) forms)) env))
-(defVau (while? b . forms) env (eval (list 'if b #inert (list* 'throwTag (mk'Tag 'break 0 env) forms)) env))
-|#
-
-#|TODO sostituito dai successivi, eliminare dopo verifica
-
-(defDe\ (mk'Tag tag (#! (and Integer (>= 0) (<= %deep)) n))
-  #|Return a quoted tag for the throws forms by joining TAG and N.
-   |Get the %deep of the enhanced loop form in the dynamic environment.
-   |Used from break, continue, until and while forms of the enhanced loops.
-   |
-   |$(fn tag n)
-   |$(type dynamic function)
-   |#
-  (list 'quote (symbol ($ tag (- %deep n)))) )
-
-(defVau (break . forms)       env (eval             (list* 'throwTag (apply mk'Tag (list "break" 0) env) forms) env))
-(defVau (break? b . forms)    env (eval (list 'if b (list* 'throwTag (apply mk'Tag (list "break" 0) env) forms)) env))
-(defVau (break- n . forms)    env (eval             (list* 'throwTag (apply mk'Tag (list "break" (eval n env)) env) forms) env))
-(defVau (break-? n b . forms) env (eval (list 'if b (list* 'throwTag (apply mk'Tag (list "break" (eval n env)) env) forms)) env))
-
-(defVau (continue . forms)       env (eval             (list* 'throwTag (apply mk'Tag (list "continue" 0) env) forms) env))
-(defVau (continue? b . forms)    env (eval (list 'if b (list* 'throwTag (apply mk'Tag (list "continue" 0) env) forms)) env))
-(defVau (continue- n . forms)    env (eval             (list* 'throwTag (apply mk'Tag (list "continue" (eval n env)) env) forms) env))
-(defVau (continue-? n b . forms) env (eval (list 'if b (list* 'throwTag (apply mk'Tag (list "continue" (eval n env)) env) forms)) env))
-
-(defVau (until? b . forms) env (eval (list 'if b        (list* 'throwTag (apply mk'Tag (list "break" 0) env) forms)) env))
-(defVau (while? b . forms) env (eval (list 'if b #inert (list* 'throwTag (apply mk'Tag (list "break" 0) env) forms)) env))
-|#
-
-#|TODO test de\
-(let ((%deep 1)) (break- 1)) 
-(loop (break- 0 5))
-(loop (loop (break- 1 5)))
-(loop (loop (break- (+ 1 0) 5)))
-(load "wat!/vm.wat")
-(load "varie/reference/reference.lsp")
-|#
-
-(defDe\ (mkTag tag (#! (and Integer (>= 0) (<= %deep)) n))
+(defde\ (mkTag tag (#! (and Integer (>= 0) (<= %deep)) n))
   #|Return a tag for the throws forms by joining TAG and N.
    |Get the %deep of the enhanced loop form in the dynamic environment.
    |Used from break, continue, until and while forms for the enhanced loops.
@@ -3418,13 +3228,13 @@
  |- with bindResult #inert return #inert
  |- with bindResult :rhs return the right side of the last binding
  |- with bindResult :prv return the previous value of the last binding
- |- with bindResult :obj return the box
+ |- with bindResult :cnt return the box
  |
  |$(box)
  |$(box value)
  |$(box bindResult value)
  |$(type function)
- |$(syntax bindResult (or #ignore #inert :rhs :prv :obj))
+ |$(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
  |#
 
 (def newBox
@@ -3438,7 +3248,7 @@
   %newBox)
 
 (defMacro (defBox name . value)
-  #|Defines the named box NAME the optional VALUE.
+  #|Defines into the current environment the named box NAME with the optional VALUE.
    |Without VALUE use as VALUE (boxDft).
    |
    |$(fn name . value)
@@ -3611,7 +3421,7 @@
         (let1 (receiver (car args)) (if (type? receiver Obj) (newEnv env receiver) env)) )
       args ))
   (def prv (%addMethod (eval class env) name method))
-  (case (bndRes) (#inert #inert) (:rhs method) (:prv prv)) )
+  (case (bndRes) (:rhs method) (:prv prv) (else #inert)) )
 
 (let ()
   (defClass Foo () ())

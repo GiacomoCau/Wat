@@ -475,7 +475,7 @@
   (defTest def.9
     (signalsError?
      (def x 1 "docstring")
-     Error :type 'type :datum 1 :expected '(or #inert #ignore :rhs :prv))))
+     Error :type 'type :datum 1 :expected '(or #inert #ignore :rhs :prv :cnt))))
 
 (defSuite defConstant
 

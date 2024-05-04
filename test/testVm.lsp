@@ -20,7 +20,7 @@
 (%assert (%def 1)           &Wat.Vm$Error :type 'match :operands# +1) 
 (%assert (%def 1 1)         &Wat.Vm$Error :type 'type :datum 1 :expected '(or Symbol Cons))
 (%assert (%def a 1)         #inert)
-(%assert (%def a 1 2)       &Wat.Vm$Error :type 'type :datum 1 :expected '(or #inert #ignore :rhs :prv))
+(%assert (%def a 1 2)       &Wat.Vm$Error :type 'type :datum 1 :expected '(or #inert #ignore :rhs :prv :cnt))
 (%assert (%def a #inert 1)  #inert)
 (%assert (%def a #ignore 1) (%if (%== (bndRes) #inert) #inert (%if (%== (bndRes) :rhs) 1 #null)))
 (%assert (%def a :prv 1)    #null)

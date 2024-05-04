@@ -5,7 +5,6 @@
 (%def milli (@currentTimeMillis &java.lang.System))
 
 (@clear (.methods vm))
-(ctApv #f)
 (prTrc 0)
 (bndRes #inert)
 (boxDft #null)

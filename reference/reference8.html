@@ -42,7 +42,7 @@
           (type function)
         </li>
         <li>
-          (derivation (\ (((caar . #_) . #_)) caar))
+          (derivation ((\ (((caar . #_) . #_)) caar)) cons)
         </li>
         <li>
           (derivation (car (car cons)))
@@ -66,7 +66,7 @@
           (type function)
         </li>
         <li>
-          (derivation (\ ((#_ cadr)) cadr))
+          (derivation ((\ ((#_ cadr)) cadr)) cons)
         </li>
       </ul>
     </div>
@@ -87,7 +87,7 @@
           (type function)
         </li>
         <li>
-          (derivation (\ (((#_ . cdar) . #_)) cdar))
+          (derivation ((\ (((#_ . cdar) . #_)) cdar)) cons)
         </li>
         <li>
           (derivation (cdr (car cons)))
@@ -111,7 +111,7 @@
           (type function)
         </li>
         <li>
-          (derivation (\ ((#_ #_ . cddr)) cddr))
+          (derivation ((\ ((#_ #_ . cddr)) cddr)) cons)
         </li>
         <li>
           (derivation (cdr (cdr cons)))
@@ -138,7 +138,7 @@
           (type function)
         </li>
         <li>
-          (derivarion (cons car))
+          (derivarion ((\ (car) (cons car)) car))
         </li>
       </ul>
     </div>

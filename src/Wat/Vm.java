@@ -150,20 +150,17 @@ public class Vm {
 	int typeT = 0; // type true: 0:true, 1:!false, 2:!(or false null), 3:!(or false null inert), 4:!(or false null inert zero)
 	int prEnv = 10; // print environment
 	int bndRes = 0; // bind result: 0:inert 1:rhs 2:prv
-	private Object bndRes(Object o, boolean obj) {
+	private Object bndRes(Object o) {
 		switch (o) {
 			case Inert i: return 0; 
 			case Ignore i: return bndRes;
 			case Keyword k: switch (k.name) {
 				case "rhs": return 1;
 				case "prv": return 2;
-				case "obj": if (obj) return 3;
+				case "cnt": return 3;
 			};
 			default: return typeError("cannot determine bndRes, not {expected}: {datum}", o,
-				toChk(obj
-					? or(inert, ignore, keyword(":rhs"), keyword(":prv"), keyword(":obj"))
-					: or(inert, ignore, keyword(":rhs"), keyword(":prv"))
-				)
+				toChk(or(inert, ignore, keyword(":rhs"), keyword(":prv"), keyword(":cnt")))
 			);
 		}
 	}
@@ -430,7 +427,7 @@ public class Vm {
 					var bndRes = len % 2 == 0 ? ignore : first(o.car, len-=1, o=o.cdr());
 					for (; len>2; len-=2, o=o.cdr(1)) f.apply(toKey(o.car), o.car(1));
 					var key = toKey(o.car);
-					yield switch (bndRes(bndRes, true)) {
+					yield switch (bndRes(bndRes)) {
 						case Suspension s-> s;
 						case Integer i-> switch(i) {
 							case 0-> inert(f.apply(key, o.car(1)));
@@ -461,7 +458,7 @@ public class Vm {
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			return switch (len) {
 				case 0-> value;
-				default-> switch (bndRes(len != 2 ? ignore : o.car, true)) {
+				default-> switch (bndRes(len != 2 ? ignore : o.car)) {
 					case Suspension s-> s;
 					case Integer i-> switch(i) {
 						case 0-> inert(value = o.car(len-1));
@@ -526,7 +523,7 @@ public class Vm {
 			var bndRes = len % 2 == 0 ? ignore : first(o.car, len-=1, o=o.cdr());
 			for (; len>2; len-=2, o=o.cdr(1)) map.put(toKey(o.car), o.car(1));
 			var key = toKey(o.car);
-			return switch (bndRes(bndRes, true)) {
+			return switch (bndRes(bndRes)) {
 				case Suspension s-> s;
 				case Integer i-> switch(i) {
 					case 0-> inert(map.put(key, o.car(1)));
@@ -796,18 +793,18 @@ public class Vm {
 		boolean def;
 		Def(boolean def) { this.def = def; }
 		public Object combine(Env e, List o) {
-			var chk = checkR(this, o, 2, 3); // o = (dt val) | (dt (or #ignore #inert :rhs :prv) val)
+			var chk = checkR(this, o, 2, 3); // o = (dt val) | (dt (or #ignore #inert :rhs :prv :cnt) val)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			var dt = o.car;
 			var msg = checkDt(cons(this, o), dt); if (msg != null) return msg;
 			var dbg = dbg(e, this, o);
 			return pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> 
-				switch (bndRes(len != 3 ? ignore : o.car(1), false)) {
+				switch (bndRes(len != 3 ? ignore : o.car(1))) {
 					case Suspension s-> s;
-					case Integer i-> i >= 0 && i <= 2
+					case Integer i-> i >= 0 && i <= 3
 						? bind(dbg, def, i, e, dt, res)
-						: typeError("cannot " + (def ? "def" : "set!") + ", invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2)));
+						: typeError("cannot " + (def ? "def" : "set!") + ", invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
 					case Object obj-> resumeError(chk, symbol("Integer"));
 				}
 			);
@@ -1209,7 +1206,7 @@ public class Vm {
 				var o0 = o.car;
 				// (.<name> object)       -> object.getclass().getField(name).get(object) -> field.get(object) 
 				// (.<name> object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
-				//TODO (.<name> object (or #ignore #inert :rhs :prv :obj) value) 
+				//TODO (.<name> object (or #ignore #inert :rhs :prv :cnt) value) 
 				Field field = getField(o0 instanceof Class ? (Class) o0 : o0.getClass(), name);
 				if (field == null) return unboundFieldError("field: {field} not found in: {object}", name, o0 instanceof Class cl ? cl : o0.getClass());
 				try {
@@ -1646,7 +1643,7 @@ public class Vm {
 	Env vmEnv() {
 		Env vmEnv = env();
 		return (Env) vmEnv.apply(
-			list(keyword(":obj"),
+			list(keyword(":cnt"),
 				// Basics
 				"%begin", begin,
 				"%vau", new Vau(),
@@ -1822,20 +1819,21 @@ public class Vm {
 				"doTco", wrap(new JFun("DoTco", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doTco : inert(doTco=o.car()) )),
 				"doAsrt", wrap(new JFun("DoAsrt", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doAsrt : inert(doAsrt=o.car()) )),
 				"ctApv", wrap(new JFun("CtApv",
-					(n,o)-> checkR(n, o, 0, 1, Boolean.class),
+					(n,o)-> checkN(n, o, 0, Boolean.class),
 					(l,o)-> l == 0 ? ctApv
 						: inert(ctApv = o.car(),
 							bind(null, theEnv,
 								list(symbol("%catch"), symbol("%throw")),
 								list((Object) apply(c-> !ctApv ? c : wrap(c), new CatchTagWth()),
 									(Object) apply(t-> !ctApv ? t : wrap(t), new ThrowTag())))) )),
+				"intStr", wrap(new JFun("IntStr", (n,o)-> checkN(n, o, 0), (l,o)-> intStr )),
 				"prTrc", wrap(new JFun("PrTrc", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4, 5, 6)), (l,o)-> l == 0 ? prTrc : inert(start=level-(doTco ? 0 : 3), prTrc=o.car()) )),
 				"typeT", wrap(new JFun("TypeT", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4)), (l,o)-> l == 0 ? typeT : inert(typeT=o.car()) )),
 				"bndRes", wrap(new JFun("BndRes",
-					(n,o)-> checkR(n, o, 0, 1, or(inert, keyword("rhs"), keyword("prv"))),
+					(n,o)-> checkR(n, o, 0, 1, or(inert, keyword("rhs"), keyword("prv"), keyword("cnt"))),
 					(l,o)-> l == 0
-						? switch (bndRes) {case 1-> keyword("rhs"); case 2-> keyword("prv"); default-> inert; }
-						: inert(bndRes=(int) bndRes(o.car, false)) )),
+						? switch (bndRes) {case 1-> keyword("rhs"); case 2-> keyword("prv"); case 3-> keyword("cnt"); default-> inert; }
+						: inert(bndRes=(int) bndRes(o.car)) )),
 				"prEnv", wrap(new JFun("PrEnv", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? prEnv : inert(prEnv=o.car()) )),
 				"boxDft", wrap(new JFun("BoxDft", (n,o)-> checkR(n, o, 0, 1), (l,o)-> l == 0 ? boxDft : inert(boxDft=o.car) )),
 				"aQuote", wrap(new JFun("AQuote", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? aQuote : inert(aQuote=o.car()) )),

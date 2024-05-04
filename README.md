@@ -19,35 +19,35 @@ These are the differences compared to the original Wat/LispX
 * `#ignore` and `#_` are two forms of the same valore
 * the nomenclature has been changed by eliminating the hyphens and camelizing
 * Proper and improper lists are distinct (`List` <: `Cons`)
-* Proper lists, ending with cdr equal to `#null`, are evaluable expressions
-* Improper lists, ending with a cdr other than `#null`, are literal
-* Proper lists where the car evaluation is not a `Combinable` are literal `(autoquote (or #t #f))`
+* Proper lists, ending with the last cdr equal to `#null`, are evaluable expressions
+* Improper lists, ending with the last cdr other than `#null`, are literal
+* Proper lists where the car evaluation is not a `Combinable` are literal `(aQuote (or #t #f))`
 * Lists can be delimited by either `()` or `[]`
-* The __if__ operator can have multiple `test` and `then` forms
-* The expressions can be true if are equals to #t, !#f, !(or #f #null), !(or #f #null #inert) or !(or #f #null #inert 0) by setting `(typeT (or 0 1 2 3 4))`
+* The __if__ operator can have multiple `test` and `then` forms, idea stolen from [Anarki](https://github.com/arclanguage/anarki)
+* The expressions can be `true` if is equals to `#t`, `!#f`, `!(or #f #null)`, `!(or #f #null #inert)` or `!(or #f #null #inert 0)` by setting `(typeT (or 0 1 2 3 4))`
 * The __def__ operator can return:
-	`#inert`, the assigned value (`:rhs`) or the previous value (`:prv`) of the last bind made
-	specifying it directly in the expression `(def symbol (or #inert :rhs :prv) value)`
-	or indirectly by setting `(bndRes (or #inert :rhs :prv))`
+	`#inert`, the assigned value (`:rhs`) or the previous value (`:prv`) of the last bind made, or the current environment (`:cnt`)
+	specifying it directly in the expression `(def symbol (or #inert :rhs :prv :cnt) value)`
+	or indirectly by setting `(bndRes (or #inert :rhs :prv :cnt))`
 * The `Obj` can be defined with key value pairs which will become attribute value pairs of the new obj `(new Obj key value ...)`
 * The `Obj` are `Combinable` and combined with
 	* a key return the value associated with that key `(obj key)`
 	* key value pairs
 		* these pairs will become obj attribute value pairs `(obj key value ...)`
-		* can return `#inert`, the assigned value (`:rhs`) or the previous value (`:prv`) of the last assigned attribute, or the object itself (`:obj`)
-		specifying it directly in the expression `(obj (or #inert :rhs :prv :obj) key value ...)`
-		or indirectly by setting `(bndRes (or #inert :rhs :prv))`
-* The `Env` can also be defined with an env parent `(newEnv)` `(newEnv parentEnv) and
+		* can return `#inert`, the assigned value (`:rhs`) or the previous value (`:prv`) of the last assigned attribute, or the object itself (`:cnt`)
+		specifying it directly in the expression `(obj (or #inert :rhs :prv :cnt) key value ...)`
+		or indirectly by setting `(bndRes (or #inert :rhs :prv :cnt))`
+* The `Env` can also be defined with an env parent `(newEnv)` `(newEnv parentEnv)` and
 	* key value pairs which will become symbol value pairs of the new env `(newEnv env key value ...)`
 	* an `Obj` whose attribute value pairs will become symbol value pairs of the new env `(newEnv env obj)`
 * The `Env` are `Combinable` and combined with
 	* a key return the value associated with that key `(env key)`
 	* key value pairs
 		* these pairs will become value symbol pairs of the env `(env key value ...)`
-		* can return `#inert`, the assigned value (`:rhs`) or previous value (`:prv`) of the last bound symbol, or the object itself (`:obj`)
-		specifying it directly in the expression `(env (or #inert :rhs :prv :obj) key value ...)`
-		or indirectly by setting `(bndRes (or #inert :rhs :prv))`
-		* preceded by `:def` to bind in the last frame or `:set!` to bind in the frame where the single key is present `(env (or :def :set!) (or #inert :rhs :prv :obj ) key value ...)`
+		* can return `#inert`, the assigned value (`:rhs`) or previous value (`:prv`) of the last bound symbol, or the environment itself (`:cnt`)
+		specifying it directly in the expression `(env (or #inert :rhs :prv :cnt) key value ...)`
+		or indirectly by setting `(bndRes (or #inert :rhs :prv :cnt))`
+		* preceded by `:def` to bind in the last frame or `:set!` to bind in the frame where the single key is present `(env (or :def :set!) (or #inert :rhs :prv :cnt) key value ...)`
 * The keys used for `Obj` assignments and `Env` bindings can be `(or Keyword Symbol String)`
 * The __eval__ function can be called with only the expression to evaluate, the `Env` will be the current one `(eval exp)`
 * The __vau__ operator (i.e. __\\__ or __lambda__) allows control over the type and value of parameters.
@@ -85,26 +85,26 @@ These are the differences compared to the original Wat/LispX
 	* `()` return the associated value `(box)`
 	* a value
 		* this will become the value of the box `(box value)` 
-		* can return `#inert`, the assigned value (`:rhs`), the previous value (`:prv`), or the object itself (`:obj`)
-		specifying it directly in the expression `(box (or #inert :rhs :prv :obj) value)`
-		or indirectly by setting `(bndRes (or #inert :rhs :prv))`
+		* can return `#inert`, the assigned value (`:rhs`), the previous value (`:prv`), or the box itself (`:cnt`)
+		  specifying it directly in the expression `(box (or #inert :rhs :prv :cnt) value)`
+		  or indirectly by setting `(bndRes (or #inert :rhs :prv :cnt))`
 * The `DVars` or dynamic variables extend the `Boxes`
 * The `DVars` are managed by a single operator `(%dv\\ (#! (Symbol) symbols) . body)`
 	which allows you to implement the various operators for dynamic variables as macros __ddef__ __ddef*__ __progv__ __dlet__ __dlet*__
 	* if `body` is
 		* `()` will assign the values ​​it is combined with, converted to `DVar`, to the corresponding symbols in the current `Env` `((d\\ symbols) . values)`
-		* a `List` will assign the values ​​with which it is combined to the `DVars` associated with the symbols, execute the forms in the current `Env` and finally restore the values ​​of the
-		`DVar` to those preceding the assignment `((d\\ symbols form . forms) . values)`
+		* a `List` will assign the values ​​with which it is combined to the `DVars` associated with the symbols, execute the forms in the current `Env`
+		  and finally restore the values ​​of the `DVar` to those preceding the assignment `((d\\ symbols form . forms) . values)`
 	* if it is combined with `()` it will use the value obtainable from `(boxDft)` as the value to be assigned
-* __catchTagWth__ and __throwTag__ can be either operators (`Opv`) or functions (`Apv`) depending on `(ctApv (or #t #f))`
+* __catchTagWth__ and __throwTag__ can be either operators (`Opv`) or functions (`Apv`) depending on `ctApv = (or true false)`
 * The __catchTagWth__ handler, can be not only a function of an argument (`Apv1`), but also any value that will be returned if an `Error` is caught
 * The __finally__ operator is derived, as a macro, from the __atEnd__ operator `(atEnd (#! Apv0 cleaner) form . forms)`
 * __takeSubcont__, __pushPrompt__, __pushDelimSubcont__ and __pushSubcontDelim__ are operators and do not require completion
-* `Supplier` `Function` `BiFunction` `Executable` and `Field`, generically java functions, are implicitly considered `Apv` functions
-* __wrap__ does not wrap the `Apv` and the java functions, but wraps the remaining `Combinator`
-* __unwrap__ unwraps the `Apv`, wraps the java functions in a `JFun` and does not unwrap the remaining `Combinator`
-* `String` can be interned with `(intStr (or #f #t))`, if interned they can be compared with `==`
-* __defMacro__, __defVau__, __def\\__, __def*\\__, __rec\\__, __let1\\__, __let1rec\\__, __let\\__ and __letrec\\__ allow the definition of `Combinable` with two equivalent forms
+* `Supplier` `Function` `BiFunction` `Executable` and `Field`, generically `java functions`, are implicitly considered `Apv` functions
+* __wrap__ does not wrap the `Apv` and the `java functions`, but wraps the remaining `Combinator`
+* __unwrap__ unwraps the `Apv`, wraps the `java functions` in a `JFun` and does not unwrap the remaining `Combinator`
+* `String` can be interned depending on `intStr = (or true false)`, if interned they can be compared with `==`
+* __defMacro__, __defVau__, __def\\__, , __defde\\__, __def*\\__, __rec\\__, __let1\\__, __let1rec\\__, __let\\__ and __letrec\\__ allow the definition of `Combinable` with two equivalent forms
 	* `(___ name parameters . body)`
 	* `(___ (name . parameters) . body)`
 * __rec__, __rec\\__, __let1rec__, __let1rec\\__, __letrec__ and __letrec\\__ initialize definitions to `#inert` before evaluation

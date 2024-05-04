@@ -57,7 +57,7 @@
         - with bindResult :prv return the previous value of the last binding
       </li>
       <li>
-        - with bindResult :obj return the obj
+        - with bindResult :cnt return the obj
       </li>
       <li>
         &nbsp;
@@ -81,7 +81,7 @@
         $(syntax attribute (or Symbol Keyword String))
       </li>
       <li>
-        $(syntax bindResult (or #ignore #inert :rhs :prv :obj))
+        $(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
       </li>
     </ul>
     <div>
@@ -125,7 +125,7 @@
       </h3>
       <ul>
         <li>
-          Define a new instance of CLASS with the given NAME into the current environment.
+          Defines into the current environment a named instance NAME of the given CLASS.
           <br/>
             &nbsp;
         </li>

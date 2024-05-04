@@ -41,6 +41,9 @@
         <li>
           (type function)
         </li>
+        <li>
+          (derivation (eval (list 'def :cnt definiendTree value) environment))
+        </li>
       </ul>
     </div>
     <div>
@@ -58,6 +61,9 @@
         </li>
         <li>
           (type function)
+        </li>
+        <li>
+          (derivation (catch #f (bind environment definiendTree value) #t))
         </li>
       </ul>
     </div>
@@ -129,7 +135,7 @@
       </h3>
       <ul>
         <li>
-          Defines the named caseVau NAME with the given CLAUSES into the current environment.
+          Defines into the current environment the named caseVau NAME with the given CLAUSES.
           <br/>
             &nbsp;
         </li>
@@ -140,7 +146,7 @@
           (type fexpr)
         </li>
         <li>
-          (derivation (list 'def name (cons 'caseVau clauses)))
+          (derivation (def name (caseVau . clauses)))
         </li>
       </ul>
     </div>
@@ -187,7 +193,7 @@
           (syntax clause (definiendTree . forms))
         </li>
         <li>
-          (derivation (list 'wrap (cons 'caseVau clauses)))
+          (derivation (wrap (caseVau . clauses)))
         </li>
       </ul>
     </div>
@@ -197,7 +203,7 @@
       </h3>
       <ul>
         <li>
-          Defines the named case\ NAME with the given CLAUSES into the current environment.
+          Defines into the current environment the named case\ NAME with the given CLAUSES.
           <br/>
             &nbsp;
         </li>
@@ -208,7 +214,7 @@
           (type fexpr)
         </li>
         <li>
-          (derivation (list 'def name (cons 'case\ clauses)))
+          (derivation (def name (case\ . clauses)))
         </li>
       </ul>
     </div>
@@ -253,7 +259,7 @@
           (syntax clause (definiendTree . forms))
         </li>
         <li>
-          (derivation (list 'wrap (cons 'caseVau clauses)))
+          (derivation (wrap (caseVau . clauses)))
         </li>
       </ul>
     </div>

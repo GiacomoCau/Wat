@@ -27,7 +27,7 @@
     </h2>
     <ul>
       <li>
-        The forms defMacro defVau def\ defDe\ def*\ rec\ let1\ let1rec\ let\ and letrec\ have two equivalent syntax
+        The forms defMacro defVau def\ defde\ def*\ rec\ let1\ let1rec\ let\ and letrec\ have two equivalent syntax
       </li>
       <li>
         &nbsp;
@@ -42,7 +42,7 @@
         &nbsp;
       </li>
       <li>
-        The forms rec rec\ let1rec let1rec\ letrec and letrec\ pre-initialize all bindings to #inert before evaluating and binding the values.
+        The forms rec rec\ let1rec let1rec\ letrec and letrec\ pre-initialize all bindings to #inert before evaluating and binding the values ot functions.
       </li>
     </ul>
     <div>
@@ -51,7 +51,7 @@
       </h3>
       <ul>
         <li>
-          Defines the named macro NAME with the given PARAMETER-TREE and FORMS as body into the current environment.
+          Defines into the current environment the named macro NAME with the given PARAMETER-TREE and FORMS as body.
           <br/>
             &nbsp;
         </li>
@@ -72,7 +72,7 @@
       </h3>
       <ul>
         <li>
-          Defines the named fexpr NAME with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER and FORMS as body into the current environment.
+          Defines into the current environment the named fexpr NAME with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER and FORMS as body.
           <br/>
             &nbsp;
         </li>
@@ -93,7 +93,7 @@
       </h3>
       <ul>
         <li>
-          Define a constant with the given NAME and VALUE into the current environment.
+          Defines into the current environment the named constant NAME with the given VALUE.
           <br/>
             This is mostly for documentation purposes, as constants are still mutable.
           <br/>
@@ -107,7 +107,7 @@
       </h3>
       <ul>
         <li>
-          Match the DEFINIEND-TREE against the VALUES and define resulting bindings into the current environment.
+          Defines into the current environment the resulting bindings from the match of the DEFINIEND-TREE against VALUES, signals an error otherwise.
           <br/>
             &nbsp;
         </li>
@@ -131,7 +131,7 @@
       </h3>
       <ul>
         <li>
-          Defines the named function NAME with the given PARAMETER-TREE and FORMS as body into the current environment.
+          Defines into the current environment the named function NAME with the given PARAMETER-TREE and FORMS as body.
           <br/>
             &nbsp;
         </li>

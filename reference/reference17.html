@@ -96,7 +96,7 @@
           (type macro)
         </li>
         <li>
-          (derivation (list 'atEnd (cons 'begin cleanupForms) protectedForm)
+          (derivation (atEnd (begin . cleanupForms) protectedForm))
         </li>
       </ul>
     </div>
@@ -135,7 +135,7 @@
           (type fexpr)
         </li>
         <li>
-          (derivation (list* 'throwTag #ignore forms))
+          (derivation (throwTag #ignore forms))
         </li>
       </ul>
     </div>
@@ -182,7 +182,7 @@
           (type macro)
         </li>
         <li>
-          (derivation (list* 'catchTagWth #ignore handler forms))
+          (derivation (catchTagWth #ignore handler . forms))
         </li>
       </ul>
     </div>
@@ -205,7 +205,7 @@
           (type macro)
         </li>
         <li>
-          (derivation (list* 'catchTagWth tag #ignore forms))
+          (derivation (catchTagWth tag #ignore . forms))
         </li>
       </ul>
     </div>
@@ -228,7 +228,7 @@
           (type macro)
         </li>
         <li>
-          (derivation (list* 'catchTagWth #ignore #ignore forms))
+          (derivation (catchTagWth #ignore #ignore . forms))
         </li>
       </ul>
     </div>

@@ -60,7 +60,7 @@
           (type macro)
         </li>
         <li>
-          (derivation (list* '\ '(_) forms))
+          (derivation (\ (_) . forms))
         </li>
       </ul>
     </div>
@@ -252,9 +252,7 @@
       </h3>
       <ul>
         <li>
-          Define multiple named functions with given PARAMETER-TREES and FORMS as body.
-          <br/>
-            Match the DEFINIEND-TREES against the BODIES and define resulting bindings into the current environment.
+          Defines into the current environment the named functions NAMES with given PARAMETER-TREES and FORMS as body. 
           <br/>
             &nbsp;
         </li>
