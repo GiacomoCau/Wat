@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      11. Equals
+      11. List
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,20 +23,28 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      11. Equals
+      11. List
     </h2>
     <div>
       <h3>
-        ==
+        append
       </h3>
       <ul>
         <li>
-          Return true if A istanceof Number &amp;&amp; A equals B || A == B, false otherwise.
+          Return the append of the LIST2 to the LIST1.
+          <br/>
+            The first one must be proper and is copied.
+          <br/>
+            The second one is not copied (and doesn't even have to be a list).
+          <br/>
+            It becomes the `cdr' of the final cons of the first list,
+          <br/>
+            or is returned directly if the first list is empty.
           <br/>
             &nbsp;
         </li>
         <li>
-          (== a b)
+          (append list1 list2)
         </li>
         <li>
           (type function)
@@ -45,16 +53,16 @@
     </div>
     <div>
       <h3>
-        !=
+        len
       </h3>
       <ul>
         <li>
-          Return false if A istanceof Number &amp;&amp; A equals B || A == B, thrue otherwise.
+          Return the number of elements in the LIST.
           <br/>
             &nbsp;
         </li>
         <li>
-          (!= a b)
+          (len list)
         </li>
         <li>
           (type function)
@@ -63,49 +71,40 @@
     </div>
     <div>
       <h3>
-        eq?
+        list?
       </h3>
       <ul>
         <li>
-          Return true if A is equals B, false otherwise.
+          Return #true if the OBJECT is a list, #false otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (eq? a b)
+          (list? object)
         </li>
         <li>
           (type function)
         </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        ignore?
-      </h3>
-      <ul>
         <li>
-          (def\ (ignore? o) (== o #_))
+          (derivation (type? object List))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        sheBang?
+        reverse
       </h3>
       <ul>
         <li>
-          (def\ (sheBang? o) (== o #!))
+          Reverse the LIST.
+          <br/>
+            &nbsp;
         </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        inert?
-      </h3>
-      <ul>
         <li>
-          (def\ (inert? o) (== o #inert))
+          (reverse list)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>

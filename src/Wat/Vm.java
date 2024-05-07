@@ -149,7 +149,7 @@ public class Vm {
 	int prTrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
 	int typeT = 0; // type true: 0:true, 1:!false, 2:!(or false null), 3:!(or false null inert), 4:!(or false null inert zero)
 	int prEnv = 10; // print environment
-	int bndRes = 0; // bind result: 0:inert 1:rhs 2:prv
+	int bndRes = 0; // bind result: 0:inert 1:rhs 2:prv 3:cnt
 	private Object bndRes(Object o) {
 		switch (o) {
 			case Inert i: return 0; 
@@ -471,7 +471,7 @@ public class Vm {
 				}; 
 			};
 		}
-		public String toString() { return "{&" + getClass().getSimpleName() + " " + Vm.this.toString(value) + "}"; }
+		public String toString() { return "{" + toSource(getClass()) + " " + Vm.this.toString(value) + "}"; }
 	}
 	public class Obj extends RuntimeException implements ArgsList, ObjEnv {
 		private static final long serialVersionUID = 1L;
@@ -509,7 +509,7 @@ public class Vm {
 			return s;
 		}
 		public String toString(Obj obj) {
-			return "{&" + obj.getClass().getCanonicalName() // or .getSimpleName()?
+			return "{" + toSource(obj.getClass()) // or .getSimpleName()?
 				+ eIfnull(obj.getMessage(), m-> " " + Vm.this.toString(true, m))
 				//+ eIfnull(getCause(), t-> " " + symbol(t.getClass().getSimpleName()))
 				+ (map.size() > 10 ? " [" + map.size() + "]" + " ..." : toStringSet(obj.map.entrySet()))
@@ -1521,16 +1521,20 @@ public class Vm {
 			try {
 				var val = pushSubcontBarrier.combine(env, pushRootPrompt(cons(exp)));
 				switch (len) {
-					case 2-> 
+					case 2: 
 						print(name, exp, " should throw but is ", val);
-					case 3-> {
-						var expt = o.<List>cdr(1);
-						if (Vm.this.equals(val, pushSubcontBarrier.combine(env, pushRootPrompt(expt)))) return true;
-						print(name, exp, " should be ", o.car(2), " but is ", val);
+						break;
+					case 3: {
+						if (! (val instanceof Box)) { 
+							var expt = o.<List>cdr(1);
+							if (Vm.this.equals(val, pushSubcontBarrier.combine(env, pushRootPrompt(expt)))) return true;
+							print(name, exp, " should be ", o.car(2), " but is ", val);
+							break;
+						}
 					}
-					default-> {
+					default: {
 						var expt = (List) map(x-> pushSubcontBarrier.combine(env, pushRootPrompt(cons(x))), o.cdr(1)); 
-						if (expt.car instanceof Class && matchObj(val, expt)) return true;
+						if (expt.car instanceof Class && matchType(val, expt)) return true;
 						print(name, exp, " should be ", expt, " but is ", val);
 					}
 				}
@@ -1542,7 +1546,7 @@ public class Vm {
 				else {
 					var val = thw instanceof Value v ? v.value : thw;
 					var expt = (List) map(x-> pushSubcontBarrier.combine(env, pushRootPrompt(cons(x))), o.cdr(1));
-					if (expt.car instanceof Class && matchObj(val, expt)) return true;
+					if (expt.car instanceof Class && matchType(val, expt)) return true;
 					print(name, exp, " should be ", expt, " but is ", val);
 				}
 			}
@@ -1553,9 +1557,10 @@ public class Vm {
 	boolean isType(Object object, Class classe) {
 		return classe == null ? object == null : object != null && classe.isAssignableFrom(object.getClass());
 	}
-	private boolean matchObj(Object object, List expt) {
+	private boolean matchType(Object object, List expt) {
 		//if (!(expt.car() instanceof Class cls && isType(object, cls))) return false;
 		if (!isType(object, expt.car())) return false;
+		if (object instanceof Box box) return expt.cdr() == null || expt.cdr(1) == null && Vm.this.equals(box.value, expt.car(1));
 		for (var l=expt.cdr(); l != null; l = l.cdr(1)) {
 			var car = l.car;
 			if (car instanceof AtDot ad) {
@@ -1612,7 +1617,7 @@ public class Vm {
 			case null-> "#null"; // () in cons altrove #null
 			case Boolean b-> b ? "#t" : "#f";
 			case Character c-> !t ? c.toString() : "#\\" + (isISOControl(c) ? "x"+ toHexString(c) : c);
-			case Class cl-> "&" + toSource(cl);
+			case Class cl-> toSource(cl);
 			case String s-> !t ? s : '"' + toSource(s) + '"';
 			case Object[] a-> {
 				var s = new StringBuilder();
@@ -1788,7 +1793,9 @@ public class Vm {
 				"%the+", wrap(new JFun("%The+", (n,o)-> checkN(n, o, 2), (l,o)-> check("the+", o.car(1), o.car) )),
 				"%check", wrap(new JFun("%Check", (n,o)-> checkN(n, o, 2), (l,o)-> check("check", o.car, o.car(1)) )),
 				"%checkO", wrap(new JFun("%CheckO", (n,o)-> checkN(n, o, 2), (l,o)-> checkO(o.car, o.car(1)) )),
-				"%matchObj?", wrap(new JFun("%MatchObj?", (n,o)-> checkN(n, o, 2, Any.class, list(1, more, Class.class, or(At.class, Dot.class, Symbol.class, Keyword.class, String.class), Any.class)), (l,o)-> matchObj(o.car, o.car(1)) )),
+				//"%matchBox?", wrap(new JFun("%MatchBox?", (n,o)-> checkN(n, o, 2, Any.class, list(1, 2, Box.class, Any.class)), (l,o)-> matchType(o.car, o.car(1)) )),
+				//"%matchObj?", wrap(new JFun("%MatchObj?", (n,o)-> checkN(n, o, 2, Any.class, list(1, more, Class.class, or(At.class, Dot.class, Symbol.class, Keyword.class, String.class), Any.class)), (l,o)-> matchType(o.car, o.car(1)) )),
+				"%matchType?", wrap(new JFun("%MatchType?", (n,o)-> checkN(n, o, 2, Any.class, or(list(1, 2, Box.class, Any.class), list(1, more, Any.class, list(1, more, Class.class, or(At.class, Dot.class, Symbol.class, Keyword.class, String.class), Any.class)))), (l,o)-> matchType(o.car, o.car(1)) )),
 				// Array
 				//"%array?", wrap(new JFun("%Array?", (Function<Object, Boolean>) obj-> obj.getClass().isArray() )),
 				"%list->array", wrap(new JFun("%List->Array", (n,o)-> checkM(n, o, 1, List.class), (l,o)-> array(o.car()) )),
@@ -1918,8 +1925,8 @@ public class Vm {
 			thw instanceof ParseException pe
 			? "{&" + Utility.getMessage(pe) + "}"
 			: thw instanceof Obj o 
-			?  ifnull(o.getMessage(), "&" + o.getClass().getCanonicalName()) + (prMap ? toStringSet(o.map.entrySet()) : "")
-			: "&" + thw.getClass().getCanonicalName() + eIfnull(thw.getMessage(), msg-> ": " + msg)
+			? ifnull(o.getMessage(), toSource(o.getClass())) + (prMap ? toStringSet(o.map.entrySet()) : "")
+			: toSource(thw.getClass()) + eIfnull(thw.getMessage(), msg-> ": " + msg)
 		);
 		while ((thw = thw.getCause()) != null);
 	}

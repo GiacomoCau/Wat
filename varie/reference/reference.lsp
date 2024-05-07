@@ -40,7 +40,8 @@
                 (continue? (! (@startsWith l "#|!")))
                 (+= chapters 1)
                 (def chapter (encode (subSeq l 4)))
-                (li (a (attr 'href ($ base chapters ".html")) (pr chapter))) ))) ))) ))
+                (li (a (attr 'href ($ base chapters ".html")) (pr chapter))) ))) )
+        (br) )) ))
 
 (log chapters 'chapters)
 

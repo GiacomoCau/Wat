@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      16. Bitwise and Shift Operators
+      16. String
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,128 +23,41 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      16. Bitwise and Shift Operators
+      16. String
     </h2>
     <div>
       <h3>
-        ~
+        string?
       </h3>
       <ul>
         <li>
-          Java binary ~ operator.
+          Return #true if the OBJECT is a string, #false otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (~ a b)
+          (string? object)
         </li>
         <li>
           (type function)
+        </li>
+        <li>
+          (derivation (type? object String))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        &amp;
+        $
       </h3>
       <ul>
         <li>
-          Java binary &amp; operator.
+          Java binary + operator, join the values after the conversion of the operands to string.
           <br/>
             &nbsp;
         </li>
         <li>
-          (&amp; a b)
-        </li>
-        <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        \|
-      </h3>
-      <ul>
-        <li>
-          Java binary | operator.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (\| a b)
-        </li>
-        <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        ^
-      </h3>
-      <ul>
-        <li>
-          Java binary ^ operator.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (^ a b)
-        </li>
-        <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        &lt;&lt;
-      </h3>
-      <ul>
-        <li>
-          Java binary &lt;&lt; operator.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (&lt;&lt; a b)
-        </li>
-        <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        &gt;&gt;
-      </h3>
-      <ul>
-        <li>
-          Java binary &gt;&gt; operator.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (&gt;&gt; a b)
-        </li>
-        <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        &gt;&gt;&gt;
-      </h3>
-      <ul>
-        <li>
-          Java binary &gt;&gt;&gt; operator.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (&gt;&gt;&gt; a b)
+          ($ a b)
         </li>
         <li>
           (type function)

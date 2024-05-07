@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      24. Bind Bind? IfBind? CaseVau DefCaseVau Case\ DefCase\ Match Cond
+      24. Lexical Bindings
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,302 +23,430 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      24. Bind Bind? IfBind? CaseVau DefCaseVau Case\ DefCase\ Match Cond
+      24. Lexical Bindings
     </h2>
     <div>
       <h3>
-        bind
+        -&gt;begin
       </h3>
       <ul>
         <li>
-          return #inert if VALUE match the DEFINIEND-TREE and define resulting bindings into ENVIRONMENT, signals an error otherwise.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (bind environment definiendTree value)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (eval (list 'def :cnt definiendTree value) environment))
+          (def\ (-&gt;begin binding) (cons 'begin (cdr binding)))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        bind?
+        -&gt;name+#inert
       </h3>
       <ul>
         <li>
-          return true if VALUE match the DEFINIEND-TREE and define resulting bindings into ENVIRONMENT, false otherwise.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (bind? environment definiendTree value)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (catch #f (bind environment definiendTree value) #t))
+          (def\ (-&gt;name+#inert (lhs . #_)) (list (if (cons? lhs) (car lhs) lhs) #inert))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        ifBind?
+        -&gt;name+lambda
       </h3>
       <ul>
         <li>
-          return the evaluation of THEN into resulting ENVIRONMENT if VALUE match the DEFINIEND-TREE, inert otherwise.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (ifBind? (definiendTree value) then . forms)
-        </li>
-        <li>
-          (type fexpr)
+          (def\ (-&gt;name+lambda (lhs . rhs)) (if (cons? lhs) (list (car lhs) (list* '\ (cdr lhs) rhs)) (list lhs (cons '\ rhs)) ))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        caseVau
+        wth1
       </h3>
       <ul>
         <li>
-          Multi-armed vau.
+          Establishes the BINDING, before the evaluation of FORMS as an implicit `begin'.
           <br/>
-            When applied go through the CLAUSES in order.
-          <br/>
-            If CLAUSES is #null return #inert.
-          <br/>
-            If car of CLAUSE is else
-          <br/>
-            &nbsp;&nbsp;if the cadr of CLAUSES is =&gt;, evaluate caddr of CLAUSE and apply it to the operands,
-          <br/>
-            &nbsp;&nbsp;otherwise evaluate FORMS as an implicit `begin'.
-          <br/>
-            If the operands match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
-          <br/>
-            Otherwise go to the next CLAUSE.
+            Idea stolen from Anarki https://github.com/arclanguage/anarki
           <br/>
             &nbsp;
         </li>
         <li>
-          (caseVau . clauses)
+          (wth1 binding . forms)
         </li>
         <li>
-          (type fexpr)
+          (type macro)
         </li>
         <li>
-          (syntax clauses (or () (clause . clauses)))
-        </li>
-        <li>
-          (syntax clause (else . forms))
-        </li>
-        <li>
-          (syntax clause (else =&gt; apv1))
-        </li>
-        <li>
-          (syntax clause (definiendTree . forms))
+          (syntax binding . (definiendTree initForm))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        defCaseVau
+        wth*
       </h3>
       <ul>
         <li>
-          Defines into the current environment the named caseVau NAME with the given CLAUSES.
+          Establishes BINDINGS serially, so that every binding can refer to previous one,
+          <br/>
+            before the evaluation of FORMS as an implicit `begin'.
+          <br/>
+            Idea stolen from Anarki https://github.com/arclanguage/anarki
           <br/>
             &nbsp;
         </li>
         <li>
-          (defCaseVau name . clauses)
+          (wth* bindings . forms)
         </li>
         <li>
-          (type fexpr)
+          (type macro)
         </li>
         <li>
-          (derivation (def name (caseVau . clauses)))
+          (syntax bindings (definiendTree intiForm . bindings))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        case\
+        wth
       </h3>
       <ul>
         <li>
-          Multi-armed \.
+          Establishes BINDINGS parallelly, so that no binding can refer to itself or the other ones,
           <br/>
-            When applied go through the CLAUSES in order.
+            after evaluate FORMS as an implicit `begin'.
           <br/>
-            If CLAUSES is #null return #inert.
-          <br/>
-            If car of CLAUSE is else
-          <br/>
-            &nbsp;&nbsp;if the cadr of CLAUSES is =&gt;, evaluate caddr of CLAUSE and apply it to the arguments,
-          <br/>
-            &nbsp;&nbsp;otherwise evaluate FORMS as an implicit `begin'.
-          <br/>
-            If the arguments match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
-          <br/>
-            Otherwise go to the next CLAUSE.
+            Idea stolen from Anarki https://github.com/arclanguage/anarki
           <br/>
             &nbsp;
         </li>
         <li>
-          (case\ . clauses)
+          (wth bindings . forms)
         </li>
         <li>
-          (type function)
+          (wth name bindings . forms)
         </li>
         <li>
-          (syntax clauses (or () (clause . clauses)))
+          (type macro)
         </li>
         <li>
-          (syntax clause (else . forms))
-        </li>
-        <li>
-          (syntax clause (else =&gt; apv1))
-        </li>
-        <li>
-          (syntax clause (definiendTree . forms))
-        </li>
-        <li>
-          (derivation (wrap (caseVau . clauses)))
+          (syntax bindings (definiendTree initForm . bindings))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        defCase\
+        let1Loop
       </h3>
       <ul>
         <li>
-          Defines into the current environment the named case\ NAME with the given CLAUSES.
+          Labelled recursive loop.
+          <br/>
+            Lexically bind NAME with the function with the specified PARAMETER-TREE and FORMS as body,
+          <br/>
+            so that it can recursively refer to itself.
+          <br/>
+            The function is immediately applied to the list containing the value of the INIT_FORMS evaluate as an implicit `begin',
+          <br/>
+            after evaluate FORMS as an implicit `begin'.
           <br/>
             &nbsp;
         </li>
         <li>
-          (defCase\ name . clauses)
+          (let1Loop name binding . forms)
         </li>
         <li>
-          (type fexpr)
+          (let1Loop (name . binding) . forms)
         </li>
         <li>
-          (derivation (def name (case\ . clauses)))
+          (type macro)
+        </li>
+        <li>
+          (syntax binding (parameterTree . initForms))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        match
+        let1
       </h3>
       <ul>
         <li>
-          Evaluates VALUE and go through the CLAUSES in order.
+          Establishes the BINDING, after evaluate FORMS as an implicit `begin'.
           <br/>
-            If CLAUSES is #null return #inert.
+            The INIT_FORMS is evaluate as an implicit `begin'.
           <br/>
-            If car of CLAUSE is else
-          <br/>
-            &nbsp;&nbsp;if the cadr of CLAUSES is =&gt;, evaluate caddr of CLAUSE and apply it to the arguments,
-          <br/>
-            &nbsp;&nbsp;otherwise evaluate FORMS as an implicit `begin'.
-          <br/>
-            If VALUE match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
-          <br/>
-            Otherwise go to the next CLAUSE.
+            If the first argument is a symbol is like 'let1Loop'.
           <br/>
             &nbsp;
         </li>
         <li>
-          (match value . clauses)
+          (let1 binding . forms)
         </li>
         <li>
-          (type fexpr)
+          (let1 name binding . forms)
         </li>
         <li>
-          (syntax clauses (or () (clause . clauses)))
+          (type macro)
         </li>
         <li>
-          (syntax clause (else . forms))
-        </li>
-        <li>
-          (syntax clause (else =&gt; apv1))
-        </li>
-        <li>
-          (syntax clause (definiendTree . forms))
-        </li>
-        <li>
-          (derivation (wrap (caseVau . clauses)))
+          (syntax binding (definiendTree . initForms))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        cond
+        let1\
       </h3>
       <ul>
         <li>
-          Multi-armed conditional.
-          <br/>
-            Go through the CLAUSES in order.
-          <br/>
-            If CLAUSES is #null return #inert.
-          <br/>
-            If car of CLAUSE is else evaluate FORMS as an implicit `begin'.
-          <br/>
-            Otherwise evaluate the TEST.
-          <br/>
-            If TEST is a boolean
-          <br/>
-            &nbsp;&nbsp;if is true, evaluate the FORMS as an implicit `begin',
-          <br/>
-            &nbsp;&nbsp;otherwise go to the next CLAUSE.
-          <br/>
-            If FORMS is #null return TEST.
-          <br/>
-            If car di FORMS is =&gt; evaluate the cadr of FORMS and apply it to TEST.
-          <br/>
-            If cadr di FORMS is =&gt; evaluate car of FORMS
-          <br/>
-            &nbsp;&nbsp;if is true evaluate the caddr of FORMS and apply it to TEST
-          <br/>
-            &nbsp;&nbsp;otherwise go to the next CLAUSE.
-          <br/>
-            Otherwise go to the next CLAUSE.
+          Establishes the FUNCTION-BINDINGS, after evaluate of FORMS as an implicit `begin'.
           <br/>
             &nbsp;
         </li>
         <li>
-          (cond . clauses)
+          (let1\ functionBinding . forms)
         </li>
         <li>
-          (syntax clauses (clause . clauses))
+          (type macro)
         </li>
         <li>
-          (syntax clause (else . forms))
+          (syntax functionBinding (name parameterTree . bodyForms))
         </li>
         <li>
-          (syntax clause (test-&gt;bool . forms))
+          (syntax functionBinding ((name . parameterTree) . bodyForms))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        let1rec
+      </h3>
+      <ul>
+        <li>
+          Establishes the BINDING recursively so that the binding can recursively refer to itself,
+          <br/>
+            after evaluate FORMS as an implicit `begin'.
+          <br/>
+            The binding is initializated to #inert before evaluating INIT_FORMS as an implicit `begin'.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          (syntax clause (test))
+          (let1rec binding . forms)
         </li>
         <li>
-          (syntax clause (test =&gt; apv1))
+          (type macro)
         </li>
         <li>
-          (syntax clause (test guard =&gt; apv1))
+          (syntax binding (name . intForms))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        let1rec\
+      </h3>
+      <ul>
+        <li>
+          Establishes the FUNCTION-BINDING recursively, so that the function can refer to itself,
+          <br/>
+            after evaluate FORMS as an implicit `begin'.
+          <br/>
+            The binding is initializated to #inert before the bind of the function.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (let1rec\ functionBinding . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+        <li>
+          (syntax functionBinding (name parameterTree . bodyForms))
+        </li>
+        <li>
+          (syntax functionBinding ((name . parameterTree) . bodyForms))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        let*
+      </h3>
+      <ul>
+        <li>
+          Establishes BINDINGS serially, so that every binding can refer to previous one,
+          <br/>
+            after evaluate FORMS as an implicit `begin'.
+          <br/>
+            The INIT_FORMS are evaluate as an implicit `begin'.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (let* bindings . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+        <li>
+          (syntax bindings ((definiendTree . intiForms) . bindings))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        letLoop
+      </h3>
+      <ul>
+        <li>
+          Labelled recursive loop.
+          <br/>
+            Lexically bind NAME with the function with the specified multiple PARAMETER-TREES and FORMS as body,
+          <br/>
+            so that it can recursively refer to itself.
+          <br/>
+            The function is immediately applied to the list containing the values of INIT_FORM evaluate as an implicit `begin',
+          <br/>
+            after evaluates FORMS as an implicit `begin'.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (letLoop name bindings . forms)
+        </li>
+        <li>
+          (letLoop (name . bindings) . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+        <li>
+          (syntax bindings ((parameterTree . initForms) . bindings))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        let
+      </h3>
+      <ul>
+        <li>
+          Establishes the BINDINGS parallelly, so that no binding can refer to itself or the other ones,
+          <br/>
+            after evaluates FORMS as an implicit `begin'.
+          <br/>
+            The INIT_FORMS are evaluate as an implicit `begin'.
+          <br/>
+            If the first argument is a symbol is like 'letLoop'.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (let bindings . forms)
+        </li>
+        <li>
+          (let name bindings . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+        <li>
+          (syntax bindings ((definiendTree . initForms) . bindings))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        let\
+      </h3>
+      <ul>
+        <li>
+          Establishes the FUNCTION-BINDINGS parallelly, so that no function can refer to itself or the other ones,
+          <br/>
+            after evaluate FORMS as an implicit `begin'.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (let\ functionBindings . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+        <li>
+          (syntax functionBindings (functionBinding . functionBindings))
+        </li>
+        <li>
+          (syntax functionBinding (name parameterTree . bodyForms))
+        </li>
+        <li>
+          (syntax functionBinding ((name . parameterTree) . bodyForms))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        letrec
+      </h3>
+      <ul>
+        <li>
+          Establishes the BINDINGS recursively, so that the bindings can refer to itself and the other ones,
+          <br/>
+            after evaluate FORMS as an implicit `begin'.
+          <br/>
+            The bindings are initializated to #inert before evaluating the INIT_FORMS as an implicit `begin'.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (letrec bindings . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+        <li>
+          (syntax bindings ((name . intForms) . bindings))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        letrec\
+      </h3>
+      <ul>
+        <li>
+          Establishes the FUNCTION-BINDINGS recursively, so that the functions can refer to itself and the other ones,
+          <br/>
+            after evaluate FORMS as an implicit `begin'.
+          <br/>
+            The bindings are initializated to #inert before the bind of the functions.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (letrec\ functionBindings . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+        <li>
+          (syntax functionBindings (functionBinding . functionBindings))
+        </li>
+        <li>
+          (syntax functionBinding ((name parameterTree . bodyForms) . functionBindings))
+        </li>
+        <li>
+          (syntax functionBinding (((name . parameterTree) . bodyForms) . functionBindings))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        labels
+      </h3>
+      <ul>
+        <li>
+          Alias of letrec\.
         </li>
       </ul>
     </div>

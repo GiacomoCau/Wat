@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      35. Syntetic Expressions
+      35. Arrays
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,40 +23,212 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      35. Syntetic Expressions
+      35. Arrays
     </h2>
-    <ul>
-      <li>
-        Idea stolen from Anarki https://github.com/arclanguage/anarki
-      </li>
-    </ul>
     <div>
       <h3>
-        %´
+        array-&gt;list
       </h3>
       <ul>
         <li>
-          ´a;b -&gt; (compose a b)
+          Array to proper list.
           <br/>
-            ´a;b;c -&gt; (compose* a b c)
+            &nbsp;
+        </li>
+        <li>
+          (array-&gt;list array)
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        array-&gt;cons
+      </h3>
+      <ul>
+        <li>
+          Array to improper list.
           <br/>
-            ´!a -&gt; (compose ! a)
+            &nbsp;
+        </li>
+        <li>
+          (array-&gt;cons array)
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        list-&gt;array
+      </h3>
+      <ul>
+        <li>
+          List to array.
           <br/>
-            ´a…b -&gt; (a b)
+            &nbsp;
+        </li>
+        <li>
+          (list-&gt;array list)
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        array
+      </h3>
+      <ul>
+        <li>
+          List to array.
           <br/>
-            ´a…'b -&gt; (a 'b)
+            &nbsp;
+        </li>
+        <li>
+          (array . list)
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        arrayMap
+      </h3>
+      <ul>
+        <li>
+          Return a new array by applying the FUNCTION to each element of the ARRAY.
           <br/>
-            ´a…'b…c -&gt; (a 'b c)
+            &nbsp;
+        </li>
+        <li>
+          (arrayMap function array)
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        arrayFilter
+      </h3>
+      <ul>
+        <li>
+          Returns a new array with the elements of the ARRAY for which the application of the FUNCTION returns #true.
           <br/>
-            ´a,b -&gt; (peval a b)
+            &nbsp;
+        </li>
+        <li>
+          (arrayFilter function array)
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        newInstance
+      </h3>
+      <ul>
+        <li>
+          Returns a new array with the elements of CLASS tipe and the specified DIMENSIONS.
           <br/>
-            ´a,'b,c -&gt; (peval* a 'b c)
+            &nbsp;
+        </li>
+        <li>
+          (newInstance class . dimensions)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (syntax dimension (integer . dimensions)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        arrayGet
+      </h3>
+      <ul>
+        <li>
+          Returns the element at INDEX position int the ARRAY.
           <br/>
-            ´a,_,'b,c -&gt; (\ (_) (a _ 'b c))
+            &nbsp;
+        </li>
+        <li>
+          (arrayGet array index)
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        arrayGet*
+      </h3>
+      <ul>
+        <li>
+          Returns the element at INDEXES position int the multi-dimensions ARRAY.
           <br/>
-            ´dd,_c,1,_b,&quot;a&quot;,_a,_a,'c,_,:ff,_* -&gt; (\ (_ _a _b _c . _*) (dd _c 1 _b &quot;a&quot; _a _a 'c _ :ff _*))
+            &nbsp;
+        </li>
+        <li>
+          (arrayGet* array . indexes)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (syntax indexes (integer . indexes)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        arraySet
+      </h3>
+      <ul>
+        <li>
+          Returns the ARRAY after update the element at INDEX position with VALUE.
           <br/>
-            ´(dd _c 1 _b &quot;a&quot; _a _a 'c _ :ff _*) -&gt; (\ (_ _a _b _c . _*) (dd _c 1 _b &quot;a&quot; _a _a 'c _ :ff _*))
+            &nbsp;
+        </li>
+        <li>
+          (arraySet array index value)
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        arraySet*
+      </h3>
+      <ul>
+        <li>
+          Returns the multi-dimensions ARRAY after update the element at INDEXES position with VALUE.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (arraySet* array value . indexes)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (syntax indexes (integer . indexes)
         </li>
       </ul>
     </div>

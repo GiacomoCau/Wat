@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      17. First-Order Controls
+      17. Comparators
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,212 +23,97 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      17. First-Order Controls
+      17. Comparators
     </h2>
     <div>
       <h3>
-        then else
+        &lt;
       </h3>
       <ul>
         <li>
-          Alias of begin.
+          Java binary &lt; operator.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (&lt; a b)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        loop
+        &gt;
       </h3>
       <ul>
         <li>
-          Evaluate the FORMS as an implicit `begin' in an infinite loop.
+          Java binary &gt; operator.
           <br/>
             &nbsp;
         </li>
         <li>
-          (loop . forms)
+          (&gt; a b)
         </li>
         <li>
-          (type fexpr)
+          (type function)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        atEnd
+        &lt;=
       </h3>
       <ul>
         <li>
-          Evaluate the PROTECTED-FORMS as an implicit `begin' and return its result.
-          <br/>
-            Regardless of whether the protected form returns normally, or via a nonlocal exit or panic,
-          <br/>
-            the CLEANUP-FORM are evaluated after the protected forms.
+          Java binary &lt;= operator.
           <br/>
             &nbsp;
         </li>
         <li>
-          (atEnd cleanupForm . protectedForms)
+          (&lt;= a b)
         </li>
         <li>
-          (type fexpr)
+          (type function)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        finally
+        &gt;=
       </h3>
       <ul>
         <li>
-          Evaluate the PROTECTED-FORM and return its result.
-          <br/>
-            Regardless of whether the protected form returns normally, or via a nonlocal exit, or panic,
-          <br/>
-            the CLEANUP-FORMS are evaluated as an implicit `begin' after the protected forms.
+          Java binary &gt;= operator.
           <br/>
             &nbsp;
         </li>
         <li>
-          (finally protectedForm . cleanupForms)
+          (&gt;= a b)
         </li>
         <li>
-          (type macro)
-        </li>
-        <li>
-          (derivation (atEnd (begin . cleanupForms) protectedForm))
+          (type function)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        throwTag
+        min
       </h3>
       <ul>
         <li>
-          Abort to a nesting catch TAG established by `catch', evaluate FORMS as an implicit `begin' and return its result.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (throwTag tag . forms)
-        </li>
-        <li>
-          (type fexpr)
+          (def\ (min a b) (if (&lt; a b) a b))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        throw
+        max
       </h3>
       <ul>
         <li>
-          Abort to a nesting generic catch, evaluate FORMS as an implicit `begin' and return its result.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (throw . forms)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (derivation (throwTag #ignore forms))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        catchTagWth
-      </h3>
-      <ul>
-        <li>
-          Establish a catch TAG with an HANDLER (one arg function or any value) and evaluate FORMS as an implicit `begin' and return its result.
-          <br/>
-            The FORMS may use `throw' to nonlocally exit from the TAG. if FORMS throw and HANDLER is a value, value will be the result of `catchTagWth'
-          <br/>
-            otherwise the value of the `throw' is passed to the HANDLER and the value returned by the HANDLER will be the result of the `catchTagWth'
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (catchTagWth tag handler . forms)
-        </li>
-        <li>
-          (type (if (ctApv) macro fexpr))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        catchWth
-      </h3>
-      <ul>
-        <li>
-          Establish an generic catch all with HANDLER (one arg function or any value) and evaluate FORMS as an implicit `begin' and return its result.
-          <br/>
-            The FORMS may use `throw' to nonlocally exit. if FORMS throw and HANDLER is a value, value will be the result of `catchWth'
-          <br/>
-            otherwise the value of the `throw' is passed to the HANDLER and the value returned by the HANDLER will be the result of the `catchWth'
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (catchWth handler . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (derivation (catchTagWth #ignore handler . forms))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        catchTag
-      </h3>
-      <ul>
-        <li>
-          Establish a catch TAG without handler and evaluate FORMS as an implicit `begin' and return its result.
-          <br/>
-            The FORMS may use `throw' to nonlocally exit from the tag. if FORMS throw the value returned by the `throw' will be the result of the `catchTag'
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (catchTag tag . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (derivation (catchTagWth tag #ignore . forms))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        catch
-      </h3>
-      <ul>
-        <li>
-          Establish an generic catch all without handler and evaluate FORMS as an implicit `begin' and return its result.
-          <br/>
-            The FORMS may use `throw' to nonlocally exit. if FORMS throw the value returned by the `throw' will be the result of the `catch'
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (catch . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (derivation (catchTagWth #ignore #ignore . forms))
+          (def\ (max a b) (if (&gt; a b) a b))
         </li>
       </ul>
     </div>

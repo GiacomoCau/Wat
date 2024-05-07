@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      30. Type and Value Checks
+      30. Case MatchType? MatchType? CaseType CaseType\
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,247 +23,172 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      30. Type and Value Checks
+      30. Case MatchType? MatchType? CaseType CaseType\
     </h2>
-    <ul>
-      <li>
-        Type and value checks are possible with (#! check symbol) wherever there is a Symbol in a definined or parameters tree including all lexical bindings.
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        A `check` can be:
-      </li>
-      <li>
-        - a `value`,
-      </li>
-      <li>
-        - the `Any` class,
-      </li>
-      <li>
-        - a `Class`,
-      </li>
-      <li>
-        - a `List` with zero, one or two `Integers` followed by zero or more `checks`,
-      </li>
-      <li>
-        - a `List` with an `Integer` and the symbol `oo` followed by zero or more `checks`,
-      </li>
-      <li>
-        - a `List` with car equals `or` followed by two or more `check`,
-      </li>
-      <li>
-        - a `List` with car equals `and` followed by two or more `check`,
-      </li>
-      <li>
-        - a `List` with car `Apv` followed by zero o more arguments.
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        When the `check` is:
-      </li>
-      <li>
-        - a `value`: the parameter value must be equal to that `value`
-      </li>
-      <li>
-        - the `Any` class : the parameter can be any value
-      </li>
-      <li>
-        - a `Class`: the parameter value can be an instance of that `Class` or a class that extends that `Class`
-      </li>
-      <li>
-        - a `List`: the parameter value must be a `List` where, in the `check` `List`,
-      </li>
-      <li>
-        &nbsp;&nbsp;- the first `Integer` indicates the minimum number of elements, default is `0`
-      </li>
-      <li>
-        &nbsp;&nbsp;- the second `Integer` indicates the maximum number of elements
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;default is the value of the first `Integer` if present, otherwise `oo` for `Integer.maxValue`
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;for the second `Integer` can be also specified the symbol `oo` for `Integer.maxValue`
-      </li>
-      <li>
-        &nbsp;&nbsp;- if the number of `check` arguments in the list is
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;- less than the minimum: parameters values that exceed the minimum can have any value
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;- greater than the minimum: the parameters values exceeding the minimum will be checked cyclically using `check` arguments exceeding the minimum
-      </li>
-      <li>
-        &nbsp;&nbsp;- if the first element of the list is:
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;- `or`: the parameter value must match one of the `check` arguments of the `or`
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;- `and`: the parameter value must match all the `check` arguments of the `and`
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;- `Apv`: applying `Apv` to the cons of the parameter value and the remaining arguments must return `#true`
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        $(syntax defieniendTree (or symbol decomposeTree))
-      </li>
-      <li>
-        $(syntax parametersTree (or () #ignore symbol decomposeTree))
-      </li>
-      <li>
-        $(syntax decomposeTree ((or () #ignore symbol decomposeTree) . decomposeTree))
-      </li>
-      <li>
-        $(syntax symbol (or Symbol (#! check Symbol)))
-      </li>
-      <li>
-        $(syntax check Any)
-      </li>
-      <li>
-        $(syntax check Class)
-      </li>
-      <li>
-        $(syntax check checks)
-      </li>
-      <li>
-        $(syntax checks (check . checks))
-      </li>
-      <li>
-        $(syntax check (min . checks))
-      </li>
-      <li>
-        $(syntax check (min max . checks))
-      </li>
-      <li>
-        $(syntax check (min oo . checks))
-      </li>
-      <li>
-        $(syntax check (or . checks))
-      </li>
-      <li>
-        $(syntax check (and . checks))
-      </li>
-      <li>
-        $(syntax check (Apv . moreArguments))
-      </li>
-      <li>
-        $(syntax check value)
-      </li>
-    </ul>
     <div>
       <h3>
-        assert#t
+        case
       </h3>
       <ul>
         <li>
-          Return #inert if BOOLEAN is true, signal an error otherwise.
+          Multi-armed value test.
+          <br/>
+            Evaluate KEY and Go through the CLAUSES.
+          <br/>
+            If CLAUSES is #null return #inert.
+          <br/>
+            If `car' of CLAUSE is else or `eq?' KEY VALUE or `member? :cmp eq?' KEY VALUES
+          <br/>
+            &nbsp;&nbsp;if `car' FORMS is =&gt; apply evaluate `cadr' FORMS to VALUE
+          <br/>
+            &nbsp;&nbsp;otherwise evaluate FORMS as an implicit `begin'.
+          <br/>
+            Otherwise go to the next CLAUSE.
           <br/>
             &nbsp;
         </li>
         <li>
-          (assert#t boolean)
-        </li>
-        <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        the
-      </h3>
-      <ul>
-        <li>
-          Return OBJECT if OBJECT is an instance of the CLASS, signal a `type-error' otherwise.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (the class object)
-        </li>
-        <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        check
-      </h3>
-      <ul>
-        <li>
-          Return the lenght of OBJECT if match CHECK, signals an error otherwise.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (check object check)
+          (case (key . clauses))
         </li>
         <li>
           (type fexpr)
         </li>
+        <li>
+          (syntax clauses (clause . clauses))
+        </li>
+        <li>
+          (syntax clause (else . forms))
+        </li>
+        <li>
+          (syntax clause (else =&gt; apv1))
+        </li>
+        <li>
+          (syntax clause (value . forms))
+        </li>
+        <li>
+          (syntax clause (value =&gt; apv1))
+        </li>
+        <li>
+          (syntax clause (values . forms))
+        </li>
+        <li>
+          (syntax clause (values =&gt; apv1))
+        </li>
+        <li>
+          (syntax values (value . values))
+        </li>
       </ul>
     </div>
     <div>
       <h3>
-        check*
+        matchType?
       </h3>
       <ul>
         <li>
-          Return the lenght of OBJECT if match CHECKS, signals an error otherwise.
+          Return #true if OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, #false otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (check* object . checks)
+          (matchType? object class . attributes)
         </li>
         <li>
-          (type macro)
+          (type function)
+        </li>
+        <li>
+          (syntax attributes (attribute value . attributes))
+        </li>
+        <li>
+          (syntax attribute (or Symbol Keyword String .Field @Method))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        check?
+        matchType*?
       </h3>
       <ul>
         <li>
-          Return true if OBJECT match CHECK, false otherwise.
+          Return #true if OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, #false otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (check? object check)
+          (matchType*? object class . attributes)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (syntax attributes (attribute value . attributes))
+        </li>
+        <li>
+          (syntax attribute (or Symbol Keyword String .Field @Method))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        caseType
+      </h3>
+      <ul>
+        <li>
+          Multi-armed type test.
+          <br/>
+            Evaluate the OBJECT and Go through the CLAUSES.
+          <br/>
+            If CLAUSES is #null return #inert.
+          <br/>
+            If OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, evaluate FORMS as an implicit `begin'.
+          <br/>
+            Otherwise go to the next CLAUSE.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (caseType (object . clauses))
         </li>
         <li>
           (type fexpr)
         </li>
+        <li>
+          (syntax clauses (clause . clauses))
+        </li>
+        <li>
+          (syntax clause (class . forms))
+        </li>
+        <li>
+          (syntax clause ((class . attributes) . forms))
+        </li>
+        <li>
+          (syntax attributes (attribute value . attributes))
+        </li>
+        <li>
+          (syntax attribute (or Symbol Keyword String .Field @Method))
+        </li>
       </ul>
     </div>
     <div>
       <h3>
-        the+
+        caseType\
       </h3>
       <ul>
         <li>
-          Return OBJECT if OBJECT match CHECK, signals a error otherwise.
+          Return a sigle argument function for multi-armed type test, useful as a catch handler.
           <br/>
             &nbsp;
         </li>
         <li>
-          (the+ check object)
+          (caseType\ (symbol) . clauses))
         </li>
         <li>
           (type macro)
+        </li>
+        <li>
+          (derivation (\ (symbol) (caseType symbol . clauses)))
+        </li>
+        <li>
+          (use (catchWth (caseType\ (e) ...) ...)
         </li>
       </ul>
     </div>

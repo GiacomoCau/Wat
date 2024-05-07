@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      41. Relational Operators
+      41. Modules
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,193 +23,89 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      41. Relational Operators
+      41. Modules
     </h2>
-    <ul>
-      <li>
-        Note that unlike in Common Lisp, these operators currently require at least two arguments.
-      </li>
-      <li>
-        This will be improved in the future.
-      </li>
-    </ul>
     <div>
       <h3>
-        relationalOp
+        provide
       </h3>
       <ul>
         <li>
-          Utility to create an n-ary relational operator from a BINARY-OPERATOR.
+          Defines SYMBOLS in the current environment with values generated evaluating FORMS as an implicit `begin'.
           <br/>
             &nbsp;
         </li>
         <li>
-          (relationalOp binop)
+          (provide symbols . forms)
         </li>
         <li>
-          (type function)
+          (type fexpr)
+        </li>
+        <li>
+          (syntax symbols (symbol . symbols))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        &lt;
+        module
       </h3>
       <ul>
         <li>
-          Return true if the ARGUMENTS are in monotonically increasing order, false otherwise.
+          Return an environment where SYMBOLS are defined with values generated evaluating FORMS as an implicit `begin'.
           <br/>
             &nbsp;
         </li>
         <li>
-          (&lt; arguments)
+          (module symbols . forms)
         </li>
         <li>
-          (type function)
+          (type fexpr)
         </li>
         <li>
-          (derivation (relationalOp &lt;))
+          (syntax symbols (symbol . symbols))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        &gt;
+        defModule
       </h3>
       <ul>
         <li>
-          Return true if the ARGUMENTS are in monotonically decreasing order, false otherwise.
+          Define a `environment' with the given NAME, where SYMBOLS are defined with values generated evaluating FORMS as an implicit `begin'.
           <br/>
             &nbsp;
         </li>
         <li>
-          (&gt; arguments)
+          (defModule name symbols . forms)
         </li>
         <li>
-          (type function)
+          (type macro)
         </li>
         <li>
-          (derivation (relationalOp &gt;))
+          (syntax symbols (symbol . symbols))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        &lt;=
+        import
       </h3>
       <ul>
         <li>
-          Return true if the ARGUMENTS are in monotonically nondecreasing order, false otherwise.
+          Define in the current environment the SYMBOLS defined in MODULE.
           <br/>
             &nbsp;
         </li>
         <li>
-          (&lt;= arguments)
+          (import module symbols)
         </li>
         <li>
-          (type function)
+          (type fexpr)
         </li>
         <li>
-          (derivation (relationalOp &lt;=))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        &gt;=
-      </h3>
-      <ul>
-        <li>
-          Return true if the ARGUMENTS are in monotonically nonincreasing order, false otherwise.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (&gt;= arguments)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (relationalOp &gt;=))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        eq?
-      </h3>
-      <ul>
-        <li>
-          Return true if all ARGUMENTS are equal, false otherwise.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (eq? arguments)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (relationalOp eq?))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        ==
-      </h3>
-      <ul>
-        <li>
-          Return true if all ARGUMENTS are ==, false otherwise.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (== arguments)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (relationalOp eq?))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        !=
-      </h3>
-      <ul>
-        <li>
-          Return false if all ARGUMENTS are ==, true otherwise.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (!= arguments)
-        </li>
-        <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        /=
-      </h3>
-      <ul>
-        <li>
-          Return true if all ARGUMENTS are distinct, false otherwise.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (/= argument . arguments)
-        </li>
-        <li>
-          (type function)
+          (syntax symbols (symbol . symbols))
         </li>
       </ul>
     </div>

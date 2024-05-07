@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      40. Modules
+      40. Generic Functions
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,89 +23,49 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      40. Modules
+      40. Generic Functions
     </h2>
     <div>
       <h3>
-        provide
+        defGeneric
       </h3>
       <ul>
         <li>
-          Defines SYMBOLS in the current environment with values generated evaluating the FORMS as an implicit `begin'.
+          Define a new generic function with the given NAME.
+          <br/>
+            RECEIVER-NAME, PARAMETERS, and PROPERTIES are currently ignored.
           <br/>
             &nbsp;
         </li>
         <li>
-          (provide symbols . forms)
+          (defGeneric name receiverName . parameters)
+        </li>
+        <li>
+          (defGeneric (name receiverName) . parameters)
         </li>
         <li>
           (type fexpr)
-        </li>
-        <li>
-          (syntax symbols (symbol . symbols))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        module
+        defMethod
       </h3>
       <ul>
         <li>
-          Return an environment where SYMBOLS are defined with values generated evaluating the FORMS as an implicit `begin'.
+          Define a new method for the generic function NAME specialized for CLASS.
           <br/>
             &nbsp;
         </li>
         <li>
-          (module symbols . forms)
+          (defMethod ((name (receiverName class) . parameters) . forms))
+        </li>
+        <li>
+          (defMethod (name ((receiverName class) . parameters) . forms))
         </li>
         <li>
           (type fexpr)
-        </li>
-        <li>
-          (syntax symbols (symbol . symbols))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        defModule
-      </h3>
-      <ul>
-        <li>
-          Define a `environment' with the given NAME, where SYMBOLS are defined with values generated evaluating the FORMS as an implicit `begin'.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (defModule name symbols . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax symbols (symbol . symbols))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        import
-      </h3>
-      <ul>
-        <li>
-          Define in the current environment the SYMBOLS defined in MODULE.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (import module symbols)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (syntax symbols (symbol . symbols))
         </li>
       </ul>
     </div>

@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      26. Options
+      26. Bind Bind? IfBind? CaseVau DefCaseVau Case\ DefCase\ Match Cond
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,44 +23,64 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      26. Options
+      26. Bind Bind? IfBind? CaseVau DefCaseVau Case\ DefCase\ Match Cond
     </h2>
-    <ul>
-      <li>
-        An option is either #null (&quot;none&quot;), or a one-element list (&quot;some&quot;).
-      </li>
-      <li>
-        Idea from Taylor R. Campbell's blag. https://mumble.net/~campbell/blag.txt
-      </li>
-    </ul>
     <div>
       <h3>
-        some
+        bind
       </h3>
       <ul>
         <li>
-          Create a one-element list from the VALUE.
+          Return the ENVIRONMENT if VALUE match the DEFINIEND-TREE updated with new bindings, signals an error otherwise.
           <br/>
-            Alias of cons!.
+            &nbsp;
+        </li>
+        <li>
+          (bind environment definiendTree value)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation (eval (list 'def :cnt definiendTree value) environment))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        ifOpt
+        bind?
       </h3>
       <ul>
         <li>
-          Single-value OPTION destructuring.
-          <br/>
-            If the evaluation of OPTION it's not #null, evaluate the THEN form with the NAME bound to the contents of the OPTION.
-          <br/>
-            Otherwise, evaluate the ELSE forms as an implicit `begin'.
+          Return #true if VALUE match the DEFINIEND-TREE and update the ENVIRONMENT with the new bindings, #false otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (ifOpt (name option) then . else)
+          (bind? environment definiendTree value)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation (catch #f (bind environment definiendTree value) #t))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        ifBind?
+      </h3>
+      <ul>
+        <li>
+          Return the evaluation of THEN into resulting ENVIRONMENT if VALUE match the DEFINIEND-TREE,
+          <br/>
+            the evaluation of ELSE if present, #inert otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (ifBind? (definiendTree value) then . forms)
         </li>
         <li>
           (type fexpr)
@@ -69,100 +89,40 @@
     </div>
     <div>
       <h3>
-        ifOpt*
+        caseVau
       </h3>
       <ul>
         <li>
-          Multi-valued OPTION destructuring.
+          Return a multi-armed vau operator, when applied go through the CLAUSES in order.
           <br/>
-            If the evaluation of OPTION it's not #null, evaluate THEN form with the DEFINIEND-TREE bound to OPTION value.
+            If CLAUSES is #null return #inert.
           <br/>
-            Otherwise, evaluate the ELSE forms as an implicit `begin'.
+            If `car' of CLAUSE is else
           <br/>
-            &nbsp;
-        </li>
-        <li>
-          (ifOpt* (definiendTree option) then . else)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        whenOpt
-      </h3>
-      <ul>
-        <li>
-          Destructure the OPTION.
+            &nbsp;&nbsp;if the `cadr' of CLAUSES is =&gt;, evaluate `caddr' of CLAUSE and apply it to the operands,
           <br/>
-            If the evaluation of OPTION it's #null, return #null.
+            &nbsp;&nbsp;otherwise evaluate FORMS as an implicit `begin'.
           <br/>
-            Otherwise, evaluate the FORMS as an implicit `begin' with the NAME bound to the contents of the OPTION.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (whenOpt (name option) . forms)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        unlessOpt
-      </h3>
-      <ul>
-        <li>
-          Destructure the OPTION.
-          <br/>
-            If the evaluation of OPTION it's #null, evaluate the FORMS as an implicit `begin'.
-          <br/>
-            Otherwise, return #null.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (unlessOpt option . forms)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        caseOpt
-      </h3>
-      <ul>
-        <li>
-          Multi-armed ifOpt.
-          <br/>
-            Evaluate OPTION and go through the CLAUSES in order.
-          <br/>
-            If OPTION is #null return #null.
-          <br/>
-            If CLAUSES is #null return #null.
-          <br/>
-            If car of CLAUSE is else evaluate FORMS as an implicit `begin'.
-          <br/>
-            If the OPTION match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
+            If the operands match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
           <br/>
             Otherwise go to the next CLAUSE.
           <br/>
             &nbsp;
         </li>
         <li>
-          (caseOpt option . clauses)
+          (caseVau . clauses)
         </li>
         <li>
           (type fexpr)
         </li>
         <li>
-          (syntax clauses (or () (clause . clauses)))
+          (syntax clauses (clause . clauses))
         </li>
         <li>
           (syntax clause (else . forms))
+        </li>
+        <li>
+          (syntax clause (else =&gt; apv1))
         </li>
         <li>
           (syntax clause (definiendTree . forms))
@@ -171,63 +131,192 @@
     </div>
     <div>
       <h3>
-        optDft
+        defCaseVau
       </h3>
       <ul>
         <li>
-          Return the contents of the OPTION, or the DEFAULT if the option is #null.
-          <br/>
-            The default itself defaults to #inert.
-          <br/>
-            The DEFAULT is evaluated lazily, only when the OPTION is #null.
+          Defines into the current environment the named caseVau NAME with the given CLAUSES.
           <br/>
             &nbsp;
         </li>
         <li>
-          (optDft option . default)
+          (defCaseVau name . clauses)
         </li>
         <li>
           (type fexpr)
+        </li>
+        <li>
+          (derivation (def name (caseVau . clauses)))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        optDft*
+        case\
       </h3>
       <ul>
         <li>
-          Similar to `opt', but provides DEFAULTS for any number of elements of LIST.
+          Return a multi-armed \ function, when applied go through the CLAUSES in order.
           <br/>
-            This is useful for implementing functions that take multiple optDft arguments.
+            If CLAUSES is #null return #inert.
           <br/>
-            Each default is evaluated lazily, only when needed.
+            If `car' of CLAUSE is else
+          <br/>
+            &nbsp;&nbsp;if the `cadr' of CLAUSES is =&gt;, evaluate `caddr' of CLAUSE and apply it to the arguments,
+          <br/>
+            &nbsp;&nbsp;otherwise evaluate FORMS as an implicit `begin'.
+          <br/>
+            If the arguments match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
+          <br/>
+            Otherwise go to the next CLAUSE.
           <br/>
             &nbsp;
         </li>
         <li>
-          (optDft* list . defaults)
+          (case\ . clauses)
         </li>
         <li>
-          (type fexpr)
+          (type function)
+        </li>
+        <li>
+          (syntax clauses (clause . clauses))
+        </li>
+        <li>
+          (syntax clause (else . forms))
+        </li>
+        <li>
+          (syntax clause (else =&gt; apv1))
+        </li>
+        <li>
+          (syntax clause (definiendTree . forms))
+        </li>
+        <li>
+          (derivation (wrap (caseVau . clauses)))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        optDft!
+        defCase\
       </h3>
       <ul>
         <li>
-          Returns the contents of the OPTION or signals an error if it is #null.
+          Defines into the current environment the named case\ NAME with the given CLAUSES.
           <br/>
             &nbsp;
         </li>
         <li>
-          (optDft! option)
+          (defCase\ name . clauses)
         </li>
         <li>
           (type fexpr)
+        </li>
+        <li>
+          (derivation (def name (case\ . clauses)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        match
+      </h3>
+      <ul>
+        <li>
+          Evaluates VALUE and go through the CLAUSES in order.
+          <br/>
+            If CLAUSES is #null return #inert.
+          <br/>
+            If `car' of CLAUSE is else
+          <br/>
+            &nbsp;&nbsp;if the `cadr' of CLAUSES is =&gt;, evaluate `caddr' of CLAUSE and apply it to the arguments,
+          <br/>
+            &nbsp;&nbsp;otherwise evaluate FORMS as an implicit `begin'.
+          <br/>
+            If VALUE match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
+          <br/>
+            Otherwise go to the next CLAUSE.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (match value . clauses)
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+        <li>
+          (syntax clauses (clause . clauses))
+        </li>
+        <li>
+          (syntax clause (else . forms))
+        </li>
+        <li>
+          (syntax clause (else =&gt; apv1))
+        </li>
+        <li>
+          (syntax clause (definiendTree . forms))
+        </li>
+        <li>
+          (derivation (wrap (caseVau . clauses)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        cond
+      </h3>
+      <ul>
+        <li>
+          Multi-armed conditional.
+          <br/>
+            Go through the CLAUSES in order.
+          <br/>
+            If CLAUSES is #null return #inert.
+          <br/>
+            If `car' of CLAUSE is else evaluate FORMS as an implicit `begin'.
+          <br/>
+            Otherwise evaluate the TEST.
+          <br/>
+            If TEST is a boolean
+          <br/>
+            &nbsp;&nbsp;if is #true, evaluate FORMS as an implicit `begin',
+          <br/>
+            &nbsp;&nbsp;otherwise go to the next CLAUSE.
+          <br/>
+            If FORMS is #null return TEST.
+          <br/>
+            If `car' di FORMS is =&gt; evaluate the `cadr' of FORMS and apply it to TEST.
+          <br/>
+            If `cadr' di FORMS is =&gt; evaluate `car' of FORMS
+          <br/>
+            &nbsp;&nbsp;if is #true evaluate the `caddr' of FORMS and apply it to TEST
+          <br/>
+            &nbsp;&nbsp;otherwise go to the next CLAUSE.
+          <br/>
+            Otherwise go to the next CLAUSE.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (cond . clauses)
+        </li>
+        <li>
+          (syntax clauses (clause . clauses))
+        </li>
+        <li>
+          (syntax clause (else . forms))
+        </li>
+        <li>
+          (syntax clause (test-&gt;bool . forms))
+        </li>
+        <li>
+          (syntax clause (test))
+        </li>
+        <li>
+          (syntax clause (test =&gt; apv1))
+        </li>
+        <li>
+          (syntax clause (test guard =&gt; apv1))
         </li>
       </ul>
     </div>

@@ -62,10 +62,10 @@ check(List o, List chk)
 
 ; test check e #!
 
-(assert (check*       () (or () (2))) 0)
-(assert (check*     '(1) (or () (2))) Error :type 'type :datum (1) :expected '(or () (2)))
-(assert (check*   '(1 2) (or () (2))) 2)
-(assert (check* '(1 2 3) (or () (2))) Error :type 'type :datum (1 2 3) :expected '(or () (2)))
+(assert (check       () (or () (2))) 0)
+(assert (check     '(1) (or () (2))) Error :type 'type :datum (1) :expected '(or () (2)))
+(assert (check   '(1 2) (or () (2))) 2)
+(assert (check '(1 2 3) (or () (2))) Error :type 'type :datum (1 2 3) :expected '(or () (2)))
 
 (assert (check*       () or () (2)) 0)
 (assert (check*     '(1) or () (2)) Error :type 'type :datum (1) :expected '(or () (2)))
@@ -78,20 +78,20 @@ check(List o, List chk)
 (assert ((\ ((#! (or () (2)) x)) x) (1 2 3)) Error :type 'type :datum (1 2 3) :expected '(or () (2)))
 
 
-(assert (check*   '(b 3) (or ('b 3) ('a 1 2))) 2)
-(assert (check*   '(b 2) (or ('b 3) ('a 1 2))) Error :type 'type :datum '(b 2) :expected '(or (b 3) (a 1 2)))
-(assert (check* '(a 1 2) (or ('b 3) ('a 1 2))) 3)
-(assert (check* '(a 1 3) (or ('b 3) ('a 1 2))) Error :type 'type :datum '(a 1 3) :expected '(or (b 3) (a 1 2)))
+(assert (check   '(b 3) (or ('b 3) ('a 1 2))) 2)
+(assert (check   '(b 2) (or ('b 3) ('a 1 2))) Error :type 'type :datum '(b 2) :expected '(or (b 3) (a 1 2)))
+(assert (check '(a 1 2) (or ('b 3) ('a 1 2))) 3)
+(assert (check '(a 1 3) (or ('b 3) ('a 1 2))) Error :type 'type :datum '(a 1 3) :expected '(or (b 3) (a 1 2)))
 
 (assert (check*   '(b 3) or ('b 3) ('a 1 2)) 2)
 (assert (check*   '(b 2) or ('b 3) ('a 1 2)) Error :type 'type :datum '(b 2) :expected '(or (b 3) (a 1 2)))
 (assert (check* '(a 1 2) or ('b 3) ('a 1 2)) 3)
 (assert (check* '(a 1 3) or ('b 3) ('a 1 2)) Error :type 'type :datum '(a 1 3) :expected '(or (b 3) (a 1 2)))
 
-(assert (check*   ('b 3) (or ('b 3) ('a 1 2))) 2)
-(assert (check*   ('b 2) (or ('b 3) ('a 1 2))) Error :type 'type :datum '(b 2) :expected '(or (b 3) (a 1 2)))
-(assert (check* ('a 1 2) (or ('b 3) ('a 1 2))) 3)
-(assert (check* ('a 1 3) (or ('b 3) ('a 1 2))) Error :type 'type :datum '(a 1 3) :expected '(or (b 3) (a 1 2)))
+(assert (check   ('b 3) (or ('b 3) ('a 1 2))) 2)
+(assert (check   ('b 2) (or ('b 3) ('a 1 2))) Error :type 'type :datum '(b 2) :expected '(or (b 3) (a 1 2)))
+(assert (check ('a 1 2) (or ('b 3) ('a 1 2))) 3)
+(assert (check ('a 1 3) (or ('b 3) ('a 1 2))) Error :type 'type :datum '(a 1 3) :expected '(or (b 3) (a 1 2)))
 
 
 (assert ((\ ((#! (or ('b 3) ('a 1 2)) x)) x)   ('b 3)) ('b 3))
@@ -101,10 +101,11 @@ check(List o, List chk)
 
 
 ;#| test new
-(assert (new)             Error :type 'match :operands# +1)
-(assert (new Box)         Error :type 'type :datum (&Wat.Vm$Box) :expected '(or (2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))))
-(assert (new Obj :a)      Error :type 'type :datum (&Wat.Vm$Obj :a) :expected '(or (2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))))
-(assert (new Obj :a 1 :b) Error :type 'type :datum (&Wat.Vm$Obj :a 1 :b) :expected '(or (2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))))
+(assert (new) Error :type 'match :operands# +1)
+(assert (new Box) Box #inert)
+(assert (new Box 1) Box 1)
+(assert (new Obj :a) Error :type 'type :datum (&Wat.Vm$Obj :a) :expected '(or (1 2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))))
+(assert (new Obj :a 1 :b) Error :type 'type :datum (&Wat.Vm$Obj :a 1 :b) :expected '(or (1 2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))))
 
 (new Obj) ;-> ok {&Wat.Vm.Obj}
 (new Box 1) ;-> ok {&Box 1}

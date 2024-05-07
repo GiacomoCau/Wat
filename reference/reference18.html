@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      18. Delimited-Control Operators
+      18. Bitwise and Shift Operators
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,111 +23,131 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      18. Delimited-Control Operators
+      18. Bitwise and Shift Operators
     </h2>
-    <ul>
-      <li>
-        These operators follow the API put forth in the delimcc library at URL `http://okmij.org/ftp/continuations/implementations.html'.
-      </li>
-    </ul>
     <div>
       <h3>
-        takeSubcont
+        ~
       </h3>
       <ul>
         <li>
-          Abort outwards to the PROMPT.
-          <br/>
-            When the prompt is reached, evaluate the FORMS as an implicit `begin' with SYMBOL bound to the captured continuation (which does not include the prompt) and return its result.
+          Java binary ~ operator.
           <br/>
             &nbsp;
         </li>
         <li>
-          (takeSubcont prompt symbol . forms)
+          (~ a b)
         </li>
         <li>
-          (type fexpr)
+          (type function)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        pushPrompt
+        &amp;
       </h3>
       <ul>
         <li>
-          Push the PROMPT and evaluate the FORMS as an implicit `begin' inside the prompt and return its result.
-          <br/>
-            This delimits the continuation.
+          Java binary &amp; operator.
           <br/>
             &nbsp;
         </li>
         <li>
-          (pushPrompt prompt . forms)
+          (&amp; a b)
         </li>
         <li>
-          (type fexpr)
+          (type function)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        pushDelimSubcont
+        \|
       </h3>
       <ul>
         <li>
-          Push the PROMPT and compose the previously captured CONTINUATION inside it
-          <br/>
-            before evaluated the FORMS as an implicit `begin' inside the new continuation and return its result.
+          Java binary | operator.
           <br/>
             &nbsp;
         </li>
         <li>
-          (pushDelimSubcont prompt continuation . forms)
+          (\| a b)
         </li>
         <li>
-          (type fexpr)
+          (type function)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        pushSubcont
+        ^
       </h3>
       <ul>
         <li>
-          We don't have `pushSubcont' but we can emulate it with a `pushDelimSubcont' that pushes an #ignore prompt.
+          Java binary ^ operator.
           <br/>
             &nbsp;
         </li>
         <li>
-          (pushSubcont continuation . forms)
+          (^ a b)
         </li>
         <li>
-          (type macro)
-        </li>
-        <li>
-          (derivation (pushDelimSubcont #ignore continuation . forms))
+          (type function)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        pushSubcontBarrier
+        &lt;&lt;
       </h3>
       <ul>
         <li>
-          Push a continuation barrier that prevents the FORMS from capturing any continuations to the outside,
-          <br/>
-            before evaluated the FORMS as an implicit `begin'
+          Java binary &lt;&lt; operator.
           <br/>
             &nbsp;
         </li>
         <li>
-          (pushSubcontBarrier . forms)
+          (&lt;&lt; a b)
         </li>
         <li>
-          (type fexpr)
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        &gt;&gt;
+      </h3>
+      <ul>
+        <li>
+          Java binary &gt;&gt; operator.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (&gt;&gt; a b)
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        &gt;&gt;&gt;
+      </h3>
+      <ul>
+        <li>
+          Java binary &gt;&gt;&gt; operator.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (&gt;&gt;&gt; a b)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>

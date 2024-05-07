@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      12. Boolean
+      12. Symbol &amp; Keyword
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,57 +23,162 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      12. Boolean
+      12. Symbol &amp; Keyword
     </h2>
+    <ul>
+      <li>
+        Symbol and Keyword extends Intern
+      </li>
+    </ul>
     <div>
       <h3>
-        !
+        intern
       </h3>
       <ul>
         <li>
-          Invert the BOOLEAN.
+          Return the unique symbol or keyword with STRING as name.
+          <br/>
+            Keyword if STRING start with ':', symbol otherwise
           <br/>
             &nbsp;
         </li>
         <li>
-          (! boolean)
+          (intern string)
         </li>
         <li>
           (type function)
-        </li>
-        <li>
-          (derivation (if boolean #f #t))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        not
+        name
       </h3>
       <ul>
         <li>
-          Alias of !.
+          Return the name of the INTERN as a string.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (name intern)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        !!
+        keyword
       </h3>
       <ul>
         <li>
-          Convert a VALUE to boolean when tTrue != 0.
+          Return the unique keyword with STRING as name.
           <br/>
             &nbsp;
         </li>
         <li>
-          (!! value)
+          (keyword string)
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        keyword?
+      </h3>
+      <ul>
+        <li>
+          Return #true if the OBJECT is a keyword, #false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (keyword? object)
         </li>
         <li>
           (type function)
         </li>
         <li>
-          (derivation (if value #t #f))
+          (derivation (type? object Keyword))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        keywordName
+      </h3>
+      <ul>
+        <li>
+          Return the name of the KEYWORD as a string.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (keywordName keyword)
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        symbol
+      </h3>
+      <ul>
+        <li>
+          Return the unique symbol with STRING as name.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (symbol string)
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        symbol?
+      </h3>
+      <ul>
+        <li>
+          Return #true if the OBJECT is a symbol, #false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (symbol? object)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation (type? object Symbol))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        symbolName
+      </h3>
+      <ul>
+        <li>
+          Return the name of the SYMBOL as a string.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (symbolName symbol)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>

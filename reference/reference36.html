@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      36. Boxes
+      36. Simple Sets
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,74 +23,20 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      36. Boxes
+      36. Simple Sets
     </h2>
-    <ul>
-      <li>
-        The Box are functions that encapsulates a mutable value.
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        Calling the box:
-      </li>
-      <li>
-        - without arguments returns the value in the box.
-      </li>
-      <li>
-        - with an attribute update the value in the box.
-      </li>
-      <li>
-        - without bindResult or with bindResult #ignore use as bindResult (bndRes)
-      </li>
-      <li>
-        - with bindResult #inert return #inert
-      </li>
-      <li>
-        - with bindResult :rhs return the right side of the last binding
-      </li>
-      <li>
-        - with bindResult :prv return the previous value of the last binding
-      </li>
-      <li>
-        - with bindResult :cnt return the box
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        $(box)
-      </li>
-      <li>
-        $(box value)
-      </li>
-      <li>
-        $(box bindResult value)
-      </li>
-      <li>
-        $(type function)
-      </li>
-      <li>
-        $(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
-      </li>
-    </ul>
     <div>
       <h3>
-        newBox
+        set?
       </h3>
       <ul>
         <li>
-          Return a new box with the optional VALUE.
-          <br/>
-            The Box are functions that encapsulates a mutable value.
-          <br/>
-            Without VALUE use as VALUE (boxDft).
+          Return #true if all element of LIST are distinct, #false otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (newBox . value)
+          (set? list)
         </li>
         <li>
           (type function)
@@ -99,21 +45,53 @@
     </div>
     <div>
       <h3>
-        defBox
+        set+
       </h3>
       <ul>
         <li>
-          Defines into the current environment the named box NAME with the optional VALUE.
-          <br/>
-            Without VALUE use as VALUE (boxDft).
+          Return a set, with an VALUE more if VALUE not is in the SET.
+        </li>
+        <li>
+          (set+ set value)
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        defSet+
+      </h3>
+      <ul>
+        <li>
+          Return the set after update the set of SYMBOL with an VALUE more if VALUE not is in the set.
           <br/>
             &nbsp;
         </li>
         <li>
-          (defBox name . value)
+          (defSet+ symbol value)
         </li>
         <li>
-          (type macro)
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        -&gt;set
+      </h3>
+      <ul>
+        <li>
+          Return the LIST without duplicate elements.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (-&gt;set list)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>

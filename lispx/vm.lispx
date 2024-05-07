@@ -159,10 +159,8 @@
   #inert )
 
 (def\ invokeDebugger (condition)
-  #|Invoke the debugger, which as a default just prints a stack trace
-   |and panics, thereby throwing an exception to JS.  When running in the
-   |REPL, this function gets replaced with a different one that runs a
-   |nested debug loop.
+  #|Invoke the debugger, which as a default just prints a stack trace |and panics, thereby throwing an exception to JS.
+   |When running in the REPL, this function gets replaced with a different one that runs a nested debug loop.
    |#
   (takeSubcont rootPrompt k
     (pushDelimSubcont rootPrompt k
@@ -170,11 +168,11 @@
       (panic condition))))
 
 (def\ panic (e)
-  #|Mostly for internal use.  Signal the ERROR in such a way that it is
-   |hard to handle and will usually escape the VM as a host language
-   |exception.  In particular, signal handlers will not be invoked.
-   |However, intervening `finally' cleanup expressions and `progv'
-   |expressions are still triggered, so Lisp invariants are maintained.
+  #|Mostly for internal use.
+   |Signal the ERROR in such a way that it is hard to handle and will usually escape the VM as a host language exception.
+   |In particular, signal handlers will not be invoked.
+   |However, intervening `finally' cleanup expressions and `progv' expressions are still triggered, so Lisp invariants are maintained.
+   |
    |$(fn (error))
    |$(type function)
    |#
@@ -206,7 +204,7 @@
 (defVau signalsError? (form class . slots) env
   (block exit
     (handlerCase
-      ( (Object (\ (object) (exit (matchObj? object (eval (list* 'list class slots) env))) )) )
+      ( (Object (\ (object) (exit (matchType? object (eval (list* 'list class slots) env))) )) )
       (eval form env) )
     #f ))
 
@@ -230,7 +228,7 @@ x
 (+ 100 x)
 (invokeRestart 'useValue 42)
 (invokeRestart 'replEnd)
-x
+(assert x Error :type 'unboundSymbol :symbol 'x)
 |#
 
 (%def milli (%- (@currentTimeMillis &java.lang.System) milli))

@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      46. Fibers
+      46. Coroutines
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,105 +23,46 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      46. Fibers
+      46. Coroutines
     </h2>
-    <ul>
-      <li>
-        The following implementation of fibers follows the one at URL `http://okmij.org/ftp/continuations/implementations.html#dget-wind'
-      </li>
-      <li>
-        We're calling them fibers instead of coroutines so as to not conflict with the built-in coroutine operators.
-      </li>
-      <li>
-        We use it for testing that built-in operators properly suspend and resume.
-      </li>
-    </ul>
     <div>
       <h3>
-        fiberPrompt
+        coroutinePrompt
       </h3>
       <ul>
         <li>
-          The prompt used for delimiting fibers.
+          This prompt is used for general coroutine-like use of continuations.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        YieldRecord
+        coroutine
       </h3>
       <ul>
         <li>
-          Instances of this class are yielded.
+          Evaluate FORMS as an implicit `begin' in a context in which `yield' can be used to pause execution.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        makeYieldRecord
+        yield
       </h3>
       <ul>
         <li>
-          Create a new yield record with the given yielded VALUE and resume CONTINUATION.
+          Pause the current coroutine.
+          <br/>
+            In the place where the enclosing `coroutine' (or `resume') was called,
+          <br/>
+            evaluate FORMS as an implicit `begin' with NAME bound to the paused coroutine.
+          <br/>
+            `resume' can later be used to restart execution inside the coroutine.
           <br/>
             &nbsp;
         </li>
         <li>
-          (makeYieldRecord value continuation)
-        </li>
-        <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        fiberYield
-      </h3>
-      <ul>
-        <li>
-          Yield a VALUE (which defaults to #inert).
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (fiberYield . value)
-        </li>
-        <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        fiberResume
-      </h3>
-      <ul>
-        <li>
-          Resume a suspended fiber YIELD-RECORD with a VALUE (which defaults to #inert).
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (fiberResume yieldRecord . value)
-        </li>
-        <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        fiber
-      </h3>
-      <ul>
-        <li>
-          Evaluate the forms expressions as a fiber.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (fiber . forms)
+          (yield name . forms)
         </li>
         <li>
           (type macro)
@@ -130,31 +71,19 @@
     </div>
     <div>
       <h3>
-        runFiber
+        resume
       </h3>
       <ul>
         <li>
-          Get all values yielded by a fiber, and its final result, and collect them in a list.
-          <br/>
-            Uses the optional list of values to sent to the fiber with `fiberResume'.
+          Resume the paused coroutine CONTINUATION and evaluate FORMS as an implicit `begin' in the place where `yield' was called in the coroutine, and return the result.
           <br/>
             &nbsp;
         </li>
         <li>
-          (runFiber thunk . forms)
+          (resume continuation . forms)
         </li>
         <li>
           (type macro)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        runFiberWithValues
-      </h3>
-      <ul>
-        <li>
-          (defMacro (runFiberWithValues f args) (list 'apply** 'runFiber f args))
         </li>
       </ul>
     </div>

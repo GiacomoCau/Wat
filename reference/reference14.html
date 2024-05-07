@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      14. String
+      14. Boolean
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,44 +23,57 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      14. String
+      14. Boolean
     </h2>
     <div>
       <h3>
-        string?
+        !
       </h3>
       <ul>
         <li>
-          Return true if the OBJECT is a string, false otherwise.
+          Invert the BOOLEAN.
           <br/>
             &nbsp;
         </li>
         <li>
-          (string? object)
+          (! boolean)
         </li>
         <li>
           (type function)
         </li>
         <li>
-          (derivation (type? object String))
+          (derivation (if boolean #f #t))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        $
+        not
       </h3>
       <ul>
         <li>
-          Java binary + operator, join the values after the conversion of the operands to string.
+          Alias of !.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        !!
+      </h3>
+      <ul>
+        <li>
+          Convert a VALUE to boolean when tTrue != 0.
           <br/>
             &nbsp;
         </li>
         <li>
-          ($ a b)
+          (!! value)
         </li>
         <li>
           (type function)
+        </li>
+        <li>
+          (derivation (if value #t #f))
         </li>
       </ul>
     </div>

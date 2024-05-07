@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      9. List
+      9. Obj &amp; Box
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,86 +23,74 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      9. List
+      9. Obj &amp; Box
     </h2>
     <div>
       <h3>
-        append
+        new
       </h3>
       <ul>
         <li>
-          Append two lists. The first one must be proper and is copied.
-          <br/>
-            The second one is not copied (and doesn't even have to be a list).
-          <br/>
-            It becomes the `cdr' of the final cons of the first list,
-          <br/>
-            or is returned directly if the first list is empty.
+          Return a new instance of CLASS with the given VALUE or BINDINGS.
           <br/>
             &nbsp;
         </li>
         <li>
-          (append list1 list2)
+          (new boxClass)
         </li>
         <li>
-          (type function)
+          (new boxClass value)
+        </li>
+        <li>
+          (new objClass . bindings)
+        </li>
+        <li>
+          (new objClass string . bindings)
+        </li>
+        <li>
+          (new objClass string throwableObject . bindings)
+        </li>
+        <li>
+          (syntax bindings (attribute value . bindings))
+        </li>
+        <li>
+          (syntax attribute (or Symbol Keyword String))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        len
+        defNew
       </h3>
       <ul>
         <li>
-          Return the number of elements in the LIST.
+          Defines into the current environment a named instance NAME of the given CLASS and VALUE or BINDINGS.
           <br/>
             &nbsp;
         </li>
         <li>
-          (len list)
+          (defNew name boxClass)
         </li>
         <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        list?
-      </h3>
-      <ul>
-        <li>
-          Return true if the OBJECT is a list, false otherwise.
-          <br/>
-            &nbsp;
+          (defNew name boxClass value)
         </li>
         <li>
-          (list? object)
+          (defNew name objClass . bindings)
         </li>
         <li>
-          (type function)
+          (defNew name objClass string . bindings)
         </li>
         <li>
-          (derivation (type? object Keyword))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        reverse
-      </h3>
-      <ul>
-        <li>
-          Reverse the LIST.
-          <br/>
-            &nbsp;
+          (defNew name objClass string throwableObject . bindings)
         </li>
         <li>
-          (reverse list)
+          (syntax bindings (attribute value . bindings))
         </li>
         <li>
-          (type function)
+          (syntax attribute (or Symbol Keyword String))
+        </li>
+        <li>
+          (type macro)
         </li>
       </ul>
     </div>

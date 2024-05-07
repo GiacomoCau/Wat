@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      15. Comparators
+      15. Number
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,20 +23,43 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      15. Comparators
+      15. Number
     </h2>
     <div>
       <h3>
-        &lt;
+        number?
       </h3>
       <ul>
         <li>
-          Java binary &lt; operator.
+          Return #true if the OBJECT is a number, #false otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (&lt; a b)
+          (number? object)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation (type? object Number))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        +
+      </h3>
+      <ul>
+        <li>
+          Java binary + operator, sums the values after the conversion of the operands to the same type.
+          <br/>
+            Converts to BigDecimal, Double, BigInteger, Long or Integer if one operands is BigDecimal, Double, BigInteger, Long or Integer
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (+ a b)
         </li>
         <li>
           (type function)
@@ -45,16 +68,18 @@
     </div>
     <div>
       <h3>
-        &gt;
+        *
       </h3>
       <ul>
         <li>
-          Java binary &gt; operator.
+          Java binary - operator, multiplies the values after the conversion of the operands to the same type.
+          <br/>
+            Converts to BigDecimal, Double, BigInteger, Long or Integer if one operands is BigDecimal, Double, BigInteger, Long or Integer
           <br/>
             &nbsp;
         </li>
         <li>
-          (&gt; a b)
+          (* a b)
         </li>
         <li>
           (type function)
@@ -63,16 +88,18 @@
     </div>
     <div>
       <h3>
-        &lt;=
+        -
       </h3>
       <ul>
         <li>
-          Java binary &lt;= operator.
+          Java binary - operator, subtracts the values after the conversion of the operands to the same type.
+          <br/>
+            Converts to BigDecimal, Double, BigInteger, Long or Integer if one operands is BigDecimal, Double, BigInteger, Long or Integer
           <br/>
             &nbsp;
         </li>
         <li>
-          (&lt;= a b)
+          (- a b)
         </li>
         <li>
           (type function)
@@ -81,16 +108,18 @@
     </div>
     <div>
       <h3>
-        &gt;=
+        /
       </h3>
       <ul>
         <li>
-          Java binary &gt;= operator.
+          Java binary / operator, divides the values after the conversion of the operands to the same type.
+          <br/>
+            Converts to BigDecimal, Double, BigInteger, Long or Integer if one operands is BigDecimal, Double, BigInteger, Long or Integer
           <br/>
             &nbsp;
         </li>
         <li>
-          (&gt;= a b)
+          (/ a b)
         </li>
         <li>
           (type function)
@@ -99,21 +128,91 @@
     </div>
     <div>
       <h3>
-        min
+        %
       </h3>
       <ul>
         <li>
-          (def\ (min a b) (if (&lt; a b) a b))
+          Java binary % operator, rest of the division of the values after the conversion of the operands to the same type.
+          <br/>
+            Converts to BigDecimal, Double, BigInteger, Long or Integer if one operands is BigDecimal, Double, BigInteger, Long or Integer
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (% a b)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        max
+        1+
       </h3>
       <ul>
         <li>
-          (def\ (max a b) (if (&gt; a b) a b))
+          (def\ (1+ n) (+ n 1))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        1-
+      </h3>
+      <ul>
+        <li>
+          (def\ (1- n) (- n 1))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        0?
+      </h3>
+      <ul>
+        <li>
+          (def\ (0? n) (== n 0))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        1?
+      </h3>
+      <ul>
+        <li>
+          (def\ (1? n) (== n 1))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        -1?
+      </h3>
+      <ul>
+        <li>
+          (def\ (-1? n) (== n -1))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        even?
+      </h3>
+      <ul>
+        <li>
+          (def\ (even? n) (== (% n 2) 0))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        odd?
+      </h3>
+      <ul>
+        <li>
+          (def\ (odd? n)  (== (% n 2) 1))
         </li>
       </ul>
     </div>

@@ -36,6 +36,9 @@
         Calling the obj:
       </li>
       <li>
+        &nbsp;
+      </li>
+      <li>
         - without arguments returns the env.
       </li>
       <li>
@@ -45,7 +48,10 @@
         - with couples of attribute and value defines or update the attribute with the value in the obj.
       </li>
       <li>
-        - without bindResult or with bindResult #ignore use as bindResult (bndRes)
+        &nbsp;
+      </li>
+      <li>
+        - without bindResult or with bindResult #ignore use as bindResult `(bndRes)'
       </li>
       <li>
         - with bindResult #inert return #inert
@@ -75,7 +81,7 @@
         $(obj bindResult attribute value . attributes)
       </li>
       <li>
-        $(syntax attributes (or () (attribute value . attributes)))
+        $(syntax attributes (attribute value . attributes))
       </li>
       <li>
         $(syntax attribute (or Symbol Keyword String))
@@ -86,33 +92,22 @@
     </ul>
     <div>
       <h3>
-        new
+        newObj
       </h3>
       <ul>
         <li>
-          Return a new instance of CLASS (that must be a `standard-class').
-          <br/>
-            The BINDINGS must be of even length, and alternately contain bindings names (symbols, keywords or string) and values.
+          Return a new obj with the given BINDING.
           <br/>
             &nbsp;
         </li>
         <li>
-          (new boxClass)
+          (newObj . bindings)
         </li>
         <li>
-          (new boxClass value)
+          (type function)
         </li>
         <li>
-          (new objClass . bindings)
-        </li>
-        <li>
-          (new objClass string . bindings)
-        </li>
-        <li>
-          (new objClass string throwableObject . bindings)
-        </li>
-        <li>
-          (syntax bindings (or () (attribute value . bindings)))
+          (syntax bindings (attribute value . bindings))
         </li>
         <li>
           (syntax attribute (or Symbol Keyword String))
@@ -125,33 +120,21 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment a named instance NAME of the given CLASS.
+          Defines into the current environment the named box NAME with the given BINDINGS.
           <br/>
             &nbsp;
         </li>
         <li>
-          (defObj name boxClass)
-        </li>
-        <li>
-          (defObj name boxClass value)
-        </li>
-        <li>
-          (defObj name objClass . bindings)
-        </li>
-        <li>
-          (defObj name objClass string . bindings)
-        </li>
-        <li>
-          (defObj name objClass string throwableObject . bindings)
-        </li>
-        <li>
-          (syntax bindings (or () (attribute value . bindings)))
-        </li>
-        <li>
-          (syntax attribute (or Symbol Keyword String))
+          (defObj name . bindings)
         </li>
         <li>
           (type macro)
+        </li>
+        <li>
+          (syntax bindings (attribute value . bindings))
+        </li>
+        <li>
+          (syntax attribute (or Symbol Keyword String))
         </li>
       </ul>
     </div>

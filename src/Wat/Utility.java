@@ -339,13 +339,14 @@ public class Utility {
 	
 	public static String toSource(Class cl) {
 		var str = cl.getName();
+		//var str = cl.getCanonicalName();
 		var dim = ""; int i=0; for (; str.charAt(i) == '['; i+=1) dim += "[]";
 		if (dim.length() == 0) return str;
 		//str = str.substring(i);
 		char c = str.charAt(i);
 		if (c == 'L') return str.substring(i+1, str.length()-1) + dim;
 		for (var p: PrimitiveWrapper.values()) if (p.type == c) return p.name + dim;
-		return cl.toString();
+		return "&" + cl.toString();
 	}
 	
 	public static Object[] reorg(Executable ex, Object[] args) {

@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      44. Sequences
+      44. Greatest Common Divisor e Lowest Common Multiple
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,141 +23,65 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      44. Sequences
+      44. Greatest Common Divisor e Lowest Common Multiple
     </h2>
     <div>
       <h3>
-        length
+        gcd
       </h3>
       <ul>
         <li>
-          Return the number of elements in a SEQUENCE.
+          Return the greatest common divisor of two or more integer arguments.
           <br/>
             &nbsp;
         </li>
         <li>
-          (length sequence)
+          (gcd integer integer . integers)
         </li>
         <li>
-          (type generic)
+          (type function)
         </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        length
-      </h3>
-      <ul>
         <li>
-          (defMethod length ((seq List))
+          (syntax integers (integer . integers))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        length
+        abs
       </h3>
       <ul>
         <li>
-          (defMethod length ((seq Null))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        length
-      </h3>
-      <ul>
-        <li>
-          (defMethod length ((seq String))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        elt
-      </h3>
-      <ul>
-        <li>
-          Return the SEQUENCE element at the specified INDEX.
+          Return the abs value of one integer argument.
           <br/>
             &nbsp;
         </li>
         <li>
-          (elt sequence index)
+          (abs integer)
         </li>
         <li>
-          (type generic)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        elt
-      </h3>
-      <ul>
-        <li>
-          (defMethod elt ((seq List) index)
+          (type function)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        elt
+        lcm
       </h3>
       <ul>
         <li>
-          (defMethod elt ((seq String) index)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        subSeq
-      </h3>
-      <ul>
-        <li>
-          Create a sequence that is a copy of the subsequence of the SEQUENCE bounded by START and optional END.
-          <br/>
-            If END is not supplied, the subsequence stretches until the end of the list
+          Return the lowest common multiple of two or more integer arguments
           <br/>
             &nbsp;
         </li>
         <li>
-          (subSeq sequence start . end)
+          (lcm integer integer . integers)
         </li>
         <li>
-          (type generic)
+          (type function)
         </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        subSeq
-      </h3>
-      <ul>
         <li>
-          (defMethod subSeq ((seq List) start . end)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        subSeq
-      </h3>
-      <ul>
-        <li>
-          (defMethod subSeq ((seq Null) start . end)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        subSeq
-      </h3>
-      <ul>
-        <li>
-          (defMethod subSeq ((seq String) start . end)
+          (syntax integers (integer . integers))
         </li>
       </ul>
     </div>

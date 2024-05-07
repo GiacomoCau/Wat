@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      45. Coroutines
+      45. Sequences
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,67 +23,141 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      45. Coroutines
+      45. Sequences
     </h2>
     <div>
       <h3>
-        coroutinePrompt
+        length
       </h3>
       <ul>
         <li>
-          This prompt is used for general coroutine-like use of continuations.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        coroutine
-      </h3>
-      <ul>
-        <li>
-          Evaluate the FORMS as an implicit `begin' in a context in which `yield' can be used to pause execution.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        yield
-      </h3>
-      <ul>
-        <li>
-          Pause the current coroutine.
-          <br/>
-            In the place where the enclosing `coroutine' (or `resume') was called,
-          <br/>
-            evaluate the FORMS as an implicit `begin' with NAME bound to the paused coroutine, and return the result.
-          <br/>
-            `resume' can later be used to restart execution inside the coroutine.
+          Return the number of elements in a SEQUENCE.
           <br/>
             &nbsp;
         </li>
         <li>
-          (yield name . forms)
+          (length sequence)
         </li>
         <li>
-          (type macro)
+          (type generic)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        resume
+        length
       </h3>
       <ul>
         <li>
-          Resume the paused coroutine CONTINUATION and evaluate FORMS as an implicit `begin' in the place where `yield' was called in the coroutine, and return the result.
+          (defMethod length ((seq List))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        length
+      </h3>
+      <ul>
+        <li>
+          (defMethod length ((seq Null))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        length
+      </h3>
+      <ul>
+        <li>
+          (defMethod length ((seq String))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        elt
+      </h3>
+      <ul>
+        <li>
+          Return the SEQUENCE element at the specified INDEX.
           <br/>
             &nbsp;
         </li>
         <li>
-          (resume continuation . forms)
+          (elt sequence index)
         </li>
         <li>
-          (type macro)
+          (type generic)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        elt
+      </h3>
+      <ul>
+        <li>
+          (defMethod elt ((seq List) index)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        elt
+      </h3>
+      <ul>
+        <li>
+          (defMethod elt ((seq String) index)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        subSeq
+      </h3>
+      <ul>
+        <li>
+          Create a sequence that is a copy of the subsequence of the SEQUENCE bounded by START and optional END.
+          <br/>
+            If END is not supplied, the subsequence stretches until the end of the sequence.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (subSeq sequence start . end)
+        </li>
+        <li>
+          (type generic)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        subSeq
+      </h3>
+      <ul>
+        <li>
+          (defMethod subSeq ((seq List) start . end)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        subSeq
+      </h3>
+      <ul>
+        <li>
+          (defMethod subSeq ((seq Null) start . end)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        subSeq
+      </h3>
+      <ul>
+        <li>
+          (defMethod subSeq ((seq String) start . end)
         </li>
       </ul>
     </div>

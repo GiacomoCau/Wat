@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      47. Auto Increment/Decrement and Assignement Operators
+      47. Fibers
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,68 +23,59 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      47. Auto Increment/Decrement and Assignement Operators
+      47. Fibers
     </h2>
+    <ul>
+      <li>
+        The following implementation of fibers follows the one at URL `http://okmij.org/ftp/continuations/implementations.html#dget-wind'
+      </li>
+      <li>
+        We're calling them fibers instead of coroutines so as to not conflict with the built-in coroutine operators.
+      </li>
+      <li>
+        We use it for testing that built-in operators properly suspend and resume.
+      </li>
+    </ul>
     <div>
       <h3>
-        ++
+        fiberPrompt
       </h3>
       <ul>
         <li>
-          Return the incremented value of Number, Box and Obj.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (++ number)
-        </li>
-        <li>
-          (++ box)
-        </li>
-        <li>
-          (++ obj field)
-        </li>
-        <li>
-          (type fexpr)
+          The prompt used for delimiting fibers.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        --
+        YieldRecord
       </h3>
       <ul>
         <li>
-          Return the decrenented value of Number, Box and Obj.
+          Instances of this class are yielded.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (-- number)
-        </li>
-        <li>
-          (-- box)
-        </li>
-        <li>
-          (-- obj field)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (extends Obj)
+          <br/>
+            (type class)
+          <br/>
+            (slots (value continuation))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        assignOp
+        makeYieldRecord
       </h3>
       <ul>
         <li>
-          Return a fexpr which returns the value assigned to Box, Obj and Object after applying the OPERATOR.
+          Create a new yield record with the given yielded VALUE and resume CONTINUATION.
           <br/>
             &nbsp;
         </li>
         <li>
-          (assignOp operator)
+          (makeYieldRecord value continuation)
         </li>
         <li>
           (type function)
@@ -93,31 +84,85 @@
     </div>
     <div>
       <h3>
-        $=
+        fiberYield
       </h3>
       <ul>
         <li>
-          (def $= (assignOp %$))
+          Yield a optional VALUE (which defaults to #inert).
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (fiberYield . value)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        +=
+        fiberResume
       </h3>
       <ul>
         <li>
-          (def += (assignOp %+))
+          Resume a suspended fiber YIELD-RECORD with an optional VALUE (which defaults to #inert).
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (fiberResume yieldRecord . value)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        -=
+        fiber
       </h3>
       <ul>
         <li>
-          (def -= (assignOp %-))
+          Evaluate the forms expressions as a fiber.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (fiber . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        runFiber
+      </h3>
+      <ul>
+        <li>
+          Get all values yielded by a fiber, and its final result, and collect them in a list.
+          <br/>
+            Uses the optional list of values to sent to the fiber with `fiberResume'.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (runFiber thunk . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        runFiberWithValues
+      </h3>
+      <ul>
+        <li>
+          (defMacro (runFiberWithValues f args) (list 'apply** 'runFiber f args))
         </li>
       </ul>
     </div>

@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      39. Generic Functions
+      39. Classes
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,49 +23,51 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      39. Generic Functions
+      39. Classes
     </h2>
     <div>
       <h3>
-        defGeneric
+        findClass
       </h3>
       <ul>
         <li>
-          Define a new generic function with the given NAME.
-          <br/>
-            RECEIVER-NAME, PARAMETERS, and PROPERTIES are currently ignored.
+          Look up a class based on its NAME symbol (evaluated) in the given ENVIRONMENT.
           <br/>
             &nbsp;
         </li>
         <li>
-          (defGeneric name receiverName . parameters)
+          (findClass name environment)
         </li>
         <li>
-          (defGeneric (name receiverName) . parameters)
-        </li>
-        <li>
-          (type fexpr)
+          (type function)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        defMethod
+        defClass
       </h3>
       <ul>
         <li>
-          Define a new method for the generic function NAME specialized for CLASS.
+          Define a new `ObjClass' with the given NAME, optional SUPERCLASS, and ATTRIBUTES.
+          <br/>
+            The SUPERCLASS defaults to `Obj'.
+          <br/>
+            The ATTRIBUTES and PROPERTIES are currently ignored.
           <br/>
             &nbsp;
         </li>
         <li>
-          (defMethod ((name (receiverName class) . parameters) . forms))
-        </li>
-        <li>
-          (defMethod (name ((receiverName class) . parameters) . forms))
+          (defClass superclass attributes . properties)
         </li>
         <li>
           (type fexpr)
+        </li>
+        <li>
+          (syntax superclass (or () (symbol)))
+        </li>
+        <li>
+          (syntax attributes (symbol . attributes))
         </li>
       </ul>
     </div>

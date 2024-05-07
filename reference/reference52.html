@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      52. Configuration
+    </title>
+    <meta charset="UTF-8"/>
+    <style>
+      body { font-family: consolas; }
+      ul { list-style-type: none; }
+      a { text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <br/>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference51.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference53.html">
+      <input type="button" value="&gt;"/>
+    </a>
+    <h2>
+      52. Configuration
+    </h2>
+    <div>
+      <h3>
+        ctApv
+      </h3>
+      <ul>
+        <li>
+          Return #true if catch and throw are applicative, #false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (ctApv)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        intStr
+      </h3>
+      <ul>
+        <li>
+          Return #true if the string are interned, #false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (intStr)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        doTco
+      </h3>
+      <ul>
+        <li>
+          Return or update the use of the tail call optimiaztion.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (doTco . boolean)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        doAsrt
+      </h3>
+      <ul>
+        <li>
+          Return or update the execution of the assert.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (doAsrt . boolean)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        prStk
+      </h3>
+      <ul>
+        <li>
+          Return or update the print of the stack for uncatched errors.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (prStk . boolean)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        prMap
+      </h3>
+      <ul>
+        <li>
+          Return or update the print of the attributes for the uncatched errors.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (prMap . boolean)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        prWrn
+      </h3>
+      <ul>
+        <li>
+          Return or update the warning print.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (prWrn . boolean)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        aQuote
+      </h3>
+      <ul>
+        <li>
+          Return or update the auto quote propertiy for the list without combinable car. 
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (aQuote . boolean)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        hdlAny
+      </h3>
+      <ul>
+        <li>
+          Return or update the use of an arbitraty value for the catch handler.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (hdlAny . boolean)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        prInert
+      </h3>
+      <ul>
+        <li>
+          Return or update the print of #inert value in the repl
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (prInert . boolean)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        typeT
+      </h3>
+      <ul>
+        <li>
+          Return or update the type of #true.
+          <br/>
+            &nbsp;
+          <br/>
+            - 0: #true
+          <br/>
+            - 1: !#false
+          <br/>
+            - 2: !(or #false #null)
+          <br/>
+            - 3: !(or #false #null #inert)
+          <br/>
+            - 4: !(or #false #null #inert 0)
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (typeT . integer)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        bndRes
+      </h3>
+      <ul>
+        <li>
+          Return or update the type of the bind result.
+          <br/>
+            &nbsp;
+          <br/>
+            - 0: #inert
+          <br/>
+            - 1: the value used to set the last binding
+          <br/>
+            - 2: the previous value of the last binding
+          <br/>
+            - 3: the container obj or environment
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (bndRes . integer)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        prTrc
+      </h3>
+      <ul>
+        <li>
+          Return or update the type of the trace.
+          <br/>
+            &nbsp;
+          <br/>
+            - 0: none
+          <br/>
+            - 1: files loaded
+          <br/>
+            - 2: root evaluations
+          <br/>
+            - 3: all deep evaluations
+          <br/>
+            - 4: values returned
+          <br/>
+            - 5: applications executed
+          <br/>
+            - 6: bind/lookup symbols
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (prTrc . integer)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        prEnv
+      </h3>
+      <ul>
+        <li>
+          Return or update the max number of attributes for printable environments.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (prEnv . integer)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        boxDft
+      </h3>
+      <ul>
+        <li>
+          Return or update the VALUE to use as default value for the Box.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (boxDft . value)
+        </li>
+      </ul>
+    </div>
+    <br/>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference51.html">
+      <input type="button" value="&lt;"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html">
+      <input type="button" value="^"/>
+    </a>
+    <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference53.html">
+      <input type="button" value="&gt;"/>
+    </a>
+  </body>
+</html>

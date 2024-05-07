@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      49. Apl/J
+      49. Java
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,35 +23,166 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      49. Apl/J
+      49. Java
     </h2>
+    <ul>
+      <li>
+        Classes
+      </li>
+      <li>
+        &nbsp;&nbsp;&amp;canonicalClassName
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        &nbsp;&nbsp;&amp;int
+      </li>
+      <li>
+        &nbsp;&nbsp;&amp;java.lang.Integer
+      </li>
+      <li>
+        &nbsp;&nbsp;&amp;Wat.Vm$Cons
+      </li>
+      <li>
+        &nbsp;&nbsp;&amp;Object[]
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        Costructors
+      </li>
+      <li>
+        &nbsp;&nbsp;(@new class . arguments)
+      </li>
+      <li>
+        &nbsp;&nbsp;(@new class containerInstance . arguments)
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        &nbsp;&nbsp;(@new &amp;java.lang.String &quot;abc&quot;)
+      </li>
+      <li>
+        &nbsp;&nbsp;(@new &amp;Wat.Vm$Cons vm 1 2)
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        Fields
+      </li>
+      <li>
+        &nbsp;&nbsp;(.fieldName object)
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        &nbsp;&nbsp;(.MAX_VALUE &amp;java.lang.Integer)
+      </li>
+      <li>
+        &nbsp;&nbsp;(.car cons)
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        Methods
+      </li>
+      <li>
+        &nbsp;&nbsp;(@methodName object . arguments)
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        &nbsp;&nbsp;(@toString cons)
+      </li>
+      <li>
+        &nbsp;&nbsp;(@doubleValue 10)
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        &nbsp;&nbsp;(@getField &amp;java.lang.Integer &quot;MAX_VALUE&quot;)
+      </li>
+      <li>
+        &nbsp;&nbsp;(@getDeclaredField &amp;Wat.Vm$Cons &quot;car&quot;)
+      </li>
+      <li>
+        &nbsp;&nbsp;(@getConstructor &amp;java.lang.Integer &amp;java.lang.String)
+      </li>
+      <li>
+        &nbsp;&nbsp;(@getMethod &amp;java.lang.Integer &quot;compare&quot; &amp;int &amp;int)
+      </li>
+      <li>
+        &nbsp;&nbsp;(@getConstructor &amp;java.lang.Character &amp;char)
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        Utility
+      </li>
+      <li>
+        &nbsp;&nbsp;(@getField &amp;Wat.Utility &amp;java.lang.Integer &quot;MAX_VALUE&quot;)
+      </li>
+      <li>
+        &nbsp;&nbsp;(@getField &amp;Wat.Utility &amp;Wat.Vm$Cons &quot;car&quot;)
+      </li>
+      <li>
+        &nbsp;&nbsp;(@getExecutable &amp;Wat.Utility &amp;java.lang.Integer &quot;new&quot; &amp;java.lang.String)
+      </li>
+      <li>
+        &nbsp;&nbsp;(@getExecutable &amp;Wat.Utility &amp;java.lang.Integer &quot;compare&quot;)
+      </li>
+      <li>
+        &nbsp;&nbsp;(@getExecutable &amp;Wat.Utility &amp;java.lang.Character &quot;new&quot;)
+      </li>
+    </ul>
     <div>
       <h3>
-        iota
+        close1
       </h3>
       <ul>
         <li>
-          (def\ (iota n) (reverse ((rec\ (iota n) (if (0? n) () (cons n (iota (1- n))))) n)))
+          Single try/resource
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (close1 binding . forms)
+        </li>
+        <li>
+          (syntax binding (name . initForms))
+        </li>
+        <li>
+          (type macro)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        fork
+        close
       </h3>
       <ul>
         <li>
-          (def\ (fork f l r) [_ (f (l _) (r _))])
+          Multiple try/resource
+          <br/>
+            &nbsp;
         </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        hook
-      </h3>
-      <ul>
         <li>
-          (def\ (hook l r) [_ (l _ (r _))])
+          (close bindings . forms)
+        </li>
+        <li>
+          (syntax bindings ((name . initForms) . bindings))
+        </li>
+        <li>
+          (type macro)
         </li>
       </ul>
     </div>

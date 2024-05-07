@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      32. Lists
+      32. Type and Value Checks
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,279 +23,268 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      32. Lists
+      32. Type and Value Checks
     </h2>
+    <ul>
+      <li>
+        Type and value checks are possible with (#! check symbol) wherever there is a Symbol in a definined or parameters tree including all lexical bindings.
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        A `check' can be:
+      </li>
+      <li>
+        - a `value',
+      </li>
+      <li>
+        - the `Any' class,
+      </li>
+      <li>
+        - a `Class',
+      </li>
+      <li>
+        - a `List' with zero, one or two `Integers' followed by zero or more `checks',
+      </li>
+      <li>
+        - a `List' with an `Integer' and the symbol `oo' followed by zero or more `checks',
+      </li>
+      <li>
+        - a `List' with `car' equals `or' followed by two or more `check',
+      </li>
+      <li>
+        - a `List' with `car' equals `and' followed by two or more `check',
+      </li>
+      <li>
+        - a `List' with `car' `Apv' followed by zero o more arguments.
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        When the `check' is:
+      </li>
+      <li>
+        - a `value': the parameter value must be equal to that `value'
+      </li>
+      <li>
+        - the `Any' class : the parameter can be any value
+      </li>
+      <li>
+        - a `Class': the parameter value can be an instance of that `Class' or a class that extends that `Class'
+      </li>
+      <li>
+        - a `List': the parameter value must be a `List' where, in the `check' `List',
+      </li>
+      <li>
+        &nbsp;&nbsp;- the first `Integer' indicates the minimum number of elements, default is `0'
+      </li>
+      <li>
+        &nbsp;&nbsp;- the second `Integer' indicates the maximum number of elements
+      </li>
+      <li>
+        &nbsp;&nbsp;&nbsp;&nbsp;default is the value of the first `Integer' if present, otherwise `oo' for `Integer.maxValue'
+      </li>
+      <li>
+        &nbsp;&nbsp;&nbsp;&nbsp;for the second `Integer' can be also specified the symbol `oo' for `Integer.maxValue'
+      </li>
+      <li>
+        &nbsp;&nbsp;- if the number of `check' arguments in the list is
+      </li>
+      <li>
+        &nbsp;&nbsp;&nbsp;&nbsp;- less than the minimum: parameters values that exceed the minimum can have any value
+      </li>
+      <li>
+        &nbsp;&nbsp;&nbsp;&nbsp;- greater than the minimum: the parameters values exceeding the minimum will be checked cyclically using `check' arguments exceeding the minimum
+      </li>
+      <li>
+        &nbsp;&nbsp;- if the first element of the list is:
+      </li>
+      <li>
+        &nbsp;&nbsp;&nbsp;&nbsp;- `or': the parameter value must match one of the `check' arguments of the `or'
+      </li>
+      <li>
+        &nbsp;&nbsp;&nbsp;&nbsp;- `and': the parameter value must match all the `check' arguments of the `and'
+      </li>
+      <li>
+        &nbsp;&nbsp;&nbsp;&nbsp;- `Apv': applying `Apv' to the cons of the parameter value and the remaining arguments must return #true
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        $(syntax definiendTree (or symbol decomposeTree))
+      </li>
+      <li>
+        $(syntax parametersTree (or #null #ignore symbol decomposeTree))
+      </li>
+      <li>
+        $(syntax decomposeTree (parametersTree . decomposeTree))
+      </li>
+      <li>
+        $(syntax symbol (or Symbol (#! check Symbol)))
+      </li>
+      <li>
+        $(syntax check Any)
+      </li>
+      <li>
+        $(syntax check Class)
+      </li>
+      <li>
+        $(syntax check checks)
+      </li>
+      <li>
+        $(syntax checks (check . checks))
+      </li>
+      <li>
+        $(syntax check (min . checks))
+      </li>
+      <li>
+        $(syntax check (min max . checks))
+      </li>
+      <li>
+        $(syntax check (min oo . checks))
+      </li>
+      <li>
+        $(syntax check (or . checks))
+      </li>
+      <li>
+        $(syntax check (and . checks))
+      </li>
+      <li>
+        $(syntax check (Apv . arguments))
+      </li>
+      <li>
+        $(syntax check value)
+      </li>
+      <li>
+        $(syntax arguments (value . arguments))
+      </li>
+    </ul>
     <div>
       <h3>
-        any?
+        assert#t
       </h3>
       <ul>
         <li>
-          Return true if the apply of the FUNCTION to every first elements of the LISTS return true, false otherwise.
+          Return #inert if BOOLEAN is #true, signals an error otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (any? function . lists).
+          (assert#t boolean)
         </li>
         <li>
-          (type function).
+          (type function)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        any*?
+        the
       </h3>
       <ul>
         <li>
-          Return true if the apply of the FUNCTION to every element of VALUES return true, false otherwise.
+          Return OBJECT if OBJECT is an instance of the CLASS, signals an error otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (any*? function . values).
+          (the class object)
         </li>
         <li>
-          (type function).
+          (type function)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        all?
+        check
       </h3>
       <ul>
         <li>
-          Return true if the apply of the FUNCTION to one first elements of the LISTS return true, false otherwise.
+          Return the lenght of OBJECT if match CHECK, signals an error otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (all? function . lists).
+          (check object check)
         </li>
         <li>
-          (type function).
+          (type fexpr)
+        </li>
+        <li>
+          (derivation ((\ ((#! check arg)) (len arg)) object) 
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        all*?
+        check*
       </h3>
       <ul>
         <li>
-          Return true if the apply of the FUNCTION to one element of VALUES return true, false otherwise.
+          Returns the length of LIST if the elements of LIST match the corresponding CHECKS, signals an error otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (all*? function . values).
-        </li>
-        <li>
-          (type function).
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        forEach#
-      </h3>
-      <ul>
-        <li>
-          Return #inert after applies the FUNCTION to every first elements of the LISTS.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (forEach# function . lists).
-        </li>
-        <li>
-          (type function).
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        forEach
-      </h3>
-      <ul>
-        <li>
-          Return LISTS after applies the FUNCTION to every first elements of the LISTS.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (forEach function . lists).
-        </li>
-        <li>
-          (type function).
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        maplist
-      </h3>
-      <ul>
-        <li>
-          Return the list of the results of apply the FUNCTION, which must return a list, to every first elements of the LISTS.
-          <br/>
-            (Note: this currently uses `append', but might be changed to use `nconc' in the future, like Common Lisp.)
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (maplist function . lists).
-        </li>
-        <li>
-          (type function).
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        filter
-      </h3>
-      <ul>
-        <li>
-          Returns the list of the first elements of the LISTS for which the application of the FUNCTION returns true.
-          <br/>
-            (Note: this currently uses `append', but might be changed to use `nconc' in the future, like Common Lisp.)
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (filter function . lists).
-        </li>
-        <li>
-          (type function).
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        remove
-      </h3>
-      <ul>
-        <li>
-          Returns the list of the first elements of the LIST without those for which the application of the FUNCTION returns true.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (remove function . lists).
-        </li>
-        <li>
-          (type function).
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        reduceL
-      </h3>
-      <ul>
-        <li>
-          Use the FUNCTION to combine the elements of the LIST from first element.
-          <br/>
-            The INITIAL-VALUE is logically placed before the first element of the LIST.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (reduceL function  init . lists).
-        </li>
-        <li>
-          (type function).
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        reduce
-      </h3>
-      <ul>
-        <li>
-          Alias of reduceL.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        reduceR
-      </h3>
-      <ul>
-        <li>
-          Use the FUNCTION to combine the elements of the LIST from last element.
-          <br/>
-            The INITIAL-VALUE is logically placed before the last element of the LIST.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (reduceR function  init . list).
-        </li>
-        <li>
-          (type function).
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        foldL
-      </h3>
-      <ul>
-        <li>
-          Use the FUNCTION to combine the elements of the LIST from first element.
-          <br/>
-            The INITIAL-VALUE is logically placed after the last element of the LIST.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (foldL function  init . list).
-        </li>
-        <li>
-          (type function).
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        foldR
-      </h3>
-      <ul>
-        <li>
-          Use the FUNCTION to combine the elements of the LIST from last element.
-          <br/>
-            The INITIAL-VALUE is logically placed after the last element of the LIST.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (foldR function  init . list).
-        </li>
-        <li>
-          (type function).
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        doList
-      </h3>
-      <ul>
-        <li>
-          Cf. Common Lisp's DOLIST.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (doList symbol list . forms)
+          (check* list . checks)
         </li>
         <li>
           (type macro)
+        </li>
+        <li>
+          (derivation ((\ (#! checks args) (len args)) . list) 
+        </li>
+        <li>
+          (derivation (check list checks)) 
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        check?
+      </h3>
+      <ul>
+        <li>
+          Return #true if OBJECT match CHECK, #false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (check? object check)
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+        <li>
+          (derivation wat (catchWth #f (apply check args env) #t)) 
+        </li>
+        <li>
+          (derivation lispx (catch (handlerBind ( (Error (_ (throw #f))) ) (apply check args env) #t))) 
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        the+
+      </h3>
+      <ul>
+        <li>
+          Return OBJECT if OBJECT match CHK, signals an error otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (the+ chk object)
+        </li>
+        <li>
+          (type macro)
+        </li>
+        <li>
+          (derivation (let1 (object object) (check object chk) object)) 
         </li>
       </ul>
     </div>

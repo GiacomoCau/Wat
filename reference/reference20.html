@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      20. Classes
+      20. Delimited-Control Operators
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,112 +23,109 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      20. Classes
+      20. Delimited-Control Operators
     </h2>
+    <ul>
+      <li>
+        These operators follow the API put forth in the delimcc library at URL `http://okmij.org/ftp/continuations/implementations.html'.
+      </li>
+    </ul>
     <div>
       <h3>
-        className
+        takeSubcont
       </h3>
       <ul>
         <li>
-          Return the name symbol of the CLASS.
+          Abort outwards to the PROMPT.
+          <br/>
+            When the prompt is reached, evaluate FORMS as an implicit `begin' with SYMBOL bound to the captured continuation (which does not include the prompt).
           <br/>
             &nbsp;
         </li>
         <li>
-          (className class)
+          (takeSubcont prompt symbol . forms)
         </li>
         <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (symbol (@getSimpleName class))))
+          (type fexpr)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        classOf
+        pushPrompt
       </h3>
       <ul>
         <li>
-          Return the class of the OBJECT.
+          Push the PROMPT and evaluate FORMS as an implicit `begin' inside the PROMPT.
+          <br/>
+            This delimits the continuation.
           <br/>
             &nbsp;
         </li>
         <li>
-          (classOf object)
+          (pushPrompt prompt . forms)
         </li>
         <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (if (null? object) #null (@getClass object)))
+          (type fexpr)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        instanceOf?
+        pushDelimSubcont
       </h3>
       <ul>
         <li>
-          Return true if OBJECT is instaceof CLASS.
+          Push the PROMPT and compose the previously captured CONTINUATION inside it
+          <br/>
+            before evaluated FORMS as an implicit `begin' inside the new continuation.
           <br/>
             &nbsp;
         </li>
         <li>
-          (instanceOf? object class)
+          (pushDelimSubcont prompt continuation . forms)
         </li>
         <li>
-          (type function)
+          (type fexpr)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        subClass?
+        pushSubcont
       </h3>
       <ul>
         <li>
-          Return true if the CLASS is a subclass of the SUPERCLASS, false otherwise.
-          <br/>
-            A class is considered a subclass of itself.
+          We don't have `pushSubcont' but we can emulate it with a `pushDelimSubcont' that pushes an #ignore prompt.
           <br/>
             &nbsp;
         </li>
         <li>
-          (subClass? class superclass)
+          (pushSubcont continuation . forms)
         </li>
         <li>
-          (type function)
+          (type macro)
         </li>
         <li>
-          (derivation (@isAssignableFrom superClass class)))
+          (derivation (pushDelimSubcont #ignore continuation . forms))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        type?
+        pushSubcontBarrier
       </h3>
       <ul>
         <li>
-          Return true if the OBJECT is an instance of the CLASS, false otherwise.
+          Evaluate FORMS as an implicit `begin' after push a continuation barrier that prevent FORMS from capturing any continuations to the outside 
           <br/>
             &nbsp;
         </li>
         <li>
-          (type? object class)
+          (pushSubcontBarrier . forms)
         </li>
         <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (if (null? class) (null? object) (null? object) #f (subClass? (classOf object) class)))
-        </li>
-        <li>
-          (derivation (if (null? class) (null? object) (instanceOf object class)))
+          (type fexpr)
         </li>
       </ul>
     </div>

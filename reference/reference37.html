@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      37. Dynamic Bindings
+      37. Syntetic Expressions
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,190 +23,40 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      37. Dynamic Bindings
+      37. Syntetic Expressions
     </h2>
     <ul>
       <li>
-        DVar estends Box
+        Idea stolen from Anarki https://github.com/arclanguage/anarki
       </li>
     </ul>
     <div>
       <h3>
-        newDVar
+        %´
       </h3>
       <ul>
         <li>
-          Define a new dynamic variable with optional default VALUE.
+          ´a;b -&gt; (compose a b)
           <br/>
-            &nbsp;
-        </li>
-        <li>
-          (newDVar . value)
-        </li>
-        <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        dval
-      </h3>
-      <ul>
-        <li>
-          Return the current value of the DYNAMIC-VARIABLE.
+            ´a;b;c -&gt; (compose* a b c)
           <br/>
-            &nbsp;
-        </li>
-        <li>
-          (dval dvar)
-        </li>
-        <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        ddef
-      </h3>
-      <ul>
-        <li>
-          Define a new or update an existing dynamic variable with the given NAME and optional default VALUE.
+            ´!a -&gt; (compose ! a)
           <br/>
-            &nbsp;
-        </li>
-        <li>
-          (ddef name . value)
-        </li>
-        <li>
-          (type macro)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        ddef*
-      </h3>
-      <ul>
-        <li>
-          Define a new or update an existing dynamic variable with the given NAMES and optional default VALUES.
+            ´a…b -&gt; (a b)
           <br/>
-            &nbsp;
-        </li>
-        <li>
-          (ddef* (names) . values)
-        </li>
-        <li>
-          (type macro)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        dget
-      </h3>
-      <ul>
-        <li>
-          Return the current value of the DYNAMIC-VARIABLE.
+            ´a…'b -&gt; (a 'b)
           <br/>
-            &nbsp;
-        </li>
-        <li>
-          (dget dvar)
-        </li>
-        <li>
-          (type macro)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        dset
-      </h3>
-      <ul>
-        <li>
-          Set the current value of the DYNAMIC-VARIABLE.
+            ´a…'b…c -&gt; (a 'b c)
           <br/>
-            &nbsp;
-        </li>
-        <li>
-          (dset dvar value)
-        </li>
-        <li>
-          (type macro)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        dlet
-      </h3>
-      <ul>
-        <li>
-          With the dynamic variables specified by NAMES temporarily bound to new VALUES, evaluate the FORMS as an implicit `begin'.
+            ´a,b -&gt; (peval a b)
           <br/>
-            Bindings are established parallely as per `let'.
+            ´a,'b,c -&gt; (peval* a 'b c)
           <br/>
-            &nbsp;
-        </li>
-        <li>
-          (dlet bindings . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax bindings ((name value) . bindings))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        progv
-      </h3>
-      <ul>
-        <li>
-          With the dynamic variables specified by NAMES temporarily bound to new VALUES, evaluate the FORMS as an implicit `begin'.
+            ´a,_,'b,c -&gt; (\ (_) (a _ 'b c))
           <br/>
-            The NAMES and VALUES lists must have the same length.
+            ´dd,_c,1,_b,&quot;a&quot;,_a,_a,'c,_,:ff,_* -&gt; (\ (_ _a _b _c . _*) (dd _c 1 _b &quot;a&quot; _a _a 'c _ :ff _*))
           <br/>
-            &nbsp;
-        </li>
-        <li>
-          (progv names values . forms)
-        </li>
-        <li>
-          (syntax names (name . names))
-        </li>
-        <li>
-          (syntax values (value . values))
-        </li>
-        <li>
-          (type macro)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        dlet*
-      </h3>
-      <ul>
-        <li>
-          With the dynamic variables specified by NAMES temporarily bound to new VALUES, evaluate the FORMS as an implicit `begin'.
-          <br/>
-            Bindings are established serially as per `let*'.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (dlet* bindings . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax bindings ((name value) . bindings))
+            ´(dd _c 1 _b &quot;a&quot; _a _a 'c _ :ff _*) -&gt; (\ (_ _a _b _c . _*) (dd _c 1 _b &quot;a&quot; _a _a 'c _ :ff _*))
         </li>
       </ul>
     </div>

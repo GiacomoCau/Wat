@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      25. Quasiquote
+      25. Simple Controls
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,26 +23,181 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      25. Quasiquote
+      25. Simple Controls
     </h2>
-    <ul>
-      <li>
-        Idea from Alf Petrofsky http://scheme-reports.org/mail/scheme-reports/msg00800.html
-      </li>
-    </ul>
     <div>
       <h3>
-        %`
+        then else
       </h3>
       <ul>
         <li>
-          (let ((a 1) (b 2) (c '(3 4))) `(,@c ,a (,a) (,@c) b ,@c)) -&gt; (3 4 1 (1) (3 4) b 3 4)
+          Alias of begin.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        prog1
+      </h3>
+      <ul>
+        <li>
+          Evaluate FORM and return the result after evaluate FORMS as an implicit `begin'.
           <br/>
-            (let1 (x '(a b c)) ``(,,x ,@,x ,,@x ,@,@x)) -&gt; `(,(a b c) ,@(a b c) ,a ,b ,c ,@a ,@b ,@c)
+            &nbsp;
+        </li>
+        <li>
+          (prog1 form . forms)
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        when
+      </h3>
+      <ul>
+        <li>
+          If TEST yields #true evaluate FORMS as an implicit `begin', #inert otherwise.
           <br/>
-            ``(,,@'() ,@,@(list)) -&gt; `()
+            &nbsp;
+        </li>
+        <li>
+          (when test . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        unless
+      </h3>
+      <ul>
+        <li>
+          If TEST yields #false evaluate FORMS as an implicit `begin', #inert otherwise.
           <br/>
-            `````(a ,(b c ,@,,@,@'(a b c))) -&gt; ````(a ,(b c ,@,,@a ,@,,@b ,@,,@c))
+            &nbsp;
+        </li>
+        <li>
+          (unless test . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        &amp;&amp;
+      </h3>
+      <ul>
+        <li>
+          Return #true if all OPERANDS evaluate to #true, #false otherwise.
+          <br/>
+            If an operand evaluates to #false, later operands are not evaluated.
+          <br/>
+            If there are no operands, return #false.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (&amp;&amp; . operands)
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        and
+      </h3>
+      <ul>
+        <li>
+          Alias of &amp;&amp;.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        ||
+      </h3>
+      <ul>
+        <li>
+          Return #true if one of the OPERANDS evaluates to #true, #false otherwise.
+          <br/>
+            If an operand evaluates to #true, later operands are not evaluated.
+          <br/>
+            If there are no operands, return #true.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (|| . operands)
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        or
+      </h3>
+      <ul>
+        <li>
+          Alias of ||.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        &amp;&amp;f
+      </h3>
+      <ul>
+        <li>
+          Return a function the return #true if all FUNCTIONS evaluate to #true when applied to the arguments, #false otherwise.
+          <br/>
+            If an function evaluates to #false, later FUNCTIONS are not evaluated.
+          <br/>
+            If there are no FUNCTIONS, when applied return #false.
+          <br/>
+            Idea stolen from Anarki https://github.com/arclanguage/anarki
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (&amp;&amp;f . functions)
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        ||f
+      </h3>
+      <ul>
+        <li>
+          Return a function the return #true if one FUNCTIONS evaluate to #true when applied to the arguments, #false otherwise.
+          <br/>
+            If an function evaluates to #true, later FUNCTIONS are not evaluated.
+          <br/>
+            If there are no FUNCTIONS, when applied return #true.
+          <br/>
+            Idea stolen from Anarki https://github.com/arclanguage/anarki
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (||f . functions)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>

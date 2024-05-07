@@ -144,7 +144,7 @@
 
   (defTest makeTypeError.1
     (let ((e (makeTypeError "foo" 'Number)))
-      (assert#t (matchObj*? e Error :type 'type :datum "foo" :expected 'Number))
+      (assert#t (matchType*? e Error :type 'type :datum "foo" :expected 'Number))
       (assert#t (type? e Error))
       (assert#t (type? e Condition))
       (assert#t (eq? "foo" (getSlot e 'datum)))

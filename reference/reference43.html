@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      43. Greatest Common Divisor e Lowest Common Multiple
+      43. Thetics &amp; Lytics
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,20 +23,25 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      43. Greatest Common Divisor e Lowest Common Multiple
+      43. Thetics &amp; Lytics
     </h2>
+    <ul>
+      <li>
+        The terms thetic (for + and *) and lytic (for - and /) are due to Hankel.
+      </li>
+    </ul>
     <div>
       <h3>
-        gcd
+        theticOp
       </h3>
       <ul>
         <li>
-          Return the greatest common divisor of two or more integer arguments.
+          Utility to create an n-ary thetic operator from a BINARY-OPERATOR and INITIAL-VALUE.
           <br/>
             &nbsp;
         </li>
         <li>
-          (gcd integer integer . integers)
+          (theticOp binOp unit)
         </li>
         <li>
           (type function)
@@ -45,16 +50,79 @@
     </div>
     <div>
       <h3>
-        abs
+        +
       </h3>
       <ul>
         <li>
-          Return the abs value of one integer argument.
+          Return the sum of the ARGUMENTS, or 0 if no arguments are supplied.
           <br/>
             &nbsp;
         </li>
         <li>
-          (abs integer)
+          (+ arguments)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation (tethicOp + 0))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        *
+      </h3>
+      <ul>
+        <li>
+          Return the product of the ARGUMENTS, or 1 if no arguments are supplied.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (* arguments)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation (tethicOp * 1))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        $
+      </h3>
+      <ul>
+        <li>
+          Return the join of the ARGUMENTS, or &quot;&quot; if no arguments are supplied.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          ($ arguments)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation (tethicOp $ &quot;&quot;))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        lyticOp
+      </h3>
+      <ul>
+        <li>
+          Utility to create an n-ary lytic operator from a BINARY-OPERATOR and INITIAL-VALUE.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (lyticOp binOp unit)
         </li>
         <li>
           (type function)
@@ -63,19 +131,47 @@
     </div>
     <div>
       <h3>
-        lcm
+        -
       </h3>
       <ul>
         <li>
-          Return the lowest common multiple of two or more integer arguments
+          If only one number is supplied in the ARGUMENTS, return the negation of that number.
+          <br/>
+            If more than one number is supplied, subtract all of the later ones from the first one and return the result.
           <br/>
             &nbsp;
         </li>
         <li>
-          (lcm integer integer . integers)
+          (- arguments)
         </li>
         <li>
           (type function)
+        </li>
+        <li>
+          (derivation (lithicOp - 0))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        /
+      </h3>
+      <ul>
+        <li>
+          If only one number is supplied in the ARGUMENTS, return the reciprocal of that number.
+          <br/>
+            If more than one number is supplied, divide the first one by all of the later ones and return the result.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (/ arguments)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation (lithicOp / 1))
         </li>
       </ul>
     </div>

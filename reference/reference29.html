@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      29. Sort
+      29. OptValue Member Member? !Member? OptKey Assoc Member*?
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,20 +23,136 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      29. Sort
+      29. OptValue Member Member? !Member? OptKey Assoc Member*?
     </h2>
     <div>
       <h3>
-        sort
+        optValue
       </h3>
       <ul>
         <li>
-          Return the sorted LIST, getting the key with the :key function (defaults to 'idf') and up or down with key :up or :dn (defaults to :up).
+          Search for the KEYWORD in the property LIST (a list of alternating keywords and values)
+          <br/>
+            and return the next value as an option if found it, #null otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (sort list . (#! 0 3 (or (2 :key function) (1 (or :up :dn)) )))
+          (optValue keyword list)
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        member
+      </h3>
+      <ul>
+        <li>
+          Search for ITEM in the LIST according to the CMP predicate (defaults to `==').
+          <br/>
+            Return, if found it, the tail of the list starting with ITEM after apply the GET function (defaults to 'idf'), #null otherwise.
+          <br/>
+            The KEY function is applied to each list element before comparison (defaults to `idf').
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (member item list &amp;Value cmp key ret))
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        member?
+      </h3>
+      <ul>
+        <li>
+          Return #true if the ITEM is in the LIST, #false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (member? (item list &amp;key cmp key ret))
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        !member?
+      </h3>
+      <ul>
+        <li>
+          Return #false if the ITEM is in the LIST, #true otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (!member? (item list &amp;key cmp key ret))
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        optKey
+      </h3>
+      <ul>
+        <li>
+          Return ITEM if the ITEM is in the LIST, #true otherwise.
+          <br/>
+            ITEM can be an sigle element or a list of element
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (optKey (item list))
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        assoc
+      </h3>
+      <ul>
+        <li>
+          Return the `car' of a assoc LIST (a list of lists of keywords and values) is ITEM is the `caar' if == to ITEM, #null otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (assoc (item list))
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        member*?
+      </h3>
+      <ul>
+        <li>
+          Return #true if the ITEM is in the LIST, #false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (member*? (item . list))
         </li>
         <li>
           (type function)

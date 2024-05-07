@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      34. Simple Sets
+      34. Lists
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,75 +23,279 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      34. Simple Sets
+      34. Lists
     </h2>
     <div>
       <h3>
-        set?
+        any?
       </h3>
       <ul>
         <li>
-          Return true if all element of LIST are distinct, false otherwise.
+          Return #true if the apply of the FUNCTION to every first elements of the LISTS return #true, #false otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (set? list)
+          (any? function . lists).
         </li>
         <li>
-          (type function)
+          (type function).
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        set+
+        any*?
       </h3>
       <ul>
         <li>
-          Return a set, with an VALUE more if VALUE not is in the SET.
+          Return #true if the apply of the FUNCTION to every element of VALUES return #true, #false otherwise.
+          <br/>
+            &nbsp;
         </li>
         <li>
-          (set+ set value)
+          (any*? function . values).
         </li>
         <li>
-          (type function)
+          (type function).
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        defSet+
+        all?
       </h3>
       <ul>
         <li>
-          Return the set after update the set of SYMBOL with an VALUE more if VALUE not is in the set.
+          Return #true if the apply of the FUNCTION to one first elements of the LISTS return #true, #false otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (defSet+ symbol value)
+          (all? function . lists).
         </li>
         <li>
-          (type function)
+          (type function).
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        -&gt;set
+        all*?
       </h3>
       <ul>
         <li>
-          Return the LIST without duplicate elements.
+          Return #true if the apply of the FUNCTION to one element of VALUES return #true, #false otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (-&gt;set list)
+          (all*? function . values).
         </li>
         <li>
-          (type function)
+          (type function).
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        forEach#
+      </h3>
+      <ul>
+        <li>
+          Return #inert after applies the FUNCTION to every first elements of the LISTS.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (forEach# function . lists).
+        </li>
+        <li>
+          (type function).
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        forEach
+      </h3>
+      <ul>
+        <li>
+          Return LISTS after applies the FUNCTION to every first elements of the LISTS.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (forEach function . lists).
+        </li>
+        <li>
+          (type function).
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        maplist
+      </h3>
+      <ul>
+        <li>
+          Return the list of the results of apply the FUNCTION, which must return a list, to every first elements of the LISTS.
+          <br/>
+            (Note: this currently uses `append', but might be changed to use `nconc' in the future, like Common Lisp.)
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (maplist function . lists).
+        </li>
+        <li>
+          (type function).
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        filter
+      </h3>
+      <ul>
+        <li>
+          Returns the list of the first elements of the LISTS for which the application of the FUNCTION returns #true.
+          <br/>
+            (Note: this currently uses `append', but might be changed to use `nconc' in the future, like Common Lisp.)
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (filter function . lists).
+        </li>
+        <li>
+          (type function).
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        remove
+      </h3>
+      <ul>
+        <li>
+          Returns the list of the first elements of the LIST without those for which the application of the FUNCTION returns #true.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (remove function . lists).
+        </li>
+        <li>
+          (type function).
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        reduceL
+      </h3>
+      <ul>
+        <li>
+          Use the FUNCTION to combine the elements of the LIST from first element.
+          <br/>
+            The INITIAL-VALUE is logically placed before the first element of the LIST.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (reduceL function  init . lists).
+        </li>
+        <li>
+          (type function).
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        reduce
+      </h3>
+      <ul>
+        <li>
+          Alias of reduceL.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        reduceR
+      </h3>
+      <ul>
+        <li>
+          Use the FUNCTION to combine the elements of the LIST from last element.
+          <br/>
+            The INITIAL-VALUE is logically placed before the last element of the LIST.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (reduceR function  init . list).
+        </li>
+        <li>
+          (type function).
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        foldL
+      </h3>
+      <ul>
+        <li>
+          Use the FUNCTION to combine the elements of the LIST from first element.
+          <br/>
+            The INITIAL-VALUE is logically placed after the last element of the LIST.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (foldL function  init . list).
+        </li>
+        <li>
+          (type function).
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        foldR
+      </h3>
+      <ul>
+        <li>
+          Use the FUNCTION to combine the elements of the LIST from last element.
+          <br/>
+            The INITIAL-VALUE is logically placed after the last element of the LIST.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (foldR function  init . list).
+        </li>
+        <li>
+          (type function).
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        doList
+      </h3>
+      <ul>
+        <li>
+          Cf. Common Lisp's DOLIST.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (doList symbol list . forms)
+        </li>
+        <li>
+          (type macro)
         </li>
       </ul>
     </div>

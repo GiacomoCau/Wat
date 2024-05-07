@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      42. Thetics &amp; Lytics
+      42. Relational Operators
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,25 +23,28 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      42. Thetics &amp; Lytics
+      42. Relational Operators
     </h2>
     <ul>
       <li>
-        The terms thetic (for + and *) and lytic (for - and /) are due to Hankel.
+        Note that unlike in Common Lisp, these operators currently require at least two arguments.
+      </li>
+      <li>
+        This will be improved in the future.
       </li>
     </ul>
     <div>
       <h3>
-        theticOp
+        relationalOp
       </h3>
       <ul>
         <li>
-          Utility to create an n-ary thetic operator from a BINARY-OPERATOR and INITIAL-VALUE.
+          Utility to create an n-ary relational operator from a BINARY-OPERATOR.
           <br/>
             &nbsp;
         </li>
         <li>
-          (theticOp binOp unit)
+          (relationalOp binop)
         </li>
         <li>
           (type function)
@@ -50,79 +53,142 @@
     </div>
     <div>
       <h3>
-        +
+        &lt;
       </h3>
       <ul>
         <li>
-          Return the sum of the ARGUMENTS, or 0 if no arguments are supplied.
+          Return #true if the ARGUMENTS are in monotonically increasing order, #false otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (+ arguments)
+          (&lt; arguments)
         </li>
         <li>
           (type function)
         </li>
         <li>
-          (derivation (tethicOp + 0))
+          (derivation (relationalOp &lt;))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        *
+        &gt;
       </h3>
       <ul>
         <li>
-          Return the product of the ARGUMENTS, or 1 if no arguments are supplied.
+          Return #true if the ARGUMENTS are in monotonically decreasing order, #false otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (* arguments)
+          (&gt; arguments)
         </li>
         <li>
           (type function)
         </li>
         <li>
-          (derivation (tethicOp * 1))
+          (derivation (relationalOp &gt;))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        $
+        &lt;=
       </h3>
       <ul>
         <li>
-          Return the join of the ARGUMENTS, or &quot;&quot; if no arguments are supplied.
+          Return #true if the ARGUMENTS are in monotonically nondecreasing order, #false otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          ($ arguments)
+          (&lt;= arguments)
         </li>
         <li>
           (type function)
         </li>
         <li>
-          (derivation (tethicOp $ &quot;&quot;))
+          (derivation (relationalOp &lt;=))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        lyticOp
+        &gt;=
       </h3>
       <ul>
         <li>
-          Utility to create an n-ary lytic operator from a BINARY-OPERATOR and INITIAL-VALUE.
+          Return #true if the ARGUMENTS are in monotonically nonincreasing order, #false otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (lyticOp binOp unit)
+          (&gt;= arguments)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation (relationalOp &gt;=))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        eq?
+      </h3>
+      <ul>
+        <li>
+          Return #true if all ARGUMENTS are equal, #false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (eq? arguments)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation (relationalOp eq?))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        ==
+      </h3>
+      <ul>
+        <li>
+          Return #true if all ARGUMENTS are ==, #false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (== arguments)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation (relationalOp eq?))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        !=
+      </h3>
+      <ul>
+        <li>
+          Return #false if all ARGUMENTS are ==, #true otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (!= arguments)
         </li>
         <li>
           (type function)
@@ -131,47 +197,19 @@
     </div>
     <div>
       <h3>
-        -
+        /=
       </h3>
       <ul>
         <li>
-          If only one number is supplied in the ARGUMENTS, return the negation of that number.
-          <br/>
-            If more than one number is supplied, subtract all of the later ones from the first one and return the result.
+          Return #true if all ARGUMENTS are distinct, #false otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (- arguments)
+          (/= argument . arguments)
         </li>
         <li>
           (type function)
-        </li>
-        <li>
-          (derivation (lithicOp - 0))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        /
-      </h3>
-      <ul>
-        <li>
-          If only one number is supplied in the ARGUMENTS, return the reciprocal of that number.
-          <br/>
-            If more than one number is supplied, divide the first one by all of the later ones and return the result.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (/ arguments)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (lithicOp / 1))
         </li>
       </ul>
     </div>

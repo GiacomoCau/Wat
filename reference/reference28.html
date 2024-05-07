@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      28. Case MatchObj? MatchObj*? CaseType CaseType\
+      28. Options
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,32 +23,135 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      28. Case MatchObj? MatchObj*? CaseType CaseType\
+      28. Options
     </h2>
+    <ul>
+      <li>
+        An option is either #null (&quot;none&quot;), or a one-element list (&quot;some&quot;).
+      </li>
+      <li>
+        Idea from Taylor R. Campbell's blag. https://mumble.net/~campbell/blag.txt
+      </li>
+    </ul>
     <div>
       <h3>
-        case
+        some
       </h3>
       <ul>
         <li>
-          Multi-armed value test.
+          Create a one-element list from the VALUE.
           <br/>
-            Evaluate KEY and Go through the CLAUSES.
+            Alias of cons!.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        ifOpt
+      </h3>
+      <ul>
+        <li>
+          Single-value OPTION destructuring.
           <br/>
-            If CLAUSES is #null return #inert.
+            Evaluate the THEN form with the NAME bound to the contents of the OPTION if the evaluation of OPTION is !#null,
           <br/>
-            If car of CLAUSE is else or 'eq?' KEY VALUE or 'member? :cmp eq?' KEY VALUES
+            evaluate the ELSE forms as an implicit `begin' otherwise.
           <br/>
-            &nbsp;&nbsp;if car FORMS is =&gt; apply evaluate cadr FORMS to VALUE
+            &nbsp;
+        </li>
+        <li>
+          (ifOpt (name option) then . else)
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        ifOpt*
+      </h3>
+      <ul>
+        <li>
+          Multi-valued OPTION destructuring.
           <br/>
-            &nbsp;&nbsp;otherwise evaluate FORMS as an implicit `begin'.
+            Evaluate THEN form with the DEFINIEND-TREE bound to OPTION value if the evaluation of OPTION is !#null,
+          <br/>
+            evaluate the ELSE forms as an implicit `begin' otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (ifOpt* (definiendTree option) then . else)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        whenOpt
+      </h3>
+      <ul>
+        <li>
+          Destructure the OPTION.
+          <br/>
+            Return #null if the evaluation of OPTION it's #null,
+          <br/>
+            evaluate FORMS as an implicit `begin' with the NAME bound to the contents of the OPTION, otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (whenOpt (name option) . forms)
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        unlessOpt
+      </h3>
+      <ul>
+        <li>
+          Destructure the OPTION.
+          <br/>
+            Return the evaluation of FORMS as an implicit `begin' if the evaluation of OPTION is #null, #null otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (unlessOpt option . forms)
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        caseOpt
+      </h3>
+      <ul>
+        <li>
+          Multi-armed ifOpt.
+          <br/>
+            Evaluate OPTION and go through the CLAUSES in order.
+          <br/>
+            If OPTION is #null return #null.
+          <br/>
+            If CLAUSES is #null return #null.
+          <br/>
+            If `car' of CLAUSE is else evaluate FORMS as an implicit `begin'.
+          <br/>
+            If the OPTION match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
           <br/>
             Otherwise go to the next CLAUSE.
           <br/>
             &nbsp;
         </li>
         <li>
-          (case (key . clauses))
+          (caseOpt option . clauses)
         </li>
         <li>
           (type fexpr)
@@ -60,129 +163,72 @@
           (syntax clause (else . forms))
         </li>
         <li>
-          (syntax clause (else =&gt; apv1))
-        </li>
-        <li>
-          (syntax clause (value . forms))
-        </li>
-        <li>
-          (syntax clause (value =&gt; apv1))
-        </li>
-        <li>
-          (syntax clause (values . forms))
-        </li>
-        <li>
-          (syntax clause (values =&gt; apv1))
-        </li>
-        <li>
-          (syntax values (value . values))
+          (syntax clause (definiendTree . forms))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        matchObj?
+        optDft
       </h3>
       <ul>
         <li>
-          Return true if OBJECT is an instance of CLASE and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, false otherwise.
+          Return the contents of the OPTION if the option is !#null,
+          <br/>
+            the evaluation if DEFAULT if present, #inert otherwise.
+          <br/>
+            The DEFAULT is evaluated lazily, only when the OPTION is #null.
           <br/>
             &nbsp;
         </li>
         <li>
-          (matchObj? object (class . attributes))
+          (optDft option . default)
         </li>
         <li>
-          (syntax attributes (or () (attribute value . attributes)))
-        </li>
-        <li>
-          (syntax attribute (or Symbol Keyword String .Field @Method))
+          (type fexpr)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        matchObj*?
+        optDft*
       </h3>
       <ul>
         <li>
-          Return true if OBJECT is an instance of CLASE and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, false otherwise.
+          Similar to `optdft', but provides DEFAULT for any elements of LIST.
+          <br/>
+            This is useful for implementing functions that take multiple optional arguments.
+          <br/>
+            Each DEFAULT is evaluated lazily, only when needed.
           <br/>
             &nbsp;
         </li>
         <li>
-          (matchObj*? object (class . attributes))
-        </li>
-        <li>
-          (syntax attributes (or () (attribute value . attributes)))
-        </li>
-        <li>
-          (syntax attribute (or Symbol Keyword String .Field @Method))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        caseType
-      </h3>
-      <ul>
-        <li>
-          Multi-armed type test.
-          <br/>
-            Evaluate the OBJECT and Go through the CLAUSES.
-          <br/>
-            If CLAUSES is #null return #inert.
-          <br/>
-            If OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, evaluate the FORMS as an implicit `begin'.
-          <br/>
-            Otherwise go to the next CLAUSE.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (caseType (object . clauses))
+          (optDft* list . defaults)
         </li>
         <li>
           (type fexpr)
         </li>
         <li>
-          (syntax clauses (clause . clauses))
-        </li>
-        <li>
-          (syntax clause (class . forms))
-        </li>
-        <li>
-          (syntax clause ((class . attributes) . forms))
-        </li>
-        <li>
-          (syntax attributes (or () (attribute value . attributes)))
-        </li>
-        <li>
-          (syntax attribute (or Symbol Keyword String .Field @Method))
+          (syntax defaults (default . defaults))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        caseType\
+        optDft!
       </h3>
       <ul>
         <li>
-          Return a sigle argument function for multi-armed type test, useful as a catch handler.
+          Returns the contents of the OPTION or signals an error if it is #null.
           <br/>
             &nbsp;
         </li>
         <li>
-          (caseType\ (symbol) . clauses))
+          (optDft! option)
         </li>
         <li>
-          (type macro)
-        </li>
-        <li>
-          (derivation (\ (symbol) (caseType symbol . clauses)))
-        </li>
-        <li>
-          (use (catchWth (caseType\ (e) ...) ...)
+          (type fexpr)
         </li>
       </ul>
     </div>

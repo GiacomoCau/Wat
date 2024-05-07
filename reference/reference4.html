@@ -99,9 +99,11 @@
         <li>
           Update the bindings defined of the environment, signals an error if the binding is not defined.
           <br/>
-            So 'def' match the DEFINIEND-TREE against the VALUE and update the resulting bindings into environment if exist.
+            As 'def' match the DEFINIEND-TREE against the VALUE and update the resulting bindings into environment if exist.
           <br/>
-            without bindResult or with bindResult #ignore use as bindResult (bndRes)
+            &nbsp;
+          <br/>
+            without bindResult or with bindResult #ignore use as bindResult `(bndRes)'
           <br/>
             with bindResult #inert return #inert
           <br/>
@@ -153,7 +155,7 @@
         <li>
           Return an anonymous function with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER and FORMS as body,
           <br/>
-            which may use the execution environment in the ENVIRONMENT-PARAMETER rather than the definition environment for evaluate FORMS.
+            which may use the execution environment in the ENVIRONMENT-PARAMETER, rather than the definition environment, for evaluate FORMS as an implicit `begin'.
           <br/>
             Used for defining the dynamic environment and variable lambda de\ and dv\.
           <br/>
@@ -178,9 +180,9 @@
         <li>
           Return an anonymous function with the given PARAMETER-TREE and FORMS as body,
           <br/>
-            which accesses to the execution environment, rather than the definition environment, for the values of free variables.
+            which use the execution environment for evaluate FORMS as an implicit `begin' and get the values of the free variables.
           <br/>
-            The classic lambda of the first type, before the Scheme static lambda.
+            The first type of lambda before Scheme.
           <br/>
             &nbsp;
         </li>

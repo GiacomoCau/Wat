@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      8. Cons
+      8. Box
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,137 +23,80 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      8. Cons
+      8. Box
     </h2>
+    <ul>
+      <li>
+        The Box are functions that encapsulates a mutable value.
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        Calling the box:
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        - without arguments returns the value in the box.
+      </li>
+      <li>
+        - with an argument update the value in the box.
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        - without bindResult or with bindResult #ignore use as bindResult `(bndRes)'
+      </li>
+      <li>
+        - with bindResult #inert return #inert
+      </li>
+      <li>
+        - with bindResult :rhs return the right side of the last binding
+      </li>
+      <li>
+        - with bindResult :prv return the previous value of the last binding
+      </li>
+      <li>
+        - with bindResult :cnt return the box
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        $(box)
+      </li>
+      <li>
+        $(box value)
+      </li>
+      <li>
+        $(box bindResult value)
+      </li>
+      <li>
+        $(type function)
+      </li>
+      <li>
+        $(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+      </li>
+    </ul>
     <div>
       <h3>
-        caar
+        newBox
       </h3>
       <ul>
         <li>
-          Return the `car' of the `car' of the CONS.
+          Return a new box with the optional VALUE.
+          <br/>
+            The Box are functions that encapsulates a mutable value.
+          <br/>
+            Without VALUE use as VALUE `(boxDft)'.
           <br/>
             &nbsp;
         </li>
         <li>
-          (caar cons)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation ((\ (((caar . #_) . #_)) caar)) cons)
-        </li>
-        <li>
-          (derivation (car (car cons)))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        cadr!
-      </h3>
-      <ul>
-        <li>
-          Return the `car' of the `cdr' of the CONS if 'cddr' is #null, signals an error otherwise.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (cadr! cons)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation ((\ ((#_ cadr)) cadr)) cons)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        cdar
-      </h3>
-      <ul>
-        <li>
-          Return the `cdr' of the `car' of the CONS.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (cdar cons)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation ((\ (((#_ . cdar) . #_)) cdar)) cons)
-        </li>
-        <li>
-          (derivation (cdr (car cons)))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        cddr
-      </h3>
-      <ul>
-        <li>
-          Return the `cdr' of the `cdr' of the CONS.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (cddr cons)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation ((\ ((#_ #_ . cddr)) cddr)) cons)
-        </li>
-        <li>
-          (derivation (cdr (cdr cons)))
-        </li>
-        <li>
-          (derivation (@cdr cons 1))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        cons!
-      </h3>
-      <ul>
-        <li>
-          Return a cons with the given CAR and #null.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (cons! car)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivarion ((\ (car) (cons car)) car))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        nth
-      </h3>
-      <ul>
-        <li>
-          Return element number N of LIST, where the `car' is element zero.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (nth n list)
+          (newBox . value)
         </li>
         <li>
           (type function)
@@ -162,19 +105,21 @@
     </div>
     <div>
       <h3>
-        nthCdr
+        defBox
       </h3>
       <ul>
         <li>
-          Returns the tail of LIST that would be obtained by calling `cdr' N times in succession.
+          Defines into the current environment the named box NAME with the optional VALUE.
+          <br/>
+            Without VALUE use as VALUE `(boxDft)'.
           <br/>
             &nbsp;
         </li>
         <li>
-          (nthCdr n list)
+          (defBox name . value)
         </li>
         <li>
-          (type function)
+          (type macro)
         </li>
       </ul>
     </div>

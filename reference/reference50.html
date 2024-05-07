@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      50. Utility
+      50. Apl/J
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,59 +23,35 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      50. Utility
+      50. Apl/J
     </h2>
     <div>
       <h3>
-        time
+        iota
       </h3>
       <ul>
         <li>
-          Evaluate n times FORMS as implicit `begin` and return the elapsed time in milliseconds
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (time n . forms)
-        </li>
-        <li>
-          (type fexpr)
+          (def\ (iota n) (reverse ((rec\ (iota n) (if (0? n) () (cons n (iota (1- n))))) n)))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        make*\
+        fork
       </h3>
       <ul>
         <li>
-          Returns a function that applies FUNCTION with the arguments from n placed in a list.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (make*\ n function)
-        </li>
-        <li>
-          (type function)
+          (def\ (fork f l r) [_ (f (l _) (r _))])
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        minMax
+        hook
       </h3>
       <ul>
         <li>
-          Returns a cons with the min and the max of the VALUES.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (minMax . values)
-        </li>
-        <li>
-          (type function)
+          (def\ (hook l r) [_ (l _ (r _))])
         </li>
       </ul>
     </div>

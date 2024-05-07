@@ -35,7 +35,7 @@
           <br/>
             &nbsp;
           <br/>
-            without bindResult or with bindResult #ignore use as bindResult (bndRes)
+            without bindResult or with bindResult #ignore use as bindResult `(bndRes)'
           <br/>
             with bindResult #inert return #inert
           <br/>
@@ -90,7 +90,7 @@
         <li>
           Return an anonymous function with the given PARAMETER-TREE and FORMS as body,
           <br/>
-            which accesses to the definition environment for the values of free variables.
+            which use the definition environment for evaluate FORMS as an implicit `begin' and get the values of the free variables.
           <br/>
             The classic Scheme static lambda.
           <br/>
@@ -161,7 +161,7 @@
           (assert expression class attribute value . attributes)
         </li>
         <li>
-          (syntax attributes (or () (attribute value . attributes)))
+          (syntax attributes (attribute value . attributes))
         </li>
         <li>
           (syntax attribute (or Symbol Keyword String .Field @Method))
@@ -177,18 +177,18 @@
       </h3>
       <ul>
         <li>
-          Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
+          Call the FUNCTION with a dynamically-supplied list of ARGUMENTS in the optional ENVIRONMENT.
           <br/>
             &nbsp;
         </li>
         <li>
-          (apply fun args . env)
+          (apply fun args . environment)
         </li>
         <li>
           (type function)
         </li>
         <li>
-          (derivation (eval (cons (unwrap fun) args) (if (null? env) (newEnv) (car! env)) ))
+          (derivation (eval (cons (unwrap fun) args) (if (null? environment) (newEnv) (car! environment)) ))
         </li>
       </ul>
     </div>
@@ -198,7 +198,7 @@
       </h3>
       <ul>
         <li>
-          Sequentially evaluate FORMS returning the value of the last one or #inert if FORMS is #null.
+          Sequentially evaluate FORMS returning the value of the last one, #inert if FORMS is #null.
           <br/>
             &nbsp;
         </li>
@@ -335,7 +335,7 @@
       </h3>
       <ul>
         <li>
-          Return true if the OBJECT is a cons, false otherwise.
+          Return #true if the OBJECT is a cons, #false otherwise.
           <br/>
             &nbsp;
         </li>
@@ -352,11 +352,32 @@
     </div>
     <div>
       <h3>
+        atom?
+      </h3>
+      <ul>
+        <li>
+          Return #true if the OBJECT is not a cons, #false otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (atom? object)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation (! (cons? object)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         eval
       </h3>
       <ul>
         <li>
-          Evaluate the FORM in the ENVIRONMENT, returning its result.
+          Return the result of evaluation of FORM in the optional ENVIRONMENT.
           <br/>
             &nbsp;
         </li>
@@ -367,7 +388,7 @@
           (type function)
         </li>
         <li>
-          (derivation (eval form (if (null? environment) ((vau () env env)) (car! environment))))
+          (derivation (eval form (if (null? environment) (theEnv) (car! environment))))
         </li>
       </ul>
     </div>
@@ -379,7 +400,7 @@
         <li>
           Evaluate the TEST which must yield a boolean.
           <br/>
-            Then evaluate either the THEN or ELSE expression depending on whether the TEST yielded true or false.
+            Then evaluate either the THEN or ELSE expression depending on whether the TEST yielded #true or #false.
           <br/>
             Idea stolen from Anarki https://github.com/arclanguage/anarki
           <br/>
@@ -389,7 +410,7 @@
           (if test then . forms)
         </li>
         <li>
-          (syntax forms (or () (else) (test then . forms)))
+          (syntax forms (or (else) (test then . forms)))
         </li>
         <li>
           (type fexpr)
@@ -438,6 +459,9 @@
         <li>
           (type function)
         </li>
+        <li>
+          (derivation (if (! (cons? arguments)) arguments ((rec\ (loop (if (null? (cdr arguments) (car argument) (cons (car argument) (loop (cdr arguments))))))) arguments)))
+        </li>
       </ul>
     </div>
     <div>
@@ -450,7 +474,7 @@
           <br/>
             The Box are functions that encapsulates a mutable value.
           <br/>
-            Without VALUE use as VALUE (boxDft).
+            Without VALUE use as VALUE `(boxDft)'.
           <br/>
             &nbsp;
           <br/>
@@ -474,7 +498,7 @@
       </h3>
       <ul>
         <li>
-          Return true if the OBJECT is #null, false otherwise.
+          Return #true if the OBJECT is #null, #false otherwise.
           <br/>
             &nbsp;
         </li>

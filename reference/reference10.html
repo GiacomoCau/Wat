@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      10. Symbol &amp; Keyword
+      10. Cons
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,27 +23,137 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      10. Symbol &amp; Keyword
+      10. Cons
     </h2>
-    <ul>
-      <li>
-        Symbol and Keyword extends Intern
-      </li>
-    </ul>
     <div>
       <h3>
-        intern
+        caar
       </h3>
       <ul>
         <li>
-          Return the unique symbol or keyword with STRING as name.
-          <br/>
-            Keyword if STRING start with ':', symbol otherwise
+          Return the `car' of the `car' of the CONS.
           <br/>
             &nbsp;
         </li>
         <li>
-          (intern string)
+          (caar cons)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation ((\ (((caar . #_) . #_)) caar)) cons)
+        </li>
+        <li>
+          (derivation (car (car cons)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        cadr!
+      </h3>
+      <ul>
+        <li>
+          Return the `car' of the `cdr' of the CONS if 'cddr' is #null, signals an error otherwise.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (cadr! cons)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation ((\ ((#_ cadr)) cadr)) cons)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        cdar
+      </h3>
+      <ul>
+        <li>
+          Return the `cdr' of the `car' of the CONS.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (cdar cons)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation ((\ (((#_ . cdar) . #_)) cdar)) cons)
+        </li>
+        <li>
+          (derivation (cdr (car cons)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        cddr
+      </h3>
+      <ul>
+        <li>
+          Return the `cdr' of the `cdr' of the CONS.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (cddr cons)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation ((\ ((#_ #_ . cddr)) cddr)) cons)
+        </li>
+        <li>
+          (derivation (cdr (cdr cons)))
+        </li>
+        <li>
+          (derivation (@cdr cons 1))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        cons!
+      </h3>
+      <ul>
+        <li>
+          Return a cons with the given CAR and #null.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (cons! car)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivarion ((\ (car) (cons car)) car))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        nth
+      </h3>
+      <ul>
+        <li>
+          Return element number N of LIST, where the `car' is element zero.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (nth n list)
         </li>
         <li>
           (type function)
@@ -52,130 +162,16 @@
     </div>
     <div>
       <h3>
-        name
+        nthCdr
       </h3>
       <ul>
         <li>
-          Return the name of the SYMBOL or KEYWORD as a string.
+          Returns the tail of LIST that would be obtained by calling `cdr' N times in succession.
           <br/>
             &nbsp;
         </li>
         <li>
-          (name intern)
-        </li>
-        <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        keyword
-      </h3>
-      <ul>
-        <li>
-          Return the unique keyword with STRING as name.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (keyword string)
-        </li>
-        <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        keyword?
-      </h3>
-      <ul>
-        <li>
-          Return true if the OBJECT is a keyword, false otherwise.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (keyword? object)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (type? object Keyword))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        keywordName
-      </h3>
-      <ul>
-        <li>
-          Return the name of the KEYWORD as a string.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (keywordName keyword)
-        </li>
-        <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        symbol
-      </h3>
-      <ul>
-        <li>
-          Return the unique symbol with STRING as name.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (symbol string)
-        </li>
-        <li>
-          (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        symbol?
-      </h3>
-      <ul>
-        <li>
-          Return true if the OBJECT is a symbol, false otherwise.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (symbol? object)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (type? object Symbol))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        symbolName
-      </h3>
-      <ul>
-        <li>
-          Return the name of the SYMBOL as a string.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (symbolName symbol)
+          (nthCdr n list)
         </li>
         <li>
           (type function)

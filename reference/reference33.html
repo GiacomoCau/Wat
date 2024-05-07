@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      33. Arrays
+      33. Block ReturnFrom Loop For While Until Repeat DoTimes
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,20 +23,46 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      33. Arrays
+      33. Block ReturnFrom Loop For While Until Repeat DoTimes
     </h2>
     <div>
       <h3>
-        array-&gt;list
+        block
       </h3>
       <ul>
         <li>
-          Array to proper list.
+          Establishes a block named BLOCK-NAME after evaluate FORMS as an implicit `begin'.
+          <br/>
+            The forms may use `returnFrom' to nonlocally exit from the block.
+          <br/>
+            Note that unlike in Common Lisp, there is no separate namespace for block names;
+          <br/>
+            a block is named in the normal variable namespace.
           <br/>
             &nbsp;
         </li>
         <li>
-          (array-&gt;list array)
+          (block blockName . forms)
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        returnFrom
+      </h3>
+      <ul>
+        <li>
+          Abort evaluation and return the optional VALUE (which defaults to #inert) from the block named BLOCK-NAME.
+          <br/>
+            It is an error to return from a block whose dynamic extent has ended.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (returnFrom (blockName . value))
         </li>
         <li>
           (type function)
@@ -45,181 +71,357 @@
     </div>
     <div>
       <h3>
-        array-&gt;cons
+        while
       </h3>
       <ul>
         <li>
-          Array to improper list.
+          Evaluate FORMS as an implicit `begin' while TEST-FORM evaluates to #true.
+          <br/>
+            Defined using block and returnFrom.
           <br/>
             &nbsp;
         </li>
         <li>
-          (array-&gt;cons array)
+          (while testForm . forms)
         </li>
         <li>
-          (type function)
+          (type fexpr)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        list-&gt;array
+        mkTag
       </h3>
       <ul>
         <li>
-          List to array.
+          Return a tag for the throws forms by joining TAG and N.
+          <br/>
+            Get the %deep of the enhanced loop form in the dynamic environment.
+          <br/>
+            Used from break, continue, until and while forms for the enhanced loops.
           <br/>
             &nbsp;
         </li>
         <li>
-          (list-&gt;array list)
+          (mkTag tag n)
         </li>
         <li>
-          (type function)
+          (type dynamic function)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        array
+        break
       </h3>
       <ul>
         <li>
-          List to array.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (array . list)
-        </li>
-        <li>
-          (type function)
+          (defMacro (break . forms) (list* 'throwTag (list 'mkTag &quot;break&quot; 0) forms))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        arrayMap
+        break-
       </h3>
       <ul>
         <li>
-          Return a new array by applying the FUNCTION to each element of the ARRAY.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (arrayMap function array)
-        </li>
-        <li>
-          (type function)
+          (defMacro (break- n . forms) (list* 'throwTag (list 'mkTag &quot;break&quot; n) forms))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        arrayFilter
+        break?
       </h3>
       <ul>
         <li>
-          Returns a new array with the elements of the ARRAY for which the application of the FUNCTION returns true.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (arrayFilter function array)
-        </li>
-        <li>
-          (type function)
+          (defMacro (break? b . forms) (list 'if b (list* 'throwTag (list 'mkTag &quot;break&quot; 0) forms)))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        newInstance
+        break-?
       </h3>
       <ul>
         <li>
-          Returns a new array with the elements of CLASS tipe and the specified DIMENSIONS.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (newInstance class . dimensions)
-        </li>
-        <li>
-          (type function)
+          (defMacro (break-? n b . forms) (list 'if b (list* 'throwTag (list 'mkTag &quot;break&quot; n) forms)))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        arrayGet
+        continue
       </h3>
       <ul>
         <li>
-          Returns the element at INDEX position int the ARRAY.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (arrayGet array index)
-        </li>
-        <li>
-          (type function)
+          (defMacro (continue . forms) (list* 'throwTag (list 'mkTag &quot;continue&quot; 0) forms))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        arrayGet*
+        continue-
       </h3>
       <ul>
         <li>
-          Returns the element at INDEXES position int the multi-dimensions ARRAY.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (arrayGet* array . indexes)
-        </li>
-        <li>
-          (type function)
+          (defMacro (continue- n . forms) (list* 'throwTag (list 'mkTag &quot;continue&quot; n) forms))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        arraySet
+        continue?
       </h3>
       <ul>
         <li>
-          Returns the ARRAY after update the element at INDEX position with VALUE.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (arraySet array index value)
-        </li>
-        <li>
-          (type function)
+          (defMacro (continue? b . forms) (list 'if b (list* 'throwTag (list 'mkTag &quot;continue&quot; 0) forms)))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        arraySet*
+        continue-?
       </h3>
       <ul>
         <li>
-          Returns the multi-dimensions ARRAY after update the element at INDEXES position with VALUE.
+          (defMacro (continue-? n b . forms) (list 'if b (list* 'throwTag (list 'mkTag &quot;continue&quot; n) forms)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        until?
+      </h3>
+      <ul>
+        <li>
+          (defMacro (until? b . forms) (list 'if b        (list* 'throwTag (list 'mkTag &quot;break&quot; 0) forms)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        while?
+      </h3>
+      <ul>
+        <li>
+          (defMacro (while? b . forms) (list 'if b #inert (list* 'throwTag (list 'mkTag &quot;break&quot; 0) forms)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        %loop
+      </h3>
+      <ul>
+        <li>
+          Redefine the primitive %loop to add the clauses for and for1 and the forms break, continue, while and until.
           <br/>
             &nbsp;
         </li>
         <li>
-          (arraySet* array value . indexes)
+          (%loop . forms)
         </li>
         <li>
-          (type function)
+          (%loop for1 binding . forms)
+        </li>
+        <li>
+          (%loop for bindings . forms)
+        </li>
+        <li>
+          (type fexpr)
+        </li>
+        <li>
+          (syntax bindings (binding . bindings))
+        </li>
+        <li>
+          (syntax binding (symbol initForm . incrFrom))
+        </li>
+        <li>
+          (syntax forms (form . forms) )
+        </li>
+        <li>
+          (syntax form (break . forms))
+        </li>
+        <li>
+          (syntax form (break- n . forms))
+        </li>
+        <li>
+          (syntax form (break? testForm . forms))
+        </li>
+        <li>
+          (syntax form (break-? n testForm . forms))
+        </li>
+        <li>
+          (syntax form (continue . forms))
+        </li>
+        <li>
+          (syntax form (continue- n . forms))
+        </li>
+        <li>
+          (syntax form (continue? testForm . forms))
+        </li>
+        <li>
+          (syntax form (continue-? n testForm . forms))
+        </li>
+        <li>
+          (syntax form (while? testForm . forms))
+        </li>
+        <li>
+          (syntax form (until? testForm . forms))
+        </li>
+        <li>
+          (syntax form ...)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        loop
+      </h3>
+      <ul>
+        <li>
+          Alias of %loop.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        for1
+      </h3>
+      <ul>
+        <li>
+          Single variabile for loop.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (for1 binding whileForm . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+        <li>
+          (syntax binding (symbol initForm . incrFrom))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        for
+      </h3>
+      <ul>
+        <li>
+          Multile variabiles for loop.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (for bindings whileForm . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+        <li>
+          (syntax bindings (binding . bindings))
+        </li>
+        <li>
+          (syntax binding (symbol initForm . incrForm))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        while
+      </h3>
+      <ul>
+        <li>
+          Evaluate FORMS as an implicit `begin' while WHILE-FORM evaluates to #true.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (while whileForm . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        until
+      </h3>
+      <ul>
+        <li>
+          Evaluate FORMS as an implicit `begin' until UNTIL-FORM evaluates to #false.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (until whileForm . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        repeat
+      </h3>
+      <ul>
+        <li>
+          Evaluate FORMS as an implicit `begin' TIMES times.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (repeat times . forms)
+        </li>
+        <li>
+          (repeat (symbol times . endForms) . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        doTimes
+      </h3>
+      <ul>
+        <li>
+          Cf. Common Lisp's DOTIMES.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (doTimes (symbol times . endForms) . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        doList
+      </h3>
+      <ul>
+        <li>
+          Cf. Common Lisp's DOLIST.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (doList symbol list . forms)
+        </li>
+        <li>
+          (type macro)
         </li>
       </ul>
     </div>

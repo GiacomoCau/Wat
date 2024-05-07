@@ -36,6 +36,9 @@
         Calling the env:
       </li>
       <li>
+        &nbsp;
+      </li>
+      <li>
         - without arguments returns the env.
       </li>
       <li>
@@ -45,7 +48,10 @@
         - with couples of attribute and value defines or update the attribute with the value in the env.
       </li>
       <li>
-        - without bindResult or with bindResult #ignore use as bindResult (bndRes)
+        &nbsp;
+      </li>
+      <li>
+        - without bindResult or with bindResult #ignore use as bindResult `(bndRes)'
       </li>
       <li>
         - with bindResult #inert return #inert
@@ -58,6 +64,9 @@
       </li>
       <li>
         - with bindResult :cnt return the env
+      </li>
+      <li>
+        &nbsp;
       </li>
       <li>
         - without bindType use the bindType :def
@@ -90,7 +99,7 @@
         $(env bindType bindResult attribute value . attributes)
       </li>
       <li>
-        $(syntax attributes (or () (attribute value . attributes)))
+        $(syntax attributes (attribute value . attributes))
       </li>
       <li>
         $(syntax attribute (or Symbol Keyword String))
@@ -129,7 +138,7 @@
           (syntax parent (or () Env))
         </li>
         <li>
-          (syntax bindings (or () (attribute value . bindings)))
+          (syntax bindings (attribute value . bindings))
         </li>
         <li>
           (syntax attribute (or Symbol Keyword String))

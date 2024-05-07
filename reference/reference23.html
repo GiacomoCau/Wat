@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      23. Simple Controls
+      23. Basic Functions and Macros
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,144 +23,20 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      23. Simple Controls
+      23. Basic Functions and Macros
     </h2>
     <div>
       <h3>
-        prog1
+        idf
       </h3>
       <ul>
         <li>
-          Evaluate FORM and return the result after evaluate any additional FORMS as an implicit `begin'.
+          Identity function.
           <br/>
             &nbsp;
         </li>
         <li>
-          (prog1 form . forms)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        when
-      </h3>
-      <ul>
-        <li>
-          If TEST yields true, evaluate the FORMS as an implicit `begin', inert otherwise.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (when test . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        unless
-      </h3>
-      <ul>
-        <li>
-          If TEST yields false, evaluate the FORMS as an implicit `begin', inert otherwise.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (unless test . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        &amp;&amp;
-      </h3>
-      <ul>
-        <li>
-          Return true if all OPERANDS evaluate to true, false otherwise.
-          <br/>
-            If an operand evaluates to false, later operands are not evaluated.
-          <br/>
-            If there are no operands, return false.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (&amp;&amp; . operands)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        and
-      </h3>
-      <ul>
-        <li>
-          Alias of &amp;&amp;.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        ||
-      </h3>
-      <ul>
-        <li>
-          Return true if one of the OPERANDS evaluates to true, false otherwise.
-          <br/>
-            If an operand evaluates to true, later operands are not evaluated.
-          <br/>
-            If there are no operands, return true.
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (|| . operands)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        or
-      </h3>
-      <ul>
-        <li>
-          Alias of ||.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        &amp;&amp;f
-      </h3>
-      <ul>
-        <li>
-          Return a function the return true if all FUNCTIONS evaluate to true when applied to the arguments, false otherwise.
-          <br/>
-            If an function evaluates to false, later FUNCTIONS are not evaluated.
-          <br/>
-            If there are no FUNCTIONS, when applied return false.
-          <br/>
-            Idea stolen from Anarki https://github.com/arclanguage/anarki
-          <br/>
-            &nbsp;
-        </li>
-        <li>
-          (&amp;&amp;f . functions)
+          (idf object)
         </li>
         <li>
           (type function)
@@ -169,25 +45,246 @@
     </div>
     <div>
       <h3>
-        ||f
+        _
       </h3>
       <ul>
         <li>
-          Return a function the return true if one FUNCTIONS evaluate to true when applied to the arguments, false otherwise.
-          <br/>
-            If an function evaluates to true, later FUNCTIONS are not evaluated.
-          <br/>
-            If there are no FUNCTIONS, when applied return true.
-          <br/>
-            Idea stolen from Anarki https://github.com/arclanguage/anarki
+          &quot;Implicit&quot; Argument Lambda.
           <br/>
             &nbsp;
         </li>
         <li>
-          (||f . functions)
+          (_ . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+        <li>
+          (derivation (\ (_) . forms))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        peval
+      </h3>
+      <ul>
+        <li>
+          Single arg partial evaluation.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (peval f v)
         </li>
         <li>
           (type function)
+        </li>
+        <li>
+          (derivation (\ args (apply f (cons v args))))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        peval*
+      </h3>
+      <ul>
+        <li>
+          Multiple args partial evaluation.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (peval* f v*)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation (\ args (apply f (append v* args))))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        compose
+      </h3>
+      <ul>
+        <li>
+          Return a function equivalent to the composition of the two functions.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (compose f g)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation (\ args (f (apply g args))))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        compose*
+      </h3>
+      <ul>
+        <li>
+          Return a function equivalent to the composition of the functions.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (compose* . f*)
+        </li>
+        <li>
+          (type function)
+        </li>
+        <li>
+          (derivation (\ args ((rec\ (loop (f . f*)) (if (null? f*) (apply f args) (f (loop f*)))) f*)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        rec
+      </h3>
+      <ul>
+        <li>
+          Return VALUE, after lexically bind NAME with #inert,
+          <br/>
+            and update NAME with VALUE so that it can reference itself.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (rec name value)
+        </li>
+        <li>
+          (type macro)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        label
+      </h3>
+      <ul>
+        <li>
+          Alias of rec.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        rec\
+      </h3>
+      <ul>
+        <li>
+          Return the function with given PARAMETER-TREE and FORMS as body, after lexically bind NAME with #inert,
+          <br/>
+            and updated NAME with the function so that it can reference to itself.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (rec\ name parameterTree . forms)
+        </li>
+        <li>
+          (rec\ (name . parameterTree) . forms)
+        </li>
+        <li>
+          (type macro)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        label\
+      </h3>
+      <ul>
+        <li>
+          Alias of rec\.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        map
+      </h3>
+      <ul>
+        <li>
+          Return a new list by applying the FUNCTION to each element of the LIST or the LISTS which must be of the same length
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (map function list)
+        </li>
+        <li>
+          (map function list1 list2 ... listN)
+        </li>
+        <li>
+          (type function)
+        </li>
+      </ul>
+    </div>
+    <ul>
+      <li>
+        Some importanti equivalences with eval apply list and map:
+      </li>
+      <li>
+        &nbsp;
+      </li>
+      <li>
+        apply: (eval (cons opv args) env) &lt;=&gt; (apply opv args env)
+      </li>
+      <li>
+        apply: (eval (cons apv args) env) &lt;=&gt; (apply apv (evlis env args) env)
+      </li>
+      <li>
+        evlis: (eval (cons 'list args) env) &lt;=&gt; (map (\ (arg) (eval arg env)) args)
+      </li>
+    </ul>
+    <div>
+      <h3>
+        def*\
+      </h3>
+      <ul>
+        <li>
+          Defines into the current environment the named functions NAMES with given PARAMETER-TREES and FORMS as body. 
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (def*\ definiendTrees . bodies)
+        </li>
+        <li>
+          (def*\ ((name parameterTree) . definiendTrees) . (forms . bodies))
+        </li>
+        <li>
+          (def*\ (name . definiendTrees) . ((parameterTree . forms) . bodies))
+        </li>
+        <li>
+          (syntax definiendTrees ((name parameterTree) . definiendTrees)
+        </li>
+        <li>
+          (syntax bodies (forms . bodies)
+        </li>
+        <li>
+          (syntax definiendTrees (name . definiendTrees)
+        </li>
+        <li>
+          (syntax bodies ((parameterTree . forms) . bodies)
+        </li>
+        <li>
+          (type macro)
+        </li>
+        <li>
+          (example (def*\ ((f a) g) ((1+ a)) ((a) (1+ a))) )
         </li>
       </ul>
     </div>
