@@ -490,7 +490,7 @@ public class Vm {
 		public Object get(Object obj) {
 			var key = toKey(obj);
 			var val = map.get(key);
-			return val != null || map.containsKey(key) ? val : unboundFieldError("slot: {field} not found in: {object}", key, this);
+			return val != null || map.containsKey(key) ? val : unboundFieldError("unbound slot: {field} in: {object}", key, this);
 		}
 		Object puts(Object ... objs) {
 			if (objs == null) return null;
@@ -910,7 +910,7 @@ public class Vm {
 				if (tag != ignore && thw instanceof Value val && val.tag != tag) throw thw; 
 				if (hdl != ignore) return combine2(null, e, tag, hdl, thw);
 				if (thw instanceof Value val) return val.value;
-				throw thw instanceof Condition cond ? cond : new Error("catch exception: " + Vm.this.toString(thw.getClass()), thw);
+				throw thw instanceof Condition cnd ? cnd : new Error("catch exception: " + Vm.this.toString(thw.getClass()), thw);
 			}
 		}
 		public Object combine2(Resumption r, Env e, Object tag, Object hdl, Throwable thw) {
@@ -955,7 +955,7 @@ public class Vm {
 		Object cleanup(Object cln, Env e, boolean success, Object res) {
 			return pipe(dbg(e, this, cln, success, res), ()-> getTco(evaluate(e, cln)), $-> {
 					if (success) return res;
-					throw res instanceof Value val ? val : res instanceof Error err ? err : new Error("cleanup error!", (Throwable) res);
+					throw res instanceof Value val ? val : res instanceof Condition cnd ? cnd : new Error("cleanup error!", (Throwable) res);
 				}
 			);
 		}
@@ -994,15 +994,11 @@ public class Vm {
 			var dbg = dbg(e, this, o);
 			return pipe(dbg,
 				()-> getTco(evaluate(e, o.car)),
-				prp-> cons(prp, getTco(evaluate(e, o.car(1)))),
-				a-> apply(
-					c->	pushPrompt(null, e, dbg, c.car,
-						()-> c.cdr() instanceof Continuation cont
-						? cont.apply(e, o.<List>cdr(1))
-						: typeError("cannot apply continuation, not a {expected}: {datum}", c.cdr(), Continuation.class)
-					),
-					(Cons) a
-				)
+				prp-> switch (getTco(evaluate(e, o.car(1)))) {
+					case Suspension s-> s;
+					case Continuation k-> pushPrompt(null, e, dbg, prp, ()-> k.apply(e, o.<List>cdr(1)));
+					case Object object-> typeError("cannot apply continuation, not a {expected}: {datum}", object, Continuation.class);
+				}
 			);
 		}
 		public String toString() { return "%PushDelimSubcont"; }
@@ -1133,7 +1129,7 @@ public class Vm {
 					catch (Throwable thw) {
 						switch (thw) {
 							case Value val: throw val;
-							case Error err: throw err;
+							case Condition cnd: throw cnd;
 							case InnerException ie when name.equals("%CheckO"): throw ie; 
 							default: return javaError("error executing: {member} with: {args}", thw, name == null ? null : symbol(name), o, null);
 						}
@@ -1184,8 +1180,8 @@ public class Vm {
 				catch (Throwable thw) {
 					if (thw instanceof InvocationTargetException ite) {
 						switch (thw = ite.getTargetException()) {
-							case Value v: throw v;
-							case Error e: throw e;
+							case Value val: throw val;
+							case Condition cnd: throw cnd;
 							default: // in errore senza!
 						}
 					}
@@ -1208,7 +1204,7 @@ public class Vm {
 				// (.<name> object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
 				//TODO (.<name> object (or #ignore #inert :rhs :prv :cnt) value) 
 				Field field = getField(o0 instanceof Class ? (Class) o0 : o0.getClass(), name);
-				if (field == null) return unboundFieldError("field: {field} not found in: {object}", name, o0 instanceof Class cl ? cl : o0.getClass());
+				if (field == null) return unboundFieldError("unbound field: {field} in: {object}", name, o0 instanceof Class cl ? cl : o0.getClass());
 				try {
 					if (len == 1) return field.get(o0);
 					field.set(o0, o.car(1)); return inert;

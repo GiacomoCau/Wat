@@ -98,9 +98,9 @@
 (%def %className (%\ (class) (%intern (@getSimpleName (%the Class class)))))
 ;(%def %newClass ((%\ (%newClass) (%\ (name superclass) (%newClass (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass))) %newClass))
 
-(%def %getSlot (%\ (obj slot) ((%the ObjEnv obj) (%the Intern slot)) ))
-(%def %setSlot (%\ (obj slot value) ((%the ObjEnv obj) (%the Intern slot) value) ))
-(%def %slotBound? (%\ (obj slot) (@isBound (%the ObjEnv obj) (%the Intern slot)) ))
+(%def %getSlot (%\ ((#! ObjEnv obj) (#! Intern slot)) (obj slot)))
+(%def %setSlot (%\ ((#! ObjEnv obj) (#! Intern slot) value) (obj slot value)))
+(%def %slotBound? (%\ ((#! ObjEnv obj) (#! Intern slot)) (%bound? slot obj)))
 
 (%def %mkCheckEval
   (%\ (check)

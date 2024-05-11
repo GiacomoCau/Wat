@@ -2395,10 +2395,12 @@
       (def obj (new Obj))
       (assert#t (not (slotBound? obj 'x)))
       (assert#t (not (slotBound? obj :x)))
-      (assert#t (signalsError? (getSlot obj 'x)
-                             Error :type 'unboundField :object obj :field "x"))
-      (assert#t (signalsError? (getSlot obj :x)
-                             Error :type 'unboundField :object obj :field "x"))
+      (assert#t
+        (signalsError? (getSlot obj 'x)
+          Error :type 'unboundField :object obj :field "x"))
+      (assert#t
+        (signalsError? (getSlot obj :x)
+          Error :type 'unboundField :object obj :field "x"))
       (setSlot obj 'x 1)
       (assert#t (slotBound? obj 'x))
       (assert#t (slotBound? obj :x))

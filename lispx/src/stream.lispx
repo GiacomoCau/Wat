@@ -7,11 +7,13 @@
 ;;; String Input Streams
 
 (def\ make-string-input-stream (string)
-  "Create a string input stream that reads from STRING."
+  #|Create a string input stream that reads from STRING.
+   |#
   (%make-string-input-stream string))
 
 (defVau with-standard-input-from-string (string . forms) env
-  "Evaluate FORMS with `*standard-input*' coming from STRING."
+  #|Evaluate FORMS with `*standard-input*' coming from STRING.
+   |#
   (let ((s (eval string env)))
     (dlet ((*standard-input* (make-string-input-stream s)))
       (apply begin forms env))))
@@ -19,15 +21,18 @@
 ;;; String Output Streams
 
 (def\ make-string-output-stream ()
-  "Construct an empty string output stream."
+  #|Construct an empty string output stream.
+   |#
   (%make-string-output-stream))
 
 (def\ get-output-stream-string (stream)
-  "Return the contents of the string output STREAM."
+  #|Return the contents of the string output STREAM.
+   |#
   (%get-output-stream-string stream))
 
 (defVau with-standard-output-to-string forms env
-  "Evaluate FORMS with `*standard-output*' being collected in a string."
+  #|Evaluate FORMS with `*standard-output*' being collected in a string.
+   |#
   (dlet ((*standard-output* (make-string-output-stream)))
     (apply begin forms env)
     (get-output-stream-string (dget *standard-output*))))
@@ -35,11 +40,13 @@
 ;;; Miscellaneous
 
 (def\ fresh-line stream?
-  "Ensure that the following output appears on a new line by itself.
-  |The optional STREAM? defaults to `*standard-output*'."
+  #|Ensure that the following output appears on a new line by itself.
+   |The optional STREAM? defaults to `*standard-output*'.
+   |#
   (%fresh-line (optDft stream? (dget *standard-output*))))
 
 (def\ force-output stream?
-  "Initiate the emptying of any internal buffers but don't wait for them to finish.
-  |The optional STREAM? defaults to `*standard-output*'."
+  #|Initiate the emptying of any internal buffers but don't wait for them to finish.
+   |The optional STREAM? defaults to `*standard-output*'.
+   |#
   (%force-output (optDft stream? (dget *standard-output*))))

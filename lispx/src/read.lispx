@@ -5,20 +5,22 @@
 ;; Copyright (c) 2021 Manuel J. Simoni
 
 (def\ read arguments
-  "Reads an object from the STREAM (which defaults to
-  |`*standard-input*').  If EOF is reached, and `eof-error-p' is true
-  |(the default), `end-of-file' is signalled. If it is false, `eof-value'
-  |is returned (it defaults to void).
-  |$(fn (&optDft stream eof-error-p eof-value))"
+  #|Reads an object from the STREAM (which defaults to `*standard-input*').
+   |If EOF is reached, and `eofError?' is true (the default), `end-of-file' is signalled.
+   |If it is false, `eofValue' is returned (it defaults to void).
+   |
+   |$(fn (&optDft stream eof-error-p eof-value))
+   |#
   (apply stream-read (optDft* arguments (dget *standard-input*) #t #inert)))
 
 ;;; Unstable/Experimental API:
 
 (defGeneric stream-read (stream eof-error-p eof-value)
-  (:documentation "Underlying, generic implementation of `read'.
-  |Every stream class can provide a specialized method."))
+  #|Underlying, generic implementation of `read'.
+   |Every stream class can provide a specialized method.
+   |# )
 
 (defMethod stream-read ((stream input-stream) eof-error-p eof-value)
-  "The default implementation of `stream-read' calls a built-in
-  |function written in JS."
-  (%read stream eof-error-p eof-value))
+  #|The default implementation of `stream-read' calls a built-in function written in JS.
+   |#
+  (%read stream eof-error-p eof-value) )

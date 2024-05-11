@@ -5,35 +5,42 @@
 ;; Copyright (c) 2021, 2022 Manuel J. Simoni
 
 (def\ write (object . keywords)
-  "Write OBJECT to STREAM (defaults to `*standard-output*').  Main
-  |printer entry point.
-  |$(fn (object &key stream))"
+  #|Write OBJECT to STREAM (defaults to `*standard-output*').
+   |Main printer entry point.
+   |
+   |$(fn (object &key stream))
+   |#
   (%write object (optDft (optValue :stream keywords) (dget *standard-output*))))
 
 (def\ write-to-string (object)
-  "Create a string consisting of the printed representation of object."
+  #|Create a string consisting of the printed representation of object.
+   |#
   (with-standard-output-to-string (write object)))
 
 (def\ print1 (object)
-  "Print OBJECT readably on the current line.  May or may not force
-  |the output."
+  #|Print OBJECT readably on the current line.
+   |May or may not force the output.
+   |#
   (dlet ((*print-escape* #t))
     (write object)))
 
 (def\ uprint1 (object)
-  "Print OBJECT unreadably on the current line.  May or may not force
-  |the output."
+  #|Print OBJECT unreadably on the current line.
+   |May or may not force the output.
+   |#
   (dlet ((*print-escape* #f))
     (write object)))
 
 (def\ print (object)
-  "Print OBJECT readably on a fresh line and force the output."
+  #|Print OBJECT readably on a fresh line and force the output.
+   |#
   (fresh-line)
   (prog1 (print1 object)
     (force-output)))
 
 (def\ uprint (object)
-  "Print OBJECT unreadably on a fresh line and force the output."
+  #|Print OBJECT unreadably on a fresh line and force the output.
+   |#
   (fresh-line)
   (prog1 (uprint1 object)
     (force-output)))

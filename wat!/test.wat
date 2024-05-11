@@ -12,7 +12,7 @@
 (assert (\ "foo" "bar"))
 (assert (def))
 (assert (def 12))
-(assert (def 12 12))
+(assert(def 12 12))
 
 (assert (begin) #inert)
 (assert (begin 1) 1)
@@ -20,8 +20,6 @@
 
 
 ;;;; Delimited Control Operators Tests
-
-;; adapted from 
 
 (def\ (newPrompt) (list #null))
 
@@ -37,6 +35,7 @@
 (def\ promptSet? (prompt)
   (catchWth (caseType\ (e) ((Error :type 'unboundPrompt) #f) (else (throw e)))
     (takeSubcont prompt k (pushDelimSubcont prompt k #t))))
+
 
 (test test1
   (let ((p (newPrompt)))

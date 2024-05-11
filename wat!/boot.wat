@@ -51,7 +51,7 @@
   \ )
 
 (def wrap
-  #|Return a new function that wraps around an underlying OPERATOR, and induces argument evaluation around it.
+  #|Return a new function that wraps around the underlying OPERATOR, and induces argument evaluations around it.
    |
    |$(fn operator)
    |$(type function)
@@ -747,6 +747,9 @@
 
 
 #|! List
+ |The last `cdr' of lists il alwais #null.
+ |
+ |(List type Class extends Cons)
  |#
 
 (def append
@@ -788,7 +791,8 @@
 
 
 #|! Symbol & Keyword
- |Symbol and Keyword extends Intern
+ |(Symbol type Class extends Intern)
+ |(Keyword type Class extends Intern)
  |#
 
 (def intern
@@ -2592,7 +2596,7 @@
 ; (def the the+)
 
 
-#|! Block ReturnFrom Loop For While Until Repeat DoTimes
+#|! Block ReturnFrom Loop For While Until Repeat DoTimes DoList
  |#
 
 (defVau block (blockName . forms) env
@@ -2639,7 +2643,7 @@
           (returnFrom exit #inert)) ))))
 
 (defde\ (mkTag tag (#! (and Integer (>= 0) (<= %deep)) n))
-  #|Return a tag for the throws forms by joining TAG and N.
+  #|Return a tag for the break/continue throws forms of into the loop form by joining TAG and N.
    |Get the %deep of the enhanced loop form in the dynamic environment.
    |Used from break, continue, until and while forms for the enhanced loops.
    |
@@ -2873,7 +2877,7 @@
 (defMacro doList ((var lst . endForms) . forms)
   #|Cf. Common Lisp's DOLIST.
    |
-   |$(fn symbol list . forms)
+   |$(fn (symbol list . endForms) . forms)
    |$(type macro)
    |#
   (let1rec\
@@ -2888,7 +2892,7 @@
       (list* '\ (list var) endForms) )))
 
 
-#|! Lists
+#|! Lists Functions
  |#
 
 (def\ (any? f lst . lst*)
@@ -3064,23 +3068,6 @@
 
 (assert (foldR cons () '(1 2 3 4)) '(4 3 2 1))
 
-(defMacro doList ((var lst . resultForms) . bodyForms)
-  #|Cf. Common Lisp's DOLIST.
-   |
-   |$(fn symbol list . forms)
-   |$(type macro)
-   |#
-  (let1rec\
-    (doList (lst body\ result\)
-      (if (null? lst) (result\ lst)
-        (else
-          (body\ (car lst))
-          (doList (cdr lst) body\ result\) )))
-    (list doList
-      lst
-      (list* '\ (list var) bodyForms)
-      (list* '\ (list var) resultForms) )))
-
 
 #|! Arrays
  |#
@@ -3095,6 +3082,7 @@
 
 (def\ (array->cons arr)
   #|Array to improper list.
+   |The last element of the array becomes the last `cdr' of the list.
    |
    |$(fn array)
    |$(type function)
@@ -3352,8 +3340,8 @@
 (assert (expand ´(dd _c 1 _b "a" _a _a 'c _ :ff _*) '(\ (_ _a _b _c . _*) (dd _c 1 _b "a" _a _a 'c _ :ff _*)) ))
 
 
-#|! Dynamic Bindings
- |DVar estends Box
+#|! Dynamic Variable
+ |(DVar type Class extends Box)
  |
  |The form ddef ddef* dlet progv and dlet* are defined as macro using the primitive operator %dv\ that return a function.   
  |
@@ -3499,7 +3487,7 @@
    |$(syntax superclass (or () (symbol)))
    |$(syntax attributes (symbol . attributes))
    |#
-  ;; Slot-specs are ignored for now, but check that they are symbols nevertheless.
+  ;; Attribute-specs are ignored for now, but check that they are symbols nevertheless.
   (def superClass (findClass (optDft superClass 'Obj) env))
   (eval (list 'def name (%newClass name superClass)) env) )
 
@@ -3948,9 +3936,8 @@
 (defClass YieldRecord ()
   #|Instances of this class are yielded.
    |
-   |(extends Obj)
-   |(type class)
-   |(slots (value continuation))
+   |$(type class extends Obj)
+   |$(attributes (value continuation))
    |#
   (value continuation) )
 
