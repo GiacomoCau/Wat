@@ -41,12 +41,12 @@
 (%def Math &java.lang.Math)
 (%def Number &java.lang.Number)
 (%def Object &java.lang.Object)
-(%def Object[] &java.lang.Object[])
 (%def Opv &Wat.Vm$Opv)
 (%def Keyword &Wat.Vm$Keyword)
 (%def Obj &Wat.Vm$Obj)
 (%def ObjEnv &Wat.Vm$ObjEnv)
 (%def Object &java.lang.Object)
+(%def Object[] &java.lang.Object[])
 (%def Opv &Wat.Vm$Opv)
 (%def Symbol &Wat.Vm$Symbol)
 (%def System &java.lang.System)
@@ -90,17 +90,18 @@
           (%if (%type? (@getCause thw) &java.lang.StringIndexOutOfBoundsException)
             (%new Error "cannot subString" thw :type 'outOfBounds)
             thw )))
-      (apply** @substring str start end)  )))
+      (%apply** @substring str start end) )))
 
 
 ;(%def %pushPrompt ((%\ (%pushPrompt) (%wrap %pushPrompt)) %pushPrompt))
 
-(%def %className (%\ (class) (%intern (@getSimpleName (%the Class class)))))
+(%def %className (%\ ((#! Class class)) (%intern (@getSimpleName class))))
 ;(%def %newClass ((%\ (%newClass) (%\ (name superclass) (%newClass (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass))) %newClass))
 
 (%def %getSlot (%\ ((#! ObjEnv obj) (#! Intern slot)) (obj slot)))
 (%def %setSlot (%\ ((#! ObjEnv obj) (#! Intern slot) value) (obj slot value)))
 (%def %slotBound? (%\ ((#! ObjEnv obj) (#! Intern slot)) (%bound? slot obj)))
+
 
 (%def %mkCheckEval
   (%\ (check)
@@ -123,7 +124,7 @@
                       (%if (%type? evckcar Apv)
                         (%cons evckcar (%cons ckcar (%eval (%list* '%list (%cdr ck)) env)))
                         (%cons (evl ckcar) (evm (%cdr ck))) ))
-                    (%eval ckcar env) )))
+                    (%eval ckcar env) ) ))
               (%car ck) ) )))
       (%def evm (%\ (lst) (%if (%null? lst) #null (%cons (evl (%car lst)) (evm (%cdr lst))))))
       (check o (evl ck)) )))
@@ -152,6 +153,14 @@
   (when (prStk) (log "-" (@getMessage err)) (printStacktrace))
   (throw err) )
 
+#|
+(def\ (printStacktrace)
+  (takeSubcont rootPrompt k
+    (pushDelimSubcont rootPrompt k
+      (printFrames k) )))
+
+(def panic throw)
+|#
 
 ;;;; Test
 

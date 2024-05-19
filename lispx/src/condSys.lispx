@@ -91,8 +91,7 @@
   #|Instances of this class make up the condition and restart handler chains.
    |Each frame stores a list of HANDLERS and an optional PARENT-FRAME.
    |
-   |$(extends Obj)
-   |$(type class)
+   |$(type class extends Obj)
    |$(slots (handlers parentFrame))
    |#
   (handlers parentFrame) )
@@ -101,8 +100,7 @@
   #|A condition handler is handling a particular CONDITION-CLASS (can be `object' to handle all conditions).
    |The HANDLER-FUNCTION receives a signalled condition as its single argument.
    |
-   |$(extends Obj)
-   |$(type class)
+   |$(type class extends Obj)
    |$(slots (conditionClass handlerFunction))
    |#
   (conditionClass handlerFunction) )
@@ -116,8 +114,7 @@
    |If the list is empty, the handler is applicable to any condition.
    |If it's not empty, the handler is applicable only to conditions in the list.
    |
-   |$(extends Obj)
-   |$(type class)
+   |$(type class extends Obj)
    |$(slots (restartName handlerFunction interactiveFunction associatedConditions))
    |#
   (restartName handlerFunction interactiveFunction associatedConditions) )
@@ -167,7 +164,7 @@
     (\ ((className functionForm) env)
       (new ConditionHandler
         :conditionClass
-           (the+ (or Class (1 oo Class (or Intern AtDot) Any))
+           (the (or Class (1 oo Class (or Intern AtDot) Any))
              (if (cons? className) (eval (cons 'list className) env) (eval className env)) )
         :handlerFunction
            (the Function (eval functionForm env)) ))
@@ -497,8 +494,7 @@
 (defClass RestartError (Error)
   #|Signalled when no handler for RESTART-NAME is found.
    |
-   |$(extends Error)
-   |$(type class)
+   |$(type class extends Error)
    |#
   (restartName) )
 
@@ -522,8 +518,7 @@
 (defClass SimpleError (Error)
   #|Class for simple errors with a MESSAGE.
    |
-   |$(extends Error)
-   |$(type class)
+   |$(type class extends Error)
    |#
   (message) )
 

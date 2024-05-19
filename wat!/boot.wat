@@ -2528,14 +2528,6 @@
    |#
   (unless boolean (error (new Error "invalid assetion" :type 'assert :datum boolean :expected #t))))
 
-(def the
-  #|Return OBJECT if OBJECT is an instance of the CLASS, signals an error otherwise.
-   |
-   |$(fn class object)
-   |$(type function)
-   |#
-  %the)
-
 (defVau (check o ck) env
   #|Return the lenght of OBJECT if match CHECK, signals an error otherwise.
    |
@@ -2577,7 +2569,7 @@
     (apply check args env)
     #t ))
 
-(defMacro (the+ ck obj)
+(defMacro (the ck obj)
   #|Return OBJECT if OBJECT match CHK, signals an error otherwise.
    |
    |$(fn chk object)
@@ -2586,14 +2578,11 @@
    |#
   (list 'let1 (list 'obj obj) (list 'check 'obj ck) 'obj))
 
-(assert (the+ Integer 1) 1)
-(assert (the+ Integer "1") Error :type 'type :datum "1" :expected 'Integer)
-(assert (the+ (or 1 2) 1) 1)
-(assert (the+ (or 1 2) 2) 2)
-(assert (the+ (or 1 2) 3) Error :type 'type :datum 3 :expected '(or 1 2))
-
-; TODO non è più così costosa la conversione, si può fare
-; (def the the+)
+(assert (the Integer 1) 1)
+(assert (the Integer "1") Error :type 'type :datum "1" :expected 'Integer)
+(assert (the (or 1 2) 1) 1)
+(assert (the (or 1 2) 2) 2)
+(assert (the (or 1 2) 3) Error :type 'type :datum 3 :expected '(or 1 2))
 
 
 #|! Block ReturnFrom Loop For While Until Repeat DoTimes DoList

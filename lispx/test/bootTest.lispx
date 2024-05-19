@@ -128,7 +128,7 @@
   (defTest the.3
     (signalsError?
      (the #t #f)
-     Error :type 'type :datum #t :expected 'Class))
+     Error :type 'type :datum #f :expected #t))
 
   (defTest the.4
     (signalsError?
@@ -138,7 +138,7 @@
   (defTest the.5
     (signalsError?
      (the #t)
-     Error :type 'type :datum #t :expected 'Class)))
+     Error :type 'match :operands# +1)))
 
 (defSuite makeTypeError
 
@@ -2397,10 +2397,10 @@
       (assert#t (not (slotBound? obj :x)))
       (assert#t
         (signalsError? (getSlot obj 'x)
-          Error :type 'unboundField :object obj :field "x"))
+          Error :type 'unboundSlot :obj obj :slot "x"))
       (assert#t
         (signalsError? (getSlot obj :x)
-          Error :type 'unboundField :object obj :field "x"))
+          Error :type 'unboundSlot :obj obj :slot "x"))
       (setSlot obj 'x 1)
       (assert#t (slotBound? obj 'x))
       (assert#t (slotBound? obj :x))

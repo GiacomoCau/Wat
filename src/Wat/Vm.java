@@ -373,7 +373,7 @@ public class Vm {
 		public boolean isBound(Object obj) { return lookup(obj).isBound; }
 		public Object get(Object obj) {
 			var lookup = lookup(obj);
-			if (!lookup.isBound) return unboundSymbolError("unbound symbol: {symbol}", obj, this);
+			if (!lookup.isBound) return unboundSymbolError(obj, this);
 			if (prTrc >= 6) print("  lookup: ", lookup.value); return lookup.value;
 		}
 		Object def(Object obj, Object value) {
@@ -388,7 +388,7 @@ public class Vm {
 				if (prTrc >= 6) print("     set: ", key, "=", value, " in: ", env);
 				return env.map.put(key, value);
 			}
-			return unboundSymbolError("unbound symbol: {symbol}", obj, this);
+			return unboundSymbolError(obj, this);
 		};
 		boolean isParent(Env other) {
 			for (var env=this; env != null; env=env.parent) if (other == env) return true; 
@@ -490,7 +490,7 @@ public class Vm {
 		public Object get(Object obj) {
 			var key = toKey(obj);
 			var val = map.get(key);
-			return val != null || map.containsKey(key) ? val : unboundFieldError("unbound slot: {field} in: {object}", key, this);
+			return val != null || map.containsKey(key) ? val : unboundSlotError(key, this);
 		}
 		Object puts(Object ... objs) {
 			if (objs == null) return null;
@@ -727,7 +727,7 @@ public class Vm {
 		if (op instanceof Combinable cmb) return cmb.combine(e, o);
 		// per default le jFun nude sono considerate applicative
 		if (isjFun(op)) return new Apv(new JFun(op)).combine(e, o);
-		return aQuote ? cons(op, o) : typeError("cannot combine, not a {expected}: {datum} in: " + cons(op, o), op, symbol("Combinable"));
+		return aQuote ? cons(op, o) : typeError("cannot combine, not a {expected}: {datum} in: {expr}", op, symbol("Combinable"), cons(op, o));
 	}
 	
 	class Opv implements Combinable  {
@@ -772,7 +772,7 @@ public class Vm {
 	}
 	Opv opv(Env e, Object pt, Object pe, List body) { return new Opv(e, pt, pe, body); } 
 	Apv lambda(Env e, Object pt, List body) { return new Apv(opv(e, pt, ignore, body)); }
-	Apv apv1(Env e, Symbol sym, List body) { return lambda(e, list(sym), body); }
+	Apv apv1(Env e, Symbol sym, List body) { return lambda(e, cons(sym), body); }
 	Apv apv0(Env e, List body) { return lambda(e, null, body); }
 	
 	
@@ -917,7 +917,7 @@ public class Vm {
 			Object res = r != null ? r.resume() : ctApv ? hdl : getTco(evaluate(e, hdl));
 			if (res instanceof Suspension s) return s.suspend(dbg(e, this, tag, hdl), rr-> combine2(rr, e, tag, hdl, thw));
 			return res instanceof Apv apv && args(apv) == 1
-				? getTco(Vm.this.combine(e, unwrap(apv), list(thw instanceof Value val ? val.value : thw)))
+				? getTco(Vm.this.combine(e, unwrap(apv), cons(thw instanceof Value val ? val.value : thw)))
 				: hdlAny ? res : typeError("cannot apply handler, not a {expected}: {datum}", res, symbol("Apv1"))
 			;
 		}
@@ -969,7 +969,7 @@ public class Vm {
 			var chk = checkM(this, o, 2, Any.class, or(ignore, Symbol.class)); // o = (prp (or #ignore symbol) . forms)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
-			var hdl = lambda(e, list(o.<Object>car(1)), o.cdr(1));
+			var hdl = lambda(e, cons(o.car(1)), o.cdr(1));
 			return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, o.car)),
 				prp-> new Suspension(prp, hdl).suspend(dbg(e, this, prp, hdl), rr-> Vm.this.combine(e, rr.s, null)))
 			;
@@ -1018,7 +1018,7 @@ public class Vm {
 		Object combine(Resumption r, Env e, List o) {
 			var res = r != null ? r.resume() : getTco(begin.combine(e, o));
 			if (!(res instanceof Suspension s)) return res;
-			return s.suspend(dbg(e, "pushSubcontBarrier", o), rr-> combine(rr, e, o)).k.apply(()-> unboundPromptError("prompt not found: {prompt}", s.prp));
+			return s.suspend(dbg(e, "pushSubcontBarrier", o), rr-> combine(rr, e, o)).k.apply(()-> unboundPromptError(s.prp));
 		}
 		public String toString() { return "%PushSubcontBarrier"; }
 	};
@@ -1029,7 +1029,7 @@ public class Vm {
 	class DVLambda implements Combinable {
 		public Object combine(Env e, List o) { return combine(null, e, o); }
 		public Object combine(Resumption r, Env e, List o) {
-			var chk = checkM(this, o, 1, list(Symbol.class)); // o = ((symbol . symbols) . forms)
+			var chk = checkM(this, o, 1, cons(Symbol.class)); // o = ((symbol . symbols) . forms)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer)) return resumeError(chk, symbol("Integer"));
 			var vars = array(o.car());
@@ -1168,7 +1168,7 @@ public class Vm {
 				}
 				var classes = getClasses(args);
 				Executable executable = getExecutable(o0, name, classes);
-				if (executable == null) return unboundExecutableError(Vm.this.toString(name, classes) + " not found in: {class}", symbol(name), list((Object[])classes), o0 instanceof Class cl ? cl : o0.getClass());
+				if (executable == null) return unboundExecutableError(Vm.this.toString(name, classes) + " not found in: {class}", symbol(name), list((Object[]) classes), o0 instanceof Class cl ? cl : o0.getClass());
 				try {
 					//executable.setAccessible(true);
 					args = reorg(executable, args);
@@ -1204,7 +1204,7 @@ public class Vm {
 				// (.<name> object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
 				//TODO (.<name> object (or #ignore #inert :rhs :prv :cnt) value) 
 				Field field = getField(o0 instanceof Class ? (Class) o0 : o0.getClass(), name);
-				if (field == null) return unboundFieldError("unbound field: {field} in: {object}", name, o0 instanceof Class cl ? cl : o0.getClass());
+				if (field == null) return unboundFieldError(name, o0 instanceof Class cl ? cl : o0.getClass());
 				try {
 					if (len == 1) return field.get(o0);
 					field.set(o0, o.car(1)); return inert;
@@ -1243,12 +1243,14 @@ public class Vm {
 	<T> T typeError(String msg, Object datum, Object expected) { return error(msg, "type", symbol("type"), "datum", datum, "expected", expected); }
 	<T> T typeError(String msg, Object datum, Object expected, Object expr) { return error(msg, "type", symbol("type"), "datum", datum, "expected", expected, "expr", expr); }
 	<T> T syntaxError(String msg, Object datum, Object expr) { return error(msg, "type", symbol("syntax"), "datum", datum, "expr", expr); }
-	<T> T resumeError(Object datum, Object expected) { return error("invalid resume value, not a {expected}: {datum}", "type", symbol("resume"), "datum", datum, "expected", expected); }
-	<T> T unboundSymbolError(String msg, Object name, Env env) { return error(msg, "type", symbol("unboundSymbol"), "symbol", name, "environment", env); }
-	<T> T unboundFieldError(String msg, String field, Object object) { return error(msg, "type", symbol("unboundField"), "field", field, "object", object); }
+	//<T> T resumeError(Object datum, Object expected) { return error("invalid resume value, not a {expected}: {datum}", "type", symbol("resume"), "datum", datum, "expected", expected); }
+	<T> T resumeError(Object datum, Object expected) { return typeError("invalid resume value, not a {expected}: {datum}", datum, expected); }
+	<T> T unboundSymbolError(Object name, Env env) { return error("unbound symbol: {symbol} in: {env}", "type", symbol("unboundSymbol"), "symbol", name, "env", env); }
+	<T> T unboundSlotError(String slot, Obj obj) { return error("unbound slot: {slot} in: {obj}", "type", symbol("unboundSlot"), "slot", slot, "obj", obj); }
+	<T> T unboundFieldError(String field, Object object) { return error("unbound field: {field} in: {object}", "type", symbol("unboundField"), "field", field, "object", object); }
 	<T> T unboundExecutableError(String msg, Symbol executable, Object object) { return error(msg, "type", symbol("unboundExecutable"), "executable", executable, "class", object); }
 	<T> T unboundExecutableError(String msg, Symbol executable, List classes, Object object) { return error(msg, "type", symbol("unboundExecutable"), "executable", executable, "classes", classes, "class", object); }
-	<T> T unboundPromptError(String msg, Object prompt) { return error(msg, "type", symbol("unboundPrompt"), "prompt", prompt); }
+	<T> T unboundPromptError(Object prompt) { return error("prompt not found: {prompt}", "type", symbol("unboundPrompt"), "prompt", prompt); }
 	<T> T javaError(String msg, Throwable cause, Symbol member, List args, Object object) { return error(msg, cause, "type", symbol("java"), "member", member, "object", object, "args", args); }
 	class Value extends RuntimeException {
 		private static final long serialVersionUID = 1L;
@@ -1410,7 +1412,7 @@ public class Vm {
 		}
 	}
 	private Object innerError(InnerException ie, Object op, Object o, Object chk) {
-		return !member(op, "check", "the+")
+		return !member(op, "check", "the")
 			? error("combining {operator} with {operands}", ie, "operator", op, "operands", o)
 			: ie.objs[1] != o /*&& ie.objs[3].equals(toChk(chk))*/
 			? error("checking {operands} with {check}", ie, "operands", o, "check", toChk(chk))
@@ -1560,7 +1562,7 @@ public class Vm {
 		for (var l=expt.cdr(); l != null; l = l.cdr(1)) {
 			var car = l.car;
 			if (car instanceof AtDot ad) {
-				if (!Vm.this.equals(ad.apply(list(object)), l.car(1))) return false;
+				if (!Vm.this.equals(ad.apply(cons(object)), l.car(1))) return false;
 			}
 			else if (object instanceof Obj obj) {
 				if (!Vm.this.equals(obj.value(car), l.car(1))) return false;
@@ -1785,8 +1787,8 @@ public class Vm {
 				"%addMethod", wrap(new JFun("%AddMethod", (n,o)-> checkN(n, o, 3, or(null, Class.class), Symbol.class, Apv.class), (l,o)-> addMethod(o.car(), o.car(1), o.car(2)) )),
 				"%getMethod", wrap(new JFun("%GetMethod", (n,o)-> checkN(n, o, 2, or(null, Class.class), Symbol.class), (l,o)-> getMethod(o.car(), o.car(1)) )),
 				// Check
-				"%the", wrap(new JFun("%The", (n,o)-> checkN(n, o, 2, Class.class), (l,o)-> o.<Class>car().isInstance(o.car(1)) ? o.car(1) : typeError("not a {expected}: {datum}", o.car(1), symbol(o.<Class>car().getSimpleName())) )),
-				"%the+", wrap(new JFun("%The+", (n,o)-> checkN(n, o, 2), (l,o)-> check("the+", o.car(1), o.car) )),
+				//"%the", wrap(new JFun("%The", (n,o)-> checkN(n, o, 2, Class.class), (l,o)-> o.<Class>car().isInstance(o.car(1)) ? o.car(1) : typeError("not a {expected}: {datum}", o.car(1), symbol(o.<Class>car().getSimpleName())) )),
+				"%the", wrap(new JFun("%The", (n,o)-> checkN(n, o, 2), (l,o)-> check("the", o.car(1), o.car) )),
 				"%check", wrap(new JFun("%Check", (n,o)-> checkN(n, o, 2), (l,o)-> check("check", o.car, o.car(1)) )),
 				"%checkO", wrap(new JFun("%CheckO", (n,o)-> checkN(n, o, 2), (l,o)-> checkO(o.car, o.car(1)) )),
 				//"%matchBox?", wrap(new JFun("%MatchBox?", (n,o)-> checkN(n, o, 2, Any.class, list(1, 2, Box.class, Any.class)), (l,o)-> matchType(o.car, o.car(1)) )),
@@ -1797,10 +1799,10 @@ public class Vm {
 				"%list->array", wrap(new JFun("%List->Array", (n,o)-> checkM(n, o, 1, List.class), (l,o)-> array(o.car()) )),
 				"%array->list", wrap(new JFun("%Array->List", (n,o)-> checkM(n, o, 2, Boolean.class, Object[].class), (l,o)-> list(o.<Boolean>car(), o.<Object[]>car(1)) )),
 				// Derivated
-				"%theEnv", opv(vmEnv, null, symbol("env"), list(symbol("env"))),
-				"%'", opv(vmEnv, list(symbol("arg")), ignore, list(symbol("arg"))),
-				"%`", opv(vmEnv, list(symbol("arg")), ignore, list(symbol("arg"))),
-				"%´", opv(vmEnv, list(symbol("arg")), ignore, list(symbol("arg"))),
+				"%theEnv", opv(vmEnv, null, symbol("env"), cons(symbol("env"))),
+				"%'", opv(vmEnv, cons(symbol("arg")), ignore, cons(symbol("arg"))),
+				"%`", opv(vmEnv, cons(symbol("arg")), ignore, cons(symbol("arg"))),
+				"%´", opv(vmEnv, cons(symbol("arg")), ignore, cons(symbol("arg"))),
 				"%\\", opv(vmEnv,
 					cons(symbol("formals"), symbol("forms")),
 					symbol("env"),
