@@ -178,6 +178,72 @@
         </li>
       </ul>
     </div>
+    <div>
+      <h3>
+        setCar
+      </h3>
+      <ul>
+        <li>
+          Set the `car' of the Cons.
+          <br/>
+            &nbsp;
+          <br/>
+            without bindResult or with bindResult #ignore use as bindResult `(bndRes)'
+          <br/>
+            with bindResult #inert return #inert
+          <br/>
+            with bindResult :rhs return value
+          <br/>
+            with bindResult :prv return the previous value of the `car'
+          <br/>
+            with bindResult :cnt return the Cons or List
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (setCar value)
+        </li>
+        <li>
+          (setCar bindResult value)
+        </li>
+        <li>
+          (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        setCdr
+      </h3>
+      <ul>
+        <li>
+          Set the `cdr' of the Cons.
+          <br/>
+            &nbsp;
+          <br/>
+            without bindResult or with bindResult #ignore use as bindResult `(bndRes)'
+          <br/>
+            with bindResult #inert return #inert
+          <br/>
+            with bindResult :rhs return value
+          <br/>
+            with bindResult :prv return the previous value of the `cdr'
+          <br/>
+            with bindResult :cnt return the Cons
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (setCdr value)
+        </li>
+        <li>
+          (setCdr bindResult value)
+        </li>
+        <li>
+          (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+        </li>
+      </ul>
+    </div>
     <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference9.html">
       <input type="button" value="&lt;"/>

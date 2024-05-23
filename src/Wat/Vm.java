@@ -321,16 +321,15 @@ public class Vm {
 		public <T> T cdr() { return (T) cdr; }
 		public <T> T car(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? o.car() : error("cannot get car", "type", symbol("outOfBounds")); }
 		public <T> T cdr(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? o.cdr() : error("cannot get cdr", "type", symbol("outOfBounds")); }
-		<T extends Cons> T setCar(Object car) { this.car = car; return (T) this; }
-		<T extends Cons> T setCdr(Object cdr) { this.cdr = cdr; return (T) this; }
+		Object setCar(Object car) { this.car = car; return this; }
+		Object setCdr(Object cdr) { this.cdr = cdr; return this; }
 	}
 	public class List extends Cons {
 		List(Object car, List cdr) { super(car, cdr); }
 		@Override public List cdr() { return super.cdr(); }
-		List setCdr(List cdr) { return super.setCdr(cdr); }
-		@Override List setCdr(Object cdr) { return cdr == null || cdr instanceof List ? setCdr(cdr) : typeError("cannot set cdr, not a {expected}: {datum}", cdr, symbol("List") ); }
+		@Override Object setCdr(Object cdr) { return cdr == null || cdr instanceof List ? super.setCdr(cdr) : typeError("cannot set cdr, not a {expected}: {datum}", cdr, symbol("List") ); }
 	}
-	public int len(List o) { int i=0; for (; o != null; i+=1, o=o.cdr()); return i; }
+	//public int len(List o) { int i=0; for (; o != null; i+=1, o=o.cdr()); return i; }
 	public int len(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return i /*o == null ? i : i + .5*/; }
 	//public Object arity(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return o == null ? i : list(symbol(">="), i); }
 	<T extends Cons> T cons(Object car) { return (T) new List(car, null); }
@@ -1684,6 +1683,7 @@ public class Vm {
 					(l,o)-> ((ArgsList) at("new")).apply(listStar(o.car, Vm.this, o.cdr())) )),
 				// Env & Obj
 				//"%objEnv?", wrap(new JFun("%ObjEnv?", (Function<Object, Boolean>) obj-> obj instanceof ObjEnv )),
+				"%get", wrap(new JFun("%Get", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), ObjEnv.class), (l,o)-> o.<ObjEnv>car(1).get(o.car)) ),
 				"%value", wrap(new JFun("%Value", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), ObjEnv.class), (l,o)-> o.<ObjEnv>car(1).value(o.car)) ),
 				"%bound?", wrap(new JFun("%Bound?", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), ObjEnv.class), (l,o)-> o.<ObjEnv>car(1).isBound(o.car)) ),
 				"%remove!", wrap(new JFun("%remove!", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), ObjEnv.class), (l,o)-> o.<ObjEnv>car(1).remove(o.car)) ),				
@@ -1696,6 +1696,32 @@ public class Vm {
 				"%cadr", wrap(new JFun("%Cadr", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().car(1) )),
 				"%cddr", wrap(new JFun("%Cddr", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().cdr(1) )),
 				"%cons", wrap(new JFun("%Cons", (n,o)-> checkR(n, o, 1, 2), (l,o)-> cons(o.car, l == 1 ? null : o.car(1)) )),
+				"%setCar", wrap(new JFun("%SetCar",
+					(n,o)-> checkR(n, o, 2, 3, Cons.class),
+					(l,o)->	switch (bndRes(l == 2 ? ignore : o.car(1))) {
+						case Suspension s-> s;
+						case Integer i-> switch(i) {
+							case 0-> inert((o.<Cons>car()).setCar(o.car(l-1)));
+							case 1-> { var v = o.car(l-1); (o.<Cons>car()).setCar(v); yield v; }
+							case 2-> { var cons = o.<Cons>car(); var v = cons.car; cons.setCar(o.car(l-1)); yield v; }
+							case 3-> (o.<Cons>car()).setCar(o.car(l-1));
+							default-> typeError("cannot set car, invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
+						};
+						case Object obj-> resumeError(obj, symbol("Integer"));
+					} )),
+				"%setCdr", wrap(new JFun("%SetCdr",
+					(n,o)-> checkR(n, o, 2, 3, Cons.class),
+					(l,o)->	switch (bndRes(l == 2 ? ignore : o.car(1))) {
+						case Suspension s-> s;
+						case Integer i-> switch(i) {
+							case 0-> inert((o.<Cons>car()).setCdr(o.car(l-1)));
+							case 1-> { var v = o.car(l-1); (o.<Cons>car()).setCdr(v); yield v; }
+							case 2-> { var cons = o.<Cons>car(); var v = cons.cdr; cons.setCdr(o.car(l-1)); yield v; }
+							case 3-> (o.<Cons>car()).setCdr(o.car(l-1));
+							default-> typeError("cannot set cdr, invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
+						};
+						case Object obj-> resumeError(obj, symbol("Integer"));
+					} )),
 				"%null?", wrap(new JFun("%Null?", (Function<Object, Boolean>) obj-> obj == null)),
 				//"%!null?", wrap(new JFun("%!Null?", (Function<Object, Boolean>) obj-> obj != null)),
 				"%cons?", wrap(new JFun("%Cons?", (Function<Object, Boolean>) obj-> obj instanceof Cons)),
@@ -1706,7 +1732,7 @@ public class Vm {
 				"%list*", wrap(new JFun("%List*", (ArgsList) this::listStar)),
 				"%list-", wrap(new JFun("%List-", (ArgsList) this::listMinus)),
 				"%append", wrap(new JFun("%Append", (n,o)-> checkM(n, o, 2, or(null, List.class)), (l,o)-> append(o.car(),o.car(1)) )),
-				"%len", wrap(new JFun("%Len", (n,o)-> checkM(n, o, 1, or(null, List.class)), (l,o)-> len(o.car()) )),
+				"%len", wrap(new JFun("%Len", (n,o)-> checkM(n, o, 1 /*, or(null, List.class)*/), (l,o)-> len(o.car()) )),
 				"%reverse", wrap(new JFun("%Reverse", (n,o)-> checkM(n, o, 1, or(null, List.class)), (l,o)-> reverse(o.car()) )),
 				// Symbol Keyword 
 				"%symbol", wrap(new JFun("%Symbol", (n,o)-> checkN(n, o, 1, String.class), (l,o)-> symbol(o.car()) )),

@@ -10,7 +10,7 @@
  |#
 
 (%def def
-  #|Defines into the current environment the resulting bindings from the Match of the DEFINIEND-TREE against VALUE, signals an error otherwise.
+  #|Defines into the current environment the resulting bindings from the match of the DEFINIEND-TREE against VALUE, signals an error otherwise.
    |
    |without bindResult or with bindResult #ignore use as bindResult `(bndRes)'
    |with bindResult #inert return #inert
@@ -571,6 +571,17 @@
    |#
   %value )
 
+(def get
+  #|Return the value of SYMBOL or KEYWORD or STRING is bound in the ENVIRONMENT or OBJ, signals an error otherwise.
+   |
+   |$(fn attribute object)
+   |$(syntax attribute (or Symbol Keyword String))
+   |$(syntax object (or Env Obj))
+   |$(type function)
+   |$(derivation (@get object attribute))
+   |#
+  %get )
+
 (def\ (slotBound? object attribute)
   #|Return #true if the SYMBOL or KEYWORD or STRING is bound in the ENVIRONMENT or OBJ, #false otherwise.
    |
@@ -744,6 +755,36 @@
    |$(type function)
    |#
   %nthCdr)
+
+(def setCar
+  #|Set the `car' of the Cons.
+   |
+   |without bindResult or with bindResult #ignore use as bindResult `(bndRes)'
+   |with bindResult #inert return #inert
+   |with bindResult :rhs return value
+   |with bindResult :prv return the previous value of the `car'
+   |with bindResult :cnt return the Cons or List
+   |
+   |$(fn value)
+   |$(fn bindResult value)
+   |$(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+   |#
+  %setCar)
+
+(def setCdr
+  #|Set the `cdr' of the Cons.
+   |
+   |without bindResult or with bindResult #ignore use as bindResult `(bndRes)'
+   |with bindResult #inert return #inert
+   |with bindResult :rhs return value
+   |with bindResult :prv return the previous value of the `cdr'
+   |with bindResult :cnt return the Cons
+   |
+   |$(fn value)
+   |$(fn bindResult value)
+   |$(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+   |#
+  %setCdr)
 
 
 #|! List
@@ -2398,7 +2439,7 @@
   (matchType? obj (cons class attributes)) )
 
 
-; vedi signalsError? in vm.lispx (o test-util.lispx) per codice simile
+; vedi signalsError? in vm.lispx (o testUtil.lispx) per codice simile
 (defVau (caseType key . clauses) env
   #|Multi-armed type test.
    |Evaluate the OBJECT and Go through the CLAUSES.
@@ -2428,7 +2469,7 @@
             (next clauses) ))))))
 
 (assert (caseType 2.0 (else 3)) 3)
-(assert (caseType (+ 2 2) (else => (\(v) v))) 4)
+(assert (caseType (+ 2 2) (else => (\ (v) v))) 4)
 (assert (caseType 2.0 (String "string") (Double "double")) "double")
 (assert (caseType (new Obj :a 1) (Double "double") ((Obj :a 1) "Obj :a 1")) "Obj :a 1")
 
@@ -4210,7 +4251,7 @@ load)
           (milli (currentTime #null))
           (result (apply repeat (cons times forms) env))
           (milli (- (currentTime #null) milli)) )
-    (print "time " times " " forms ": " milli "ms" (if (== times 1) "" ($ ", on average: " (@format String "%.2f" (/ milli (@doubleValue times))) "ms" )))
+    (print "time " times " " (if (null? (cdr forms)) (car forms) (cons 'begin forms)) ": " milli "ms" (if (== times 1) "" ($ ", on average: " (@format String "%.2f" (/ milli (@doubleValue times))) "ms" )))
     result ))
 
 (def\ (make*\ n f)

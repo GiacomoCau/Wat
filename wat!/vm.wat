@@ -143,7 +143,7 @@
   (let1 (k (.nxt k))
     (unless (null? k) (printFrames k)) )
   (log "v" k)
-  #inert)
+  #inert )
 
 (def\ (printStacktrace)
   (takeSubcont rootPrompt k
@@ -162,12 +162,13 @@
 (def panic throw)
 |#
 
+
 ;;;; Test
 
 (load "wat!/test.wat");
 
 
-; for minimal lispx test compatibility
+;;;; for minimal lispx test compatibility
 
 (defMacro defTest (name expression . expected?)
   (list* '%test name expression (if (null? expected?) '(#t) expected?)))
