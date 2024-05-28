@@ -276,7 +276,7 @@
    |$(fn handler handlerFrame condition)
    |$(type function)
    |#
-  (dlet ((*conditionHandlerFrame* (getSlot handlerFrame 'parentFrame)))
+  (dlet1 (*conditionHandlerFrame* (getSlot handlerFrame 'parentFrame))
     (lispx::applyHandlerFunction handler (list condition)) ))
 
 (def\ lispx::applyHandlerFunction (handler arguments)
@@ -513,27 +513,3 @@
    |$(type function)
    |#
   (error (makeRestartError restartName)) )
-
-
-(defClass SimpleError (Error)
-  #|Class for simple errors with a MESSAGE.
-   |
-   |$(type class extends Error)
-   |#
-  (message) )
-
-(def\ makeSimpleError (message)
-  #|Create a new simple error with a MESSAGE.
-   |
-   |$(fn message)
-   |$(type function)
-   |#
-  (new SimpleError message :type 'simple) )
-
-(def\ simpleError (message)
-  #|Signal a simple error with a MESSAGE.
-   |
-   |$(fn message)
-   |$(type function)
-   |#
-  (error (makeSimpleError message)) )

@@ -31,7 +31,7 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment the resulting bindings from the Match of the DEFINIEND-TREE against VALUE, signals an error otherwise.
+          Defines into the current environment the resulting bindings from the match of the DEFINIEND-TREE against VALUE, signals an error otherwise.
           <br/>
             &nbsp;
           <br/>
@@ -124,6 +124,8 @@
       <ul>
         <li>
           Return a new function that wraps around the underlying OPERATOR, and induces argument evaluations around it.
+          <br/>
+            Does not wrap the `Apv` and the `java functions`, but wraps the remaining `Combinator`.
           <br/>
             &nbsp;
         </li>

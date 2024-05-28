@@ -37,7 +37,7 @@ These are the differences compared to the original Wat/LispX
 		* can return `#inert`, the assigned value (`:rhs`) or the previous value (`:prv`) of the last assigned attribute, or the object itself (`:cnt`)
 		specifying it directly in the expression `(obj (or #inert :rhs :prv :cnt) key value ...)`
 		or indirectly by setting `(bndRes (or #inert :rhs :prv :cnt))`
-* The `Env` can also be defined with an env parent `(newEnv)` `(newEnv parentEnv)` and
+* The `Env` can also be defined without `(newEnv)` or with an env parent  `(newEnv env)` and
 	* key value pairs which will become symbol value pairs of the new env `(newEnv env key value ...)`
 	* an `Obj` whose attribute value pairs will become symbol value pairs of the new env `(newEnv env obj)`
 * The `Env` are `Combinable` and combined with
@@ -90,7 +90,7 @@ These are the differences compared to the original Wat/LispX
 		  or indirectly by setting `(bndRes (or #inert :rhs :prv :cnt))`
 * The `DVars` or dynamic variables extend the `Boxes`
 * The `DVars` are managed by a single operator `(%dv\\ (#! (Symbol) symbols) . body)`
-	which allows you to implement the various operators for dynamic variables as macros __ddef__ __ddef*__ __progv__ __dlet__ __dlet*__
+	which allows you to implement the various operators for dynamic variables as macros __ddef__ __ddef*__ __progv__ __dlet__ __dlet1__ __dlet*__
 	* if `body` is
 		* `()` will assign the values ​​it is combined with, converted to `DVar`, to the corresponding symbols in the current `Env` `((d\\ symbols) . values)`
 		* a `List` will assign the values ​​with which it is combined to the `DVars` associated with the symbols, execute the forms in the current `Env`

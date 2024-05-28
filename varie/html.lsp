@@ -6,23 +6,21 @@
   (@println (htmlWriter)) )
 
 (def encode
-  (let1 (method (@getMethod Utility "encode" String))
-    (\ (str) (method #null str)) ))
+  (let1 (encode (@getMethod Utility "encode" String))
+    (\ (str) (encode #null str)) ))
 
 (def\ (tag name . ac)
+  (def name (list 'quote name))
   (def ac (optDft ac #f))
   (def\ (attr b forms) (if b (cdar forms) #null)) 
-  (def\ (body b forms) (if b (cdr forms) forms))
+  (def\ (body b forms) (if b (cdr forms) forms)) 
   (macro forms
-    (def at (&& (cons? forms) (cons? (car forms)) (== (caar forms) 'attr)))
-    `(begin
-       (startTag ,ac ',name ,@(attr at forms))
-       (+= htmlDeep 1)
-       (atEnd
-         ,(if `,ac '(-= htmlDeep 1) `(begin (-= htmlDeep 1) (endTag ',name)) )
-         ,@(body at forms)
-         ;; senza il seguente #inert (body) andrebbe in errore perchè verrebbe
-         ;; composto (atEnd (-= htmlDeep 1)) che invece vuole almeno due epressioni
+    (def attr? (&& (cons? forms) (cons? (car forms)) (== (caar forms) 'attr)))
+    (list 'atEnd
+       (if ac #inert (list 'endTag name))
+       (list* 'startTag ac name (attr attr? forms))
+       (list 'dlet1 '(htmlDeep (1+ (htmlDeep)))
+         (cons 'begin (body attr? forms))
          #inert ))))
 
 #| TODO da definire altrove

@@ -149,37 +149,45 @@
 ;;; Boot
 
 (load "lispx/src/boot.lispx")
-(load "lispx/src/condSys.lispx") ; define error, SimpleError & simpleError!
+(load "lispx/src/condSys.lispx") ; define _error_ (call invokeDebugger) and error!
 
-;;;; Error break routine, called by VM to print stacktrace and throw
-
-(def\ (printFrames k)
-  (let1 (k (.nxt k))
-    (unless (null? k) (printFrames k)) )
-  (log "v" k)
-  #inert )
-
-(def\ invokeDebugger (condition)
-  #|Invoke the debugger, which as a default just prints a stack trace |and panics, thereby throwing an exception to JS.
-   |When running in the REPL, this function gets replaced with a different one that runs a nested debug loop.
-   |#
-  (takeSubcont rootPrompt k
-    (pushDelimSubcont rootPrompt k
-      (if (prStk) (printFrames k))
-      (panic condition))))
-
-(def\ panic (e)
-  #|Mostly for internal use.
-   |Signal the ERROR in such a way that it is hard to handle and will usually escape the VM as a host language exception.
-   |In particular, signal handlers will not be invoked.
-   |However, intervening `finally' cleanup expressions and `progv' expressions are still triggered, so Lisp invariants are maintained.
+(defClass SimpleError (Error)
+  #|Class for simple errors with a MESSAGE.
    |
-   |$(fn (error))
+   |$(type class extends Error)
+   |#
+  (message) )
+
+(def\ makeSimpleError (message)
+  #|Create a new simple error with a MESSAGE.
+   |
+   |$(fn message)
    |$(type function)
    |#
-  (throw e) )
-  
-(def userBreak error)
+  (new SimpleError message :type 'simple) )
+
+(def\ simpleError (message)
+  #|Signal a simple error with a MESSAGE.
+   |
+   |$(fn message)
+   |$(type function)
+   |#
+  (error (makeSimpleError message)) )
+
+
+;;;; User error break routine, called to print stacktrace and throw or debug
+
+(def userBreak
+  #|Define userBreak function invocked from Vm when signals an error
+   |#
+  error )
+
+(def invokeDebugger
+  #|Define the InvokeDebugger function invoked from _error_ when signals an error.
+   |Ad default just prints a stack trace and panics, thereby throwing an exception to Java.
+   |When running in the REPL, it is replaced with a different one that runs a nested debug loop.
+   |#
+  printStacktrace )
 
 ;(load "lispx/src/stream.lispx")
 ;(load "lispx/src/read.lispx")
@@ -187,14 +195,14 @@
 ;(load "lispx/src/js.lispx")
 
 
-;;;; Test
+;;;; Test Util
 
 ; lasciare commentati, bastano le successive definizioni
 ;(load "lispx/test/testUtil.lispx") ;
 ;(load "lispx/test/testUtilTest.lispx")
 
 (defMacro defTest (name expression . expected?)
-  (list* '%test name expression (if (null? expected?) '(#t) expected?)))
+  (list* 'test name expression (if (null? expected?) '(#t) expected?)))
 
 (defMacro defTest* (name . forms)
   (list defTest name (list* prog1 #t forms)) )
@@ -209,6 +217,9 @@
       (eval form env) )
     #f ))
 
+
+;;;; Test
+
 (load "lispx/test/bootTest.lispx")
 (load "lispx/test/condSysTest.lispx")
 (load "lispx/test/delimccTest.lispx")
@@ -220,7 +231,7 @@
 ;(load "lispx/test/jsTest.lispx")
 ;(load "lispx/test/hierarchyTest.lispx")
 
-(load "lispx/tool/repl/repl.lispx")
+(load "lispx/tool/repl/repl.lispx") ; redefine invokeDebugger
 
 #|
 (debugger #t)

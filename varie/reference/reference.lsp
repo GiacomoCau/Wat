@@ -1,6 +1,10 @@
 ;; comment -> html
 
-(load "varie/html.lsp")
+(let ()
+
+(def milli (@currentTimeMillis System))
+
+(load "varie/html.lsp" (theEnv)) 
 
 (def PrintWriter &java.io.PrintWriter)
 (def FileReader &java.io.FileReader)
@@ -29,15 +33,17 @@
         (meta (attr 'charset "UTF-8"))
         (style
           (pr "body { font-family: consolas; }")
-          (pr "ul { list-style-type: none; }")) )
+          (pr "ul { list-style-type: none; }") ))
       (body
         (h2 (pr "Wat/Lispx Reference"))
-        (ol
+        (ol (attr 'start 0)
+          (li (a (attr 'href "https://github.com/GiacomoCau/Wat?tab=readme-ov-file") (pr "Wat")))
           (doList (file files)
             (close1 (r (@new BufferedReader (@new FileReader file)))
               (log file)
               (for1 (l (@readLine r)) (! (null? l)) 
                 (continue? (! (@startsWith l "#|!")))
+                ;(until? (>= chapters 2))
                 (+= chapters 1)
                 (def chapter (encode (subSeq l 4)))
                 (li (a (attr 'href ($ base chapters ".html")) (pr chapter))) ))) )
@@ -61,14 +67,14 @@
     (log file)
     (loop (set! l (@readLine r)) (until? (|| (null? l) (@startsWith l "#|!"))))
     (loop (until? (null? l))
+      ;(until? (>= chapter# 2))
       (+= chapter# 1)
-      ;(until? (> chapter# 3))
-      ;(log l)
       (def chapter ($ chapter# ". " (subSeq l 4)))
       (log 'chapter chapter)
       (def chapter (encode chapter))
       (close1 (w (@new PrintWriter ($ "reference/reference" chapter# ".html") "utf-8")) 
         (dlet ( (htmlDeep 0) (htmlWriter w) )
+          ;(log htmlDeep 0) 
           (pr "<!DOCTYPE html>")
           (html
             (head
@@ -116,4 +122,8 @@
                     (h3 (pr (encode (nm l0))))
                     (ul (li (pr (encode l0)))) )))) )))) ))
 
-(list chapter# def#)
+(log chapter# 'chapters def# 'definitions)
+
+(log (@formatted "Reference ended in %tM'%1$TS\"" (@new Date (- (@currentTimeMillis System) milli))))
+
+#inert )

@@ -49,6 +49,15 @@ public class Parser {
 		this(new StringReader(line));
 	}
 	
+	public static void main0(String args []) throws Exception {
+		Parser parser = new Parser(new InputStreamReader(in, Charset.forName("UTF-8"))); // static=false
+		for (;;) {
+		  	out.print(">");
+			Object o = parser.Elt();
+			out.println("OK: " + toString(o));
+		}
+	}
+	
 	public static void main(String args []) throws Exception {
 		//out.println(Charset.defaultCharset());
 		//out.println(getProperty("stdout.encoding"));

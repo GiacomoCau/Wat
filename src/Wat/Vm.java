@@ -139,7 +139,7 @@ public class Vm {
 	boolean intStr = false; // intern string
 	boolean prStk = false; // print stack
 	boolean prWrn = false; // print warning
-	boolean prMap = false; // print error map entry
+	boolean prAttr = false; // print error attribute
 	boolean prInert = false; // print inert
 	boolean aQuote = true; // auto quote list
 	boolean hdlAny = true; // any value for catch hadler
@@ -1062,7 +1062,7 @@ public class Vm {
 						if (body == null) return switch (bndRes) { case 0-> inert; case 1-> vals[len-1]; case 2-> olds[len-1]; default-> 1; };  
 						try {
 							Object res = r != null ? r.resume() : getTco(begin.combine(e, body));
-							return res instanceof Suspension s ? s.suspend(dbg(e, this, o), rr-> combine(rr, e, o)) : res;
+							return res instanceof Suspension s ? s.suspend(dbg(de, this, o), rr-> combine(rr, de, o)) : res;
 						}
 						finally {
 							for (int i=0; i<len; i+=1) if (ndvs[i] instanceof DVar dvar) dvar.value = olds[i];
@@ -1870,7 +1870,7 @@ public class Vm {
 				"aQuote", wrap(new JFun("AQuote", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? aQuote : inert(aQuote=o.car()) )),
 				"prStk", wrap(new JFun("PrStk", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prStk : inert(prStk=o.car()) )),
 				"prWrn", wrap(new JFun("PrWrn", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prWrn : inert(prWrn=o.car()) )),
-				"prMap", wrap(new JFun("PrMap", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prMap : inert(prMap=o.car()) )),
+				"prAttr", wrap(new JFun("PrAttr", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prAttr : inert(prAttr=o.car()) )),
 				"prInert", wrap(new JFun("PrInert", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prInert : inert(prInert=o.car()) )),
 				"hdlAny", wrap(new JFun("HdlAny", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? hdlAny : inert(hdlAny=o.car()) ))
 			)
@@ -1949,7 +1949,7 @@ public class Vm {
 			thw instanceof ParseException pe
 			? "{&" + Utility.getMessage(pe) + "}"
 			: thw instanceof Obj o 
-			? ifnull(o.getMessage(), toSource(o.getClass())) + (prMap ? toStringSet(o.map.entrySet()) : "")
+			? ifnull(o.getMessage(), toSource(o.getClass())) + (prAttr ? toStringSet(o.map.entrySet()) : "")
 			: toSource(thw.getClass()) + eIfnull(thw.getMessage(), msg-> ": " + msg)
 		);
 		while ((thw = thw.getCause()) != null);

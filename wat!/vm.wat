@@ -135,43 +135,37 @@
 
 ;;; Boot
 
-(load "wat!/boot.wat");
+(load "wat!/boot.wat")
 
-;;;; Error break routine, called by VM to print stacktrace and throw
+(def SimpleError
+  #|Class for simple errors with a MESSAGE.
+   |For minimal lispx test compatibility
+   |#
+  Error )
 
-(def\ (printFrames k)
-  (let1 (k (.nxt k))
-    (unless (null? k) (printFrames k)) )
-  (log "v" k)
-  #inert )
-
-(def\ (printStacktrace)
-  (takeSubcont rootPrompt k
-  	(printFrames k) (pushPrompt rootPrompt (pushSubcont k)) ))
-
-(def\ (userBreak err)
-  (when (prStk) (log "-" (@getMessage err)) (printStacktrace))
-  (throw err) )
-
-#|
-(def\ (printStacktrace)
-  (takeSubcont rootPrompt k
-    (pushDelimSubcont rootPrompt k
-      (printFrames k) )))
-
-(def panic throw)
-|#
+(def\ simpleError (message)
+  #|Signal a simple error with a MESSAGE.
+   |For minimal lispx test compatibility
+   |
+   |$(fn message)
+   |$(type function)
+   |#
+  (error message :type 'simple) )
 
 
-;;;; Test
+;;;; User error break routine, called to print stacktrace and throw or debug
 
-(load "wat!/test.wat");
+(def userBreak
+  #|Define userBreak function invocked from Vm when signals an error
+   |#
+  printStacktrace )
 
 
-;;;; for minimal lispx test compatibility
+;;;; Test Util
+
 
 (defMacro defTest (name expression . expected?)
-  (list* '%test name expression (if (null? expected?) '(#t) expected?)))
+  (list* 'test name expression (if (null? expected?) '(#t) expected?)))
 
 (defMacro defTest* (name . forms)
   (list defTest name (list* prog1 #t forms)) )
@@ -181,17 +175,10 @@
 
 (def signalsError? assert)
 
-(def SimpleError Error)
 
-(def\ simpleError (message)
-  (error message :type 'simple) )
+;;;; Test
 
-#| TODO da rivedere
-(defMacro (handlerCase cases . forms)
-  (list* 'catchWth (list* 'caseType\ '(e) cases) forms) )  
-
-(assert (handlerCase (((Error :type 'xx) => (\ (e) 1)) ((Error :type 'zz) => (\ (e) 2))) (error (new Error "!" :type 'zz)) ) 2)
-|#
+(load "wat!/test.wat");
 
 (%def milli (%- (@currentTimeMillis &java.lang.System) milli))
 (%$ "vm started in " (%$ milli "ms"))

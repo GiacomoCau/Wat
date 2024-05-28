@@ -61,7 +61,7 @@
   (takeSubcont rootPrompt k
     (pushDelimSubcont rootPrompt k
       ;; Increase debug level.
-      (dlet ((repl:debugLevel (+ (dget repl:debugLevel) 1)))
+      (dlet1 (repl:debugLevel (1+ (dget repl:debugLevel)))
         ;; We use a system of two restarts to abort.
         ;; The user invokes the ABORT restart to break out of a nested debug level.
         ;; Internally this invokes the REPL-ABORT restart which lands
@@ -76,7 +76,7 @@
           (caseType condition
             ( (Error :type 'unboundSymbol)
                 (let ( (symbol (getSlot condition 'symbol))
-                       (env (getSlot condition 'environment)) )
+                       (env (getSlot condition 'env)) )
                   (restartCase 
                     ( (useValue (\ (value) value) :associatedConditions (list condition))
                       (continue (\ () (eval symbol env)) :associatedConditions (list condition))

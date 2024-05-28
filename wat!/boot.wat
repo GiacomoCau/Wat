@@ -52,6 +52,7 @@
 
 (def wrap
   #|Return a new function that wraps around the underlying OPERATOR, and induces argument evaluations around it.
+   |Does not wrap the `Apv` and the `java functions`, but wraps the remaining `Combinator`.
    |
    |$(fn operator)
    |$(type function)
@@ -398,6 +399,7 @@
 
 (def unwrap
   #|Return the underlying operator of a FUNCTION.
+   |Unwraps the `Apv`, wraps the `java functions` in a `JFun` and does not unwrap the remaining `Combinator`.
    |
    |$(fn function)
    |$(type function)
@@ -1302,23 +1304,15 @@
 #|! Errors
  |#
 
-(def test
-  #|signals an error if:
-   |- EXPRESSION does not equal VALUE
-   |- VALUE is not present and the EXPRESSION does not throws
-   |- EXPRESSION throws or returns an object and the object is not of the same CLASS with the ATTRIBUTES of the given VALUE.
-   |$(fn name expression value)
-   |$(fn name expression)
-   |$(fn name expression class attribute value . attributes)
-   |$(syntax attributes (or () (attribute value . attributes)))
-   |$(syntax attribute (or Symbol Keyword String .Field @Method))
-   |$(type fexpr)
+(def rootPrompt
+  #|The prompt used for delimiting all.
    |#
-  %test)
+  %rootPrompt)
 
 (def error
-  #|Signal an error.
-   |$(fn error)
+  #|Simple function to define and signal an error
+   |In lisp it will be replaced by a function adapted to the LispX Condition System 
+   |
    |$(fn string . attributes)
    |$(fn throwable . attributes)
    |$(fn string throwable . attributes)
@@ -1326,11 +1320,6 @@
    |$(syntax attribute (or Symbol Keyword String))
    |#
   %error)
-
-(def rootPrompt
-  #|The prompt used for delimiting all.
-   |#
-  %rootPrompt)
 
 (def\ makeTypeError (datum expected)
   #|Return a new type error with DATUM and EXPECTED.
@@ -1347,6 +1336,34 @@
    |$(type function)
    |#
   (error (makeTypeError datum expected)) )
+
+(def test
+  #|Signals an error if:
+   |- EXPRESSION does not equal VALUE
+   |- VALUE is not present and the EXPRESSION does not throws
+   |- EXPRESSION throws or returns an object and the object is not of the same CLASS with the ATTRIBUTES of the given VALUE.
+   |
+   |$(fn name expression value)
+   |$(fn name expression)
+   |$(fn name expression class attribute value . attributes)
+   |$(syntax attributes (or () (attribute value . attributes)))
+   |$(syntax attribute (or Symbol Keyword String .Field @Method))
+   |$(type fexpr)
+   |#
+  %test)
+
+(def\ (printStacktrace throwable) ;ok
+  #|Throw the THROWABLE after print the message of THROWABLE and the stacktrace if `(prStk)'.
+   |
+   |$(fn throwable)
+   |$(type function)
+   |#
+  (when (prStk)
+    (log "-" (@getMessage throwable)) 
+    (takeSubcont rootPrompt k
+      ((rec\ (printFrames k) (unless (null? k) (printFrames (.nxt k)) (log "v" k))) k)
+      (pushDelimSubcont rootPrompt k) ))
+  (throw throwable) )
 
 
 #|! Classes
@@ -3456,6 +3473,16 @@
    |#
   (cons (list* '%dv\ (map car bindings) form forms) (map cadr bindings)) )
 
+(defMacro (dlet1 binding form . forms)
+  #|With the dynamic variables specified by NAME temporarily bound to new VALUE, evaluate FORMS as an implicit `begin'.
+   |Bindings are established parallely as per `let'.
+   |
+   |$(fn binding . forms)
+   |$(type macro)
+   |$(syntax binding (name value))
+   |#
+  (list* 'dlet (cons binding) form forms) )
+
 (defMacro (progv var* val* exp . exps)
   #|With the dynamic variables specified by NAMES temporarily bound to new VALUES, evaluate FORMS as an implicit `begin'.
    |The NAMES and VALUES lists must have the same length.
@@ -3583,6 +3610,7 @@
   (defMethod (g1 (bar Bar) p) (* p (+ a b)))
   (assert (g1 bar 3) 21)
 )
+
 
 #|! Modules
  |#
@@ -4321,12 +4349,12 @@ load)
    |# 
   prStk)
 
-(def prMap
+(def prAttr
   #|Return or update the print of the attributes for the uncatched errors.
    |
    |$(fn . boolean)
    |# 
-  prMap)
+  prAttr)
 
 (def prWrn
   #|Return or update the warning print.
