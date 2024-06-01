@@ -54,7 +54,14 @@ import Wat.Vm.Symbol;
 public class Prova {
 	
 	public static void main(String[] args) throws Exception {
+	}
+	
+	public static void altMcomment() throws InterruptedException, IOException {
+		//*
 		process1();
+		/*/
+		process1();
+		//*/
 	}
 	public static void process1() throws InterruptedException, IOException {
 		//out.println(getRuntime().exec("cmd.exe /e:on /c dir").waitFor());

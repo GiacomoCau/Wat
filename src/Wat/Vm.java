@@ -19,6 +19,7 @@ import static Wat.Utility.or;
 import static Wat.Utility.read;
 import static Wat.Utility.reorg;
 import static Wat.Utility.stackDeep;
+import static Wat.Utility.string;
 import static Wat.Utility.system;
 import static Wat.Utility.toSource;
 import static Wat.Utility.uncked;
@@ -1582,24 +1583,18 @@ public class Vm {
 	Object[] quotes = $(symbol("%'"), symbol("quote"));
 	
 	Object toLispExpr(Object o) {
-		if (o instanceof String s) return switch(s) { case "#inert"-> inert; case "#ignore", "#_"-> ignore; case "#!"-> sheBang; default-> intern(intStr ? s.intern() : s); };
-		if (o instanceof Object[] objs) {
-			if (objs.length == 0) return null;
-			if (objs.length == 2 && objs[0] != null && objs[0].equals("wat-string")) return intStr ? ((String) objs[1]).intern() : objs[1];
-			return toLispList(objs);
-		}
-		return o;
+		return switch (o) {
+			case String s-> switch(s) { case "#inert"-> inert; case "#_", "#ignore"-> ignore; case "#!"-> sheBang; default-> intern(intStr ? s.intern() : s); };
+			case Object[] objs-> objs.length == 2 && objs[0] == string ? intStr ? ((String) objs[1]).intern() : objs[1] : toLispList(objs);
+			case null, default-> o;
+		};
 	}
 	<T extends Cons> T toLispList(Object ... objs) {
+		Object head = null;
 		int i = objs.length - 1;
-		Object tail = null;
-		if (i > 1 && objs[i-1] != null && objs[i-1].equals(".")) { tail = toLispExpr(objs[i]); i-=2; }
-		for (; i>=0; i-=1) {
-			var obj = objs[i];
-			//if (obj != null && obj.equals(".")) throw new Error(". not is the penultimate element in " + toString(objs));
-			tail = cons(toLispExpr(obj), tail);
-		}
-		return (T) tail;
+		if (i > 1 && ".".equals(objs[i-1])) { head = toLispExpr(objs[i]); i-=2; }
+		for (; i>=0; i-=1) head = cons(toLispExpr(objs[i]), head);
+		return (T) head;
 	}
 	<T extends Cons> T toLispList(String s) throws Exception {
 		return (T) toLispList(toByteCode(s));
