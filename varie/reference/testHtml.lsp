@@ -3,8 +3,8 @@
 
 (html (attr 'aa 1 'bb "2" 'cc #t) (body (br (pr 3))))
 
-(close1 (pw (@new PrintWriter "prova.html"))  
-  (dlet ((htmlWriter pw))
+(close1 (pw (@new &java.io.PrintStream "prova.html"))  
+  (dlet1 (htmlWriter pw)
     (html (attr 'aa 1 'bb "2" 'cc #t)
       (head
         (title (pr "Wat/Lispx Reference"))

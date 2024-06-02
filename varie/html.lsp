@@ -1,9 +1,14 @@
 (ddef* (htmlDeep htmlWriter) 0 (.out System))
 
-(def\ (pr . args)
-  (@print (htmlWriter) (@repeat "  " (htmlDeep)))
-  (forEach# [_ (@print (htmlWriter) _)] args) 
-  (@println (htmlWriter)) )
+(def pr
+  (let ( (print (getMethod &java.io.PrintWriter "print" Object))
+         (println (getMethod &java.io.PrintWriter "println"))
+         (repeat (getMethod String "repeat" &int)) )
+    (\ args
+      (let1 (htmlWriter (htmlWriter))
+        (print htmlWriter (repeat "  " (htmlDeep)))
+        (forEach# [_ (print htmlWriter _)] args) 
+        (println htmlWriter) ))))
 
 (def encode
   (let1 (encode (@getMethod Utility "encode" String))

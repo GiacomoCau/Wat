@@ -10,12 +10,15 @@
 (def FileReader &java.io.FileReader)
 (def BufferedReader &java.io.BufferedReader)
 
+(def readLine (getMethod BufferedReader "readLine"))
+(def startsWith (getMethod String "startsWith" String))
+
 (def\ (nm d)
   (let* ( (b1 (@indexOf d #\ ))
           (b2 (let1 (l (@indexOf d #\  (1+ b1))) (if (-1? l) (length d) l))) )
     (subSeq d
       (let1 (b1 (1+ b1)) (if (== (@charAt d b1) #\x28) (1+ b1) b1))
-      (if (@startsWith d "\x28;def*") (@indexOf d #\x29) b2) )))
+      (if (startsWith d "\x28;def*") (@indexOf d #\x29) b2) )))
 
 (def base "https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference")
 ;(def base "/reference/reference")
@@ -41,8 +44,8 @@
           (doList (file files)
             (close1 (r (@new BufferedReader (@new FileReader file)))
               (log file)
-              (for1 (l (@readLine r)) (! (null? l)) 
-                (continue? (! (@startsWith l "#|!")))
+              (for1 (l (readLine r)) (! (null? l)) 
+                (continue? (! (startsWith l "#|!")))
                 ;(until? (>= chapters 2))
                 (+= chapters 1)
                 (def chapter (encode (subSeq l 4)))
@@ -65,7 +68,7 @@
 (doList (file files)
   (close1 (r (@new BufferedReader (@new FileReader file)))
     (log file)
-    (loop (set! l (@readLine r)) (until? (|| (null? l) (@startsWith l "#|!"))))
+    (loop (set! l (readLine r)) (until? (|| (null? l) (startsWith l "#|!"))))
     (loop (until? (null? l))
       ;(until? (>= chapter# 2))
       (+= chapter# 1)
@@ -87,37 +90,37 @@
             (body
               (buttons)
               (h2 (pr chapter))
-              (unless (@startsWith (set! l :rhs (@readLine r)) " |#")
-                (ul (loop (li (pr (encode (subSeq l 2))) (until? (@startsWith (set! l :rhs (@readLine r)) " |#")) ))))
+              (unless (startsWith (set! l :rhs (readLine r)) " |#")
+                (ul (loop (li (pr (encode (subSeq l 2))) (until? (startsWith (set! l :rhs (readLine r)) " |#")) ))))
               (loop
-                (set! l :rhs (@readLine r)) 
-                (continue-? 1 (|| (null? l) (@startsWith l "#|!")) (buttons))
-                (continue? (@startsWith l ";;!") (ul (li (pr (encode (subSeq l 3))))))
-                (continue? (@startsWith l "  #|!") (ul (until (@startsWith (set! l :rhs (@readLine r)) "   |#") (li (pr (encode (subSeq l 4)))) )))
-                (continue? (@startsWith l "#|") (until (or (@startsWith (set! l :rhs (@readLine r)) "|#") (@startsWith l "  |#")) ))
-                (continue? (! (|| (@startsWith l "\x28;def") (@startsWith l "\x28;%def"))))
+                (set! l :rhs (readLine r)) 
+                (continue-? 1 (|| (null? l) (startsWith l "#|!")) (buttons))
+                (continue? (startsWith l ";;!") (ul (li (pr (encode (subSeq l 3))))))
+                (continue? (startsWith l "  #|!") (ul (until (startsWith (set! l :rhs (readLine r)) "   |#") (li (pr (encode (subSeq l 4)))) )))
+                (continue? (startsWith l "#|") (until (or (startsWith (set! l :rhs (readLine r)) "|#") (startsWith l "  |#")) ))
+                (continue? (! (|| (startsWith l "\x28;def") (startsWith l "\x28;%def"))))
                 (def l0 l)
                 (loop
                   (+= def# 1)
                   (set! l0 l)
-                  (while? (@startsWith (set! l :rhs (@readLine r)) "\x28;def"))
+                  (while? (startsWith (set! l :rhs (readLine r)) "\x28;def"))
                   (div
                     (h3 (pr (encode (nm l0))))
                     (ul (li (pr (encode l0)))) ))
-                (if (@startsWith l "  #|")
+                (if (startsWith l "  #|")
                   (div
                     (h3 (pr (encode (def name :rhs (nm l0)))))
                     (ul
                       (li
                         (pr (encode (subSeq l 4)))
                         (loop 
-                          (until? (@startsWith (set! l :rhs (@readLine r)) "   |$"))
-                          (until? (@startsWith l "   |#"))
+                          (until? (startsWith (set! l :rhs (readLine r)) "   |$"))
+                          (until? (startsWith l "   |#"))
                           (br (pr (encode (subSeq l 4)))) ))
-                      (if (@startsWith l "   |$")
+                      (if (startsWith l "   |$")
                         (loop
                           (li (pr (encode (@replace (subSeq l 5) "fn" name))))
-                          (until? (@startsWith (def l :rhs (@readLine r)) "   |#")) )))) 
+                          (until? (startsWith (def l :rhs (readLine r)) "   |#")) )))) 
                   (div
                     (h3 (pr (encode (nm l0))))
                     (ul (li (pr (encode l0)))) )))) )))) ))

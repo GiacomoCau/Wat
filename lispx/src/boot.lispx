@@ -3814,6 +3814,29 @@
  |  (@getExecutable &Wat.Utility &java.lang.Character "new")
  |#
 
+(def getMethod
+  (@getMethod Class "getMethod" String Class[]))
+
+(def getDeclaredMethod
+  (getMethod Class "getDeclaredMethod" String Class[]))
+
+(def getConstructor
+  (getMethod Class "getConstructor" Class[]))
+
+(def getDeclaredConstructor
+  (getMethod Class "getDeclaredConstructor" Class[]))
+
+(def getField
+  (getMethod Class "getField" String))
+
+(def getDeclaredField
+  (getMethod Class "getDeclaredField" String))
+
+(def getExecutable
+  (let1 (getExecutable (getMethod Utility "getExecutable" Object String Class[]))
+    (\ (class name . classes)
+      (apply** getExecutable #null class name classes) )))
+
 (defMacro (close1 binding . forms)
   #|Single try/resource
    |
