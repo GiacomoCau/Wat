@@ -150,7 +150,7 @@
       </h3>
       <ul>
         <li>
-          (def getMethod
+          (def getMethod (@getMethod Class &quot;getMethod&quot; String Class[]))
         </li>
       </ul>
     </div>
@@ -160,7 +160,27 @@
       </h3>
       <ul>
         <li>
-          (def getDeclaredMethod
+          (def getDeclaredMethod (getMethod Class &quot;getDeclaredMethod&quot; String Class[]))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        getMethods
+      </h3>
+      <ul>
+        <li>
+          (def getMethods (getMethod Class &quot;getMethods&quot;))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        getDeclaredMethods
+      </h3>
+      <ul>
+        <li>
+          (def getDeclaredMethods (getMethod Class &quot;getDeclaredMethods&quot;))
         </li>
       </ul>
     </div>
@@ -170,7 +190,7 @@
       </h3>
       <ul>
         <li>
-          (def getConstructor
+          (def getConstructor (getMethod Class &quot;getConstructor&quot; Class[]))
         </li>
       </ul>
     </div>
@@ -180,7 +200,27 @@
       </h3>
       <ul>
         <li>
-          (def getDeclaredConstructor
+          (def getDeclaredConstructor (getMethod Class &quot;getDeclaredConstructor&quot; Class[]))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        getConstructors
+      </h3>
+      <ul>
+        <li>
+          (def getConstructors (getMethod Class &quot;getConstructors&quot;))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        getDeclaredConstructors
+      </h3>
+      <ul>
+        <li>
+          (def getDeclaredConstructors (getMethod Class &quot;getDeclaredConstructors&quot;))
         </li>
       </ul>
     </div>
@@ -190,7 +230,7 @@
       </h3>
       <ul>
         <li>
-          (def getField
+          (def getField (getMethod Class &quot;getField&quot; String))
         </li>
       </ul>
     </div>
@@ -200,7 +240,27 @@
       </h3>
       <ul>
         <li>
-          (def getDeclaredField
+          (def getDeclaredField (getMethod Class &quot;getDeclaredField&quot; String))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        getFields
+      </h3>
+      <ul>
+        <li>
+          (def getFields (getMethod Class &quot;getFields&quot;))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        getDeclaredFields
+      </h3>
+      <ul>
+        <li>
+          (def getDeclaredFields (getMethod Class &quot;getDeclaredFields&quot;))
         </li>
       </ul>
     </div>
@@ -210,7 +270,15 @@
       </h3>
       <ul>
         <li>
-          (def getExecutable
+          Return a constructor or a method with given name also without specify parameter classes.
+          <br/>
+            &nbsp;
+        </li>
+        <li>
+          (getExecutable Class name . classes)
+        </li>
+        <li>
+          (type function)
         </li>
       </ul>
     </div>

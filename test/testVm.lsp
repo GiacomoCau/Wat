@@ -1,4 +1,5 @@
-;
+
+;(prTrc 2)
 
 (%assert () #null)
 (%assert #null ())
@@ -103,6 +104,8 @@
 
 (%def testTco (%\ (n) (%if (%<= n 0) n (testTco (%- n 1))))) ; (prTrc 3)(testTco 5)(prTrc 0)
 (%def stackDeep ((%\ (stackDeep) (%\ () (stackDeep #null))) (@getMethod &Wat.Utility "stackDeep")))
+(%def stackDeep (%\ () (.length (@getStackTrace (@new &java.lang.Throwable)))))
+
 
 (%if (doTco)
   (%begin

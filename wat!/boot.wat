@@ -4166,25 +4166,25 @@
  |  (@getExecutable &Wat.Utility &java.lang.Character "new")
  |#
 
-(def getMethod
-  (@getMethod Class "getMethod" String Class[]))
-
-(def getDeclaredMethod
-  (getMethod Class "getDeclaredMethod" String Class[]))
-
-(def getConstructor
-  (getMethod Class "getConstructor" Class[]))
-
-(def getDeclaredConstructor
-  (getMethod Class "getDeclaredConstructor" Class[]))
-
-(def getField
-  (getMethod Class "getField" String))
-
-(def getDeclaredField
-  (getMethod Class "getDeclaredField" String))
+(def getMethod (@getMethod Class "getMethod" String Class[]))
+(def getDeclaredMethod (getMethod Class "getDeclaredMethod" String Class[]))
+(def getMethods (getMethod Class "getMethods"))
+(def getDeclaredMethods (getMethod Class "getDeclaredMethods"))
+(def getConstructor (getMethod Class "getConstructor" Class[]))
+(def getDeclaredConstructor (getMethod Class "getDeclaredConstructor" Class[]))
+(def getConstructors (getMethod Class "getConstructors"))
+(def getDeclaredConstructors (getMethod Class "getDeclaredConstructors"))
+(def getField (getMethod Class "getField" String))
+(def getDeclaredField (getMethod Class "getDeclaredField" String))
+(def getFields (getMethod Class "getFields"))
+(def getDeclaredFields (getMethod Class "getDeclaredFields"))
 
 (def getExecutable
+  #|Return a constructor or a method with given name also without specify parameter classes.
+   |
+   |$(fn Class name . classes)
+   |$(type function)
+   |#
   (let1 (getExecutable (getMethod Utility "getExecutable" Object String Class[]))
     (\ (class name . classes)
       (apply** getExecutable #null class name classes) )))
@@ -4232,6 +4232,9 @@
  
 (def toString
   #|internal to string function
+   |
+   |$(fn object)
+   |$(type function)
    |# 
   toString)
 
@@ -4271,6 +4274,7 @@ load)
   #|Read expression from console.
    |
    |$(fn)
+   |$(type function)
    |#
   read)
 
@@ -4278,6 +4282,7 @@ load)
   #|Read expression from string
    |
    |$(fn string)
+   |$(type function)
    |#
   readString)
 
@@ -4285,6 +4290,7 @@ load)
   #|Exec system commands
    |
    |$(fn string)
+   |$(type function)
    |#
   system)
 
@@ -4338,6 +4344,7 @@ load)
   #|Return #true if the string are interned, #false otherwise.
    |
    |$(fn)
+   |$(type function)
    |# 
   intStr)
 
@@ -4345,6 +4352,7 @@ load)
   #|Return or update the use of the tail call optimiaztion.
    |
    |$(fn . boolean)
+   |$(type function)
    |# 
   doTco)
 
@@ -4352,6 +4360,7 @@ load)
   #|Return or update the execution of the assert.
    |
    |$(fn . boolean)
+   |$(type function)
    |# 
   doAsrt)
 
@@ -4359,6 +4368,7 @@ load)
   #|Return or update the print of the stack for uncatched errors.
    |
    |$(fn . boolean)
+   |$(type function)
    |# 
   prStk)
 
@@ -4366,6 +4376,7 @@ load)
   #|Return or update the print of the attributes for the uncatched errors.
    |
    |$(fn . boolean)
+   |$(type function)
    |# 
   prAttr)
 
@@ -4373,6 +4384,7 @@ load)
   #|Return or update the warning print.
    |
    |$(fn . boolean)
+   |$(type function)
    |# 
  prWrn)
 
@@ -4380,6 +4392,7 @@ load)
   #|Return or update the auto quote propertiy for the list without combinable car. 
    |
    |$(fn . boolean)
+   |$(type function)
    |# 
 aQuote)
 
@@ -4387,6 +4400,7 @@ aQuote)
   #|Return or update the use of an arbitraty value for the catch handler.
    |
    |$(fn . boolean)
+   |$(type function)
    |# 
   hdlAny)
 
@@ -4394,6 +4408,7 @@ aQuote)
   #|Return or update the print of #inert value in the repl
    |
    |$(fn . boolean)
+   |$(type function)
    |# 
   prInert)
 
@@ -4407,6 +4422,7 @@ aQuote)
    |- 4: !(or #false #null #inert 0)
    |
    |$(fn . integer)
+   |$(type function)
    |# 
   typeT)
 
@@ -4419,6 +4435,7 @@ aQuote)
    |- 3: the container obj or environment
    |
    |$(fn . integer)
+   |$(type function)
    |# 
   bndRes)
 
@@ -4434,6 +4451,7 @@ aQuote)
    |- 6: bind/lookup symbols
    |
    |$(fn . integer)
+   |$(type function)
    |# 
   prTrc)
 
@@ -4441,6 +4459,7 @@ aQuote)
   #|Return or update the max number of attributes for printable environments.
    |
    |$(fn . integer)
+   |$(type function)
    |# 
   prEnv)
 
@@ -4448,5 +4467,6 @@ aQuote)
   #|Return or update the VALUE to use as default value for the Box.
    |
    |$(fn . value)
+7   |$(type function)
    |# 
   boxDft)

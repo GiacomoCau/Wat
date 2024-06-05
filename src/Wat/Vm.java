@@ -69,6 +69,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -748,7 +749,9 @@ public class Vm {
 			);
 			//*/
 		}
-		public String toString() { return "{%Opv " + ifnull(pt, "()", Vm.this::toString) + " " + Vm.this.toString(ep) + eIfnull(x, ()-> " " + apply(s-> !(x instanceof Cons) ? s : s.substring(1, s.length()-1), Vm.this.toString(x))) + /*" " + e +*/ "}"; }
+		public String toString() {
+			return "{%Opv " + ifnull(pt, "()", Vm.this::toString) + " " + Vm.this.toString(ep) + eIfnull(x, ()-> " " + stream(array(x)).map(Vm.this::toString).collect(joining(" "))) + /*" " + e +*/ "}";
+		}
 	}
 	class Apv implements Combinable  {
 		Combinable cmb;
@@ -1062,7 +1065,7 @@ public class Vm {
 						var vals = o == null ? apply(a-> { if (boxDft != null) fill(a, boxDft); return a; }, new Object[len]) : array(o);
 						if (vals.length != len)	return matchError(
 							"expected {operands,%+d} operand, found: {datum}"
-							+ (body != null ? " bind" : " sett") + "ing: " + list(vars)
+							+ (body == null ? " sett" : " bind") + "ing: " + list(vars)
 							+ (body == null ? "" : " of: " + this)
 							+ " with: " + o,
 							"operands", len-vals.length, "datum", len > vals.length ? null : o.cdr(vals.length-len)
@@ -1159,7 +1162,7 @@ public class Vm {
 		}
 		public String toString() {
 			if (name != null) return name;
-			var intefaces = stream(jfun.getClass().getInterfaces()).map(i-> Vm.this.toString(i)).collect(joining(" "));
+			var intefaces = stream(jfun.getClass().getInterfaces()).map(Vm.this::toString).collect(joining(" "));
 			return "{JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "}";
 		}
 	}
@@ -1193,8 +1196,8 @@ public class Vm {
 					//executable.setAccessible(true);
 					args = reorg(executable, args);
 					return switch (executable) { 
-						case Method m-> m.invoke(o0, args);
-						case Constructor c-> c.newInstance(args);
+						case Method m->{ m.setAccessible(true); yield m.invoke(o0, args); }
+						case Constructor c->{ c.setAccessible(true); yield c.newInstance(args); }
 					};
 				}
 				catch (Throwable thw) {
@@ -1227,7 +1230,7 @@ public class Vm {
 				Field field = getField(o0 instanceof Class ? (Class) o0 : o0.getClass(), name);
 				if (field == null) return unboundFieldError(name, o0 instanceof Class cl ? cl : o0.getClass());
 				try {
-					if (len == 1) return field.get(o0);
+					if (len == 1)  return field.get(o0);
 					field.set(o0, o.car(1)); return inert;
 				}
 				catch (Throwable thw) {
@@ -1240,6 +1243,85 @@ public class Vm {
 			@Override public String toString() { return "." + name; }
 		};
 	}
+	/*
+	public final class ToFunction implements Combinable {
+		@Override public final <T> T combine(Env e, List o) {
+			var chk = checkN(this, o, 1, Apv1.class); // o = (tag . forms)
+			if (chk instanceof Suspension s) return (T) s;
+			if (!(chk instanceof Integer / *len* /)) return resumeError(chk, symbol("Integer"));
+			Combinable f = o.car();
+			//return (T) (Function) (t)-> getTco(f.combine(e, cons(t)));
+			return (T) new Function() {
+				@Override public final Object apply(Object t) {
+					//return getTco(Vm.this.combine(e, f, cons(t)));
+					return getTco(f.combine(e, cons(t)));
+				}
+				@Override public String toString() {
+					return Vm.this.toString(f);
+				}
+			};
+		}
+		@Override public String toString() { return "%Tof";}
+	}
+	public final class ToFunction implements Combinable {
+		@Override public final <T> T combine(Env e, List o) {
+			var chk = checkN(this, o, 1); // o = (form)
+			if (chk instanceof Suspension s) return (T) s;
+			if (!(chk instanceof Integer / *len* /)) return resumeError(chk, symbol("Integer"));
+			var f = o.car();
+			return (T) switch (getTco(evaluate(e, f))) {
+				case Suspension s-> s;
+				case Apv apv when args(apv) == 1-> new Function() {
+					@Override public final Object apply(Object t) {
+						return getTco(apv.combine(e, cons(t)));
+					};
+					@Override public String toString() {
+						return "{Function " + Vm.this.toString(f) + "}";
+					};
+				};
+				case Object obj-> resumeError(obj, symbol("Apv1"));
+			};
+		}
+		@Override public String toString() { return "%Tof";}
+	}
+	/*/
+	class Fun implements Combinable {
+		@Override public final <T> T combine(Env e, List o) {
+			var chk = checkM(this, o, 1, list(1, Symbol.class)); // o = ((symbol) . forms)
+			if (chk instanceof Suspension s) return (T) s;
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
+			//var apv = lambda(e, o.car, o.cdr());
+			var opv = opv(e, o.car, ignore, o.cdr());
+			return (T) new Function() {
+				@Override public final Object apply(Object t) {
+					return getTco(opv.combine(e, cons(t)));
+				};
+				@Override public String toString() {
+					return "{Function " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
+				};
+			};
+		}
+		@Override public String toString() { return "%Fun";}
+	}
+	class BiCons implements Combinable {
+		@Override public final <T> T combine(Env e, List o) {
+			var chk = checkM(this, o, 1, list(2, Symbol.class)); // o = ((symbol symbol) . forms)
+			if (chk instanceof Suspension s) return (T) s;
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
+			//var apv = lambda(e, o.car, o.cdr());
+			var opv = opv(e, o.car, ignore, o.cdr());
+			return (T) new BiConsumer() {
+				@Override public final void accept(Object t, Object u) {
+					getTco(opv.combine(e, list(t, u)));
+				};
+				@Override public String toString() {
+					return "{BiConsumer " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
+				}
+			};
+		}
+		@Override public String toString() { return "%BiCons";}
+	}
+	//*/
 	
 	
 	// Error Handling
@@ -1406,7 +1488,7 @@ public class Vm {
 	public Object toChk(Object chk) {
 		return chk instanceof Class cl ? symbol(cl.getSimpleName())
 			: chk instanceof Integer i && i == more ? symbol("oo")
-			: chk instanceof Object[] a ? cons(symbol("or"), list(stream(a).map(o-> toChk(o)).toArray()))
+			: chk instanceof Object[] a ? cons(symbol("or"), list(stream(a).map(this::toChk).toArray()))
 			: chk instanceof List l ? map("toChk", o-> toChk(o), l.car instanceof Apv ? l.cdr() : l )
 			: chk
 		;
@@ -1642,10 +1724,10 @@ public class Vm {
 			default-> o.toString();
 		};
 	}
-	public String toStringSet(Set<Entry<String,Object>> set) {
+	String toStringSet(Set<Entry<String,Object>> set) {
 		return set.isEmpty() ? "" : " " + set.stream().map(e-> e.getKey() + " " + toString(true, e.getValue())).collect(joining(" "));
 	}
-	private String toString(String name, Class[] classes) {
+	String toString(String name, Class[] classes) {
 		return (name.equals("new") ? "constructor: " : "method: ") + name
 			+ "(" + stream(classes).map(Class::getSimpleName).collect(joining(", ")) + ")"
 		;
@@ -1820,6 +1902,8 @@ public class Vm {
 				"%jFun?", wrap(new JFun("%JFun?", (Function<Object,Boolean>) this::isjFun)),
 				"%at", wrap(new JFun("%At", (Function<String,Object>) this::at)),
 				"%dot", wrap(new JFun("%Dot", (Function<String,Object>) this::dot)),
+				"%fun", new Fun(),
+				"%bicons", new BiCons(),
 				"%instanceOf?", wrap(new JFun("%InstanceOf?", (n,o)-> checkN(n, o, 2, Any.class, Class.class), (l,o)-> o.<Class>car(1).isInstance(o.car) )),
 				// Class
 				//"%class?", wrap(new JFun("%Class?", (Function<Object, Boolean>) obj-> obj instanceof Class )),
@@ -1862,6 +1946,8 @@ public class Vm {
 				"write", wrap(new JFun("Write", (ArgsList) o-> write(array(o)) )),
 				"load", wrap(new JFun("Load", (n,o)-> checkR(n, o, 1, 2, String.class, Env.class), (l,o)-> uncked(()-> loadText(l==1 ? theEnv : o.<Env>car(1), o.<String>car())) )),
 				"read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> uncked(()-> toLispList(read(l == 0 ? 0 : o.<Integer>car())).car) )),
+				//"eof", new JFun("eof", (n,o)-> checkN(n, o, 0), (l,o)-> List.Parser.eof),
+				//"eof?", wrap(new JFun("eof?", (n,o)-> checkN(n, o, 1), (l,o)-> List.Parser.eof.equals(o.car))),
 				"readString", wrap(new JFun("ReadString", (n,o)-> checkN(n, o, 1), (l,o)-> uncked(()-> toLispList(o.toString())) )),
 				"system", wrap(new JFun("System", (n,o)-> checkR(n, o, 1, 2, String.class, Boolean.class), (l,o)-> uncked(()-> system(l==1 ? false : o.<Boolean>car(1),  "cmd.exe", "/e:on", "/c", o.<String>car())) )),
 				// Config

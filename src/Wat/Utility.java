@@ -40,38 +40,12 @@ import List.ParseException;
 
 public class Utility {
 	
-	//*
+	/*
 	public static void main(String[] args) throws Exception {
-		//out.println(toSource("a\nb"));
-		//out.println(toString("a\\nb"));
-		//out.println(toSource(toString("a\\nb")));
-		//out.println(toString(toSource("a\nb")));
-		//out.println(Charset.defaultCharset());
-		//out.println(getProperty("stdout.encoding"));
-		//var isr = new InputStreamReader(in, forName("UTF-8"));
-		//for(;;) { var v = read(/*0, isr*/); out.print(v); }
-		//out.println(new File("reference/*.html").list().length);
-		//Files.exists(new Path(" "));
-		stdCtrl();
+		out.println(new File("reference/*.html").list().length);
+		Files.exists(Path.of(" "));
 	}
 	//*/
-	
-	public static void stdCtrl() {
-		var str = "aa\\n\\\\rx\\rc\\c\\td\\\"f";
-		out.println(str);
-		
-		// toString
-		var pat1 = compile("\\\\[\"nrtbf\\\\]");
-		var map1 = of("\\\"", "\"", "\\n","\n", "\\r","\r", "\\t","\t", "\\b","\b", "\\f","\f", "\\\\", "\\\\\\\\");
-		var res = pat1.matcher(str).replaceAll(mr-> map1.get(mr.group()));
-		out.println(res);
-		
-		//toSource
-		var pat2 = compile("[\"\n\r\t\b\f\\\\]");
-		var map2 = of("\"","\"", "\n","n", "\r","r", "\t","t", "\b","b", "\f","f", "\\","");
-		var org = pat2.matcher(res).replaceAll(mr-> "\\\\" + map2.get(mr.group()));
-		out.println(org);
-	}
 	
 	public static int more = Integer.MAX_VALUE;
 	
@@ -357,7 +331,7 @@ public class Utility {
 		if (!isVarArgs) {
 			if (length != 1 || !parms[0].isArray()) return args;
 			var cType = parms[0].componentType();
-			return new Object[] { args.getClass().componentType() == cType ?  args : copyFrom(cType, 0, args) };
+			return args[0].getClass().componentType() == cType ? args : args[0] instanceof Object[] arr ? $(copyFrom(cType, 0, arr)) : args;
 		}
 		if (args.length == length && (args[length-1] == null || args[length-1].getClass() == parms[length-1])) return args;
 		Object[] newArgs = copyOf(args, length); // eventualmente un null in più!
@@ -409,20 +383,21 @@ public class Utility {
 		return getExecutable(obj, publicMember, name, classes);
 	}
 	public static <T extends Executable> T getExecutable(Object obj, boolean publicMember, String name, Class <?> ... argumentsClass) {
-		boolean constructors = name.equals("new");
-		Class <?> classe = constructors ? (Class) obj : obj.getClass();
+		boolean constructor = name.equals("new");
+		Class <?> classe = constructor || obj instanceof Class ? (Class) obj : obj.getClass();
 		if (trace) out.println(classe + " " + toString(name, argumentsClass));
-		// per i costruttori obj è una classe e solo su quella vanno cercati 
-		// i metodi invece vanno cercati sulla classe di obj e le relative super classi
-		// se obj è una classe vanno anche cercati su obj stesso e le relative super classi
-		// escludendo Class e Object perché già controllate con la prima ricerca 
+		// per i costruttori obj deve essere una classe e vanno cercati solo su quella
+		// per i metodi se obj è una classe vanno cercati 
+		// su Class (la classe di obj), su obj e le sue super classi
+		// altrimenti solo sulla classe di obj e le sue super classi
 		List<Executable> executables = new ArrayList<>();
-		do addExecutable(executables, classe, publicMember, constructors, name, argumentsClass);
-		while (!constructors && !publicMember && (classe = classe.getSuperclass()) != null);
-		if (!constructors && obj instanceof Class && !member(obj, Class.class, Object.class)) {
-			classe = (Class) obj;
-			do addExecutable(executables, classe, publicMember, constructors, name, argumentsClass);
-			while (!publicMember && (classe = classe.getSuperclass()) != Object.class && classe != null);
+		List<Class> classi = new ArrayList<>();
+		if (constructor)
+			addExecutable(executables, classi, classe, publicMember, constructor, name, argumentsClass);
+		else {
+			if (obj instanceof Class) addExecutable(executables, classi, Class.class, publicMember, constructor, name, argumentsClass);
+			do addExecutable(executables, classi, classe, publicMember, constructor, name, argumentsClass);
+			while (!publicMember && (classe = classe.getSuperclass()) != null);
 		}
 		
 		if (trace) out.println("found: " + executables.size());
@@ -454,24 +429,35 @@ public class Utility {
 			}
 		}
 	}
-
+	
 	private static String toString(String name, Class <?> ... argumentsClass) {
 		String s = stream(argumentsClass).map(c-> c == null ? null : c.toString()).toList().toString();
 		return name + "(" + s.substring(1, s.length()-1) + ")";
 	}
 	
 	private static void addExecutable(
-		List<Executable> executables, Class<?> classe, boolean publicMember, boolean constructors,	String name, Class<?>... argumentsClass
+		List<Executable> executables, List<Class> classi, Class<?> classe, boolean publicMember, boolean constructor,	String name, Class<?>... argumentsClass
+	) {
+		if (classi.contains(classe)) return;
+		classi.add(classe);
+		addExecutable(executables, classe, publicMember, constructor, name, argumentsClass);
+		for (Class iclass: classe.getInterfaces()) {
+			addExecutable(executables, classi, iclass, publicMember, constructor, name, argumentsClass);
+		}
+	}
+	
+	private static void addExecutable(
+		List<Executable> executables, Class<?> classe, boolean publicMember, boolean constructor,	String name, Class<?>... argumentsClass
 	) {
 		if (trace) out.println("\tc: " + classe);
 		try {
-			var t = getExecutor(classe, constructors, publicMember, name, argumentsClass);
+			var t = getExecutor(classe, constructor, publicMember, name, argumentsClass);
 			if (trace) out.println("\t\t1: " + t);
-			executables.add(t);
+			if (!executables.contains(t)) executables.add(t);
 		}
 		catch (NoSuchMethodException nsme) {
-			for (Executable executor: getExecutors(classe, constructors, publicMember)) {
-				if (!constructors && !executor.getName().equals(name)) continue;
+			for (Executable executor: getExecutors(classe, constructor, publicMember)) {
+				if (!constructor && !executor.getName().equals(name)) continue;
 				if (trace) out.println("\t\tn: " + executor);
 				if (argumentsClass != null && argumentsClass.length > 0) {
 					boolean isVarArgs = executor.isVarArgs();
@@ -479,7 +465,7 @@ public class Utility {
 					if (!isVarArgs && argumentsClass.length != parametersClass.length || argumentsClass.length < parametersClass.length - 1) continue;
 					if (!isInvokeConvertible(isVarArgs, parametersClass, argumentsClass)) continue;
 				}
-				executables.add(executor);
+				if (!executables.contains(executor)) executables.add(executor);
 			}
 		}
 	}
@@ -569,16 +555,16 @@ public class Utility {
 		return cost;
 	}
 	
-	private static Executable getExecutor(Class<?> classe, boolean constructors, boolean publicMember, String name, Class<?>... classes)
+	private static Executable getExecutor(Class<?> classe, boolean constructor, boolean publicMember, String name, Class<?>... classes)
 	throws NoSuchMethodException {
-		return constructors
+		return constructor
 			? (publicMember ? classe.getConstructor(classes) : classe.getDeclaredConstructor(classes))
 			: (publicMember ? classe.getMethod(name, classes) : classe.getDeclaredMethod(name, classes))
 		;
 	}
 	
-	private static Executable[] getExecutors(Class<?> classe, boolean constructors, boolean publicMember) {
-		return constructors
+	private static Executable[] getExecutors(Class<?> classe, boolean constructor, boolean publicMember) {
+		return constructor
 			? (publicMember ? classe.getConstructors() : classe.getDeclaredConstructors())
 			: (publicMember ? classe.getMethods() : classe.getDeclaredMethods())
 		;

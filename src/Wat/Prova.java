@@ -57,8 +57,74 @@ import Wat.Vm.Symbol;
 public class Prova {
 	
 	public static void main(String[] args) throws Exception {
+		out.println(1 * 1.2);
+		out.println(1.2 * 1);
 	}
 	
+	public static void functions() {
+		System.out.println(Arrays.stream(new Object[] {1, 2, 3}).map((n)->"_"+n).toList());
+		// (@toList (@map (@stream &java.util.Arrays (array 1 2 3)) (%tof (\ (n) ($ "_" n)))))
+		System.out.println(Arrays.stream(new Object[] {1, 2, 3}).map(toFunction("_")).toList());
+		System.out.println(Arrays.stream(new Object[] {1, 2, 3}).map(new ToF().toFunction("_")).toList());
+		System.out.println(Arrays.stream(new Object[] {1, 2, 3}).map(new Prova().new ToF2().toFunction("_")).toList());
+		
+		Map.of("a",1,"b",2).forEach((k, v)->{ out.println(k + ":" + v); });
+	}
+	
+	public static final <T> T toFunction(String s) {
+		return (T) new Function() {
+			@Override public final Object apply(Object t) {
+				return s + t;
+			}
+		};
+	}
+	
+	public static final class ToF {
+		public final <T> T toFunction(String s) {
+			return (T) new Function() {
+				@Override public final Object apply(Object t) {
+					return s + t;
+				}
+			};
+		}
+	}
+	
+	public final class ToF2 {
+		public final <T> T toFunction(String s) {
+			return (T) new Function() {
+				@Override public final Object apply(Object t) {
+					return s + t;
+				}
+			};
+		}
+	}
+	
+	public static void stdCtrl() throws IOException {
+		out.println(Utility.toSource("a\nb"));
+		out.println(Utility.toString("a\\nb"));
+		out.println(Utility.toSource(Utility.toString("a\\nb")));
+		out.println(Utility.toString(Utility.toSource("a\nb")));
+		out.println(Charset.defaultCharset());
+		out.println(System.getProperty("stdout.encoding"));
+		var isr = new InputStreamReader(in, forName("UTF-8"));
+		for(;;) { var v = Utility.read(0, isr); if (v.equals("")) break; out.print(v); }
+		
+		var str = "aa\\n\\\\rx\\rc\\c\\td\\\"f";
+		out.println(str);
+		
+		// toString
+		var pat1 = compile("\\\\[\"nrtbf\\\\]");
+		var map1 = of("\\\"", "\"", "\\n","\n", "\\r","\r", "\\t","\t", "\\b","\b", "\\f","\f", "\\\\", "\\\\\\\\");
+		var res = pat1.matcher(str).replaceAll(mr-> map1.get(mr.group()));
+		out.println(res);
+		
+		//toSource
+		var pat2 = compile("[\"\n\r\t\b\f\\\\]");
+		var map2 = of("\"","\"", "\n","n", "\r","r", "\t","t", "\b","b", "\f","f", "\\","");
+		var org = pat2.matcher(res).replaceAll(mr-> "\\\\" + map2.get(mr.group()));
+		out.println(org);
+	}
+
 	public static void altMcomment() throws InterruptedException, IOException {
 		//*
 		process1();
