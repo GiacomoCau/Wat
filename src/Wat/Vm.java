@@ -1,5 +1,6 @@
 package Wat;
 
+import static List.Parser.string;
 import static List.Parser.toByteCode;
 import static Wat.Utility.$;
 import static Wat.Utility.apply;
@@ -19,7 +20,6 @@ import static Wat.Utility.or;
 import static Wat.Utility.read;
 import static Wat.Utility.reorg;
 import static Wat.Utility.stackDeep;
-import static Wat.Utility.string;
 import static Wat.Utility.system;
 import static Wat.Utility.toSource;
 import static Wat.Utility.uncked;
@@ -136,7 +136,6 @@ public class Vm {
 	
 	boolean doTco = true; // do tco
 	boolean doAsrt = true; // do assert
-	boolean ctApv = false; // applicative catch & throw
 	boolean intStr = false; // intern string
 	boolean prStk = false; // print stack
 	boolean prWrn = false; // print warning
@@ -896,14 +895,14 @@ public class Vm {
 			// (catchTag tag . forms)        -> (%CatchTagWth tag  #_ . forms)
 			// (catchWth hdl . forms)        -> (%CatchTagWth #_  hdl . forms)
 			// (catchTagWth tag hdl . forms) -> (%CatchTagWth tag hdl . forms)
-			var chk = !ctApv ? checkM(this, o, 2) : checkN(this, o, 3, Any.class, hdlAny ? Any.class : or(ignore, Apv1.class), Apv0.class);
+			var chk = checkM(this, o, 2);
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
-			return pipe(dbg(e, this, o), ()-> ctApv ? o.car : getTco(evaluate(e, o.car)), tag-> combine(null, e, tag, o.car(1), o.cdr(1)) ); 
+			return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, o.car)), tag-> combine(null, e, tag, o.car(1), o.cdr(1)) ); 
 		}
 		private Object combine(Resumption r, Env e, Object tag, Object hdl, List xs) {
 			try {
-				var res = r != null ? r.resume() : getTco(!ctApv ? begin.combine(e, xs) : Vm.this.combine(e, xs.car, null));
+				var res = r != null ? r.resume() : getTco(begin.combine(e, xs));
 				return res instanceof Suspension s ? s.suspend(dbg(e, this, tag, xs, hdl), rr-> combine(rr, e, tag, hdl, xs)) : res;
 			}
 			catch (Throwable thw) {
@@ -914,7 +913,7 @@ public class Vm {
 			}
 		}
 		public Object combine2(Resumption r, Env e, Object tag, Object hdl, Throwable thw) {
-			Object res = r != null ? r.resume() : ctApv ? hdl : getTco(evaluate(e, hdl));
+			Object res = r != null ? r.resume() : getTco(evaluate(e, hdl));
 			if (res instanceof Suspension s) return s.suspend(dbg(e, this, tag, hdl), rr-> combine2(rr, e, tag, hdl, thw));
 			return res instanceof Apv apv && args(apv) == 1
 				? getTco(Vm.this.combine(e, unwrap(apv), cons(thw instanceof Value val ? val.value : thw)))
@@ -925,14 +924,12 @@ public class Vm {
 	}
 	class ThrowTag implements Combinable {
 		public Object combine(Env e, List o) {
-			var chk = ctApv
-				? checkR(this, o, 1, 2) // o = (tag) | (tag value)
-				: checkM(this, o, 1); // o = (tag . forms)
+			var chk = checkM(this, o, 1); // o = (tag . forms)
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			var dbg = dbg(e, this, o);
-			return pipe(dbg, ()-> ctApv ? o.car : getTco(evaluate(e, o.car)),
-				tag->{ throw new Value(tag, ctApv ? (len == 1 ? inert : o.car(1)) : pipe(dbg, ()-> getTco(begin.combine(e, o.cdr())))); }
+			return pipe(dbg, ()-> getTco(evaluate(e, o.car)),
+				tag->{ throw new Value(tag, pipe(dbg, ()-> getTco(begin.combine(e, o.cdr())))); }
 			);		
 		}
 		public String toString() { return "%ThrowTag"; }
@@ -1775,8 +1772,8 @@ public class Vm {
 				"%if", new If(),
 				"%loop", new Loop(),
 				"%atEnd", new AtEnd(),
-				"%throwTag", apply(t-> !ctApv ? t : wrap(t), new ThrowTag()),
-				"%catchTagWth", apply(c-> !ctApv ? c : wrap(c), new CatchTagWth()),
+				"%throwTag", new ThrowTag(),
+				"%catchTagWth", new CatchTagWth(),
 				// Delimited Control
 				"%takeSubcont", new TakeSubcont(),
 				"%pushPrompt", new PushPrompt(),
@@ -1838,20 +1835,12 @@ public class Vm {
 				"print", wrap(new JFun("Print", (ArgsList) o-> print(array(o)) )),
 				"write", wrap(new JFun("Write", (ArgsList) o-> write(array(o)) )),
 				"load", wrap(new JFun("Load", (n,o)-> checkR(n, o, 1, 2, String.class, Env.class), (l,o)-> uncked(()-> loadText(l==1 ? theEnv : o.<Env>car(1), o.<String>car())) )),
-				"read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> uncked(()-> toLispList(read(l == 0 ? 0 : o.<Integer>car()))) )),
+				"read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> uncked(()-> toLispList(read(l == 0 ? 0 : o.<Integer>car())).car) )),
 				"readString", wrap(new JFun("ReadString", (n,o)-> checkN(n, o, 1), (l,o)-> uncked(()-> toLispList(o.toString())) )),
 				"system", wrap(new JFun("System", (n,o)-> checkR(n, o, 1, 2, String.class, Boolean.class), (l,o)-> uncked(()-> system(l==1 ? false : o.<Boolean>car(1),  "cmd.exe", "/e:on", "/c", o.<String>car())) )),
 				// Config
 				"doTco", wrap(new JFun("DoTco", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doTco : inert(doTco=o.car()) )),
 				"doAsrt", wrap(new JFun("DoAsrt", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doAsrt : inert(doAsrt=o.car()) )),
-				"ctApv", wrap(new JFun("CtApv",
-					(n,o)-> checkN(n, o, 0, Boolean.class),
-					(l,o)-> l == 0 ? ctApv
-						: inert(ctApv = o.car(),
-							bind(null, theEnv,
-								list(symbol("%catch"), symbol("%throw")),
-								list((Object) apply(c-> !ctApv ? c : wrap(c), new CatchTagWth()),
-									(Object) apply(t-> !ctApv ? t : wrap(t), new ThrowTag())))) )),
 				"intStr", wrap(new JFun("IntStr", (n,o)-> checkN(n, o, 0), (l,o)-> intStr )),
 				"prTrc", wrap(new JFun("PrTrc", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4, 5, 6)), (l,o)-> l == 0 ? prTrc : inert(start=level-(doTco ? 0 : 3), prTrc=o.car()) )),
 				"typeT", wrap(new JFun("TypeT", (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4)), (l,o)-> l == 0 ? typeT : inert(typeT=o.car()) )),

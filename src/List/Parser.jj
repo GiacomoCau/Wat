@@ -1,6 +1,5 @@
 
 options {
-	JDK_VERSION = "1.8";
 	STATIC = false;
 	DEBUG_PARSER = false;
 	UNICODE_INPUT = true;
@@ -17,7 +16,6 @@ import static java.lang.System.getProperty;
 import static java.lang.System.in;
 import static java.lang.System.out;
 import static Wat.Utility.$;
-import static Wat.Utility.string;
 import static Wat.Utility.classForName;
 
 import java.io.BufferedReader;
@@ -31,6 +29,13 @@ import Wat.Utility;
 
 @SuppressWarnings("all")
 public class Parser {
+	
+	public static Object string = new Object() {
+		@Override public String toString() { return "#string"; }
+	};
+	public static Object eof = new Object() {
+		@Override public String toString() { return "#eof"; }
+	};
 	
 	/* static=true
 	public static <T> T parse(String line) throws Exception {
@@ -50,16 +55,21 @@ public class Parser {
 		this(new StringReader(line));
 	}
 	
-	public static void main0(String args []) throws Exception {
-		Parser parser = new Parser(new InputStreamReader(in, Charset.forName("UTF-8"))); // static=false
+	public static void main(String args []) throws Exception {
+		main1(args);
+	}
+	
+	public static void main0(String[] args) throws Exception {
+		Parser parser = new Parser(in, "UTF-8"); // static=false
 		for (;;) {
 		  	out.print(">");
 			Object o = parser.Elt();
+			if (eof.equals(o)) {out.println("\n" + o); break; }
 			out.println("OK: " + toString(o));
 		}
 	}
 	
-	public static void main(String args []) throws Exception {
+	public static void main1(String[] args) throws Exception {
 		//out.println(Charset.defaultCharset());
 		//out.println(getProperty("stdout.encoding"));
 		boolean expr = true;
@@ -220,6 +230,7 @@ Object Elt() throws Exception: {
 	Object o, o2=null;
 	List l = new ArrayList(); 
 }	{	<Null>       { return null; }
+	//|	<EOF>        { return eof; }    
 	|	<True>       { return true; }    
 	|	<False>      { return false; }    
 	|	t=<Inert>    { return t.image; }    

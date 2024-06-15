@@ -74,7 +74,6 @@ public class Utility {
 	}
 	
 	public static int more = Integer.MAX_VALUE;
-	public static Object string = new Object();
 	
 	public static Object[] $(Object... objs) {
 		return objs;

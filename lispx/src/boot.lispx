@@ -1191,12 +1191,9 @@
    |otherwise the value of the `throw' is passed to the HANDLER and the value returned by the HANDLER will be the result of the `catchTagWth'
    |
    |$(fn tag handler . forms)
-   |$(type (if (ctApv) macro fexpr))
+   |$(type fexpr)
    |#
-  (if (ctApv) ;; ctApv non andrebbe cambiato dopo il boot, anche la riassegnazione di catchTagWth potrebbe non bastare!
-    (macro (tag hdl . forms)
-      (list '%catchTagWth tag hdl (list* '\ () forms)) )
-    %catchTagWth ))
+  %catchTagWth )
 
 (defMacro (catchWth hdl . forms)
   #|Establishes an generic catch all with HANDLER (one arg function or any value) and evaluate FORMS as an implicit `begin'.
@@ -2484,14 +2481,14 @@
       (apply check args env)
       #t )))
 
-(defMacro (the ck obj)
-  #|Return OBJECT if OBJECT match CHK, signals an error otherwise.
+(defVau (the ck value) env
+  #|Return VALUE if VALUE match CHK, signals an error otherwise.
    |
-   |$(fn chk object)
+   |$(fn chk value)
    |$(type macro)
-   |$(derivation (let1 (object object) (check object chk) object)) 
+   |$(derivation (let1 (value (eval value env)) (apply %check (list value chk) env) value)) 
    |#
-  (list 'let1 (list 'obj obj) (list 'check 'obj ck) 'obj))
+  (let1 (value (eval value env)) (apply %check (list value ck) env) value) )
 
 
 #|! Block ReturnFrom Loop For While Until Repeat DoTimes DoList
@@ -3979,13 +3976,6 @@ load)
 
 #|! Configuration
  |#
-
-(def ctApv
-  #|Return #true if catch and throw are applicative, #false otherwise.
-   |
-   |$(fn)
-   |#
-  ctApv )
 
 (def intStr
   #|Return #true if the string are interned, #false otherwise.

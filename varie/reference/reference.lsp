@@ -12,13 +12,16 @@
 
 (def readLine (getMethod BufferedReader "readLine"))
 (def startsWith (getMethod String "startsWith" String))
+(def indexOf (getMethod String "indexOf" &int))
+(def indexOfFrom (getMethod String "indexOf" &int &int))
+(def charAt (getMethod String "charAt" &int))
 
 (def\ (nm d)
-  (let* ( (b1 (@indexOf d #\ ))
-          (b2 (let1 (l (@indexOf d #\  (1+ b1))) (if (-1? l) (length d) l))) )
+  (let* ( (b1 (indexOf d #\ ))
+          (b2 (let1 (l (indexOfFrom d #\  (1+ b1))) (if (-1? l) (length d) l))) )
     (subSeq d
-      (let1 (b1 (1+ b1)) (if (== (@charAt d b1) #\x28) (1+ b1) b1))
-      (if (startsWith d "\x28;def*") (@indexOf d #\x29) b2) )))
+      (let1 (b1 (1+ b1)) (if (== (charAt d b1) #\x28) (1+ b1) b1))
+      (if (startsWith d "\x28;def*") (indexOf d #\x29) b2) )))
 
 (def base "https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference")
 ;(def base "/reference/reference")
@@ -42,9 +45,9 @@
         (ol (attr 'start 0)
           (li (a (attr 'href "https://github.com/GiacomoCau/Wat?tab=readme-ov-file") (pr "Wat")))
           (doList (file files)
-            (close1 (r (@new BufferedReader (@new FileReader file)))
+            (close1 (fr (@new BufferedReader (@new FileReader file)))
               (log file)
-              (for1 (l (readLine r)) (! (null? l)) 
+              (for1 (l (readLine fr)) (! (null? l)) 
                 (continue? (! (startsWith l "#|!")))
                 ;(until? (>= chapters 2))
                 (+= chapters 1)

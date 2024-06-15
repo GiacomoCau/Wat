@@ -1,9 +1,11 @@
 
+(load "varie/html.lsp")
+
 (h2 (pr "1") (pr "2"))
 
 (html (attr 'aa 1 'bb "2" 'cc #t) (body (br (pr 3))))
 
-(close1 (pw (@new &java.io.PrintStream "prova.html"))  
+(close1 (pw (@new &java.io.PrintWriter "prova.html"))  
   (dlet1 (htmlWriter pw)
     (html (attr 'aa 1 'bb "2" 'cc #t)
       (head

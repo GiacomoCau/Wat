@@ -255,18 +255,18 @@
       </h3>
       <ul>
         <li>
-          Return OBJECT if OBJECT match CHK, signals an error otherwise.
+          Return VALUE if VALUE match CHK, signals an error otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (the chk object)
+          (the chk value)
         </li>
         <li>
           (type macro)
         </li>
         <li>
-          (derivation (let1 (object object) (check object chk) object)) 
+          (derivation (let1 (value (eval value env)) (apply %check (list value chk) env) value)) 
         </li>
       </ul>
     </div>
