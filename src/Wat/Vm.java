@@ -195,27 +195,29 @@ public class Vm {
 	}
 	Object pipe(Resumption r, Dbg dbg, Supplier before, Function ... after) {
 		var res = r != null ? r.resume() : before.get();
-		//if (res instanceof Tco) out.println /*throw new Error*/("do getTco 1"); 
 		return res instanceof Suspension s ? s.suspend(dbg, rr-> pipe(rr, dbg, before, after)) : pipe(null, dbg, res, 0, after);
 	}
 	Object pipe(Resumption r, Dbg dbg, Object res, int i, Function ... after) {
 		for (var first=true; i<after.length; i+=1) { // only one resume for suspension
 			res = first && r != null && !(first = false) ? r.resume() : after[i].apply(res);
-			//if (res instanceof Tco && i < after.length-1) out.println /*throw new Error*/ ("do getTco 2"); 
 			if (res instanceof Suspension s) { var ii=i; var rres=res; return s.suspend(dbg, rr-> pipe(rr, dbg, rres, ii, after)); }
 		}
 		return res;
 	}
-	Object map(Function f, List todo) {
-		return map(null, f, todo, null);
+	Object map(Object op, Function f, List todo) {
+		return map(op, f, -1, todo);
 	}
-	Object map(Resumption r, Function f, List todo, List done) {
-		for (var first=true;;) { // only one resume for suspension
-			if (todo == null) return reverse(done); 
-			var res = first && r != null && !(first = false) ? r.resume() : f.apply(todo.car);
-			//if (res instanceof Tco) out.println /*throw new Error*/("do getTco 3"); 
-			if (res instanceof Suspension s) { List td=todo, dn=done; return s.suspend(dbg(null, "map", todo.car), rr-> map(rr, f, td, dn)); }
-			todo = todo.cdr(); done = cons(res, done);
+	Object map(Object op, Function f, int i, List todo) {
+		return map(null, op, f, i, todo, null);
+	}
+	Object map(Resumption r, Object op, Function f, int i, List todo, List done) {
+		Object res = null;
+		for (var first=true;; i -= 1, todo = todo.cdr(), done = cons(res, done)) { // only one resume for suspension
+			if (i == 0 || todo == null) return reverse(done, todo); 
+			res = first && r != null && !(first = false) ? r.resume() : getTco(f.apply(todo.car));
+			if (!(res instanceof Suspension s)) continue;
+			int ii = i; List td=todo, dn=done;
+			return s.suspend(dbg(null, op, todo.car), rr-> map(rr, op, f, ii, td, dn));
 		}
 	}
 	class Dbg {
@@ -732,8 +734,7 @@ public class Vm {
 	class Opv implements Combinable  {
 		Env e; Object pt, ep; List x;
 		Opv(Env e, Object pt, Object ep, List x) {
-			this.e = e; this.pt = pt; this.ep = ep;
-			this.x = x != null && x.cdr() != null && x.car instanceof String ? x.cdr() : x;
+			this.e = e; this.pt = pt; this.ep = ep;	this.x = x;
 		}
 		public Object combine(Env e, List o) {
 			var xe = env(this.e);
@@ -751,7 +752,7 @@ public class Vm {
 		Combinable cmb;
 		Apv(Combinable cmb) { this.cmb = cmb; }
 		public Object combine(Env e, List o) {
-			return tco(()-> pipe(dbg(e, this, o), ()-> map(car-> getTco(evaluate(e, car)), o), args-> tco(()-> cmb.combine(e, (List) args)))); 
+			return tco(()-> pipe(dbg(e, this, o), ()-> map("evaluate", car-> getTco(evaluate(e, car)), o), args-> tco(()-> cmb.combine(e, (List) args)))); 
 		}
 		public String toString() {
 			return "{%Apv " + Vm.this.toString(cmb) + "}";
@@ -830,14 +831,15 @@ public class Vm {
 			return o == null ? inert : tco(()-> combine(null, e, o));
 		}
 		Object combine(Resumption r, Env e, List lst) {
-			for (var first = true;;) { // only one resume for suspension
+			for (var first = true;; lst = lst.cdr()) { // only one resume for suspension
 				if (prTrc >= 3 && root && r == null) print("\n--------");
 				var car = lst.car;
 				if (prTrc == 2 && root && r == null) print("evaluate: ", car);
-				if (lst.cdr() == null) { return evaluate(e, car); } 
+				if (lst.cdr() == null) return evaluate(e, car); 
 				var res = first && r != null && !(first = false) ? r.resume() : getTco(evaluate(e, car));
-				if (res instanceof Suspension s) { var l = lst; return s.suspend(dbg(e, this, car), rr-> combine(rr, e, l)); }
-				lst = lst.cdr();
+				if (!(res instanceof Suspension s)) continue;
+				var l = lst;
+				return s.suspend(dbg(e, this, car), rr-> combine(rr, e, l));
 			}
 		}
 		public String toString() { return "%Begin" + eIf(!root, "*"); }
@@ -929,7 +931,7 @@ public class Vm {
 			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			var dbg = dbg(e, this, o);
 			return pipe(dbg, ()-> getTco(evaluate(e, o.car)),
-				tag->{ throw new Value(tag, pipe(dbg, ()-> getTco(begin.combine(e, o.cdr())))); }
+				tag->{ throw new Value(tag, getTco(begin.combine(e, o.cdr()))); }
 			);		
 		}
 		public String toString() { return "%ThrowTag"; }
@@ -952,7 +954,10 @@ public class Vm {
 		Object cleanup(Object cln, Env e, boolean success, Object res) {
 			return pipe(dbg(e, this, cln, success, res), ()-> getTco(evaluate(e, cln)), $-> {
 					if (success) return res;
-					throw res instanceof Value val ? val : res instanceof Condition cnd ? cnd : new Error("cleanup error!", (Throwable) res);
+					throw res instanceof Value val ? val
+						: res instanceof Condition cnd ? cnd
+						: new Error("cleanup error!", (Throwable) res)
+					;
 				}
 			);
 		}
@@ -1115,7 +1120,7 @@ public class Vm {
 							? uncked(()-> c.newInstance(reorg(c, array(o))))
 							: resumeError(obj, symbol("Integer"))
 					);
-				default -> typeError("cannot invoke, not a {expected}: {datum}", this, toChk(or(ArgsList.class, LenList.class, Supplier.class, Function.class, BiFunction.class, Field.class, Executable.class)));
+				default -> typeError("cannot build jfun, not a {expected}: {datum}", this, toChk(or(ArgsList.class, LenList.class, Supplier.class, Function.class, BiFunction.class, Field.class, Executable.class)));
 			};
 		}
 		public Object combine(Env e, List o) {
@@ -1383,7 +1388,7 @@ public class Vm {
 		return chk instanceof Class cl ? symbol(cl.getSimpleName())
 			: chk instanceof Integer i && i == more ? symbol("oo")
 			: chk instanceof Object[] a ? cons(symbol("or"), list(stream(a).map(o-> toChk(o)).toArray()))
-			: chk instanceof List l ? map(o-> toChk(o), l.car instanceof Apv ? l.cdr() : l )
+			: chk instanceof List l ? map("toChk", o-> toChk(o), l.car instanceof Apv ? l.cdr() : l )
 			: chk
 		;
 	}
@@ -1447,9 +1452,11 @@ public class Vm {
 		return res.toArray((T[]) Array.newInstance(cls, 0));
 	}
 	List reverse(List l) {
-		List h = null;
-		for (; l != null; l = l.cdr()) h = cons(l.car, h);
-		return h;
+		return reverse(l, null);
+	}
+	List reverse(List l, List t) {
+		for (; l != null; l = l.cdr()) t = cons(l.car, t);
+		return t;
 	}
 	Object append(List l, Object t) {
 		if (l == null) return t;
@@ -1528,7 +1535,7 @@ public class Vm {
 						}
 					}
 					default: {
-						var expt = (List) map(x-> pushSubcontBarrier.combine(env, pushRootPrompt(cons(x))), o.cdr(1)); 
+						var expt = (List) map("pushSubcontBarrier.combine", x-> pushSubcontBarrier.combine(env, pushRootPrompt(cons(x))), o.cdr(1)); 
 						if (expt.car instanceof Class && matchType(val, expt)) return true;
 						print(name, exp, " should be ", expt, " but is ", val);
 					}
@@ -1540,7 +1547,7 @@ public class Vm {
 					thw.printStackTrace(out);
 				else {
 					var val = thw instanceof Value v ? v.value : thw;
-					var expt = (List) map(x-> pushSubcontBarrier.combine(env, pushRootPrompt(cons(x))), o.cdr(1));
+					var expt = (List) map("pushSubcontBarrier.combine", x-> pushSubcontBarrier.combine(env, pushRootPrompt(cons(x))), o.cdr(1));
 					if (expt.car instanceof Class && matchType(val, expt)) return true;
 					print(name, exp, " should be ", expt, " but is ", val);
 				}

@@ -101,6 +101,23 @@
 (%assert (%catchTagWth #_ #_ (%begin (%def x 0) (%loop (%if (%== x 10) (%throwTag #_ x) (%def x (%+ x 1)))))) 10)
 (%assert (%catchTagWth #_ #_ (%begin (%def x 0) (%loop (%if (%== x 10) (%throwTag #_ x)) (%def x (%+ x 1))))) 10)
 
-(%def testTco (%\ (n) (%if (%<= n 0) n (testTco (%- n 1)))))
+(%def testTco (%\ (n) (%if (%<= n 0) n (testTco (%- n 1))))) ; (prTrc 3)(testTco 5)(prTrc 0)
+(%def stackDeep ((%\ (stackDeep) (%\ () (stackDeep #null))) (@getMethod &Wat.Utility "stackDeep")))
 
-(%if (doTco) (%assert (testTco 400) 0))
+(%if (doTco)
+  (%begin
+    (%assert (%== (stackDeep) (%begin (stackDeep))) #t)
+    (%assert (%== (stackDeep) (%if #t (stackDeep))) #t)
+    (%assert (%== (stackDeep) (%if #f #inert (stackDeep))) #t)
+    (%assert (%== (stackDeep) ((%vau () #_ (stackDeep)))) #t)
+    (%assert (%== (stackDeep) (%eval '(stackDeep) (%theEnv))) #t)
+    (%if (%! (%assert (%== (stackDeep) ((%\ () (stackDeep)))) #t))
+      (log
+        (stackDeep)
+        (%begin (stackDeep))
+        (%if #t (stackDeep))
+        (%if #f #inert (stackDeep))
+        ((%vau () #_ (stackDeep)))
+        (%eval '(stackDeep) (%theEnv))
+        ((%\ () (stackDeep))) ))
+    (%assert (testTco 400) 0) ))
