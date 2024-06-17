@@ -781,7 +781,7 @@ public class Utility {
 						if (c > 32) inSymbol = true;
 					}
 				}
-				if (c >= 32 || inDSymbol) s.append((char) c);
+				if (c == 3 || c >= 32 || inDSymbol) s.append((char) c);
 			}
 			if (inComment) { inComment = false; }
 			s.append('\n'); 

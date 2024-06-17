@@ -83,6 +83,7 @@ import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
 
 import List.ParseException;
+import List.Parser;
 
 // java.exe -cp bin --enable-preview Wat.Vm
 
@@ -138,6 +139,8 @@ public class Vm {
 		for (File file: new File("bin/Ext").listFiles()) file.delete();
 		//new File("bin/Ext").delete();
 	}
+	
+	static Parser parser = new Parser(System.in, "UTF-8");
 	
 	boolean doTco = true; // do tco
 	boolean doAsrt = true; // do assert
@@ -2333,6 +2336,8 @@ public class Vm {
 				"read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> uncked(()-> str2lst(read(l == 0 ? 0 : o.<Integer>car())).car) )),
 				//"eof", new JFun("eof", (n,o)-> checkN(n, o, 0), (l,o)-> List.Parser.eof),
 				//"eof?", wrap(new JFun("eof?", (n,o)-> checkN(n, o, 1), (l,o)-> List.Parser.eof.equals(o.car))),
+				"read1", wrap(new JFun("Read1", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> uncked(()-> bc2exp(new Parser(System.in, "UTF-8").expr())) )),
+				"read2", wrap(new JFun("Read2", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> uncked(()-> bc2exp(parser.expr())) )),
 				"readString", wrap(new JFun("ReadString", (n,o)-> checkN(n, o, 1), (_,o)-> uncked(()-> str2lst(o.toString())) )),
 				"system", wrap(new JFun("System", (n,o)-> checkR(n, o, 1, 2, String.class, Boolean.class), (l,o)-> uncked(()-> system(l==1 ? false : o.<Boolean>car(1),  "cmd.exe", "/e:on", "/c", o.<String>car())) )),
 				// Config

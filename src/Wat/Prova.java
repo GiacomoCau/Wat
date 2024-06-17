@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
@@ -155,6 +156,24 @@ public class Prova {
 		out.println(org);
 	}
 
+	static class Console extends InputStreamReader {
+		int lv, oc;
+		Console(InputStream in, Charset cs) { super(in, cs); }
+		/*
+		@Override public int read() throws IOException {
+			if (!ready()) out.print("!> ");
+			//if (!ready()) out.print((lv == 0 ? "" : lv + "|") + (oc==0 ? "> " : "%+d%s> ".formatted(oc, oc>0 ? "(" : ")")));
+			return super.read();
+		}
+		*/
+		@Override public boolean ready() throws IOException {
+			boolean b = super.ready();
+			if (!b) out.print("!> ");
+			// TODO Auto-generated method stub
+			return b;
+		}
+	}
+	
 	public static void altMcomment() throws InterruptedException, IOException {
 		//*
 		process1();

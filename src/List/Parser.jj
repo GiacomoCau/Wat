@@ -2,6 +2,7 @@
 options {
 	STATIC = false;
 	DEBUG_PARSER = false;
+	GENERATE_GENERICS = true;
 	UNICODE_INPUT = true;
 	JAVA_UNICODE_ESCAPE = true;
 	TOKEN_MANAGER_USES_PARSER = true;
@@ -22,6 +23,9 @@ import static Wat.Utility.classForName;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.io.Reader;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,18 +45,25 @@ public class Parser {
 		@Override public String toString() { return "#skip"; }
 	};
 	
-	/* static=true
-	public static <T> T parse(String line) throws Exception {
-		// E' necessario inizializzare jj_input_stream con un SimpleCharStream!
-		if (jj_input_stream == null) jj_input_stream = new SimpleCharStream((Reader) null);
-		ReInit(new StringReader(line));
-		return (T) parse();
+	/* // static=true
+	public static Object[] toByteCode(String str) throws Exception {
+		if (jj_input_stream == null) jj_input_stream = new JavaCharStream((Reader) null);
+		ReInit(new StringReader(str));
+		return list();
 	}
-	//*/
 	
-	// static=false
+	public static void main(String args []) throws Exception {
+		var parser = new Parser(System.in, "UTF-8"); // static=true
+		for (;;) {
+			Object o = parser.expr();
+			if (eof.equals(o)) {out.println("\n" + o); break; }
+			out.println("OK: " + toString(o));
+		}
+	}
+	
+	/*/	// static=false
 	public static Object[] str2bc(String str) throws Exception {
-		return new Parser(str).parse();
+		return new Parser(str).list();
 	}
 	
 	public Parser(String line) {
@@ -60,14 +71,32 @@ public class Parser {
 	}
 	
 	public static void main(String args []) throws Exception {
-		main1(args);
+		main0(args);
+	}
+	
+	static class Console extends InputStreamReader {
+		int lv, oc;
+		Console(InputStream in, Charset cs) { super(in, cs); }
+		/*
+		@Override public int read() throws IOException {
+			if (!ready()) out.print("!> ");
+			//if (!ready()) out.print((lv == 0 ? "" : lv + "|") + (oc==0 ? "> " : "%+d%s> ".formatted(oc, oc>0 ? "(" : ")")));
+			return super.read();
+		}
+		*/
+		@Override public boolean ready() throws IOException {
+			boolean b = super.ready();
+			if (!b) out.print("!> ");
+			return b;
+		}
 	}
 	
 	public static void main0(String[] args) throws Exception {
-		Parser parser = new Parser(in, "UTF-8"); // static=false
+		//Parser parser = new Parser(in, "UTF-8"); // static=false
+		Parser parser = new Parser(new Console(in, Charset.forName("UTF-8"))); // static=false
 		for (;;) {
-		  	out.print(">");
-			Object o = parser.Elt();
+		  	out.print("0>");
+			Object o = parser.expr();
 			if (eof.equals(o)) {out.println("\n" + o); break; }
 			out.println("OK: " + toString(o));
 		}
@@ -77,6 +106,7 @@ public class Parser {
 		//out.println(Charset.defaultCharset());
 		//out.println(getProperty("stdout.encoding"));
 		boolean expr = true;
+		boolean prmsg = false;
 		for (;;) {
 			String line = Wat.Utility.read();
 			if (line.equals("")) break;
@@ -92,7 +122,7 @@ public class Parser {
 				out.print(line);
 				Parser parser = new Parser(line); // static=false
  				if (expr) {
-					Object o = parser.parse();
+					Object o = parser.list();
 					out.println("OK: " + toString(o));
 				}
 				else {
@@ -104,16 +134,17 @@ public class Parser {
 				}
 			}
 			catch (Exception e) {
-				out.println("NOK! " /*+ e.getMessage()*/);
+				out.println("NOK! " + (prmsg ? e.getMessage() : "" ));
 				e.printStackTrace(System.out);
 			}
 			catch (Error e) {
-				out.println("Oops! " /*+ e.getMessage()*/);
+				out.println("Oops! " + (prmsg ? e.getMessage() : "" ));
 				e.printStackTrace(out);
 			}
 		}
 		out.println("finito!");
 	}
+	//*/
 	
 	public static String toString(Object o) {
 		if (o == null) return "null";
@@ -148,7 +179,7 @@ public class Parser {
 PARSER_END(Parser)
 
 TOKEN_MGR_DECLS : {
-  int MLCD;
+	int MLCD, PD;
 }
 
 SKIP:	// white spaces
@@ -168,7 +199,7 @@ SKIP:	// white spaces
 <SMLC, SCMLC, SCMT> MORE: {	< "\\\"" | ~["\""] > }
 
 TOKEN:	// separators
-{	"(" | ")"
+{	"(" { PD+=1; } | ")" { PD-=1; } 
 }
 
 TOKEN:	// reserved words
@@ -182,6 +213,7 @@ TOKEN:	// reserved words
 |	< Symbol1: "#s" ["#", "," , "'" , "`" , "\u00b4" , "\"" , "|"] >
 |	< # hex: ["0"-"9", "a"-"f", "A"-"f"] >
 |   < Char: "#\\" ( [ "\u0000" - "\uffff" ] | "x" <hex> ( <hex> ( <hex> ( <hex> )? )? )? ) >
+|   < Ctrlc: "\u0003" >
 }
 
 TOKEN:	// literals
@@ -261,11 +293,18 @@ Object Elt(): {
 	//|	t=<Sym> ["::" t2=<Sym>] { return t2 == null ? t.image : $("%eval", $("%'", t2.image), t.image); }  	
 	|	"(" ( o=Elt(){ if (o != skip) l.add(o); } )+ ")" { return l.toArray(); }
 	|	"[" ( o=Elt(){ if (o != skip) l.add(o); } )+ "]" { return l.toArray(); }
+	|	t=<Ctrlc>   { return '\u0003'; }    
 }
 
-Object[] parse() throws Exception: {
+Object[] list() throws Exception: {
 	Object o = null;
 	List l = new ArrayList(); 
 }
 {	( o=Elt(){ if (o != skip) l.add(o); } )* <EOF> { return l.toArray(); }
+}
+Object expr() throws Exception: {
+	Object o = null;
+	//out.print("> ");
+}	{ <EOF>		{ return eof; }    
+	| o=Elt()	{ return o; }
 }
