@@ -174,7 +174,7 @@ TOKEN:	// reserved words
 |	< SheBang: "#!" >
 |	< Inert: "#inert" >
 |	< Ignore: "#_" | "#ignore" >
-|	< Comment: "#;" >
+|	< Cmt: "#;" >
 |	< Symbol1: "#s" ["#", "," , "'" , "`" , "\u00b4" , "\"" , "|"] >
 |	< # hex: ["0"-"9", "a"-"f", "A"-"f"] >
 |   < Char: "#\\" ( [ "\u0000" - "\uffff" ] | "x" <hex> ( <hex> ( <hex> ( <hex> )? )? )? ) >
@@ -250,7 +250,7 @@ Object Elt() throws Exception: {
 	|	t=<Dot>      { return $("%dot", $(string, t.image.substring(1))); }
 	|	t=<At>       { return $("%at", $(string, t.image.substring(1))); } 
 	|	t=<Mac> o=Elt() { return $("%"+t, o); }
-	|	t=<Comment> Elt() { return "#inert"; }
+	|	t=<Cmt> Elt() { return "#inert"; }
 	|	t=<Kwd>      { return t.image; }
 	|	t=<Sym>      { return t.image; }  	
 	//|	t=<Sym> ["::" t2=<Sym>] {	return t2 == null ? t.image : $("%eval", $("%'", t2.image), t.image); }  	

@@ -1934,7 +1934,7 @@
   #|Return the evaluation of THEN into resulting ENVIRONMENT if VALUE match the DEFINIEND-TREE,
    |the evaluation of ELSE if present, #inert otherwise.
    |
-   |$(fn (definiendTree value) then . forms)
+   |$(fn (definiendTree value) then . else)
    |$(type fexpr)
    |#
   (let1 (env+ (newEnv env))
