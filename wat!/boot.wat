@@ -4349,7 +4349,7 @@ load)
   intStr)
 
 (def doTco
-  #|Return or update the use of the tail call optimiaztion.
+  #|Return or update the use of the tail call optimization.
    |
    |$(fn . boolean)
    |$(type function)
@@ -4381,7 +4381,7 @@ load)
   prAttr)
 
 (def prWrn
-  #|Return or update the warning print.
+  #|Return or update the print of warnings.
    |
    |$(fn . boolean)
    |$(type function)
@@ -4389,7 +4389,7 @@ load)
  prWrn)
 
 (def aQuote
-  #|Return or update the auto quote propertiy for the list without combinable car. 
+  #|Return or update the auto quote property for the list without combinable car. 
    |
    |$(fn . boolean)
    |$(type function)
@@ -4467,6 +4467,6 @@ aQuote)
   #|Return or update the VALUE to use as default value for the Box.
    |
    |$(fn . value)
-7   |$(type function)
+   |$(type function)
    |# 
   boxDft)
