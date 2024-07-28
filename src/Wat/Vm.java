@@ -248,6 +248,7 @@ public class Vm {
 	class SheBang { public String toString() { return "#!"; }};
 	public SheBang sheBang = new SheBang();
 	
+	
 	// Tail Call Optimization
 	class Tco implements Supplier {
 		Supplier tco;
@@ -282,6 +283,7 @@ public class Vm {
 		return (T) v;
 	}
 	
+	
 	// Basic Object
 	class Intern implements Comparable<Intern> {
 		String name;
@@ -305,7 +307,7 @@ public class Vm {
 		Object car; private Object cdr;
 		Cons(Object car, Object cdr) { this.car = car; this.cdr = cdr; }
 		public String toString() {
-			if (car instanceof Symbol s) switch (s.name) {
+			if (car instanceof Symbol s && len(cdr) == 1) switch (s.name) {
 				case "%,": return "," + Vm.this.toString(car(1));
 				case "%,@": return ",@" + Vm.this.toString(car(1));
 				case "%`": return "`" + Vm.this.toString(car(1));
@@ -660,8 +662,8 @@ public class Vm {
 		private static final long serialVersionUID = 1L;
 		public TypeException(String message, Object datum, Object expected) { super(message, "datum", datum, "expected", expected); }
 	}
-	<T> T matchError(String msg, Object ... objs) {
-		return error(msg, headAdd(objs, "type", symbol("match")));
+	<T> T matchError(String msg, Object datum, int operands) {
+		return error(msg, "type", symbol("match"), "datum", datum, "operands#", operands);
 	}
 	Object bind(Dbg dbg, Env e, Object lhs, Object rhs) {
 		return bind(dbg, true, bndRes, e, lhs, rhs);
@@ -1064,11 +1066,11 @@ public class Vm {
 					public Object combine(Resumption r, Env de, List o) {
 						var vals = o == null ? apply(a-> { if (boxDft != null) fill(a, boxDft); return a; }, new Object[len]) : array(o);
 						if (vals.length != len)	return matchError(
-							"expected {operands,%+d} operand, found: {datum}"
+							"expected {operands#,%+d} operands, found: {datum}"
 							+ (body == null ? " sett" : " bind") + "ing: " + list(vars)
 							+ (body == null ? "" : " of: " + this)
 							+ " with: " + o,
-							"operands", len-vals.length, "datum", len > vals.length ? null : o.cdr(vals.length-len)
+							len > vals.length ? null : o.cdr(len-1), len-vals.length
 						);
 						var olds = new Object[len];
 						var ndvs = new Object[len];
@@ -1096,7 +1098,7 @@ public class Vm {
 				}
 			);
 		}
-		public String toString() { return "%D\\"; }
+		public String toString() { return "%DV\\"; }
 	}
 	
 	
@@ -1185,7 +1187,7 @@ public class Vm {
 				// (@getConstructor class . classes) -> class.getConstructor(classes) -> constructor
 				// (@getMethod class name . classes) -> class.getMethod(name, classes) -> method
 				// (@getField class name)            -> class.getField(name, classes) -> field
-				if (name.equals("new") && o0 instanceof Class c && isInstance(c, Obj.class, Box.class) && (args.length == 0 || args[0].getClass() != Vm.class)) {
+				if (name.equals("new") && o0 instanceof Class c && c.getDeclaringClass() == Vm.class && (args.length == 0 || args[0].getClass() != Vm.class)) {
 					// (@new Error "assert error!") -> (@new Error vm "assert error!")
 					args = headAdd(args, Vm.this);
 				}
@@ -1193,11 +1195,11 @@ public class Vm {
 				Executable executable = getExecutable(o0, name, classes);
 				if (executable == null) return unboundExecutableError(Vm.this.toString(name, classes) + " not found in: {class}", symbol(name), list((Object[]) classes), o0 instanceof Class cl ? cl : o0.getClass());
 				try {
-					//executable.setAccessible(true);
+					executable.setAccessible(true);
 					args = reorg(executable, args);
 					return switch (executable) { 
-						case Method m->{ m.setAccessible(true); yield m.invoke(o0, args); }
-						case Constructor c->{ c.setAccessible(true); yield c.newInstance(args); }
+						case Method m-> m.invoke(o0, args);
+						case Constructor c-> c.newInstance(args);
 					};
 				}
 				catch (Throwable thw) {
@@ -1230,7 +1232,7 @@ public class Vm {
 				Field field = getField(o0 instanceof Class ? (Class) o0 : o0.getClass(), name);
 				if (field == null) return unboundFieldError(name, o0 instanceof Class cl ? cl : o0.getClass());
 				try {
-					if (len == 1)  return field.get(o0);
+					if (len == 1) return field.get(o0);
 					field.set(o0, o.car(1)); return inert;
 				}
 				catch (Throwable thw) {
@@ -1243,48 +1245,6 @@ public class Vm {
 			@Override public String toString() { return "." + name; }
 		};
 	}
-	/*
-	public final class ToFunction implements Combinable {
-		@Override public final <T> T combine(Env e, List o) {
-			var chk = checkN(this, o, 1, Apv1.class); // o = (tag . forms)
-			if (chk instanceof Suspension s) return (T) s;
-			if (!(chk instanceof Integer / *len* /)) return resumeError(chk, symbol("Integer"));
-			Combinable f = o.car();
-			//return (T) (Function) (t)-> getTco(f.combine(e, cons(t)));
-			return (T) new Function() {
-				@Override public final Object apply(Object t) {
-					//return getTco(Vm.this.combine(e, f, cons(t)));
-					return getTco(f.combine(e, cons(t)));
-				}
-				@Override public String toString() {
-					return Vm.this.toString(f);
-				}
-			};
-		}
-		@Override public String toString() { return "%Tof";}
-	}
-	public final class ToFunction implements Combinable {
-		@Override public final <T> T combine(Env e, List o) {
-			var chk = checkN(this, o, 1); // o = (form)
-			if (chk instanceof Suspension s) return (T) s;
-			if (!(chk instanceof Integer / *len* /)) return resumeError(chk, symbol("Integer"));
-			var f = o.car();
-			return (T) switch (getTco(evaluate(e, f))) {
-				case Suspension s-> s;
-				case Apv apv when args(apv) == 1-> new Function() {
-					@Override public final Object apply(Object t) {
-						return getTco(apv.combine(e, cons(t)));
-					};
-					@Override public String toString() {
-						return "{Function " + Vm.this.toString(f) + "}";
-					};
-				};
-				case Object obj-> resumeError(obj, symbol("Apv1"));
-			};
-		}
-		@Override public String toString() { return "%Tof";}
-	}
-	/*/
 	class Fun implements Combinable {
 		@Override public final <T> T combine(Env e, List o) {
 			var chk = checkM(this, o, 1, list(1, Symbol.class)); // o = ((symbol) . forms)
@@ -1321,7 +1281,6 @@ public class Vm {
 		}
 		@Override public String toString() { return "%BiCons";}
 	}
-	//*/
 	
 	
 	// Error Handling
@@ -1345,8 +1304,7 @@ public class Vm {
 	}
 	<T> T typeError(String msg, Object datum, Object expected) { return error(msg, "type", symbol("type"), "datum", datum, "expected", expected); }
 	<T> T typeError(String msg, Object datum, Object expected, Object expr) { return error(msg, "type", symbol("type"), "datum", datum, "expected", expected, "expr", expr); }
-	<T> T syntaxError(String msg, Object datum, Object expr) { return error(msg, "type", symbol("syntax"), "datum", datum, "expr", expr); }
-	//<T> T resumeError(Object datum, Object expected) { return error("invalid resume value, not a {expected}: {datum}", "type", symbol("resume"), "datum", datum, "expected", expected); }
+	<T> T notUniqueError(String msg, Object datum, Object expr) { return error(msg, "type", symbol("syntax"), "datum", datum, "expr", expr); }
 	<T> T resumeError(Object datum, Object expected) { return typeError("invalid resume value, not a {expected}: {datum}", datum, expected); }
 	<T> T unboundSymbolError(Object name, Env env) { return error("unbound symbol: {symbol} in: {env}", "type", symbol("unboundSymbol"), "symbol", name, "env", env); }
 	<T> T unboundSlotError(String slot, Obj obj) { return error("unbound slot: {slot} in: {obj}", "type", symbol("unboundSlot"), "slot", slot, "obj", obj); }
@@ -1366,24 +1324,35 @@ public class Vm {
 	
 	// Check Definitions/Parameters Tree
 	class PTree {
-		private Object exp, pt, ep; // ep == null per Def ovvero %def || %set!, ep == (or #ignore Symbol) per Vau 
+		private Object expr, pt, ep; // ep == null per Def ovvero %def || %set!, ep == (or #ignore Symbol) per Vau 
 		private Set syms = new HashSet();
-		PTree(Object exp, Object pt, Object ep) { this.exp=exp; this.pt = pt; this.ep = ep; }
+		PTree(Object expr, Object pt, Object ep) { this.expr=expr; this.pt = pt; this.ep = ep; }
 		Object check() { 
 			if (!((pt instanceof Symbol || (pt == null || pt == ignore) && ep != null) && syms.add(pt))) {
-				if (!(pt instanceof Cons)) return typeError("invalid parameter tree, not {expected}: {datum} of: {expr}", pt, toChk(ep == null ? or(Symbol.class, Cons.class) : or(null, ignore, Symbol.class, Cons.class)), exp );
+				if (!(pt instanceof Cons)) return typeError("invalid parameter tree, not {expected}: {datum} of: {expr}", pt, toChk(ep == null ? or(Symbol.class, Cons.class) : or(null, ignore, Symbol.class, Cons.class)), expr );
 				var msg = check(pt); if (msg != null) return msg;
 			}
-			if (ep == null || ep == ignore) return syms.size() > 0 ? null : typeError("invalid parameter tree syntax, not one {expected} in: {datum} of: {expr}", pt, toChk(ep == null ? Symbol.class : or(null, ignore, Symbol.class)), exp);
-			if (!(ep instanceof Symbol sym)) return typeError("invalid parameter tree, not {expected}: {datum} of: {expr}", ep, toChk(or(ignore, Symbol.class)), exp);
-			return !syms.contains(sym) ? null : syntaxError("invalid parameter tree syntax, not a unique symbol: {datum} in: {expr}", ep, exp);
+			if (ep == null || ep == ignore) return syms.size() > 0 ? null : typeError("invalid parameter tree syntax, not one {expected} in: {datum} of: {expr}", pt, toChk(ep == null ? Symbol.class : or(null, ignore, Symbol.class)), expr);
+			if (!(ep instanceof Symbol sym)) return typeError("invalid parameter tree, not {expected}: {datum} of: {expr}", ep, toChk(or(ignore, Symbol.class)), expr);
+			return !syms.contains(sym) ? null : notUniqueError("invalid parameter tree, not a unique symbol: {datum} in: {expr}", ep, expr);
 		}
 		private Object check(Object p) {
 			if (p == null || p == ignore) { if (ep != null) syms.add(p); return null; }
-			if (p instanceof Symbol) { return syms.add(p) ? null : syntaxError("invalid parameter tree syntax, not a unique symbol: {datum} in: " + pt + " of: {expr}", p, exp); }
+			if (p instanceof Symbol) { return syms.add(p) ? null : notUniqueError("invalid parameter tree, not a unique symbol: {datum} in: " + pt + " of: {expr}", p, expr); }
 			if (!(p instanceof Cons c)) return null;
-			if (c.car instanceof Symbol sym && member(sym.name, "%'", "quote")) return len(c) == 2 ? null : syntaxError("invalid parameter tree %' syntax: {datum} in: {expr}", c, exp);
-			if (c.car == sheBang) return len(c) == 3 && c.car(2) instanceof Symbol? check(c.car(2)) : syntaxError("invalid parameter tree #! syntax: {datum} in: {expr}", c, exp);
+			var len = len(c);
+			if (c.car instanceof Symbol sym && member(sym.name, "%'", "quote"))
+				return len != 2
+					? matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: " + c + " of: " + expr, 2 > len ? null : c.cdr(len-2), 2-len)
+					: null
+				;
+			if (c.car == sheBang)
+				return len != 3
+					? matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: " + c + " of: " + expr, 3 > len ? null : c.cdr(len-2), 3-len)
+					: !(c.car(2) instanceof Symbol)
+					? typeError("invalid parameter tree, not a {expected}: {datum} in: " + c + " of: " + expr, c.car(2), toChk(Symbol.class))
+					: check(c.car(2))
+				;
 			var msg = check(c.car); if (msg != null) return msg;
 			return c.cdr() == null ? null : check(c.cdr());
 		}
@@ -2028,7 +1997,7 @@ public class Vm {
 				catch (Throwable thw) {
 					if (prStk)
 						thw.printStackTrace(out);
-					else if (thw instanceof Value v)  {
+					else if (thw instanceof Value v) {
 						if (v.tag != ignore) print("uncatched throw tag: " + v.tag);
 						print(ifnull(v.getCause(), thw));
 					}

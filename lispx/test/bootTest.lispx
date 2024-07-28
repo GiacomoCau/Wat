@@ -204,12 +204,12 @@
       (def env (theEnv))
       (== ((vau #ignore e e)) env)))
 
-  (defTest |Fexprs are instances of FEXPR, OPERATOR, OBJECT.|
-    (let ((fexpr (vau #ignore #ignore 12)))
-      (type? fexpr Fexpr)
-      (type? fexpr Operator)
-      (type? fexpr Object)
-      (fexpr))
+  (defTest |Opv are instances of Opv, Combinable, Object.|
+    (let ((opv (vau #ignore #ignore 12)))
+      (type? opv Opv)
+      (type? opv Combinable)
+      (type? opv Object)
+      (opv))
     12)
 
   (defTest |Arity check 1.|
@@ -556,7 +556,7 @@
      Error :type 'type :datum #t :expected '(or Symbol Cons)))
 
   (defTest def\.6
-    (type? (def\ foo ()) (if (== (bndRes) :rhs) Function Inert))))
+    (type? (def\ foo ()) (if (== (bndRes) :rhs) Apv Inert))))
 
 (defSuite begin
 
@@ -1289,7 +1289,6 @@
 
   (defTest type?.2
     (&&
-     (type? Condition StandardClass)
      (type? Condition Class)
      (type? Condition Object)))
 
@@ -1577,7 +1576,7 @@
      Error :type 'match :operands# +1))
 
   (defTest compose.3
-    (type? (compose (\ ()) (\ ())) Function))
+    (type? (compose (\ ()) (\ ())) Apv))
 
   (defTest compose.4
     ((compose idf idf) 12)
@@ -3026,15 +3025,12 @@
 
   (defTest subClass?.5
     (&& (subClass? Object Object)
-        (subClass? Class Object)
-        (subClass? StandardClass Class)
-        (subClass? StandardClass Object))
+        (subClass? Class Object))
     #t))
 
 ;; Utility used by `%newClass' and `defClass' tests.
 
 (def\ classes-test (c d p q)
-  (assert#t (type? c StandardClass))
   (assert#t (type? c Class))
   (assert#t (type? c Object))
   (assert#t (eq? (className c) 'Point2d))
@@ -3047,7 +3043,6 @@
   (assert#t (eq? (getSlot p 'x) 1))
   (assert#t (eq? (getSlot p 'y) 2))
 
-  (assert#t (type? d StandardClass))
   (assert#t (type? d Class))
   (assert#t (type? d Object))
   (assert#t (eq? (className d) 'Point3d))
@@ -3134,7 +3129,7 @@
      Error :type 'match :operands# +1))
 
   (defTest defClass.5
-    (type? (defClass C () ()) (if (== (bndRes) :rhs) StandardClass Inert)))
+    (type? (defClass C () ()) (if (== (bndRes) :rhs) Class Inert)))
 
   (defTest defClass.6
     (begin
@@ -3176,7 +3171,7 @@
       (def bar (new Bar))
 
       (defGeneric g1 (new param))
-      (assert#t (type? g1 Function))
+      (assert#t (type? g1 Apv))
 
       (assert#t (signalsError?
                (g1 12 (+ 1 1))

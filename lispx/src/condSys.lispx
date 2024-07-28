@@ -167,7 +167,7 @@
            (the (or Class (1 oo Class (or Intern AtDot) Any))
              (if (cons? className) (eval (cons 'list className) env) (eval className env)) )
         :handlerFunction
-           (the Function (eval functionForm env)) ))
+           (the Apv (eval functionForm env)) ))
     *conditionHandlerFrame* ))
 
 (def restartBind
@@ -187,9 +187,9 @@
         :restartName
            (the Symbol restartName)
         :handlerFunction
-           (the Function (eval functionForm env))
+           (the Apv (eval functionForm env))
         :interactiveFunction
-           (whenOpt (iFnForm (optValue :interactiveFunction properties)) (some (the Function (eval iFnForm env))))
+           (whenOpt (iFnForm (optValue :interactiveFunction properties)) (some (the Apv (eval iFnForm env))))
         :associatedConditions
            (whenOpt (aCnForm (optValue :associatedConditions properties)) (the List (eval aCnForm env))) ))
     *restartHandlerFrame* ))

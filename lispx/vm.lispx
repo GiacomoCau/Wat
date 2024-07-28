@@ -67,11 +67,6 @@
 (%def Parser &List.Parser)
 (%def PTree &Wat.Vm$PTree)
 
-(%def Fexpr Opv)
-(%def Function Apv)
-(%def Operator Combinable)
-(%def StandardClass Class)
-
 (%def %0? (%\ (v) (%== v 0)))
 (%def %inert? (%\ (v) (%== v #inert)))
 (%def %ignore? (%\ (v) (%== v #ignore)))

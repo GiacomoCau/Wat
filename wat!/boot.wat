@@ -1023,7 +1023,7 @@
   %%)
 
 (def\ (1+ n) (+ n 1))
-(def\ (1- n) (- n 1))
+(def\ (-1+ n) (- n 1))
 (def\ (0? n) (== n 0))
 (def\ (1? n) (== n 1))
 (def\ (-1? n) (== n -1))
@@ -2485,7 +2485,7 @@
 (assert (caseType 2.0 (else 3)) 3)
 (assert (caseType (+ 2 2) (else => (\ (v) v))) 4)
 (assert (caseType 2.0 (String "string") (Double "double")) "double")
-(assert (caseType (new Obj :a 1) (Double "double") ((Obj :a 1) "Obj :a 1")) "Obj :a 1")
+(assert (caseType (newObj :a 1) (Double "double") ((Obj :a 1) "Obj :a 1")) "Obj :a 1")
 
 (defMacro (caseType\ (#! (1 Symbol) key) . clauses)
   #|Return a sigle argument function for multi-armed type test, useful as a catch handler.
@@ -2796,14 +2796,14 @@
   (assert (loop (loop (break- 1 3))) 3)
   (defMacro (+= n v) (list 'set! n :rhs (list '+ n v)) )
   (defMacro (-= n v) (list 'set! n :rhs (list '- n v)) )
-  (assert (let1 (a 0) (loop for ((x 0 (1+ x)) (y 0 (1- y))) (while? (< x 3) a) (+= a (+ x y)))) 0)
+  (assert (let1 (a 0) (loop for ((x 0 (1+ x)) (y 0 (-1+ y))) (while? (< x 3) a) (+= a (+ x y)))) 0)
   (assert (let1 (a 0) (loop for ((x 0 (1+ x))) (while? (< x 3) a) (+= a (* x 10)) (loop for ((y 0 (1+ y))) (break? (> y 2)) (+= a y)) )) 39)
   (assert (loop for1 (x 0 (1+ x)) (break x)) 0)
   (assert (loop for1 (x 0 (1+ x)) (while? (< x 3) x)) 3)
   (assert (let1 (a 0) (loop for1 (x 0 (1+ x)) (while? (< x 3) a) (+= a (* x 10)) (loop for1 (y 0 (1+ y)) (break? (> y 2)) (+= a y) ))) 39)
   (assert (let1 (a 0) (loop for1 (x 0 (1+ x)) (while? (< x 3) a) (+= a (* x 10)) (loop for1 (y 0 (1+ y)) (break-? 1 (> y 3) a) (+= a y)))) 6)
   (assert (let1 (a 0) (for1 (x 0 (1+ x)) (< x 3) (+= a (* x 10)) (for1 (y 0 (1+ y)) #ignore (break-? 1 (> y 3) a) (+= a y)))) 6)
-  (assert (let1 (a 0) (for ((x 0 (1+ x)) (y 10 (1- y)) ) (< x 10) (+= a (+ x y))) a) 100)
+  (assert (let1 (a 0) (for ((x 0 (1+ x)) (y 10 (-1+ y)) ) (< x 10) (+= a (+ x y))) a) 100)
 )
 
 (defMacro (while cond . forms)
@@ -2824,7 +2824,7 @@
 
 (let ()
   (defMacro (++ n) (list 'set! n :rhs (list '1+ n)) )
-  (defMacro (-- n) (list 'set! n :rhs (list '1- n)) )
+  (defMacro (-- n) (list 'set! n :rhs (list '-1+ n)) )
   (assert (let1 (i 0) (while (< i 3) (++ i)) i) 3)
   (assert (let1 (i 0) (until (> i 2) (++ i)) i) 3)
   (assert (let1 (c 2) (while (> c 0) (-- c)) c) 0)
@@ -2870,11 +2870,11 @@
           (if (null? endForms) result (apply begin endForms env)) )))
     (let1 ((#! (and Integer (> 0)) times) (eval times env))
       (loop (def result (apply begin forms env))
-        (break? (0? (set! times :rhs (1- times))) result) ))))
+        (break? (0? (set! times :rhs (-1+ times))) result) ))))
 
 (let ()
   ;(defMacro (++ n) (list 'set! n :rhs (list '1+ n)) )
-  ;(defMacro (-- n) (list 'set! n :rhs (list '1- n)) )
+  ;(defMacro (-- n) (list 'set! n :rhs (list '-1+ n)) )
   (defMacro (+= n v) (list 'set! n :rhs (list '+ n v)) )
   ;(defMacro (-= n v) (list 'set! n :rhs (list '- n v)) )
   (assert (let1 (a 0) (repeat 4 (+= a 1)) a) 4)
@@ -4074,7 +4074,7 @@
   (caseType val
     (Box    (let1 (() args) (val :rhs (+ (val) 1))))
     (Obj    (let1 ((fld) args) (val :rhs fld (+ (val fld) 1))))
-    (Number (let1 (() args) (eval (list 'set! plc :rhs (+ val 1)) env)))
+    (Number (let1 (() args) (env :rhs plc (+ val 1))))
     (else   (error ($ "not valid type: " val))) ))
 
 (defVau (-- plc . args) env
@@ -4089,10 +4089,10 @@
   (caseType val
     (Box    (let1 (() args) (val :rhs (- (val) 1))))
     (Obj    (let1 ((fld) args) (val :rhs fld (- (val fld) 1))))
-    (Number (let1 (() args) (eval (list 'set! plc :rhs (- val 1)) env)))
+    (Number (let1 (() args) (env :rhs plc (- val 1))))
     (else   (error ($ "not valid type: " val))) ))
 
-(assert (begin (def obj (new Obj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
+(assert (begin (def obj (newObj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
 (assert (begin (def box (newBox 1)) (++ box) (++ box) (-- box)) 2)
 (assert (begin (def n 1) (++ n) (++ n) (-- n)) 2)
 
@@ -4121,7 +4121,7 @@
 
 (assert (begin (def a 1) (+= a :rhs 3)) 4)
 (assert (begin (def a (newBox 1)) (+= a :rhs 3)) 4)
-(assert (begin (def a (new Obj :fld 1)) (+= a :rhs :fld 3)) 4)
+(assert (begin (def a (newObj :fld 1)) (+= a :rhs :fld 3)) 4)
 
 
 #|! Java
@@ -4217,7 +4217,7 @@
 #|! Apl/J
  |#
 
-(def\ (iota n) (reverse ((rec\ (iota n) (if (0? n) () (cons n (iota (1- n))))) n)))
+(def\ (iota n) (reverse ((rec\ (iota n) (if (0? n) () (cons n (iota (-1+ n))))) n)))
 (def\ (fork f l r) [_ (f (l _) (r _))])
 (def\ (hook l r) [_ (l _ (r _))])
 
@@ -4349,7 +4349,7 @@ load)
   intStr)
 
 (def doTco
-  #|Return or update the use of the tail call optimiaztion.
+  #|Return or update the use of the tail call optimization.
    |
    |$(fn . boolean)
    |$(type function)
@@ -4381,7 +4381,7 @@ load)
   prAttr)
 
 (def prWrn
-  #|Return or update the warning print.
+  #|Return or update the print of warnings.
    |
    |$(fn . boolean)
    |$(type function)
@@ -4389,7 +4389,7 @@ load)
  prWrn)
 
 (def aQuote
-  #|Return or update the auto quote propertiy for the list without combinable car. 
+  #|Return or update the auto quote property for the list without combinable car. 
    |
    |$(fn . boolean)
    |$(type function)
@@ -4467,6 +4467,6 @@ aQuote)
   #|Return or update the VALUE to use as default value for the Box.
    |
    |$(fn . value)
-7   |$(type function)
+   |$(type function)
    |# 
   boxDft)

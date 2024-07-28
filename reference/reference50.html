@@ -31,7 +31,7 @@
       </h3>
       <ul>
         <li>
-          (def\ (iota n) (reverse ((rec\ (iota n) (if (0? n) () (cons n (iota (1- n))))) n)))
+          (def\ (iota n) (reverse ((rec\ (iota n) (if (0? n) () (cons n (iota (-1+ n))))) n)))
         </li>
       </ul>
     </div>

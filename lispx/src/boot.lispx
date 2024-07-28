@@ -1008,7 +1008,7 @@
   %%)
 
 (def\ (1+ n) (+ n 1))
-(def\ (1- n) (- n 1))
+(def\ (-1+ n) (- n 1))
 (def\ (0? n) (== n 0))
 (def\ (1? n) (== n 1))
 (def\ (-1? n) (== n -1))
@@ -1870,7 +1870,7 @@
   #|Return the evaluation of THEN into resulting ENVIRONMENT if VALUE match the DEFINIEND-TREE,
    |the evaluation of ELSE if present, #inert otherwise.
    |
-   |$(fn (definiendTree value) then . forms)
+   |$(fn (definiendTree value) then . else)
    |$(type fexpr)
    |#
   (let1 (env+ (newEnv env))
@@ -2686,7 +2686,7 @@
           (if (null? endForms) result (apply begin endForms env)) )))
     (let1 ((#! (and Integer (> 0)) times) (eval times env))
       (loop (def result (apply begin forms env))
-        (break? (0? (set! times :rhs (1- times))) result) ))))
+        (break? (0? (set! times :rhs (-1+ times))) result) ))))
 
 (defMacro doTimes ((var times . endForms) . forms)
   #|Cf. Common Lisp's DOTIMES.
@@ -3727,7 +3727,7 @@
   (caseType val
     (Box    (let1 (() args) (val :rhs (+ (val) 1))))
     (Obj    (let1 ((fld) args) (val :rhs fld (+ (val fld) 1))))
-    (Number (let1 (() args) (eval (list 'set! plc :rhs (+ val 1)) env)))
+    (Number (let1 (() args) (env :rhs plc (+ val 1))))
     (else   (error ($ "not valid type: " val))) ))
 
 (defVau (-- plc . args) env
@@ -3742,7 +3742,7 @@
   (caseType val
     (Box    (let1 (() args) (val :rhs (- (val) 1))))
     (Obj    (let1 ((fld) args) (val :rhs fld (- (val fld) 1))))
-    (Number (let1 (() args) (eval (list 'set! plc :rhs (- val 1)) env)))
+    (Number (let1 (() args) (env :rhs plc (- val 1))))
     (else   (error ($ "not valid type: " val))) ))
 
 (def\ (assignOp op)
@@ -3862,7 +3862,7 @@
 #|! Apl/J
  |#
 
-(def\ (iota n) (reverse ((rec\ (iota n) (if (0? n) () (cons n (iota (1- n))))) n)))
+(def\ (iota n) (reverse ((rec\ (iota n) (if (0? n) () (cons n (iota (-1+ n))))) n)))
 (def\ (fork f l r) [_ (f (l _) (r _))])
 (def\ (hook l r) [_ (l _ (r _))])
 
@@ -3992,7 +3992,7 @@ load)
   intStr)
 
 (def doTco
-  #|Return or update the use of the tail call optimiaztion.
+  #|Return or update the use of the tail call optimization.
    |
    |$(fn . boolean)
    |$(type function)
@@ -4024,7 +4024,7 @@ load)
   prAttr)
 
 (def prWrn
-  #|Return or update the warning print.
+  #|Return or update the print of warnings.
    |
    |$(fn . boolean)
    |$(type function)
@@ -4032,7 +4032,7 @@ load)
  prWrn)
 
 (def aQuote
-  #|Return or update the auto quote propertiy for the list without combinable car. 
+  #|Return or update the auto quote property for the list without combinable car. 
    |
    |$(fn . boolean)
    |$(type function)

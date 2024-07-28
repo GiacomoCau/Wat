@@ -61,7 +61,7 @@
 
 (def\ (buttons)
   (br)
-  (a (attr 'href ($ base (1- chapter#) ".html"))
+  (a (attr 'href ($ base (-1+ chapter#) ".html"))
     (input (attr 'type "button" 'value "<" 'disabled (== chapter# 1))) )
   (a (attr 'href ($ base ".html")) 
     (input (attr 'type "button" 'value "^")) )

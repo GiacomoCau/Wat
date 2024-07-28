@@ -1,16 +1,18 @@
-#| original,
-def dijkstraPrimes(n):
-    pool = [[4,2]]
-    primes = [2]
-    for i in range(3, n):
-        if min(pool)[0] > i:
-            pool.append([i**2,i])
-            primes+=[i]
-        else:
-            for pair in pool:
-                while pair[0] <= i:
-                    pair[0] += pair[1]
-    return primes
+
+#| original
+
+	def dijkstraPrimes(n):
+	    pool = [[4,2]]
+	    primes = [2]
+	    for i in range(3, n):
+	        if min(pool)[0] > i:
+	            pool.append([i**2,i])
+	            primes+=[i]
+	        else:
+	            for pair in pool:
+	                while pair[0] <= i:
+	                    pair[0] += pair[1]
+	    return primes
 |#
 
 (def\ (primes max)

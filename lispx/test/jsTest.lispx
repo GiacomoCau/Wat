@@ -173,7 +173,7 @@
   (defTest to-js-function.2
     (signalsError?
      (to-js-function 12)
-     type-error :datum 12 :expected 'Operator)))
+     type-error :datum 12 :expected 'Combinable)))
 
 (defSuite apply-js-function
 
