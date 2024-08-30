@@ -264,9 +264,9 @@
 
 ;;; Tests for single prompt coroutines
 
-(defSuite |Coroutines|
+(defSuite \|Coroutines|
 
-  (defTest |Adapted from A Monadic Framework for Delimited Continuations|
+  (defTest \|Adapted from A Monadic Framework for Delimited Continuations|
     (+ 2 (coroutine (if (yield k (+ (resume k #f) (resume k #t)))
                         3
                         4)))

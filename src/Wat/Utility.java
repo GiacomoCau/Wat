@@ -656,12 +656,12 @@ public class Utility {
 	static public String read(int lv, Reader in, boolean inMlComment) throws IOException {
 		var s = new StringBuilder();
 		int open = 0, close = 0;
-		boolean inEscape = false, inChar=false, inSymbol1=false, inString = false, inSymbol = false, inUSymbol = false, inComment=false, sMlComment=false, eMlComment=false;
+		boolean inEscape = false, inChar=false, inSymbol1=false, inString = false, inSymbol = false, sDSymbol = false, inDSymbol = false, inComment=false, sMlComment=false, eMlComment=false;
 		do {
 			//out.println("loop");
 			var oc = close-open;
 			if (!in.ready()) out.print((lv == 0 ? "" : lv + "|") + (oc==0 ? "> " : "%+d%s> ".formatted(oc, oc>0 ? "(" : ")")));
-			for (int c; (c = in.read()) != '\n' || inString || inUSymbol || inMlComment;) {
+			for (int c; (c = in.read()) != '\n' || inString || inDSymbol || inMlComment;) {
 				//out.printf("%d %c \n",c, c==-1?' ':c);
 				if (c == -1) { out.println("ctrl-z"); return ""; }
 				if (inEscape) {
@@ -684,12 +684,16 @@ public class Utility {
 						if (c <= 32) inSymbol = false;
 					}
 				}
-				else if (inUSymbol) switch (c) {
+				else if (inDSymbol) switch (c) {
 					case '\\'-> inEscape = true;
-					case '|'-> inUSymbol = false;
+					case '|'-> inDSymbol = false;
 					/*default-> {
 						if (c <= 32) inUSymbol = false;
 					}*/
+				}
+				else if (sDSymbol) switch (c) {
+					case '|'-> inDSymbol = !(sDSymbol = false);
+					default -> sDSymbol = false;
 				}
 				else if (inComment) switch (c) {
 					case '"'-> inString = true;
@@ -725,7 +729,7 @@ public class Utility {
 				}
 				else switch (c) {
 					case '"'-> inString = true;
-					case '|'-> inUSymbol = true;
+					case '\\'-> sDSymbol = true;
 					case ';'-> inComment = true;
 					case '#'-> sMlComment = true;
 					case '('-> open += 1;
@@ -734,7 +738,7 @@ public class Utility {
 						if (c > 32) inSymbol = true;
 					}
 				}
-				if (c >= 32 || inUSymbol) s.append((char) c);
+				if (c >= 32 || inDSymbol) s.append((char) c);
 			}
 			if (inComment) { inComment = false; }
 			s.append('\n'); 

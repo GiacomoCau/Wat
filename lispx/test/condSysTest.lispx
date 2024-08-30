@@ -675,7 +675,7 @@
        (invokeRestartInteractively 'r1) )
      Error :type 'match :operands# -1 )) )
 
-(defSuite |Condition Handling in the Lisp Language Family|
+(defSuite \|Condition Handling in the Lisp Language Family|
   ;; Adapted from https://www.nhplace.com/kent/Papers/Condition-Handling-2001.html
 
   (defClass UnboundVariable (Error) (name))

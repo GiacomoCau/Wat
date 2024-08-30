@@ -1110,7 +1110,7 @@
    |#
   %&)
 
-(def \|
+(def |
   #|Java binary | operator.
    |
    |$(fn a b)
@@ -4188,6 +4188,41 @@
   (let1 (getExecutable (getMethod Utility "getExecutable" Object String Class[]))
     (\ (class name . classes)
       (apply** getExecutable #null class name classes) )))
+
+(def supplier
+  #|Return a java Supplier.
+   |
+   |$(fn () . forms)
+   |#
+  %supplier)
+
+(def consumer
+  #|Return a java Consumer.
+   |
+   |$(fn (symbol) . forms)
+   |#
+  %consumer)
+
+(def function
+  #|Return a java Function.
+   |
+   |$(fn (symbol) . forms)
+   |#
+  %function)
+
+(def biConsumer
+  #|Return a java BiConsumer.
+   |
+   |$(fn (symbol symbol) . forms)
+   |#
+  %biConsumer)
+
+(def biFunction
+  #|Return a java BiFunction.
+   |
+   |$(fn (symbol symbol) . forms)
+   |#
+  %biFunction)
 
 (defMacro (close1 binding . forms)
   #|Single try/resource

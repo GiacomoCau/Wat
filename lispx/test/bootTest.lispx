@@ -5,39 +5,39 @@
 
 (defSuite signalsError?
 
-  (defTest |SIGNALS-ERROR returns true if the expression signals.|
+  (defTest \|SIGNALS-ERROR returns true if the expression signals.|
     (signalsError?
      x
      Error :type 'unboundSymbol))
 
-  (defTest |SIGNALS-ERROR returns true if the expression signals a subclass.|
+  (defTest \|SIGNALS-ERROR returns true if the expression signals a subclass.|
     (signalsError?
      x
      Error))
 
-  (defTest |SIGNALS-ERROR returns true if the expression signals and slots match.|
+  (defTest \|SIGNALS-ERROR returns true if the expression signals and slots match.|
     (signalsError?
      x
      Error :type 'unboundSymbol :symbol 'x))
 
-  (defTest |SIGNALS-ERROR returns true if the expression signals a subclass and slots match.|
+  (defTest \|SIGNALS-ERROR returns true if the expression signals a subclass and slots match.|
     (signalsError?
      x
      Error :symbol 'x))
 
-  (defTest |SIGNALS-ERROR returns false if the expression signals but slots don't match.|
+  (defTest \|SIGNALS-ERROR returns false if the expression signals but slots don't match.|
     (signalsError?
      x
      Error :type 'unboundSymbol :symbol 'y)
     #f)
 
-  (defTest |SIGNALS-ERROR returns false if the expression doesn't signal.|
+  (defTest \|SIGNALS-ERROR returns false if the expression doesn't signal.|
     (signalsError?
      1
      Error)
     #f)
 
-  (defTest |SIGNALS-ERROR returns false if the expression signals another condition type.|
+  (defTest \|SIGNALS-ERROR returns false if the expression signals another condition type.|
     (signalsError?
      x
      Error :type 'match)
@@ -183,15 +183,15 @@
 
 (defSuite vau
 
-  (defTest |A fexpr without body expression results in #VOID.|
+  (defTest \|A fexpr without body expression results in #VOID.|
     ((vau #ignore #ignore))
     #inert)
 
-  (defTest |A fexpr returns its operands unevaluated.|
+  (defTest \|A fexpr returns its operands unevaluated.|
     ((vau ops #ignore ops) x y z)
     '(x y z))
 
-  (defTest |A fexpr can have multiple body expressions.|
+  (defTest \|A fexpr can have multiple body expressions.|
     (begin
       (def env (theEnv))
       (assert#t (eq? ((vau ops #ignore (set env var 1) ops) x y z)
@@ -199,12 +199,12 @@
       (assert#t (eq? (eval 'var env) 1)))
     #inert)
 
-  (defTest |The environment parameter receives the current environment.|
+  (defTest \|The environment parameter receives the current environment.|
     (begin
       (def env (theEnv))
       (== ((vau #ignore e e)) env)))
 
-  (defTest |Opv are instances of Opv, Combinable, Object.|
+  (defTest \|Opv are instances of Opv, Combinable, Object.|
     (let ((opv (vau #ignore #ignore 12)))
       (type? opv Opv)
       (type? opv Combinable)
@@ -212,36 +212,36 @@
       (opv))
     12)
 
-  (defTest |Arity check 1.|
+  (defTest \|Arity check 1.|
     (signalsError?
      (vau)
      Error :type 'match :operands# +2))
 
-  (defTest |Arity check 2.|
+  (defTest \|Arity check 2.|
     (signalsError?
      (vau x)
      Error :type 'match :operands# +1)))
 
 (defSuite quote
 
-  (defTest |Quoted symbols are pointer identical.|
+  (defTest \|Quoted symbols are pointer identical.|
      (== 'foo 'foo))
 
-  (defTest |Lists can be quoted.|
+  (defTest \|Lists can be quoted.|
     (eq? '(1 2 3) (list 1 2 3)))
 
-  (defTest |Numbers can be quoted.|
+  (defTest \|Numbers can be quoted.|
     (eq? '1 1))
 
-  (defTest |Strings can be quoted.|
+  (defTest \|Strings can be quoted.|
     (eq? '"foo" "foo"))
 
-  (defTest |QUOTE requires at least one argument.|
+  (defTest \|QUOTE requires at least one argument.|
     (signalsError?
      (quote)
      Error :type 'match))
 
-  (defTest |QUOTE requires at most one argument.|
+  (defTest \|QUOTE requires at most one argument.|
     (signalsError?
      (quote 1 2 3)
      Error :type 'match)))

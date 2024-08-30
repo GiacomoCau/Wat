@@ -125,12 +125,20 @@ cls
 (%def get (getMethod &Wat.Prova$Cls "get"))
 (get cls)
 
-
 ;get method and constructor senza specificare gli argomenti
 (@getExecutable &Wat.Utility &java.lang.Float "new" &java.lang.String)
 (@getExecutable &Wat.Utility &java.lang.Integer "compare")
 (@getField &Wat.Utility &java.lang.Integer "MAX_VALUE")
 
 (@remove (%theEnv) 'a)
+
+(%assert ((%supplier () 1)) 1)
+(%assert ((%\ (a) ((%consumer (b) (%set! a (%+ a b))) 2) a) 1) 3)
+(%assert ((%function (a) (%+ 2 a)) (%+ 1 2)) 5)
+(%assert ((%\ (a) ((%biConsumer (b c) (%set! a (%+ b c))) 2 3) a) #inert) 5)
+(%assert ((%biFunction (a b) (%+ a b)) (%+ 2 2) (%+ 2 3)) 9)
+(%assert (@toArray (@map (@stream &java.util.Arrays (%list->array (1 2 3)) (%function (a) (%* 2 a)))) (%list->array 2 4 6)))
+(%assert ((%\ (a) (@forEach (@of &java.util.Map "a" 1 "b" 2) (%biConsumer (_ b) (%set! a (%+ a b)))) a) 0) 3)
+
 
 ;(prTrc 0)

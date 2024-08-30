@@ -562,13 +562,13 @@
 
 (defSuite built-in-prompts
 
-  (defTest |Default prompt exists|
+  (defTest \|Default prompt exists|
     (bound? 'coroutinePrompt (theEnv)))
 
-  (defTest |Root prompt exists|
+  (defTest \|Root prompt exists|
     (bound? 'rootPrompt (theEnv)))
 
-  (defTest |Root prompt is set|
+  (defTest \|Root prompt is set|
     ;; I have no idea why this works.  I mean it's the right thing,
     ;; but it's unclear how it interacts with test-util.lispx's
     ;; Mocha stuff that runs this test.

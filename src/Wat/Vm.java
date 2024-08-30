@@ -71,6 +71,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -1117,8 +1118,20 @@ public class Vm {
 					obj-> obj instanceof Integer len ? ll.apply(len, o)	: resumeError(obj, symbol("Integer")));   
 				case Supplier sp-> o-> pipe(null, ()-> checkN(name, o, 0),
 					obj-> obj instanceof Integer /*len*/ ? sp.get() : resumeError(obj, symbol("Integer")));  
+				case Consumer f-> o-> pipe(null, ()-> checkN(name, o, 1),
+					obj->{
+						if (! (obj instanceof Integer /*len*/)) return resumeError(obj, symbol("Integer"));
+						f.accept(o.car);
+						return inert;
+					});
 				case Function f-> o-> pipe(null, ()-> checkN(name, o, 1),
 					obj-> obj instanceof Integer /*len*/ ? f.apply(o.car) : resumeError(obj, symbol("Integer")));  
+				case BiConsumer f-> o-> pipe(null, ()-> checkN(name, o, 2),
+					obj->{
+						if (! (obj instanceof Integer /*len*/)) return resumeError(obj, symbol("Integer"));
+						f.accept(o.car, o.car(1));
+						return inert;
+					});
 				case BiFunction f-> o-> pipe(null, ()-> checkN(name, o, 2),
 					obj-> obj instanceof Integer /*len*/ ? f.apply(o.car, o.car(1)) : resumeError(obj, symbol("Integer")));
 				case Field f-> o-> pipe(null, ()-> checkR(name, o, 1, 2), obj->{
@@ -1169,7 +1182,7 @@ public class Vm {
 		}
 	}
 	boolean isjFun(Object obj) {
-		return isInstance(obj, Supplier.class, Function.class, BiFunction.class, Executable.class, Field.class);
+		return isInstance(obj, Supplier.class, Consumer.class, Function.class, BiConsumer.class, BiFunction.class, Executable.class, Field.class);
 	}
 	interface AtDot extends ArgsList {}
 	interface At extends AtDot {}
@@ -1244,42 +1257,6 @@ public class Vm {
 			}
 			@Override public String toString() { return "." + name; }
 		};
-	}
-	class Fun implements Combinable {
-		@Override public final <T> T combine(Env e, List o) {
-			var chk = checkM(this, o, 1, list(1, Symbol.class)); // o = ((symbol) . forms)
-			if (chk instanceof Suspension s) return (T) s;
-			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
-			//var apv = lambda(e, o.car, o.cdr());
-			var opv = opv(e, o.car, ignore, o.cdr());
-			return (T) new Function() {
-				@Override public final Object apply(Object t) {
-					return getTco(opv.combine(e, cons(t)));
-				};
-				@Override public String toString() {
-					return "{Function " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
-				};
-			};
-		}
-		@Override public String toString() { return "%Fun";}
-	}
-	class BiCons implements Combinable {
-		@Override public final <T> T combine(Env e, List o) {
-			var chk = checkM(this, o, 1, list(2, Symbol.class)); // o = ((symbol symbol) . forms)
-			if (chk instanceof Suspension s) return (T) s;
-			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
-			//var apv = lambda(e, o.car, o.cdr());
-			var opv = opv(e, o.car, ignore, o.cdr());
-			return (T) new BiConsumer() {
-				@Override public final void accept(Object t, Object u) {
-					getTco(opv.combine(e, list(t, u)));
-				};
-				@Override public String toString() {
-					return "{BiConsumer " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
-				}
-			};
-		}
-		@Override public String toString() { return "%BiCons";}
 	}
 	
 	
@@ -1871,8 +1848,91 @@ public class Vm {
 				"%jFun?", wrap(new JFun("%JFun?", (Function<Object,Boolean>) this::isjFun)),
 				"%at", wrap(new JFun("%At", (Function<String,Object>) this::at)),
 				"%dot", wrap(new JFun("%Dot", (Function<String,Object>) this::dot)),
-				"%fun", new Fun(),
-				"%bicons", new BiCons(),
+				"%supplier", new Combinable() {
+					@Override public final <T> T combine(Env e, List o) {
+						var chk = checkM(this, o, 1, (Object) null); // o = (() . forms)
+						if (chk instanceof Suspension s) return (T) s;
+						if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
+						var opv = opv(e, o.car, ignore, o.cdr());
+						return (T) new Supplier() {
+							@Override public Object get() {
+								return getTco(opv.combine(e, null));
+							};
+							@Override public String toString() {
+								return "{Supplier " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
+							}
+						};
+					}
+					@Override public String toString() { return "%Supplier"; }
+				},
+				"%consumer", new Combinable() {
+					@Override public final <T> T combine(Env e, List o) {
+						var chk = checkM(this, o, 1, list(1, Symbol.class)); // o = ((symbol) . forms)
+						if (chk instanceof Suspension s) return (T) s;
+						if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
+						var opv = opv(e, o.car, ignore, o.cdr());
+						return (T) new Consumer() {
+							@Override public void accept(Object t) {
+								getTco(opv.combine(e, cons(t)));
+							};
+							@Override public String toString() {
+								return "{Consumer " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
+							}
+						};
+					}
+					@Override public String toString() { return "%Consumer"; }
+				},
+				"%function", new Combinable() {
+					@Override public final <T> T combine(Env e, List o) {
+						var chk = checkM(this, o, 1, list(1, Symbol.class)); // o = ((symbol) . forms)
+						if (chk instanceof Suspension s) return (T) s;
+						if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
+						var opv = opv(e, o.car, ignore, o.cdr());
+						return (T) new Function() {
+							@Override public Object apply(Object t) {
+								return getTco(opv.combine(e, cons(t)));
+							};
+							@Override public String toString() {
+								return "{Function " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
+							};
+						};
+					}
+					@Override public String toString() { return "%Function"; }
+				},
+				"%biConsumer", new Combinable() {
+					@Override public final <T> T combine(Env e, List o) {
+						var chk = checkM(this, o, 1, list(2, Symbol.class)); // o = ((symbol symbol) . forms)
+						if (chk instanceof Suspension s) return (T) s;
+						if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
+						var opv = opv(e, o.car, ignore, o.cdr());
+						return (T) new BiConsumer() {
+							@Override public void accept(Object t, Object u) {
+								getTco(opv.combine(e, list(t, u)));
+							};
+							@Override public String toString() {
+								return "{BiConsumer " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
+							}
+						};
+					}
+					@Override public String toString() { return "%BiConsumer"; }
+				},
+				"%biFunction", new Combinable() {
+					@Override public final <T> T combine(Env e, List o) {
+						var chk = checkM(this, o, 1, list(2, Symbol.class)); // o = ((symbol) . forms)
+						if (chk instanceof Suspension s) return (T) s;
+						if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
+						var opv = opv(e, o.car, ignore, o.cdr());
+						return (T) new BiFunction() {
+							@Override public Object apply(Object t, Object u) {
+								return getTco(opv.combine(e, list(t, u)));
+							};
+							@Override public String toString() {
+								return "{Function " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
+							};
+						};
+					}
+					@Override public String toString() { return "%BiFunction"; }
+				},
 				"%instanceOf?", wrap(new JFun("%InstanceOf?", (n,o)-> checkN(n, o, 2, Any.class, Class.class), (l,o)-> o.<Class>car(1).isInstance(o.car) )),
 				// Class
 				//"%class?", wrap(new JFun("%Class?", (Function<Object, Boolean>) obj-> obj instanceof Class )),
