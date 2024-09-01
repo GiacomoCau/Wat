@@ -1,4 +1,4 @@
-(ddef* (htmlDeep htmlWriter) 0 (.out System))
+(ddef* (htmlDeep htmlWriter) 0 (@new &java.io.PrintWriter (.out System) #t))
 
 (def pr
   (let ( (print (getMethod &java.io.PrintWriter "print" Object))
@@ -20,7 +20,7 @@
   (def\ (attr b forms) (if b (cdar forms) #null)) 
   (def\ (body b forms) (if b (cdr forms) forms)) 
   (macro forms
-    (def attr? (&& (cons? forms) (cons? (car forms)) (== (caar forms) 'attr)))
+    (def attr? (&& (cons? forms) (cons? (car forms)) (== (caar forms) '@)))
     (list 'atEnd
        (if ac #inert (list 'endTag name))
        (list* 'startTag ac name (attr attr? forms))

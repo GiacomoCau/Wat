@@ -1810,6 +1810,22 @@
    |#
   ||)
 
+(def\ (&&b f key val . lst)
+  #|Return #true if FUNCTION evaluate to #true when applied to KEY and all element of LIST, #false otherwise.
+   |
+   |$(fn function key . list)
+   |$(type function)
+   |#
+  ((rec\ (loop lst) (if (null? lst) #t (f key (car lst)) (loop (cdr lst)) #f) ) (cons val lst)) )
+
+(def\ (||b f key val . lst)
+  #|Return #true if FUNCTION evaluate to #true when applied to KEY and any element of LIST, #false otherwise.
+   |
+   |$(fn function key . list)
+   |$(type function)
+   |#
+  ((rec\ (loop lst) (if (null? lst) #f (f key (car lst)) #t (loop (cdr lst))) ) (cons val lst)) )
+
 (def\ &&f f*
   #|Return a function the return #true if all FUNCTIONS evaluate to #true when applied to the arguments, #false otherwise.
    |If an function evaluates to #false, later FUNCTIONS are not evaluated.

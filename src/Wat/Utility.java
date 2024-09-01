@@ -49,20 +49,20 @@ public class Utility {
 	
 	public static int more = Integer.MAX_VALUE;
 	
-	public static Object[] $(Object... objs) {
+	public static Object[] $(Object ... objs) {
 		return objs;
 	}
-	public static <T> T $n(int i, Object ... objs) {
-		return (T) ((Object[]) objs)[i];
-	}
-	public static Object or(Object... objs) {
+	public static Object or(Object ... objs) {
 		return objs;
 	}
-	public static Object first(Object ... objs) {
-		return objs[0];
+	public static <T> T first(Object ... objs) {
+		return (T) objs[0];
 	}
-	public static Object last(Object ... objs) {
-		return objs[objs.length-1];
+	public static <T> T last(Object ... objs) {
+		return (T) objs[objs.length-1];
+	}
+	public static <T> T nth(int i, Object ... objs) {
+		return (T) objs[i];
 	}
 	
 	public static <T> boolean member(T v, T ... a) {

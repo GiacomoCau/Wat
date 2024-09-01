@@ -230,12 +230,12 @@
 (load "lispx/tool/repl/repl.lispx") ; redefine invokeDebugger
 
 #|
-(debugger #t)
+(debug #t)
 x
 (invokeRestart 'abort)
 (+ 100 x)
 (invokeRestart 'useValue 42)
-(debugger #f)
+(debug #f)
 (assert x Error :type 'unboundSymbol :symbol 'x)
 |#
 

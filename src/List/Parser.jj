@@ -4,6 +4,7 @@ options {
 	DEBUG_PARSER = false;
 	UNICODE_INPUT = true;
 	JAVA_UNICODE_ESCAPE = true;
+	TOKEN_MANAGER_USES_PARSER = true;
 }
 
 
@@ -149,6 +150,7 @@ TOKEN_MGR_DECLS : {
 
 SKIP:	// white spaces
 {	"#|" { MLCD++; } : MLC | ";" : CMT | < (" " | "\t" | "\r" | "\n")+ >
+//| "#;" { try { parser.Elt(); } catch (Throwable t) { }
 }
 <MLC> SKIP: { "|#" { SwitchTo( --MLCD == 0 ? DEFAULT : MLC ); } }
 <MLC> MORE: { "#|" { MLCD++; } | "\"" : SMLC | ";" : CMLC | < ~[] > }
@@ -230,7 +232,6 @@ Object Elt() throws Exception: {
 	Object o, o2=null;
 	List l = new ArrayList(); 
 }	{	<Null>       { return null; }
-	//|	<EOF>        { return eof; }    
 	|	<True>       { return true; }    
 	|	<False>      { return false; }    
 	|	t=<Inert>    { return t.image; }    
@@ -250,10 +251,10 @@ Object Elt() throws Exception: {
 	|	t=<Dot>      { return $("%dot", $(string, t.image.substring(1))); }
 	|	t=<At>       { return $("%at", $(string, t.image.substring(1))); } 
 	|	t=<Mac> o=Elt() { return $("%"+t, o); }
-	|	t=<Cmt> Elt() { return "#inert"; }
+	|	<Cmt> Elt()  { return "#inert"; }
 	|	t=<Kwd>      { return t.image; }
 	|	t=<Sym>      { return t.image; }  	
-	//|	t=<Sym> ["::" t2=<Sym>] {	return t2 == null ? t.image : $("%eval", $("%'", t2.image), t.image); }  	
+	//|	t=<Sym> ["::" t2=<Sym>] { return t2 == null ? t.image : $("%eval", $("%'", t2.image), t.image); }  	
 	|	"(" ( o=Elt(){ l.add(o); } )+ ")" { return l.toArray(); }
 	|	"[" ( o=Elt(){ l.add(o); } )+ "]" { return l.toArray(); }
 }

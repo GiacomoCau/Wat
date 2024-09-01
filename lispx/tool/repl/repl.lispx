@@ -8,12 +8,12 @@
    (theEnv))
 
 (ddef repl:debugLevel
-  #|Current debug level.  0 if we are not in the debugger.
+  #|Current debug level. 0 if we are not in the debug.
    |#
   0)
 
-(def\ (debugger b)
-  #|Activate and deactivate the debugger.
+(def\ (debug b)
+  #|Activate and deactivate the debug.
    |#
   (if b
     (then
