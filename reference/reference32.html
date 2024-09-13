@@ -27,7 +27,7 @@
     </h2>
     <ul>
       <li>
-        Type and value checks are possible with (#! check symbol) wherever there is a Symbol in a definined or parameters tree including all lexical bindings.
+        Type and value checks are possible with (#: check symbol) wherever there is a Symbol in a definined or parameters tree including all lexical bindings.
       </li>
       <li>
         &nbsp;
@@ -123,7 +123,7 @@
         $(syntax decomposeTree (parametersTree . decomposeTree))
       </li>
       <li>
-        $(syntax symbol (or Symbol (#! check Symbol)))
+        $(syntax symbol (or Symbol (#: check Symbol)))
       </li>
       <li>
         $(syntax check Any)
@@ -197,7 +197,7 @@
           (type fexpr)
         </li>
         <li>
-          (derivation ((\ ((#! check arg)) (len arg)) object) 
+          (derivation ((\ ((#: check object)) (len object)) object) 
         </li>
       </ul>
     </div>
@@ -218,7 +218,7 @@
           (type macro)
         </li>
         <li>
-          (derivation ((\ (#! checks args) (len args)) . list) 
+          (derivation ((\ (#: checks list) (len list)) . list) 
         </li>
         <li>
           (derivation (check list checks)) 

@@ -72,26 +72,26 @@
 (%def %ignore? (%\ (v) (%== v #ignore)))
 
 (%def %nth
-  (%\ ([#! (and Integer (>= 0)) i] [#! (or () Cons) lst])
+  (%\ ([#: (and Integer (>= 0)) i] [#: (or () Cons) lst])
     (%if (%cons? lst) (@car lst i)
       (error (%new Error "cannot get car" :type 'outOfBounds))) ))
 (%def %nthCdr
-  (%\ ([#! (and Integer (>= 0)) i] [#! (or () Cons) lst])
+  (%\ ([#: (and Integer (>= 0)) i] [#: (or () Cons) lst])
     (%if (%0? i) lst
       (%if (%cons? lst) (@cdr lst (%- i 1))
         (error (%new Error "cannot get cdr" :type 'outOfBounds)) ))))
 (%def %take
-  (%\ ([#! (and Integer (>= 0)) i] [#! (or () Cons) lst])
+  (%\ ([#: (and Integer (>= 0)) i] [#: (or () Cons) lst])
     (%if (%0? i) #null
       (%if (%cons? lst) (%cons (%car lst) (%take (%- i 1) (%cdr lst)))
         (error (%new Error "cannot take" :type 'outOfBounds)) ))))
 (%def %subList
-  (%\ ([#! (or () Cons) lst] [#! (and Integer (>= 0)) start] . [#! (or () (1 (and Integer (>= 0)))) end])
+  (%\ ([#: (or () Cons) lst] [#: (and Integer (>= 0)) start] . [#: (or () (1 (and Integer (>= 0)))) end])
     (%def tail (%nthCdr start lst))
     (%if (%null? end) tail
       (%take (%- (car end) start) tail) )))    
 (%def %subString
-  (%\ ([#! String str] [#! (and Integer (>= 0)) start] . [#! (or () (1 (and Integer (>= 0)))) end])
+  (%\ ([#: String str] [#: (and Integer (>= 0)) start] . [#: (or () (1 (and Integer (>= 0)))) end])
     (handlerBind 
       ( ((Error :type 'java)
          (%\ (thw)
@@ -104,12 +104,12 @@
 
 ;(%def %pushPrompt ((%\ (%pushPrompt) (%wrap %pushPrompt)) %pushPrompt))
 
-(%def %className (%\ ((#! Class class)) (%intern (@getSimpleName class))))
+(%def %className (%\ ((#: Class class)) (%intern (@getSimpleName class))))
 ;(%def %newClass ((%\ (%newClass) (%\ (name superclass) (%newClass (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass))) %newClass))
 
-(%def %getSlot (%\ ((#! ObjEnv obj) (#! Intern slot)) (obj slot)))
-(%def %setSlot (%\ ((#! ObjEnv obj) (#! Intern slot) value) (obj slot value)))
-(%def %slotBound? (%\ ((#! ObjEnv obj) (#! Intern slot)) (%bound? slot obj)))
+(%def %getSlot (%\ ((#: ObjEnv obj) (#: Intern slot)) (obj slot)))
+(%def %setSlot (%\ ((#: ObjEnv obj) (#: Intern slot) value) (obj slot value)))
+(%def %slotBound? (%\ ((#: ObjEnv obj) (#: Intern slot)) (%bound? slot obj)))
 
 
 (%def %mkCheckEval

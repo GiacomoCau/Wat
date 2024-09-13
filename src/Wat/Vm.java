@@ -188,9 +188,7 @@ public class Vm {
 		Object prp; Combinable hdl; Continuation k;
 		Suspension(Object prp, Combinable hdl) { this.prp = prp; this.hdl = hdl; }
 		public String toString() { return "{Suspension %s %s %s}".formatted(prp, hdl, k); }
-		Suspension suspend(Dbg dbg, Function<Resumption, Object> f) { 
-			k = new Continuation(dbg, f, k); return this;
-		}
+		Suspension suspend(Dbg dbg, Function<Resumption, Object> f) { k = new Continuation(dbg, f, k); return this; }
 	}
 	Object pipe(Dbg dbg, Supplier before, Function ... after) {
 		return pipe(null, dbg, before, after);
@@ -246,8 +244,8 @@ public class Vm {
 	class Ignore { public String toString() { return "#ignore"; }};
 	public Ignore ignore = new Ignore();
 	
-	class SheBang { public String toString() { return "#!"; }};
-	public SheBang sheBang = new SheBang();
+	class SheColon { public String toString() { return "#:"; }};
+	public SheColon sheColon = new SheColon();
 	
 	
 	// Tail Call Optimization
@@ -272,7 +270,7 @@ public class Vm {
 		Object v; try {
 			level += 1;
 			v = switch (o) {
-				case Symbol s-> tco(()-> pipe(dbg(e, o), ()-> e.get(s)));
+				case Symbol s-> tco(()-> e.get(s));
 				case List l-> tco(()-> pipe(dbg(e, o), ()-> getTco(evaluate(e, l.car)), op-> tco(()-> combine(e, op, l.cdr()))));
 				case null, default-> o;
 			};
@@ -425,12 +423,12 @@ public class Vm {
 		public List keywords() { return list(keySet().stream().map(Vm.this::keyword).toArray()); }
 		@Override public Object apply(List o) {
 			var len = len(o);
-			return switch (len(o)) {
+			return switch (len) {
 				case 0-> this;
 				case 1-> get(o.car);
 				default-> {
 					BiFunction f =	o.car == keyword(":def") ? (k,v)-> def(k,v) : o.car == keyword(":set!") ? (k,v)-> set(k,v) : null;
-					if (f == null) f = (BiFunction) (k,v)-> def(k,v); else { len-=1; o=o.cdr();  }
+					if (f == null) f = (BiFunction) (k,v)-> def(k,v); else { len-=1; o=o.cdr(); }
 					var bndRes = len % 2 == 0 ? ignore : first(o.car, len-=1, o=o.cdr());
 					for (; len>2; len-=2, o=o.cdr(1)) f.apply(toKey(o.car), o.car(1));
 					var key = toKey(o.car);
@@ -465,7 +463,7 @@ public class Vm {
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			return switch (len) {
 				case 0-> value;
-				default-> switch (bndRes(len != 2 ? ignore : o.car)) {
+				default-> switch (bndRes(len == 2 ? o.car : ignore)) {
 					case Suspension s-> s;
 					case Integer i-> switch(i) {
 						case 0-> inert(value = o.car(len-1));
@@ -692,7 +690,8 @@ public class Vm {
 	Object bind0(boolean def, int bndRes, Env e, Object lhs, Object rhs) {
 		return switch (lhs) {
 			case Ignore i-> rhs;
-			case Symbol s-> { var v = def ? e.def(s, rhs) : e.set(s, rhs); yield bndRes == 2 ? v : rhs; }  
+			case Symbol s-> { var val = def ? e.def(s, rhs) : e.set(s, rhs); yield bndRes == 2 ? val : rhs; }  
+			//case Symbol s-> apply(val-> bndRes == 2 ? val : rhs, def ? e.def(s, rhs) : e.set(s, rhs));  
 			case Keyword k-> {
 				if (k.equals(rhs)) yield rhs;
 				throw new TypeException("expected keyword: {expected}, found: {datum}", rhs, k);
@@ -706,7 +705,7 @@ public class Vm {
 					if (equals(lc.<Object>car(1), rhs)) yield null; // or rhs?
 					throw new TypeException("expected literal: {expected}, found: {datum}", rhs, lc.car(1));
 				}
-				else if (lc.car == sheBang) {
+				else if (lc.car == sheColon) {
 					getTco(evaluate(e, list(symbol("%checkO"), rhs, lc.car(1))));
 					yield bind(def, bndRes, e, lc.car(2), rhs); 
 				}
@@ -740,17 +739,15 @@ public class Vm {
 	class Opv implements Combinable  {
 		Env e; Object pt, ep; List x;
 		Opv(Env e, Object pt, Object ep, List x) {
-			this.e = e; this.pt = pt; this.ep = ep;	this.x = x;
+			this.e = e; this.pt = pt; this.ep = ep; //this.x = x
+			this.x = x == null || x.car != sheColon ? x 
+				: x.cdr() != null ? cons(list(symbol("the"), x.car(1), cons(symbol("begin"), x.cdr(1))))
+				: matchError("invalid body value check, expected {operands#,%+d} operands, found: {datum} in: " + x /* c + " of: " + expr*/ , null, 1) ;
 		}
 		public Object combine(Env e, List o) {
 			var xe = env(this.e);
 			var dbg = dbg(e, this, o);
 			return tco(()-> pipe(dbg, ()-> bind(dbg, xe, pt, o), $-> bind(dbg, xe, ep, e), $$-> tco(()-> begin.combine(xe, x))));
-			/* TODO in alternativa al precedente
-			return pipe(dbg, ()-> bind(xe, dbg, p, o), $-> bind(xe, dbg, ep, e),
-				$$-> x == null ? inert : tco(()-> x.cdr == null ? evaluate(e, x.car) : begin.begin(null, xe, x))
-			);
-			//*/
 		}
 		public String toString() {
 			return "{%Opv " + ifnull(pt, "()", Vm.this::toString) + " " + Vm.this.toString(ep) + eIfnull(x, ()-> " " + stream(array(x)).map(Vm.this::toString).collect(joining(" "))) + /*" " + e +*/ "}";
@@ -807,15 +804,13 @@ public class Vm {
 			var dt = o.car;
 			var msg = checkDt(cons(this, o), dt); if (msg != null) return msg;
 			var dbg = dbg(e, this, o);
-			return pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> 
-				switch (bndRes(len != 3 ? ignore : o.car(1))) {
-					case Suspension s-> s;
-					case Integer i-> i >= 0 && i <= 3
-						? bind(dbg, def, i, e, dt, res)
-						: typeError("cannot " + (def ? "def" : "set!") + ", invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
-					case Object obj-> resumeError(chk, symbol("Integer"));
-				}
-			);
+			return switch (bndRes(len != 3 ? ignore : o.car(1))) {
+				case Suspension s-> s;
+				case Integer i-> i >= 0 && i <= 3
+					? pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> bind(dbg, def, i, e, dt, res))
+					: typeError("cannot " + (def ? "def" : "set!") + ", invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
+				case Object obj-> resumeError(obj, symbol("Integer"));
+			};
 		}
 		public String toString() { return def ? "%Def" : "%Set!"; }
 	};
@@ -879,8 +874,8 @@ public class Vm {
 			case 0-> res instanceof Boolean b ? b : typeError("not a {expected}: {datum}", res, symbol("Boolean")); // Kernel, Wat, Lispx
 			case 1-> !member(res, false); // Scheme, Guile, Racket
 			case 2-> !member(res, false, null); // Clojure
-			case 3-> !member(res, false, null, ignore);
-			case 4-> !member(res, false, null, ignore, 0); // Javascript
+			case 3-> !member(res, false, null, inert);
+			case 4-> !member(res, false, null, inert, 0); // Javascript
 			default-> res instanceof Boolean b ? b : typeError("not a {expected}: {datum}", res, symbol("Boolean")); // Kernel, Wat, Lispx
 		};
 	}
@@ -939,7 +934,7 @@ public class Vm {
 			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			var dbg = dbg(e, this, o);
 			return pipe(dbg, ()-> getTco(evaluate(e, o.car)),
-				tag->{ throw new Value(tag, getTco(begin.combine(e, o.cdr()))); }
+				tag-> switch (getTco(begin.combine(e, o.cdr()))) { case Suspension s-> s; case Object val->{ throw new Value(tag, val); }}
 			);		
 		}
 		public String toString() { return "%ThrowTag"; }
@@ -1034,7 +1029,7 @@ public class Vm {
 		}
 		public String toString() { return "%PushSubcontBarrier"; }
 	};
-	/*/// TODO in alternativa al precedente
+	/*/ // TODO in alternativa al precedente
 	class PushSubcontBarrier implements Combinable  {
 		public Object combine(Env e, List o) {
 			return combine(null, e, o);
@@ -1116,36 +1111,36 @@ public class Vm {
 				case ArgsList al-> al;  
 				case LenList ll-> o-> pipe(null, ()-> check.apply(name, o),
 					obj-> obj instanceof Integer len ? ll.apply(len, o)	: resumeError(obj, symbol("Integer")));   
-				case Supplier sp-> o-> pipe(null, ()-> checkN(name, o, 0),
-					obj-> obj instanceof Integer /*len*/ ? sp.get() : resumeError(obj, symbol("Integer")));  
-				case Consumer f-> o-> pipe(null, ()-> checkN(name, o, 1),
+				case Supplier s-> o-> pipe(null, ()-> checkN(name, o, 0),
+					obj-> obj instanceof Integer /*len*/ ? s.get() : resumeError(obj, symbol("Integer")));  
+				case Consumer c-> o-> pipe(null, ()-> checkN(name, o, 1),
 					obj->{
 						if (! (obj instanceof Integer /*len*/)) return resumeError(obj, symbol("Integer"));
-						f.accept(o.car);
+						c.accept(o.car);
 						return inert;
 					});
 				case Function f-> o-> pipe(null, ()-> checkN(name, o, 1),
 					obj-> obj instanceof Integer /*len*/ ? f.apply(o.car) : resumeError(obj, symbol("Integer")));  
-				case BiConsumer f-> o-> pipe(null, ()-> checkN(name, o, 2),
+				case BiConsumer bc-> o-> pipe(null, ()-> checkN(name, o, 2),
 					obj->{
 						if (! (obj instanceof Integer /*len*/)) return resumeError(obj, symbol("Integer"));
-						f.accept(o.car, o.car(1));
+						bc.accept(o.car, o.car(1));
 						return inert;
 					});
-				case BiFunction f-> o-> pipe(null, ()-> checkN(name, o, 2),
-					obj-> obj instanceof Integer /*len*/ ? f.apply(o.car, o.car(1)) : resumeError(obj, symbol("Integer")));
+				case BiFunction bf-> o-> pipe(null, ()-> checkN(name, o, 2),
+					obj-> obj instanceof Integer /*len*/ ? bf.apply(o.car, o.car(1)) : resumeError(obj, symbol("Integer")));
 				case Field f-> o-> pipe(null, ()-> checkR(name, o, 1, 2), obj->{
 						if (!(obj instanceof Integer len)) return resumeError(obj, symbol("Integer"));
 						if (len == 1) return uncked(()-> f.get(o.car));
 						return uncked(()->{ f.set(o.car, o.car(1)); return inert; });
 					}
 				);
-				case Method mt-> o->{
-					var pc = mt.getParameterCount();
+				case Method m-> o->{
+					var pc = m.getParameterCount();
 					return pipe(null,
-						()-> !mt.isVarArgs() ? checkN(name, o, pc+1) : checkM(name, o, pc),
+						()-> !m.isVarArgs() ? checkN(name, o, pc+1) : checkM(name, o, pc),
 						obj-> obj instanceof Integer /*len*/
-							? uncked(()-> mt.invoke(o.car, reorg(mt, array(o.cdr()))))
+							? uncked(()-> m.invoke(o.car, reorg(m, array(o.cdr()))))
 							: resumeError(obj, symbol("Integer"))
 					);
 				};
@@ -1323,7 +1318,7 @@ public class Vm {
 					? matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: " + c + " of: " + expr, 2 > len ? null : c.cdr(len-2), 2-len)
 					: null
 				;
-			if (c.car == sheBang)
+			if (c.car == sheColon)
 				return len != 3
 					? matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: " + c + " of: " + expr, 3 > len ? null : c.cdr(len-2), 3-len)
 					: !(c.car(2) instanceof Symbol)
@@ -1635,7 +1630,7 @@ public class Vm {
 	
 	Object toLispExpr(Object o) {
 		return switch (o) {
-			case String s-> switch(s) { case "#inert"-> inert; case "#_", "#ignore"-> ignore; case "#!"-> sheBang; default-> intern(intStr ? s.intern() : s); };
+			case String s-> switch(s) { case "#inert"-> inert; case "#_", "#ignore"-> ignore; case "#:"-> sheColon; default-> intern(intStr ? s.intern() : s); };
 			case Object[] objs-> objs.length == 2 && objs[0] == string ? intStr ? ((String) objs[1]).intern() : objs[1] : toLispList(objs);
 			case null, default-> o;
 		};
@@ -1671,7 +1666,7 @@ public class Vm {
 		};
 	}
 	String toStringSet(Set<Entry<String,Object>> set) {
-		return set.isEmpty() ? "" : " " + set.stream().map(e-> e.getKey() + " " + toString(true, e.getValue())).collect(joining(" "));
+		return set.isEmpty() ? "" : " " + set.stream().map(e-> ":" + e.getKey() + " " + toString(true, e.getValue())).collect(joining(" "));
 	}
 	String toString(String name, Class[] classes) {
 		return (name.equals("new") ? "constructor: " : "method: ") + name

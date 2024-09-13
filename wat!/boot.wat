@@ -872,7 +872,7 @@
    |#
   %keyword?)
 
-(def\ (keywordName (#! Keyword keyword))
+(def\ (keywordName (#: Keyword keyword))
   #|Return the name of the KEYWORD as a string.
    |
    |$(fn keyword)
@@ -897,7 +897,7 @@
    |#
   %symbol?)
 
-(def\ (symbolName (#! Symbol symbol))
+(def\ (symbolName (#: Symbol symbol))
   #|Return the name of the SYMBOL as a string.
    |
    |$(fn symbol)
@@ -934,7 +934,7 @@
   %eq?)
 
 (def\ (ignore? o) (== o #_))
-(def\ (sheBang? o) (== o #!))
+(def\ (sheColon? o) (== o #:))
 (def\ (inert? o) (== o #inert))
 
 
@@ -2375,14 +2375,14 @@
 
 (defVau (case exp . clauses) env
   #|Multi-armed value test.
-   |Evaluate KEY and Go through the CLAUSES.
+   |Evaluate KEY and go through the CLAUSES.
    |If CLAUSES is #null return #inert.
    |If `car' of CLAUSE is else or `eq?' KEY VALUE or `member? :cmp eq?' KEY VALUES
    |  if `car' FORMS is => apply evaluate `cadr' FORMS to VALUE
    |  otherwise evaluate FORMS as an implicit `begin'.
    |Otherwise go to the next CLAUSE.
    |
-   |$(fn (key . clauses))
+   |$(fn key . clauses)
    |$(type fexpr)
    |$(syntax clauses (clause . clauses))
    |$(syntax clause (else . forms))
@@ -2472,12 +2472,12 @@
 ; vedi signalsError? in vm.lispx (o testUtil.lispx) per codice simile
 (defVau (caseType key . clauses) env
   #|Multi-armed type test.
-   |Evaluate the OBJECT and Go through the CLAUSES.
+   |Evaluate the OBJECT and go through the CLAUSES.
    |If CLAUSES is #null return #inert.
    |If OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, evaluate FORMS as an implicit `begin'.
    |Otherwise go to the next CLAUSE.
    |
-   |$(fn (object . clauses))
+   |$(fn object . clauses)
    |$(type fexpr)
    |$(syntax clauses (clause . clauses))
    |$(syntax clause (class . forms))
@@ -2503,7 +2503,7 @@
 (assert (caseType 2.0 (String "string") (Double "double")) "double")
 (assert (caseType (newObj :a 1) (Double "double") ((Obj :a 1) "Obj :a 1")) "Obj :a 1")
 
-(defMacro (caseType\ (#! (1 Symbol) key) . clauses)
+(defMacro (caseType\ (#: (1 Symbol) key) . clauses)
   #|Return a sigle argument function for multi-armed type test, useful as a catch handler.
    |
    |$(fn (symbol) . clauses))
@@ -2522,7 +2522,7 @@
 (def\ (sort lst . opts)
   #|Return the sorted LIST, getting the key with the :key function (defaults to 'idf') and up or down with key :up or :dn (defaults to :up).
    |
-   |$(fn list . (#! 0 3 (or (2 :key function) (1 (or :up :dn)) )))
+   |$(fn list . (#: 0 3 (or (2 :key function) (1 (or :up :dn)) )))
    |$(type function)
    |#
   (def cmp (case (optKey (:up :dn) opts) ((#null :up) <) (:dn >=)))
@@ -2544,7 +2544,7 @@
 
 
 #|! Type and Value Checks
- |Type and value checks are possible with (#! check symbol) wherever there is a Symbol in a definined or parameters tree including all lexical bindings.
+ |Type and value checks are possible with (#: check symbol) wherever there is a Symbol in a definined or parameters tree including all lexical bindings.
  |
  |A `check' can be:
  |- a `value',
@@ -2576,7 +2576,7 @@
  |$(syntax definiendTree (or symbol decomposeTree))
  |$(syntax parametersTree (or #null #ignore symbol decomposeTree))
  |$(syntax decomposeTree (parametersTree . decomposeTree))
- |$(syntax symbol (or Symbol (#! check Symbol)))
+ |$(syntax symbol (or Symbol (#: check Symbol)))
  |$(syntax check Any)
  |$(syntax check Class)
  |$(syntax check checks)
@@ -2604,7 +2604,7 @@
    |
    |$(fn object check)
    |$(type fexpr)
-   |$(derivation ((\ ((#! check arg)) (len arg)) object) 
+   |$(derivation ((\ ((#: check object)) (len object)) object))
    |#
   (apply %check (list (eval o env) ck) env) )
 
@@ -2613,12 +2613,10 @@
    |
    |$(fn list . checks)
    |$(type macro)
-   |$(derivation ((\ (#! checks args) (len args)) . list) 
+   |$(derivation ((\ (#: checks list) (len list)) . list) 
    |$(derivation (check list checks)) 
    |#
-  (list 'check o cks) ; originale
-  ;(list 'check o (if (null? (cdr cks)) (car cks) cks)) ;TODO sembra meglio, sostanzialmente converte la check* in check!
-)
+  (list 'check o cks))
 
 (assert (check* '(1 (:a 1 :b 2) c 3) 1 oo Integer (Keyword Integer) Symbol (or 3 4)) 4)
 (assert (check* '(a 1 2) 'a 1 2) 3)
@@ -2702,7 +2700,7 @@
           (eval forms env)
           (returnFrom exit #inert)) ))))
 
-(defde\ (mkTag tag (#! (and Integer (>= 0) (<= %deep)) n))
+(defde\ (mkTag tag (#: (and Integer (>= 0) (<= %deep)) n))
   #|Return a tag for the break/continue throws forms of into the loop form by joining TAG and N.
    |Get the %deep of the enhanced loop form in the dynamic environment.
    |Used from break, continue, until and while forms for the enhanced loops.
@@ -2878,13 +2876,13 @@
    |$(type macro)
    |#
   (if (cons? times)
-    (let* ( (((#! Symbol var) times . endForms) times)
-            ((#! (and Integer (> 0)) times) (eval times env))
+    (let* ( (((#: Symbol var) times . endForms) times)
+            ((#: (and Integer (> 0)) times) (eval times env))
             (env (newEnv env var 0)) )
       (loop (def result (apply begin forms env))
         (break? (>= (eval (list 'set! var :rhs (list '1+ var)) env) times)
           (if (null? endForms) result (apply begin endForms env)) )))
-    (let1 ((#! (and Integer (> 0)) times) (eval times env))
+    (let1 ((#: (and Integer (> 0)) times) (eval times env))
       (loop (def result (apply begin forms env))
         (break? (0? (set! times :rhs (-1+ times))) result) ))))
 
@@ -2915,13 +2913,13 @@
    |$(type macro)
    |#
   (if (cons? times)
-    (let* ( (((#! Symbol var) times . endForms) times)
-            ((#! (and Integer (>= 0)) times) (eval times env))
+    (let* ( (((#: Symbol var) times . endForms) times)
+            ((#: (and Integer (>= 0)) times) (eval times env))
             (env (newEnv env var 0)) )
       (loop (break? (>= (env var) times) (if (cons? endForms) (apply begin endForms env) (0? times) #inert result) )
             (def result (apply begin forms env))
             (eval (list '++ var) env) ))
-    (let1 ((#! (and Integer (> 0)) times) (eval times env))
+    (let1 ((#: (and Integer (> 0)) times) (eval times env))
       (loop (def result (apply begin forms env))
         (if (0? (-- times)) (break result)) ))))
 
@@ -3165,7 +3163,7 @@
    |#
   (list->array args))
 
-(def\ (arrayMap fun (#! Object[] arr))
+(def\ (arrayMap fun (#: Object[] arr))
   #|Return a new array by applying the FUNCTION to each element of the ARRAY.
    |
    |$(fn function array)
@@ -3175,7 +3173,7 @@
 
 (assert (arrayMap 1+ (array 1 2 3)) (array 2 3 4))
 
-(def\ (arrayFilter pred (#! Object[] arr))
+(def\ (arrayFilter pred (#: Object[] arr))
   #|Returns a new array with the elements of the ARRAY for which the application of the FUNCTION returns #true.
    |
    |$(fn function array)
@@ -3262,7 +3260,7 @@
    |#
   (if (member? v lst) lst (cons v lst)))
 
-(defVau (defSet+ (#! Symbol plc) v) env
+(defVau (defSet+ (#: Symbol plc) v) env
   #|Return the set after update the set of SYMBOL with an VALUE more if VALUE not is in the set.
    |
    |$(fn symbol value)
@@ -3301,7 +3299,7 @@
  |Idea stolen from Anarki https://github.com/arclanguage/anarki
  |#
 
-(defMacro %´ ((#! (or Symbol List) x))
+(defMacro %´ ((#: (or Symbol List) x))
   #|´a;b -> (compose a b)
    |´a;b;c -> (compose* a b c)
    |´!a -> (compose ! a)
@@ -3539,7 +3537,7 @@
 #|! Classes
  |#
 
-(def\ findClass ((#! Symbol name) env)
+(def\ findClass ((#: Symbol name) env)
   #|Look up a class based on its NAME symbol (evaluated) in the given ENVIRONMENT.
    |
    |$(fn name environment)
@@ -3547,7 +3545,7 @@
    |#
   (eval name env))
 
-(defVau defClass (name (#! (0 1 Symbol) superClass) (#! (Symbol) attributes) . properties) env
+(defVau defClass (name (#: (0 1 Symbol) superClass) (#: (Symbol) attributes) . properties) env
   #|Define a new `ObjClass' with the given NAME, optional SUPERCLASS, and ATTRIBUTES.
    |The SUPERCLASS defaults to `Obj'.
    |The ATTRIBUTES and PROPERTIES are currently ignored.
@@ -4352,14 +4350,14 @@ load)
    |$(type fexpr)
    |#
   (let* ( (currentTime (@getMethod System "currentTimeMillis"))
-          ((#! (and Integer (> 0)) times) (eval times env))
+          ((#: (and Integer (> 0)) times) (eval times env))
           (milli (currentTime #null))
           (result (apply repeat (cons times forms) env))
           (milli (- (currentTime #null) milli)) )
     (print "time " times " " (if (null? (cdr forms)) (car forms) (cons 'begin forms)) ": " milli "ms" (if (== times 1) "" ($ ", on average: " (@format String "%.2f" (/ milli (@doubleValue times))) "ms" )))
     result ))
 
-(def\ (make*\ n f)
+(def\ (make\* n f)
   #|Returns a function that applies FUNCTION with the arguments from n placed in a list.
    |
    |$(fn n function)
@@ -4373,7 +4371,7 @@ load)
           (loop (- n 1) (cons (car t) h) (cdr t)) ))))
   (\ lst (apply f (resize n lst))) )
 
-(assert ((make*\ 2 (\(a b) b)) 1 2 3 4 5) '(2 3 4 5))
+(assert ((make\* 2 (\ (a b) b)) 1 2 3 4 5) '(2 3 4 5))
 
 (def\ (minMax a . b)
   #|Returns a cons with the min and the max of the VALUES.

@@ -14,7 +14,7 @@ Here the [language reference](https://htmlpreview.github.io?https://github.com/G
 These are the differences compared to the original Wat/LispX
 * LispX was converted from lisp-2 to lisp-1
 * LispX's `#nil` has been converted to `#null`
-* `#null` and `()` are the same value and implemented with `null` java
+* `#null` and `()` are the same value and implemented with java `null`
 * Lispx `#void` has been converted to `#inert`
 * `#ignore` and `#_` are two forms of the same valore
 * the nomenclature has been changed by eliminating the hyphens and camelizing
@@ -50,9 +50,11 @@ These are the differences compared to the original Wat/LispX
 		* preceded by `:def` to bind in the last frame or `:set!` to bind in the frame where the single key is present `(env (or :def :set!) (or #inert :rhs :prv :cnt) key value ...)`
 * The keys used for `Obj` assignments and `Env` bindings can be `(or Keyword Symbol String)`
 * The __eval__ function can be called with only the expression to evaluate, the `Env` will be the current one `(eval exp)`
-* The __vau__ operator (i.e. __\\__ or __lambda__) allows control over the type and value of parameters.
+* The __vau__ operator (i.e. __\\__ or __lambda__) allows control over the type and value of parameters and value returned.
 
-	Instead of the single `symbol` parameter, the expression `(#! check symbol)` can be specified,
+	for checking the type and value of the
+	* return value: the body of the vau must start with a `#:` followed by the `check` followed by the `forms` of the body `(vau pt ep #: check . forms)`
+	* parameters: instead of the single `symbol` parameter in the parameter tree, must be specified the expression `(#: check symbol)`,
 	
 	where `check` can be:
 	* a `value`,
@@ -62,25 +64,25 @@ These are the differences compared to the original Wat/LispX
 	* a `List` with an `Integer` and the symbol `oo` followed by zero or more `checks`,
 	* a `List` with car equals `or` followed by two or more `check`,
 	* a `List` with car equals `and` followed by two or more `check`,
-	* a `List` with car `Apv` followed by zero o more arguments.
+	* a `List` with car an `Apv` followed by zero o more arguments.
 
 	When the `check` is:
-	* a `value`: the parameter value must be equal to that `value`
-	* the `Any` class: the parameter can be any value
-	* a `Class`: the parameter value can be an instance of that `Class` or a class that extends that `Class`
-	* a `List`: the parameter value must be a `List` where, in the `check` `List`,
-		* the first `Integer` indicates the minimum number of elements, default is `0`
-		* the second `Integer` indicates the maximum number of elements
-		  default is the value of the first `Integer` if present, otherwise `oo` for `Integer.maxValue`
-		  for the second `Integer` can be also specified the symbol `oo` for `Integer.maxValue`.
-		* if the number of `check` arguments in the list is
-			* less than the minimum: parameters value that exceed the minimum can have any value
-			* greater than the minimum: the parameters values exceeding the minimum will be checked cyclically using `check` arguments exceeding the minimum 
-		* if the first element of the list is:
-			* `or`: the parameter value must match one of the `check` arguments of the `or`
-			* `and`: the parameter value must match all the `check` arguments of the `and`
-			* `Apv`: applying `Apv` to the cons of the parameter value and the remaining arguments must return `#true`
-* The `Box` are different objects from `Objs`
+	* a `value`: the parameter value or value returned must be equal to that `value`
+	* the `Any` class: the parameter value or value returned can be any value
+	* a `Class`: the parameter value or value returned can be an instance of that `Class` or a class that extends that `Class`
+	* a `List`: the parameter value or value returned must be a `List` where, in the `List` `check`
+		* the first `Integer` indicates the minimum number of elements, the default is `0`
+		* the second `Integer` indicates the maximum number of elements,
+		  the default is the value of the minimum number of elements if present, otherwise `Integer.maxValue`.
+		  For the maximum number of elements can be also specified the symbol `oo` for `Integer.maxValue`.
+		* if the number of `check` arguments in `List` is:
+			* less than the minimum: parameters values or values returned that exceed the minimum can have any value
+			* greater than the minimum: the parameters values or values returned exceeding the minimum will be checked cyclically using `check` arguments exceeding the minimum 
+		* if the first element of `List` is:
+			* `or`: the parameter value or value returned must match one of the `check` arguments of the `or`
+			* `and`: the parameter value or value returned must match all the `check` arguments of the `and`
+			* an `Apv`: the applying of `Apv` to the cons of the parameter value or value returned and the remaining arguments must return `#true`
+* The `Box` are different objects from `Obj`
 * The `Box` are `Combinable` and combined with
 	* `()` return the associated value `(box)`
 	* a value
@@ -88,19 +90,18 @@ These are the differences compared to the original Wat/LispX
 		* can return `#inert`, the assigned value (`:rhs`), the previous value (`:prv`), or the box itself (`:cnt`)
 		  specifying it directly in the expression `(box (or #inert :rhs :prv :cnt) value)`
 		  or indirectly by setting `(bndRes (or #inert :rhs :prv :cnt))`
-* The `DVars` or dynamic variables extend the `Boxes`
-* The `DVars` are managed by a single operator `(%dv\\ (#! (Symbol) symbols) . body)`
+* The `DVar` or dynamic variables extend the `Box`
+* The `DVar` are managed by a single operator `(dv\ (#: (Symbol) symbols) . forms)`
 	which allows you to implement the various operators for dynamic variables as macros __ddef__ __ddef*__ __progv__ __dlet__ __dlet1__ __dlet*__
-	* if `body` is
-		* `()` will assign the values ​​it is combined with, converted to `DVar`, to the corresponding symbols in the current `Env` `((d\\ symbols) . values)`
-		* a `List` will assign the values ​​with which it is combined to the `DVars` associated with the symbols, execute the forms in the current `Env`
-		  and finally restore the values ​​of the `DVar` to those preceding the assignment `((d\\ symbols form . forms) . values)`
+	* if `forms` is
+		* `()` will assign the values ​​it is combined with, converted to `DVar`, to the corresponding symbols in the current `Env` `((dv\ symbols) . values)`
+		* a `List` will assign the values ​​with which it is combined to the `DVar` associated with the symbols, execute the forms in the current `Env`
+		  and finally restore the values ​​of the `DVar` to those preceding the assignment `((dv\ symbols form . forms) . values)`
 	* if it is combined with `()` it will use the value obtainable from `(boxDft)` as the value to be assigned
-* __catchTagWth__ and __throwTag__ can be either operators (`Opv`) or functions (`Apv`) depending on `ctApv = (or true false)`
 * The __catchTagWth__ handler, can be not only a function of an argument (`Apv1`), but also any value that will be returned if an `Error` is caught
-* The __finally__ operator is derived, as a macro, from the __atEnd__ operator `(atEnd (#! Apv0 cleaner) form . forms)`
+* The __finally__ operator is derived, as a macro, from the __atEnd__ operator `(atEnd (#: Apv0 cleaner) form . forms)`
 * __takeSubcont__, __pushPrompt__, __pushDelimSubcont__ and __pushSubcontDelim__ are operators and do not require completion
-* `Supplier` `Function` `BiFunction` `Executable` and `Field`, generically `java functions`, are implicitly considered `Apv` functions
+* `Supplier` `Consumer` `Function` `BiConsumer` `BiFunction` `Executable` and `Field`, generically `java functions`, are implicitly considered `Apv` functions
 * __wrap__ does not wrap the `Apv` and the `java functions`, but wraps the remaining `Combinator`
 * __unwrap__ unwraps the `Apv`, wraps the `java functions` in a `JFun` and does not unwrap the remaining `Combinator`
 * `String` can be interned depending on `intStr = (or true false)`, if interned they can be compared with `==`

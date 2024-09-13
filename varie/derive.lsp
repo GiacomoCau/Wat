@@ -12,7 +12,7 @@
      (let ( (d1 (apply* derive `(,f ,x) `,x))
             (d2 (apply* derive `(,g ,x) `,x)) )
        `(+ ,d1 ,d2) ))
-    ((('* (#! Number k) (f x)) x)
+    ((('* (#: Number k) (f x)) x)
      (let1 (d (apply* derive `(,f ,x) `,x)) 
        `(* ,k ,d) ))
     ((('* (f x) (g x)) x)

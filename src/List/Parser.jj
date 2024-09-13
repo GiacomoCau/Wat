@@ -173,7 +173,7 @@ TOKEN:	// reserved words
 {	< Null: "()" | "#null" >
 |	< True: "#t" | "#true" >
 |	< False: "#f" | "#false" >
-|	< SheBang: "#!" >
+|	< SheColon: "#:" >
 |	< Inert: "#inert" >
 |	< Ignore: "#_" | "#ignore" >
 |	< Cmt: "#;" >
@@ -236,7 +236,7 @@ Object Elt() throws Exception: {
 	|	<False>      { return false; }    
 	|	t=<Inert>    { return t.image; }    
 	|	t=<Ignore>   { return t.image; }    
-	|	t=<SheBang>  { return t.image; }    
+	|	t=<SheColon> { return t.image; }    
 	|	t=<Symbol1>  { return t.image.substring(2); }    
 	|	t=<Char>     { return t.image.length() == 3 ? t.image.charAt(2) : (char) parseInt(t.image.substring(3),16); }    
 	|	t=<BDecimal> { return new java.math.BigDecimal(t.image.substring(0,t.image.length()-2).replaceAll("_","")); }
