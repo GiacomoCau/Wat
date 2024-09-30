@@ -75,6 +75,9 @@
 (%assert ((%vau a #ignore 1 2 3 4 5 a) 6) '(6))
 (%assert ((%vau (a) #ignore 1 2 3 4 5 a) 6) 6)
 
+(%assert ((%vau ((#: &java.lang.Integer a) (#: &java.lang.Integer b)) #ignore #: (and &java.lang.Integer (%>= 4)) 1 2 3 (%+ a b)) 1 2)) ;throw
+(%assert ((%vau ((#: &java.lang.Integer a) (#: &java.lang.Integer b)) #ignore #: (and &java.lang.Integer (%>= 4)) 1 2 3 (%+ a b)) 2 2) 4)
+
 (%assert ((%\ (m)  ) 1) #inert)
 (%assert ((%\ (m) m) 1) 1)
 (%assert ((%\ x x) 1)   '(1))

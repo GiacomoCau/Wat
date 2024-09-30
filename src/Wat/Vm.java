@@ -706,7 +706,7 @@ public class Vm {
 					throw new TypeException("expected literal: {expected}, found: {datum}", rhs, lc.car(1));
 				}
 				else if (lc.car == sheColon) {
-					getTco(evaluate(e, list(symbol("%checkO"), rhs, lc.car(1))));
+					checkO(rhs, getTco(combine(e, unwrap(vmEnv.get("%evalChk")), list(lc.car(1), e))));
 					yield bind(def, bndRes, e, lc.car(2), rhs); 
 				}
 				else if (!(rhs instanceof Cons rc)) {
@@ -741,7 +741,7 @@ public class Vm {
 		Opv(Env e, Object pt, Object ep, List x) {
 			this.e = e; this.pt = pt; this.ep = ep; //this.x = x
 			this.x = x == null || x.car != sheColon ? x 
-				: x.cdr() != null ? cons(list(symbol("the"), x.car(1), cons(symbol("begin"), x.cdr(1))))
+				: x.cdr() != null ? cons(cons(new Colon(this), x.cdr()))
 				: matchError("invalid body value check, expected {operands#,%+d} operands, found: {datum} in: " + x /* c + " of: " + expr*/ , null, 1) ;
 		}
 		public Object combine(Env e, List o) {
@@ -753,6 +753,26 @@ public class Vm {
 			return "{%Opv " + ifnull(pt, "()", Vm.this::toString) + " " + Vm.this.toString(ep) + eIfnull(x, ()-> " " + stream(array(x)).map(Vm.this::toString).collect(joining(" "))) + /*" " + e +*/ "}";
 		}
 	}
+	class Colon implements Combinable {
+		Object op;
+		boolean b;
+		Colon(Object op) { this.op = op;  this.b = !op.equals("check"); } 
+		public Object combine(Env e, List o) {
+			var chk = b ? checkM(this, o, 2) : checkN(this, o, 2); // o = (chk form . forms) | (form check)
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
+			return pipe(null, ()-> getTco(b ? begin.combine(e, o.cdr()) : evaluate(e, o.car)),
+				(val)->	switch (getTco(Vm.this.combine(e, unwrap(vmEnv.get("%evalChk")), list(o.car(b ? 0 : 1), e)))) {
+					case Suspension s-> s;
+					case Object eck-> {
+						var len = check(op, val, eck);
+						yield b ? val : len;
+					}
+				}
+			);
+		}
+		public String toString() { return b ? "%:" : "%check"; }
+	};
 	class Apv implements Combinable  {
 		Combinable cmb;
 		Apv(Combinable cmb) { this.cmb = cmb; }
@@ -1163,9 +1183,18 @@ public class Vm {
 						switch (thw) {
 							case Value val: throw val;
 							case Condition cnd: throw cnd;
-							case InnerException ie when name.equals("%CheckO"): throw ie; 
-							default: return javaError("error executing: {member} with: {args}", thw, name == null ? null : symbol(name), o, null);
+							case InnerException ie /*when name.equals("%CheckO")*/: throw ie;
+							case RuntimeException rte when rte.getCause() instanceof InvocationTargetException ite: {
+								switch (ite.getTargetException()) {
+									case Value val: throw val;
+									case Condition cnd: throw cnd;
+									case InnerException ie: throw ie;
+									default: break;
+								}
+							}
+							default: break;
 						}
+						return javaError("error executing: {member} with: {args}", thw, name == null ? null : symbol(name), o, null);
 					}
 				}
 			);
@@ -1215,6 +1244,7 @@ public class Vm {
 						switch (thw = ite.getTargetException()) {
 							case Value val: throw val;
 							case Condition cnd: throw cnd;
+							case InnerException ie: throw ie;
 							default: // in errore senza!
 						}
 					}
@@ -1440,6 +1470,8 @@ public class Vm {
 		return cl == Any.class
 			|| cl.isInstance(obj)
 			|| obj instanceof Class cl2 && cl.isAssignableFrom(cl2)
+			|| cl == Apv.class && (obj instanceof Apv || isjFun(obj))
+			|| cl == Combinable.class && (obj instanceof Combinable || isjFun(obj))
 			|| cl == Apv0.class && obj instanceof Apv apv && args(apv) == 0
 			|| cl == Apv1.class && obj instanceof Apv apv && args(apv) == 1
 			// TODO valutare
@@ -1456,9 +1488,13 @@ public class Vm {
 		}
 	}
 	private Object innerError(InnerException ie, Object op, Object o, Object chk) {
-		return !member(op, "check", "the")
+		return op instanceof Opv
+			? error("returning from {opv}", ie, "opv", op)
+			: !member(op, ":", "check")
 			? error("combining {operator} with {operands}", ie, "operator", op, "operands", o)
-			: ie.objs[1] != o /*&& ie.objs[3].equals(toChk(chk))*/
+			// con : e check quando va in errore il check in profondità, es. (: (Integer) (#t))
+			// ovvero quando il valore in errore (ie.objs[1]) è diverso dall'intero valore da controllare (o)
+			: ie.objs[1] != o // || !ie.objs[3].equals(toChk(chk))
 			? error("checking {operands} with {check}", ie, "operands", o, "check", toChk(chk))
 			: error(ie)
 		;
@@ -1940,12 +1976,43 @@ public class Vm {
 				"%getMethod", wrap(new JFun("%GetMethod", (n,o)-> checkN(n, o, 2, or(null, Class.class), Symbol.class), (l,o)-> getMethod(o.car(), o.car(1)) )),
 				// Check
 				//"%the", wrap(new JFun("%The", (n,o)-> checkN(n, o, 2, Class.class), (l,o)-> o.<Class>car().isInstance(o.car(1)) ? o.car(1) : typeError("not a {expected}: {datum}", o.car(1), symbol(o.<Class>car().getSimpleName())) )),
-				"%the", wrap(new JFun("%The", (n,o)-> checkN(n, o, 2), (l,o)-> check("the", o.car(1), o.car) )),
-				"%check", wrap(new JFun("%Check", (n,o)-> checkN(n, o, 2), (l,o)-> check("check", o.car, o.car(1)) )),
-				"%checkO", wrap(new JFun("%CheckO", (n,o)-> checkN(n, o, 2), (l,o)-> checkO(o.car, o.car(1)) )),
+				//"%the", wrap(new JFun("%The", (n,o)-> checkN(n, o, 2), (l,o)-> check("the", o.car(1), o.car) )),
+				//"%check", wrap(new JFun("%Check", (n,o)-> checkN(n, o, 2), (l,o)-> check("check", o.car, o.car(1)) )),
+				//"%checkO", wrap(new JFun("%CheckO", (n,o)-> checkN(n, o, 2), (l,o)-> checkO(o.car, o.car(1)) )),
 				//"%matchBox?", wrap(new JFun("%MatchBox?", (n,o)-> checkN(n, o, 2, Any.class, list(1, 2, Box.class, Any.class)), (l,o)-> matchType(o.car, o.car(1)) )),
 				//"%matchObj?", wrap(new JFun("%MatchObj?", (n,o)-> checkN(n, o, 2, Any.class, list(1, more, Class.class, or(At.class, Dot.class, Symbol.class, Keyword.class, String.class), Any.class)), (l,o)-> matchType(o.car, o.car(1)) )),
 				"%matchType?", wrap(new JFun("%MatchType?", (n,o)-> checkN(n, o, 2, Any.class, or(list(1, 2, Box.class, Any.class), list(1, more, Any.class, list(1, more, Class.class, or(At.class, Dot.class, Symbol.class, Keyword.class, String.class), Any.class)))), (l,o)-> matchType(o.car, o.car(1)) )),
+				"%:", new Colon(":"),
+				"%check", new Colon("check"),
+				"%evalChk", lambda(vmEnv, list(symbol("ck"), symbol("env")),
+					uncked(()->
+						toLispList("""
+							(%def %=*
+							  (%vau (key . lst) env
+							    (%def key (%eval key env))
+							    ( (%def loop :rhs (%\\ (lst) (%if (%null? lst) #f (%== (%car lst) key) #t (loop (%cdr lst)) ) )) lst) ))
+							(%def evl
+							  (%\\ (ck)
+							    (%if
+							      (%== ck 'oo) (.MAX_VALUE &java.lang.Integer)
+							      (%! (%cons? ck)) (%eval ck env)
+							      ( (%\\ (ckcar)
+							          (%if
+							            (%== ckcar 'or) (%list->array (evm (%cdr ck)))
+							            (%== ckcar 'and) (%cons 'and (evm (%cdr ck)))
+							            (%=* ckcar %' quote) (%cadr ck)
+							            ( (%\\ (evckcar)
+							                (%if (%type? evckcar &Wat.Vm$Apv)
+							                  (%cons evckcar (%cons ckcar (%eval (%list* '%list (%cdr ck)) env)))
+							                  (%cons (evl ckcar) (evm (%cdr ck))) ))
+							              (%eval ckcar env) ) ))
+							        (%car ck) ) )))
+							(%def evm (%\\ (lst) (%if (%null? lst) #null (%cons (evl (%car lst)) (evm (%cdr lst))))))
+							(evl ck)
+							"""
+						)
+					)
+				),
 				// Array
 				//"%array?", wrap(new JFun("%Array?", (Function<Object, Boolean>) obj-> obj.getClass().isArray() )),
 				"%list->array", wrap(new JFun("%List->Array", (n,o)-> checkM(n, o, 1, List.class), (l,o)-> array(o.car()) )),

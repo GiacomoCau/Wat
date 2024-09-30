@@ -186,18 +186,21 @@
       </h3>
       <ul>
         <li>
-          Return the lenght of OBJECT if match CHECK, signals an error otherwise.
+          Return the lenght of FORM if match CHECK, signals an error otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (check object check)
+          (check form check)
         </li>
         <li>
           (type fexpr)
         </li>
         <li>
-          (derivation ((\ ((#: check object)) (len object)) object) 
+          (derivation ((\ ((#: check value)) (len value)) form))
+        </li>
+        <li>
+          (derivation (let ( (value (eval form env)) (chk (%evalChk check env)) ) (@check vm value chk))) 
         </li>
       </ul>
     </div>
@@ -251,22 +254,35 @@
     </div>
     <div>
       <h3>
-        the
+        :
       </h3>
       <ul>
         <li>
-          Return VALUE if VALUE match CHK, signals an error otherwise.
+          Return VALUE if VALUE match CHECK, signals an error otherwise.
           <br/>
             &nbsp;
         </li>
         <li>
-          (the chk value)
+          (: check form . forms)
         </li>
         <li>
           (type macro)
         </li>
         <li>
-          (derivation (let1 (value (eval value env)) (apply %check (list value chk) env) value)) 
+          (derivation ((\ ((#: check value)) value) (begin form . forms)))
+        </li>
+        <li>
+          (derivation (let ( (value (eval (list* 'begin form . forms) env)) (chk (%evalChk check env)) ) (@check vm value chk) value)) 
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        the
+      </h3>
+      <ul>
+        <li>
+          alias for :.
         </li>
       </ul>
     </div>

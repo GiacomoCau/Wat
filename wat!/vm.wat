@@ -104,36 +104,6 @@
 (%def %slotBound? (%\ ((#: ObjEnv obj) (#: Intern slot)) (%bound? slot obj)))
 
 
-(%def %mkCheckEval
-  (%\ (check)
-    (%vau (o ck) env
-      (%def %=*
-        (%vau (key . lst) env
-          (%def key (%eval key env))
-          ( (%def loop :rhs (%\ (lst) (%if (%null? lst) #f (%== (%car lst) key) #t (loop (%cdr lst)) ) )) lst) ))
-      (%def evl
-        (%\ (ck)
-          (%if
-            (%== ck 'oo) (.MAX_VALUE &java.lang.Integer)
-            (%! (%cons? ck)) (%eval ck env)
-            ( (%\ (ckcar)
-                (%if
-                  (%== ckcar 'or) (%list->array (evm (%cdr ck)))
-                  (%== ckcar 'and) (cons 'and (evm (%cdr ck)))
-                  (%=* ckcar %' quote) (%cadr ck)
-                  ( (%\ (evckcar)
-                      (%if (%type? evckcar Apv)
-                        (%cons evckcar (%cons ckcar (%eval (%list* '%list (%cdr ck)) env)))
-                        (%cons (evl ckcar) (evm (%cdr ck))) ))
-                    (%eval ckcar env) ) ))
-              (%car ck) ) )))
-      (%def evm (%\ (lst) (%if (%null? lst) #null (%cons (evl (%car lst)) (evm (%cdr lst))))))
-      (check o (evl ck)) )))
-
-(%def %check (%mkCheckEval %check))
-(%def %checkO (%mkCheckEval %checkO))
-
-
 ;;; Boot
 
 (load "wat!/boot.wat")

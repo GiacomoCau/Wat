@@ -82,6 +82,14 @@
                       (continue (\ () (eval symbol env)) :associatedConditions (list condition))
                       (storeValue (\ (value) (eval (list 'def symbol value) env)) :associatedConditions (list condition)) )
                     (repl:runDebuggerLoop condition k) )) )
+            ( (Error :type 'type)
+                  (restartCase 
+                    ( (useValue (\ (value) value) :associatedConditions (list condition)) )
+                    (repl:runDebuggerLoop condition k) ) )
+            ( (Error :type 'match)
+                  (restartCase 
+                    ( (useValue (\ (value) value) :associatedConditions (list condition)) )
+                    (repl:runDebuggerLoop condition k) ) )
             (else
                (repl:runDebuggerLoop condition k) ) ))))))
 

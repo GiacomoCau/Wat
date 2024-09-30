@@ -127,11 +127,14 @@ public class Utility {
 		try {
 			return t.call();
 		}
-		catch (Vm.Error|Vm.Value err) {
+		catch (Vm.Error | Vm.Value err) {
 			throw err;
 		}
 		catch (ParseException pe) {
 			throw new RuntimeException(getMessage(pe));
+		}
+		catch (RuntimeException e) {
+			throw e;
 		}
 		catch (Exception e) {
 			throw new RuntimeException(e);

@@ -2463,14 +2463,15 @@
    |#
   (unless boolean (error (new Error "invalid assetion" :type 'assert :datum boolean :expected #t))))
 
-(defVau (check o ck) env
-  #|Return the lenght of OBJECT if match CHECK, signals an error otherwise.
+(def check
+  #|Return the lenght of FORM if match CHECK, signals an error otherwise.
    |
-   |$(fn object check)
+   |$(fn form check)
    |$(type fexpr)
-   |$(derivation ((\ ((#: check object)) (len object)) object))
+   |$(derivation ((\ ((#: check value)) (len value)) form))
+   |$(derivation (let ( (value (eval form env)) (chk (%evalChk check env)) ) (@check vm value chk))) 
    |#
-  (apply %check (list (eval o env) ck) env) )
+  %check)
 
 (defMacro (check* o . cks)
   #|Returns the length of LIST if the elements of LIST match the corresponding CHECKS, signals an error otherwise.
@@ -2495,14 +2496,20 @@
       (apply check args env)
       #t )))
 
-(defVau (the ck value) env
-  #|Return VALUE if VALUE match CHK, signals an error otherwise.
+(def :
+  #|Return VALUE if VALUE match CHECK, signals an error otherwise.
    |
-   |$(fn chk value)
+   |$(fn check form . forms)
    |$(type macro)
-   |$(derivation (let1 (value (eval value env)) (apply %check (list value chk) env) value)) 
+   |$(derivation ((\ ((#: check value)) value) (begin form . forms)))
+   |$(derivation (let ( (value (eval (list* 'begin form . forms) env)) (chk (%evalChk check env)) ) (@check vm value chk) value)) 
    |#
-  (let1 (value (eval value env)) (apply %check (list value ck) env) value) )
+  %:)
+
+(def the
+  #|alias for :.
+   |#
+  :)
 
 
 #|! Block ReturnFrom Loop For While Until Repeat DoTimes DoList
