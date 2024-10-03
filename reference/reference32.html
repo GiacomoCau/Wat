@@ -6,7 +6,7 @@
     </title>
     <meta charset="UTF-8"/>
     <style>
-      body { font-family: consolas; }
+      body { margin-left: 2%; }
       ul { list-style-type: none; }
       a { text-decoration: none; }
     </style>
@@ -186,21 +186,21 @@
       </h3>
       <ul>
         <li>
-          Return the lenght of FORM if match CHECK, signals an error otherwise.
+          Returns the length of the EXPR value if it matches CHECK, otherwise reports an error.
           <br/>
             &nbsp;
         </li>
         <li>
-          (check form check)
+          (check expr check)
         </li>
         <li>
           (type fexpr)
         </li>
         <li>
-          (derivation ((\ ((#: check value)) (len value)) form))
+          (derivation ((\ ((#: check value)) (len value)) expr))
         </li>
         <li>
-          (derivation (let ( (value (eval form env)) (chk (%evalChk check env)) ) (@check vm value chk))) 
+          (derivation (let ( (value (eval exor env)) (chk (%evalChk check env)) ) (@check vm value chk))) 
         </li>
       </ul>
     </div>
@@ -258,7 +258,7 @@
       </h3>
       <ul>
         <li>
-          Return VALUE if VALUE match CHECK, signals an error otherwise.
+          Returns the value of the last form of (begin FORM . FORMS) if it matches CHECK, otherwise it reports an error.
           <br/>
             &nbsp;
         </li>
@@ -266,7 +266,7 @@
           (: check form . forms)
         </li>
         <li>
-          (type macro)
+          (type fexpr)
         </li>
         <li>
           (derivation ((\ ((#: check value)) value) (begin form . forms)))

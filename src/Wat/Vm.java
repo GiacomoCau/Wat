@@ -421,7 +421,7 @@ public class Vm {
 		public List keys() { return list(keySet().toArray()); }
 		public List symbols() { return list(keySet().stream().map(Vm.this::symbol).toArray()); }
 		public List keywords() { return list(keySet().stream().map(Vm.this::keyword).toArray()); }
-		@Override public Object apply(List o) {
+		@Override public Object apply(List o) { // () | (value) | (key value ...) | ((or #inert #ignore :rhs :prv :cnt) key value ...)
 			var len = len(o);
 			return switch (len) {
 				case 0-> this;
@@ -457,7 +457,7 @@ public class Vm {
 		Object value;
 		public Box () { this.value = boxDft; }
 		public Box (Object val) { this.value = val; }
-		@Override public Object apply(List o) { // () | (value) | (:key value)
+		@Override public Object apply(List o) { // () | (value) | ((or #inert #ignore :rhs :prv :cnt) value)
 			var chk = checkR(this, o, 0, 2);
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
@@ -521,7 +521,7 @@ public class Vm {
 				+ "}"
 			;
 		}
-		@Override public Object apply(List o) {
+		@Override public Object apply(List o) { // () | (value) | (key value ...) | ((or #inert #ignore :rhs :prv :cnt) key value ...)
 			var len = len(o);
 			if (len == 0) return this;
 			if (len == 1) return get(o.car);
@@ -706,7 +706,7 @@ public class Vm {
 					throw new TypeException("expected literal: {expected}, found: {datum}", rhs, lc.car(1));
 				}
 				else if (lc.car == sheColon) {
-					checkO(rhs, getTco(combine(e, unwrap(vmEnv.get("%evalChk")), list(lc.car(1), e))));
+					checkO(rhs, getTco(evalChk.combine(e, cons(lc.car(1)))));
 					yield bind(def, bndRes, e, lc.car(2), rhs); 
 				}
 				else if (!(rhs instanceof Cons rc)) {
@@ -742,7 +742,7 @@ public class Vm {
 			this.e = e; this.pt = pt; this.ep = ep; //this.x = x
 			this.x = x == null || x.car != sheColon ? x 
 				: x.cdr() != null ? cons(cons(new Colon(this), x.cdr()))
-				: matchError("invalid body value check, expected {operands#,%+d} operands, found: {datum} in: " + x /* c + " of: " + expr*/ , null, 1) ;
+				: matchError("invalid return value check, expected {operands#,%+d} operands, found: {datum} in: " + x /* c + " of: " + expr*/ , null, 1) ;
 		}
 		public Object combine(Env e, List o) {
 			var xe = env(this.e);
@@ -762,12 +762,11 @@ public class Vm {
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			return pipe(null, ()-> getTco(b ? begin.combine(e, o.cdr()) : evaluate(e, o.car)),
-				(val)->	switch (getTco(Vm.this.combine(e, unwrap(vmEnv.get("%evalChk")), list(o.car(b ? 0 : 1), e)))) {
-					case Suspension s-> s;
-					case Object eck-> {
-						var len = check(op, val, eck);
-						yield b ? val : len;
-					}
+				(val)->{
+					var eck = getTco(evalChk.combine(e, cons(o.car(b ? 0 : 1))));
+					if (eck instanceof Suspension s) return s;
+					var len = check(op, val, eck);
+					return b ? val : len;
 				}
 			);
 		}
@@ -1120,36 +1119,38 @@ public class Vm {
 	
 	// Java Native Interface
 	interface ArgsList extends Function<List,Object> {}
-	interface ChkList extends BiFunction<String,List,Object> {}
+	interface ChkList extends BiFunction<Symbol,List,Object> {}
 	interface LenList extends BiFunction<Integer,List,Object> {}
 	class JFun implements Combinable {
-		String name; ArgsList jfun; ChkList check;
+		Symbol symbol; ArgsList jfun; ChkList check;
 		JFun(String name, ChkList check, LenList jfun) { this(name, jfun); this.check = check; };
-		JFun(String name, Object jfun) { this(jfun); this.name = name; };
+		JFun(String name, Object jfun) { this(jfun); this.symbol = symbol(name); };
 		JFun(Object jfun) {
 			this.jfun = switch (jfun) {
 				case ArgsList al-> al;  
-				case LenList ll-> o-> pipe(null, ()-> check.apply(name, o),
+				case LenList ll-> o-> pipe(null, ()-> check.apply(symbol, o),
 					obj-> obj instanceof Integer len ? ll.apply(len, o)	: resumeError(obj, symbol("Integer")));   
-				case Supplier s-> o-> pipe(null, ()-> checkN(name, o, 0),
+				case Supplier s-> o-> pipe(null, ()-> checkN(symbol, o, 0),
 					obj-> obj instanceof Integer /*len*/ ? s.get() : resumeError(obj, symbol("Integer")));  
-				case Consumer c-> o-> pipe(null, ()-> checkN(name, o, 1),
+				case Consumer c-> o-> pipe(null, ()-> checkN(symbol, o, 1),
 					obj->{
 						if (! (obj instanceof Integer /*len*/)) return resumeError(obj, symbol("Integer"));
 						c.accept(o.car);
 						return inert;
-					});
-				case Function f-> o-> pipe(null, ()-> checkN(name, o, 1),
+					}
+				);
+				case Function f-> o-> pipe(null, ()-> checkN(symbol, o, 1),
 					obj-> obj instanceof Integer /*len*/ ? f.apply(o.car) : resumeError(obj, symbol("Integer")));  
-				case BiConsumer bc-> o-> pipe(null, ()-> checkN(name, o, 2),
+				case BiConsumer bc-> o-> pipe(null, ()-> checkN(symbol, o, 2),
 					obj->{
 						if (! (obj instanceof Integer /*len*/)) return resumeError(obj, symbol("Integer"));
 						bc.accept(o.car, o.car(1));
 						return inert;
-					});
-				case BiFunction bf-> o-> pipe(null, ()-> checkN(name, o, 2),
+					}
+				);
+				case BiFunction bf-> o-> pipe(null, ()-> checkN(symbol, o, 2),
 					obj-> obj instanceof Integer /*len*/ ? bf.apply(o.car, o.car(1)) : resumeError(obj, symbol("Integer")));
-				case Field f-> o-> pipe(null, ()-> checkR(name, o, 1, 2), obj->{
+				case Field f-> o-> pipe(null, ()-> checkR(symbol, o, 1, 2), obj->{
 						if (!(obj instanceof Integer len)) return resumeError(obj, symbol("Integer"));
 						if (len == 1) return uncked(()-> f.get(o.car));
 						return uncked(()->{ f.set(o.car, o.car(1)); return inert; });
@@ -1158,7 +1159,7 @@ public class Vm {
 				case Method m-> o->{
 					var pc = m.getParameterCount();
 					return pipe(null,
-						()-> !m.isVarArgs() ? checkN(name, o, pc+1) : checkM(name, o, pc),
+						()-> !m.isVarArgs() ? checkN(symbol, o, pc+1) : checkM(symbol, o, pc),
 						obj-> obj instanceof Integer /*len*/
 							? uncked(()-> m.invoke(o.car, reorg(m, array(o.cdr()))))
 							: resumeError(obj, symbol("Integer"))
@@ -1166,7 +1167,7 @@ public class Vm {
 				};
 				case Constructor c-> o->
 					pipe(null,
-						()-> checkN(name, o, c.getParameterCount()),
+						()-> checkN(symbol, o, c.getParameterCount()),
 						obj-> obj instanceof Integer /*len*/ 
 							? uncked(()-> c.newInstance(reorg(c, array(o))))
 							: resumeError(obj, symbol("Integer"))
@@ -1194,13 +1195,13 @@ public class Vm {
 							}
 							default: break;
 						}
-						return javaError("error executing: {member} with: {args}", thw, name == null ? null : symbol(name), o, null);
+						return javaError("error executing: {member} with: {args}", thw, symbol, o, null);
 					}
 				}
 			);
 		}
 		public String toString() {
-			if (name != null) return name;
+			if (symbol != null) return symbol.name;
 			var intefaces = stream(jfun.getClass().getInterfaces()).map(Vm.this::toString).collect(joining(" "));
 			return "{JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "}";
 		}
@@ -1492,7 +1493,7 @@ public class Vm {
 			? error("returning from {opv}", ie, "opv", op)
 			: !member(op, ":", "check")
 			? error("combining {operator} with {operands}", ie, "operator", op, "operands", o)
-			// con : e check quando va in errore il check in profondità, es. (: (Integer) (#t))
+			// con : e check quando va in errore un check in profondità, es. (: (Integer) (#t))
 			// ovvero quando il valore in errore (ie.objs[1]) è diverso dall'intero valore da controllare (o)
 			: ie.objs[1] != o // || !ie.objs[3].equals(toChk(chk))
 			? error("checking {operands} with {check}", ie, "operands", o, "check", toChk(chk))
@@ -1757,7 +1758,8 @@ public class Vm {
 									list(1, more, String.class,
 										or(	list(or(Symbol.class, Keyword.class, String.class), Any.class),
 											list(1, more, Throwable.class, or(Symbol.class, Keyword.class, String.class), Any.class) )))))),
-					(l,o)-> ((ArgsList) at("new")).apply(listStar(o.car, Vm.this, o.cdr())) )),
+					(l,o)-> ((ArgsList) at("new")).apply(listStar(o.car, Vm.this, o.cdr()))
+				)),
 				// Env & Obj
 				//"%objEnv?", wrap(new JFun("%ObjEnv?", (Function<Object, Boolean>) obj-> obj instanceof ObjEnv )),
 				"%get", wrap(new JFun("%Get", (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), ObjEnv.class), (l,o)-> o.<ObjEnv>car(1).get(o.car)) ),
@@ -1785,7 +1787,8 @@ public class Vm {
 							default-> typeError("cannot set car, invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
 						};
 						case Object obj-> resumeError(obj, symbol("Integer"));
-					} )),
+					}
+				)),
 				"%setCdr", wrap(new JFun("%SetCdr",
 					(n,o)-> checkR(n, o, 2, 3, Cons.class),
 					(l,o)->	switch (bndRes(l == 2 ? ignore : o.car(1))) {
@@ -1798,11 +1801,13 @@ public class Vm {
 							default-> typeError("cannot set cdr, invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
 						};
 						case Object obj-> resumeError(obj, symbol("Integer"));
-					} )),
+					}
+				) ),
 				"%null?", wrap(new JFun("%Null?", (Function<Object, Boolean>) obj-> obj == null)),
 				//"%!null?", wrap(new JFun("%!Null?", (Function<Object, Boolean>) obj-> obj != null)),
 				"%cons?", wrap(new JFun("%Cons?", (Function<Object, Boolean>) obj-> obj instanceof Cons)),
 				//"%atom?", wrap(new JFun("%Cons?", (Function<Object, Boolean>) obj-> !(obj instanceof Cons))),
+				//"%!cons?", wrap(new JFun("%Cons?", (Function<Object, Boolean>) obj-> !(obj instanceof Cons))),
 				// List
 				"%list?", wrap(new JFun("%List?", (Function<Object, Boolean>) obj-> obj instanceof List)),
 				"%list", wrap(new JFun("%List", (ArgsList) o-> o)),
@@ -1975,44 +1980,9 @@ public class Vm {
 				"%addMethod", wrap(new JFun("%AddMethod", (n,o)-> checkN(n, o, 3, or(null, Class.class), Symbol.class, Apv.class), (l,o)-> addMethod(o.car(), o.car(1), o.car(2)) )),
 				"%getMethod", wrap(new JFun("%GetMethod", (n,o)-> checkN(n, o, 2, or(null, Class.class), Symbol.class), (l,o)-> getMethod(o.car(), o.car(1)) )),
 				// Check
-				//"%the", wrap(new JFun("%The", (n,o)-> checkN(n, o, 2, Class.class), (l,o)-> o.<Class>car().isInstance(o.car(1)) ? o.car(1) : typeError("not a {expected}: {datum}", o.car(1), symbol(o.<Class>car().getSimpleName())) )),
-				//"%the", wrap(new JFun("%The", (n,o)-> checkN(n, o, 2), (l,o)-> check("the", o.car(1), o.car) )),
-				//"%check", wrap(new JFun("%Check", (n,o)-> checkN(n, o, 2), (l,o)-> check("check", o.car, o.car(1)) )),
-				//"%checkO", wrap(new JFun("%CheckO", (n,o)-> checkN(n, o, 2), (l,o)-> checkO(o.car, o.car(1)) )),
-				//"%matchBox?", wrap(new JFun("%MatchBox?", (n,o)-> checkN(n, o, 2, Any.class, list(1, 2, Box.class, Any.class)), (l,o)-> matchType(o.car, o.car(1)) )),
-				//"%matchObj?", wrap(new JFun("%MatchObj?", (n,o)-> checkN(n, o, 2, Any.class, list(1, more, Class.class, or(At.class, Dot.class, Symbol.class, Keyword.class, String.class), Any.class)), (l,o)-> matchType(o.car, o.car(1)) )),
 				"%matchType?", wrap(new JFun("%MatchType?", (n,o)-> checkN(n, o, 2, Any.class, or(list(1, 2, Box.class, Any.class), list(1, more, Any.class, list(1, more, Class.class, or(At.class, Dot.class, Symbol.class, Keyword.class, String.class), Any.class)))), (l,o)-> matchType(o.car, o.car(1)) )),
 				"%:", new Colon(":"),
 				"%check", new Colon("check"),
-				"%evalChk", lambda(vmEnv, list(symbol("ck"), symbol("env")),
-					uncked(()->
-						toLispList("""
-							(%def %=*
-							  (%vau (key . lst) env
-							    (%def key (%eval key env))
-							    ( (%def loop :rhs (%\\ (lst) (%if (%null? lst) #f (%== (%car lst) key) #t (loop (%cdr lst)) ) )) lst) ))
-							(%def evl
-							  (%\\ (ck)
-							    (%if
-							      (%== ck 'oo) (.MAX_VALUE &java.lang.Integer)
-							      (%! (%cons? ck)) (%eval ck env)
-							      ( (%\\ (ckcar)
-							          (%if
-							            (%== ckcar 'or) (%list->array (evm (%cdr ck)))
-							            (%== ckcar 'and) (%cons 'and (evm (%cdr ck)))
-							            (%=* ckcar %' quote) (%cadr ck)
-							            ( (%\\ (evckcar)
-							                (%if (%type? evckcar &Wat.Vm$Apv)
-							                  (%cons evckcar (%cons ckcar (%eval (%list* '%list (%cdr ck)) env)))
-							                  (%cons (evl ckcar) (evm (%cdr ck))) ))
-							              (%eval ckcar env) ) ))
-							        (%car ck) ) )))
-							(%def evm (%\\ (lst) (%if (%null? lst) #null (%cons (evl (%car lst)) (evm (%cdr lst))))))
-							(evl ck)
-							"""
-						)
-					)
-				),
 				// Array
 				//"%array?", wrap(new JFun("%Array?", (Function<Object, Boolean>) obj-> obj.getClass().isArray() )),
 				"%list->array", wrap(new JFun("%List->Array", (n,o)-> checkM(n, o, 1, List.class), (l,o)-> array(o.car()) )),
@@ -2022,10 +1992,9 @@ public class Vm {
 				"%'", opv(vmEnv, cons(symbol("arg")), ignore, cons(symbol("arg"))),
 				"%`", opv(vmEnv, cons(symbol("arg")), ignore, cons(symbol("arg"))),
 				"%´", opv(vmEnv, cons(symbol("arg")), ignore, cons(symbol("arg"))),
-				"%\\", opv(vmEnv,
-					cons(symbol("formals"), symbol("forms")),
-					symbol("env"),
-					uncked(()-> toLispList("(%wrap (%eval (%list* %vau formals #ignore forms) env))")) ),
+				"%\\", opv(vmEnv, cons(symbol("formals"), symbol("forms")), symbol("env"),
+					uncked(()-> toLispList("(%wrap (%eval (%list* %vau formals #ignore forms) env))"))
+				),
 				// Extra
 				"vm", this,
 				"%test", test,
@@ -2051,7 +2020,8 @@ public class Vm {
 					(n,o)-> checkR(n, o, 0, 1, or(inert, keyword("rhs"), keyword("prv"), keyword("cnt"))),
 					(l,o)-> l == 0
 						? switch (bndRes) {case 1-> keyword("rhs"); case 2-> keyword("prv"); case 3-> keyword("cnt"); default-> inert; }
-						: inert(bndRes=(int) bndRes(o.car)) )),
+						: inert(bndRes=(int) bndRes(o.car))
+				)),
 				"prEnv", wrap(new JFun("PrEnv", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> l == 0 ? prEnv : inert(prEnv=o.car()) )),
 				"boxDft", wrap(new JFun("BoxDft", (n,o)-> checkR(n, o, 0, 1), (l,o)-> l == 0 ? boxDft : inert(boxDft=o.car) )),
 				"aQuote", wrap(new JFun("AQuote", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? aQuote : inert(aQuote=o.car()) )),
@@ -2063,6 +2033,35 @@ public class Vm {
 			)
 		);
 	}
+	Opv evalChk = opv(vmEnv, cons(symbol("ck")), symbol("env"),
+		uncked(()->
+			toLispList("""
+				(%def %=*
+				  (%vau (key . lst) env
+				    (%def key (%eval key env))
+				    ( (%def loop :rhs (%\\ (lst) (%if (%null? lst) #f (%== (%car lst) key) #t (loop (%cdr lst)) ) )) lst) ))
+				(%def evl
+				  (%\\ (ck)
+				    (%if
+				      (%== ck 'oo) (.MAX_VALUE &java.lang.Integer)
+				      (%! (%cons? ck)) (%eval ck env)
+				      ( (%\\ (ckcar)
+				          (%if
+				            (%== ckcar 'or) (%list->array (evm (%cdr ck)))
+				            (%== ckcar 'and) (%cons 'and (evm (%cdr ck)))
+				            (%=* ckcar %' quote) (%cadr ck)
+				            ( (%\\ (evckcar)
+				                (%if (%type? evckcar &Wat.Vm$Apv)
+				                  (%cons evckcar (%cons ckcar (%eval (%list* '%list (%cdr ck)) env)))
+				                  (%cons (evl ckcar) (evm (%cdr ck))) ))
+				              (%eval ckcar env) ) ))
+				        (%car ck) ) )))
+				(%def evm (%\\ (lst) (%if (%null? lst) #null (%cons (evl (%car lst)) (evm (%cdr lst))))))
+				(evl ck)
+				"""
+			)
+		)
+	);
 	
 	
 	// API

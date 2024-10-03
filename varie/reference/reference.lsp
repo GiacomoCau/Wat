@@ -38,7 +38,7 @@
         (title (pr "Wat/Lispx Reference"))
         (meta (@ 'charset "UTF-8"))
         (style
-          (pr "body { font-family: consolas; }")
+          (pr "body { margin-left: 2%; margin-top: 2%;}")
           (pr "ul { list-style-type: none; }") ))
       (body
         (h2 (pr "Wat/Lispx Reference"))
@@ -87,7 +87,7 @@
               (title (pr chapter))
               (meta (@ 'charset "UTF-8"))
               (style
-                (pr "body { font-family: consolas; }")
+                (pr "body { margin-left: 2%; }")
                 (pr "ul { list-style-type: none; }")
                 (pr "a { text-decoration: none; }") ))
             (body

@@ -46,7 +46,7 @@
   %\ )
 
 (def lambda
-  #|alias for \ :-).
+  #|alias for \. :-)
    |#
   \ )
 
@@ -2461,17 +2461,17 @@
    |$(fn boolean)
    |$(type function)
    |#
-  (unless boolean (error (new Error "invalid assetion" :type 'assert :datum boolean :expected #t))))
+  (unless boolean (error (new Error "invalid assetion" :type 'assert :datum boolean :expected #t))) )
 
 (def check
-  #|Return the lenght of FORM if match CHECK, signals an error otherwise.
+  #|Returns the length of the EXPR value if it matches CHECK, otherwise reports an error.
    |
-   |$(fn form check)
+   |$(fn expr check)
    |$(type fexpr)
-   |$(derivation ((\ ((#: check value)) (len value)) form))
-   |$(derivation (let ( (value (eval form env)) (chk (%evalChk check env)) ) (@check vm value chk))) 
+   |$(derivation ((\ ((#: check value)) (len value)) expr))
+   |$(derivation (let ( (value (eval exor env)) (chk (%evalChk check env)) ) (@check vm value chk))) 
    |#
-  %check)
+  %check )
 
 (defMacro (check* o . cks)
   #|Returns the length of LIST if the elements of LIST match the corresponding CHECKS, signals an error otherwise.
@@ -2481,7 +2481,7 @@
    |$(derivation ((\ (#: checks list) (len list)) . list) 
    |$(derivation (check list checks)) 
    |#
-  (list 'check o cks))
+  (list 'check o cks) )
 
 (defVau check? args env
   #|Return #true if OBJECT match CHECK, #false otherwise.
@@ -2497,19 +2497,19 @@
       #t )))
 
 (def :
-  #|Return VALUE if VALUE match CHECK, signals an error otherwise.
+  #|Returns the value of the last form of (begin FORM . FORMS) if it matches CHECK, otherwise it reports an error.
    |
    |$(fn check form . forms)
-   |$(type macro)
+   |$(type fexpr)
    |$(derivation ((\ ((#: check value)) value) (begin form . forms)))
    |$(derivation (let ( (value (eval (list* 'begin form . forms) env)) (chk (%evalChk check env)) ) (@check vm value chk) value)) 
    |#
-  %:)
+  %: )
 
 (def the
   #|alias for :.
    |#
-  :)
+  : )
 
 
 #|! Block ReturnFrom Loop For While Until Repeat DoTimes DoList
