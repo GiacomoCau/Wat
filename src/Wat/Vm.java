@@ -123,7 +123,7 @@ import List.ParseException;
 	cmt: comment
 	dbg: debugging information
 	err: error
-	v, val: value
+	val, v: value
 	res: result
 	thw: throwable
 	prp: prompt
@@ -145,7 +145,7 @@ public class Vm {
 	boolean prAttr = false; // print error attribute
 	boolean prInert = false; // print inert
 	boolean aQuote = true; // auto quote list
-	boolean hdlAny = true; // any value for catch hadler
+	boolean hdlAny = true; // any value for catch handler
 	
 	Object boxDft = null; // box/dinamic default: null, inert, ...
 	
@@ -267,9 +267,9 @@ public class Vm {
 	// Evaluation Core
 	<T> T evaluate(Env e, Object o) {
 		if (prTrc >= 3) print("evaluate: ", indent(), o, "   ", e);
-		Object v; try {
+		Object val; try {
 			level += 1;
-			v = switch (o) {
+			val = switch (o) {
 				case Symbol s-> tco(()-> e.get(s));
 				case List l-> tco(()-> pipe(dbg(e, o), ()-> getTco(evaluate(e, l.car)), op-> tco(()-> combine(e, op, l.cdr()))));
 				case null, default-> o;
@@ -278,8 +278,8 @@ public class Vm {
 		finally {
 			level -= 1;
 		}
-		if (prTrc >= 4) print("  return: ", indent(), v=getTco(v)); 
-		return (T) v;
+		if (prTrc >= 4) print("  return: ", indent(), val=getTco(val)); 
+		return (T) val;
 	}
 	
 	
@@ -346,9 +346,9 @@ public class Vm {
 	
 	// Environment
 	interface ObjEnv {
-		Object value(Object key);
+		<T> T value(Object key);
 		boolean isBound(Object key);
-		Object get(Object key);
+		<T> T get(Object key);
 		List keys();
 		List symbols();
 		List keywords();
@@ -374,7 +374,7 @@ public class Vm {
 			}
 			return new Lookup(false, null);
 		};
-		public Object value(Object obj) {  return lookup(obj).value; }
+		public <T> T value(Object obj) {  return (T) lookup(obj).value; }
 		public boolean isBound(Object obj) { return lookup(obj).isBound; }
 		public Object get(Object obj) {
 			var lookup = lookup(obj);
@@ -754,11 +754,10 @@ public class Vm {
 		}
 	}
 	class Colon implements Combinable {
-		Object op;
-		boolean b;
+		Object op; boolean b;
 		Colon(Object op) { this.op = op;  this.b = !op.equals("check"); } 
 		public Object combine(Env e, List o) {
-			var chk = b ? checkM(this, o, 2) : checkN(this, o, 2); // o = (chk form . forms) | (form check)
+			var chk = b ? checkM(this, o, 2) : checkN(this, o, 2); // o = (check form . forms) | (form check)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			return pipe(null, ()-> getTco(b ? begin.combine(e, o.cdr()) : evaluate(e, o.car)),
@@ -776,7 +775,7 @@ public class Vm {
 		Combinable cmb;
 		Apv(Combinable cmb) { this.cmb = cmb; }
 		public Object combine(Env e, List o) {
-			return tco(()-> pipe(dbg(e, this, o), ()-> map("evaluate", car-> getTco(evaluate(e, car)), o), args-> tco(()-> cmb.combine(e, (List) args)))); 
+			return tco(()-> pipe(dbg(e, this, o), ()-> map("evalArgs", car-> getTco(evaluate(e, car)), o), args-> tco(()-> cmb.combine(e, (List) args)))); 
 		}
 		public String toString() {
 			return "{%Apv " + Vm.this.toString(cmb) + "}";
@@ -795,7 +794,9 @@ public class Vm {
 		: typeError("cannot unwrap, not a {expected}: {datum}", arg, symbol("Apv"));
 	}
 	Opv opv(Env e, Object pt, Object pe, List body) { return new Opv(e, pt, pe, body); } 
+	Opv opv(Env e, String s) { List lst = uncked(()-> toLispList(s)); return opv(e, lst.car(), lst.car(1), lst.cdr(1)); } 
 	Apv lambda(Env e, Object pt, List body) { return new Apv(opv(e, pt, ignore, body)); }
+	Apv lambda(Env e, String s) { List lst = uncked(()-> toLispList(s)); return lambda(e, lst.car(), lst.cdr()); }
 	Apv apv1(Env e, Symbol sym, List body) { return lambda(e, cons(sym), body); }
 	Apv apv0(Env e, List body) { return lambda(e, null, body); }
 	
@@ -1614,7 +1615,7 @@ public class Vm {
 						}
 					}
 					default: {
-						var expt = (List) map("pushSubcontBarrier.combine", x-> pushSubcontBarrier.combine(env, pushRootPrompt(cons(x))), o.cdr(1)); 
+						var expt = (List) map("evalExpt", x-> pushSubcontBarrier.combine(env, pushRootPrompt(cons(x))), o.cdr(1)); 
 						if (expt.car instanceof Class && matchType(val, expt)) return true;
 						print(name, exp, " should be ", expt, " but is ", val);
 					}
@@ -1626,7 +1627,7 @@ public class Vm {
 					thw.printStackTrace(out);
 				else {
 					var val = thw instanceof Value v ? v.value : thw;
-					var expt = (List) map("pushSubcontBarrier.combine", x-> pushSubcontBarrier.combine(env, pushRootPrompt(cons(x))), o.cdr(1));
+					var expt = (List) map("evalExpt", x-> pushSubcontBarrier.combine(env, pushRootPrompt(cons(x))), o.cdr(1));
 					if (expt.car instanceof Class && matchType(val, expt)) return true;
 					print(name, exp, " should be ", expt, " but is ", val);
 				}
@@ -1720,6 +1721,7 @@ public class Vm {
 	
 	// Bootstrap
 	Env vmEnv=vmEnv(), theEnv=env(vmEnv);
+	Opv evalChk = vmEnv.value("%evalChk");
 	Env vmEnv() {
 		Env vmEnv = env();
 		return (Env) vmEnv.apply(
@@ -1983,18 +1985,42 @@ public class Vm {
 				"%matchType?", wrap(new JFun("%MatchType?", (n,o)-> checkN(n, o, 2, Any.class, or(list(1, 2, Box.class, Any.class), list(1, more, Any.class, list(1, more, Class.class, or(At.class, Dot.class, Symbol.class, Keyword.class, String.class), Any.class)))), (l,o)-> matchType(o.car, o.car(1)) )),
 				"%:", new Colon(":"),
 				"%check", new Colon("check"),
+				"%evalChk", opv(vmEnv,"""
+					(ck) env
+					(%def %=*
+					  (%vau (key . lst) env
+					    (%def key (%eval key env))
+					    ( (%def loop :rhs (%\\ (lst) (%if (%null? lst) #f (%== (%car lst) key) #t (loop (%cdr lst)) ) )) lst) ))
+					(%def evl
+					  (%\\ (ck)
+					    (%if
+					      (%== ck 'oo) (.MAX_VALUE &java.lang.Integer)
+					      (%! (%cons? ck)) (%eval ck env)
+					      ( (%\\ (ckcar)
+					          (%if
+					            (%== ckcar 'or) (%list->array (evm (%cdr ck)))
+					            (%== ckcar 'and) (%cons 'and (evm (%cdr ck)))
+					            (%=* ckcar %' quote) (%cadr ck)
+					            ( (%\\ (evckcar)
+					                (%if (%type? evckcar &Wat.Vm$Apv)
+					                  (%cons evckcar (%cons ckcar (%eval (%list* '%list (%cdr ck)) env)))
+					                  (%cons (evl ckcar) (evm (%cdr ck))) ))
+					              (%eval ckcar env) ) ))
+					        (%car ck) ) )))
+					(%def evm (%\\ (lst) (%if (%null? lst) #null (%cons (evl (%car lst)) (evm (%cdr lst))))))
+					(evl ck)
+					"""
+				),
 				// Array
 				//"%array?", wrap(new JFun("%Array?", (Function<Object, Boolean>) obj-> obj.getClass().isArray() )),
 				"%list->array", wrap(new JFun("%List->Array", (n,o)-> checkM(n, o, 1, List.class), (l,o)-> array(o.car()) )),
 				"%array->list", wrap(new JFun("%Array->List", (n,o)-> checkM(n, o, 2, Boolean.class, Object[].class), (l,o)-> list(o.<Boolean>car(), o.<Object[]>car(1)) )),
 				// Derivated
-				"%theEnv", opv(vmEnv, null, symbol("env"), cons(symbol("env"))),
-				"%'", opv(vmEnv, cons(symbol("arg")), ignore, cons(symbol("arg"))),
-				"%`", opv(vmEnv, cons(symbol("arg")), ignore, cons(symbol("arg"))),
-				"%´", opv(vmEnv, cons(symbol("arg")), ignore, cons(symbol("arg"))),
-				"%\\", opv(vmEnv, cons(symbol("formals"), symbol("forms")), symbol("env"),
-					uncked(()-> toLispList("(%wrap (%eval (%list* %vau formals #ignore forms) env))"))
-				),
+				"%theEnv", opv(vmEnv, "() env env"),
+				"%'", opv(vmEnv, "(arg) #ignore arg"),
+				"%`", opv(vmEnv, "(arg) #ignore arg"),
+				"%´", opv(vmEnv, "(arg) #ignore arg"),
+				"%\\", opv(vmEnv, "(formals . forms) env (%wrap (%eval (%list* %vau formals #ignore forms) env))"),
 				// Extra
 				"vm", this,
 				"%test", test,
@@ -2033,35 +2059,6 @@ public class Vm {
 			)
 		);
 	}
-	Opv evalChk = opv(vmEnv, cons(symbol("ck")), symbol("env"),
-		uncked(()->
-			toLispList("""
-				(%def %=*
-				  (%vau (key . lst) env
-				    (%def key (%eval key env))
-				    ( (%def loop :rhs (%\\ (lst) (%if (%null? lst) #f (%== (%car lst) key) #t (loop (%cdr lst)) ) )) lst) ))
-				(%def evl
-				  (%\\ (ck)
-				    (%if
-				      (%== ck 'oo) (.MAX_VALUE &java.lang.Integer)
-				      (%! (%cons? ck)) (%eval ck env)
-				      ( (%\\ (ckcar)
-				          (%if
-				            (%== ckcar 'or) (%list->array (evm (%cdr ck)))
-				            (%== ckcar 'and) (%cons 'and (evm (%cdr ck)))
-				            (%=* ckcar %' quote) (%cadr ck)
-				            ( (%\\ (evckcar)
-				                (%if (%type? evckcar &Wat.Vm$Apv)
-				                  (%cons evckcar (%cons ckcar (%eval (%list* '%list (%cdr ck)) env)))
-				                  (%cons (evl ckcar) (evm (%cdr ck))) ))
-				              (%eval ckcar env) ) ))
-				        (%car ck) ) )))
-				(%def evm (%\\ (lst) (%if (%null? lst) #null (%cons (evl (%car lst)) (evm (%cdr lst))))))
-				(evl ck)
-				"""
-			)
-		)
-	);
 	
 	
 	// API
