@@ -97,7 +97,7 @@
                 (ul (loop (li (pr (encode (subSeq l 2))) (until? (startsWith (set! l :rhs (readLine r)) " |#")) ))))
               (loop
                 (set! l :rhs (readLine r)) 
-                (continue-? 1 (|| (null? l) (startsWith l "#|!")) (buttons))
+                (continue?- 1 (|| (null? l) (startsWith l "#|!")) (buttons))
                 (continue? (startsWith l ";;!") (ul (li (pr (encode (subSeq l 3))))))
                 (continue? (startsWith l "  #|!") (ul (until (startsWith (set! l :rhs (readLine r)) "   |#") (li (pr (encode (subSeq l 4)))) )))
                 (continue? (startsWith l "#|") (until (or (startsWith (set! l :rhs (readLine r)) "|#") (startsWith l "  |#")) ))

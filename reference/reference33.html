@@ -143,11 +143,11 @@
     </div>
     <div>
       <h3>
-        break-?
+        break?-
       </h3>
       <ul>
         <li>
-          (defMacro (break-? n b . forms) (list 'if b (list* 'throwTag (list 'mkTag &quot;break&quot; n) forms)))
+          (defMacro (break?- n b . forms) (list 'if b (list* 'throwTag (list 'mkTag &quot;break&quot; n) forms)))
         </li>
       </ul>
     </div>
@@ -183,11 +183,11 @@
     </div>
     <div>
       <h3>
-        continue-?
+        continue?-
       </h3>
       <ul>
         <li>
-          (defMacro (continue-? n b . forms) (list 'if b (list* 'throwTag (list 'mkTag &quot;continue&quot; n) forms)))
+          (defMacro (continue?- n b . forms) (list 'if b (list* 'throwTag (list 'mkTag &quot;continue&quot; n) forms)))
         </li>
       </ul>
     </div>
@@ -252,7 +252,7 @@
           (syntax form (break? testForm . forms))
         </li>
         <li>
-          (syntax form (break-? n testForm . forms))
+          (syntax form (break?- n testForm . forms))
         </li>
         <li>
           (syntax form (continue . forms))
@@ -264,7 +264,7 @@
           (syntax form (continue? testForm . forms))
         </li>
         <li>
-          (syntax form (continue-? n testForm . forms))
+          (syntax form (continue?- n testForm . forms))
         </li>
         <li>
           (syntax form (while? testForm . forms))

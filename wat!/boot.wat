@@ -2280,7 +2280,7 @@
   (optDft opt (simpleError "Option is #null")))
 
 
-#|! OptValue Member Member? !Member? OptKey Assoc Member*?
+#|! OptValue Member Member? !Member? OptKey Assoc Member?*
  |#
 
 (def\ (optValue key lst)
@@ -2361,7 +2361,7 @@
 
 (assert (assoc 'b '((a 1) (b 2) (c 3) (d 4))) '(b 2))
 
-(def\ (member*? key . lst)
+(def\ (member?* key . lst)
   #|Return #true if the ITEM is in the LIST, #false otherwise.
    |
    |$(fn (item . list))
@@ -2417,7 +2417,7 @@
    |#
   %matchObj?)
 
-(def\ (matchObj*? obj class . attributes)
+(def\ (matchObj?* obj class . attributes)
   #|Return #true if OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, #false otherwise.
    |
    |$(fn object class . attributes)
@@ -2437,7 +2437,7 @@
    |#
   %matchBox?)
 
-(def\ (matchBox*? obj class . attributes)
+(def\ (matchBox?* obj class . attributes)
   #|Return #true if OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, #false otherwise.
    |
    |$(fn object class . attributes)
@@ -2458,7 +2458,7 @@
    |#
   %matchType?)
 
-(def\ (matchType*? obj class . attributes)
+(def\ (matchType?* obj class . attributes)
   #|Return #true if OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, #false otherwise.
    |
    |$(fn object class . attributes)
@@ -2720,12 +2720,12 @@
 (defMacro (break . forms) (list* 'throwTag (list 'mkTag "break" 0) forms))
 (defMacro (break- n . forms) (list* 'throwTag (list 'mkTag "break" n) forms))
 (defMacro (break? b . forms) (list 'if b (list* 'throwTag (list 'mkTag "break" 0) forms)))
-(defMacro (break-? n b . forms) (list 'if b (list* 'throwTag (list 'mkTag "break" n) forms)))
+(defMacro (break?- n b . forms) (list 'if b (list* 'throwTag (list 'mkTag "break" n) forms)))
 
 (defMacro (continue . forms) (list* 'throwTag (list 'mkTag "continue" 0) forms))
 (defMacro (continue- n . forms) (list* 'throwTag (list 'mkTag "continue" n) forms))
 (defMacro (continue? b . forms) (list 'if b (list* 'throwTag (list 'mkTag "continue" 0) forms)))
-(defMacro (continue-? n b . forms) (list 'if b (list* 'throwTag (list 'mkTag "continue" n) forms)))
+(defMacro (continue?- n b . forms) (list 'if b (list* 'throwTag (list 'mkTag "continue" n) forms)))
 
 (defMacro (until? b . forms) (list 'if b        (list* 'throwTag (list 'mkTag "break" 0) forms)))
 (defMacro (while? b . forms) (list 'if b #inert (list* 'throwTag (list 'mkTag "break" 0) forms)))
@@ -2743,11 +2743,11 @@
    |$(syntax form (break . forms))
    |$(syntax form (break- n . forms))
    |$(syntax form (break? testForm . forms))
-   |$(syntax form (break-? n testForm . forms))
+   |$(syntax form (break?- n testForm . forms))
    |$(syntax form (continue . forms))
    |$(syntax form (continue- n . forms))
    |$(syntax form (continue? testForm . forms))
-   |$(syntax form (continue-? n testForm . forms))
+   |$(syntax form (continue?- n testForm . forms))
    |$(syntax form (while? testForm . forms))
    |$(syntax form (until? testForm . forms))
    |$(syntax form ...)
@@ -2822,8 +2822,8 @@
   (assert (loop for1 (x 0 (1+ x)) (break x)) 0)
   (assert (loop for1 (x 0 (1+ x)) (while? (< x 3) x)) 3)
   (assert (let1 (a 0) (loop for1 (x 0 (1+ x)) (while? (< x 3) a) (+= a (* x 10)) (loop for1 (y 0 (1+ y)) (break? (> y 2)) (+= a y) ))) 39)
-  (assert (let1 (a 0) (loop for1 (x 0 (1+ x)) (while? (< x 3) a) (+= a (* x 10)) (loop for1 (y 0 (1+ y)) (break-? 1 (> y 3) a) (+= a y)))) 6)
-  (assert (let1 (a 0) (for1 (x 0 (1+ x)) (< x 3) (+= a (* x 10)) (for1 (y 0 (1+ y)) #ignore (break-? 1 (> y 3) a) (+= a y)))) 6)
+  (assert (let1 (a 0) (loop for1 (x 0 (1+ x)) (while? (< x 3) a) (+= a (* x 10)) (loop for1 (y 0 (1+ y)) (break?- 1 (> y 3) a) (+= a y)))) 6)
+  (assert (let1 (a 0) (for1 (x 0 (1+ x)) (< x 3) (+= a (* x 10)) (for1 (y 0 (1+ y)) #ignore (break?- 1 (> y 3) a) (+= a y)))) 6)
   (assert (let1 (a 0) (for ((x 0 (1+ x)) (y 10 (-1+ y)) ) (< x 10) (+= a (+ x y))) a) 100)
 )
 
@@ -2968,14 +2968,14 @@
    |#
   (if (null? lst*)
     ((rec\ (any? lst) (if (null? lst) #f (f (car lst)) #t (any? (cdr lst))) ) lst)
-    ((rec\ (any*? lst*) (if (null? (car lst*)) #f (apply f (map car lst*)) #t (any*? (map cdr lst*))) ) (cons lst lst*)) ))
+    ((rec\ (any?* lst*) (if (null? (car lst*)) #f (apply f (map car lst*)) #t (any?* (map cdr lst*))) ) (cons lst lst*)) ))
 
 (assert (any? null? (1 2 3 4)) #f)
 (assert (any? null? (1 2 () 4)) #t)
 (assert (any? > '(1 2) '(3 4)) #f)
 (assert (any? < '(1 2) '(3 4)) #t)
 
-(defMacro (any*? f . lst)
+(defMacro (any?* f . lst)
   #|Return #true if the apply of the FUNCTION to every element of VALUES return #true, #false otherwise.
    |
    |$(fn function . values).
@@ -2991,14 +2991,14 @@
    |#
   (if (null? lst*)
     ((rec\ (all? lst) (if (null? lst) #t (f (car lst)) (all? (cdr lst)) #f) ) lst)
-    ((rec\ (all*? lst*) (if (null? (car lst*)) #t (apply f (map car lst*)) (all*? (map cdr lst*)) #f) ) (cons lst lst*)) ))
+    ((rec\ (all?* lst*) (if (null? (car lst*)) #t (apply f (map car lst*)) (all?* (map cdr lst*)) #f) ) (cons lst lst*)) ))
 
 (assert (all? number? (1 2 3 4)) #t)
 (assert (all? number? (1 2 () 4)) #f)
 (assert (all? > '(1 2) '(3 4)) #f)
 (assert (all? < '(1 2) '(3 4)) #t)
 
-(defMacro (all*? f . lst)
+(defMacro (all?* f . lst)
   #|Return #true if the apply of the FUNCTION to one element of VALUES return #true, #false otherwise.
    |
    |$(fn function . values).
@@ -3364,7 +3364,7 @@
             (if (end? r semicolon sep) (%error "! without value")
               (expd2 lev sep mk (cons (list bang (car r)) t) (cdr r)) )
           (== f sep)
-            (if (member*? (car r) apostrophe bang)
+            (if (member?* (car r) apostrophe bang)
               (expd2 lev sep mk t r)
               (expd2 lev sep mk (cons (car r) (if (cons? t) t (cons t))) (cdr r)) )
           (%error ("invalid syntax " f)) ))))

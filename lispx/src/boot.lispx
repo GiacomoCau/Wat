@@ -2171,7 +2171,7 @@
   (optDft opt (simpleError "Option is #null")))
 
 
-#|! OptValue Member Member? !Member? OptKey Assoc Member*?
+#|! OptValue Member Member? !Member? OptKey Assoc Member?*
  |#
 
 (def\ (optValue key lst)
@@ -2239,7 +2239,7 @@
    |#
   (member k lst :key car :get car) )
 
-(def\ (member*? key . lst)
+(def\ (member?* key . lst)
   #|Return #true if the ITEM is in the LIST, #false otherwise.
    |
    |$(fn (item . list))
@@ -2293,7 +2293,7 @@
    |#
   %matchObj?)
 
-(def\ (matchObj*? obj class . attributes)
+(def\ (matchObj?* obj class . attributes)
   #|Return #true if OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, #false otherwise.
    |
    |$(fn object class . attributes)
@@ -2313,7 +2313,7 @@
    |#
   %matchBox?)
 
-(def\ (matchBox*? obj class . attributes)
+(def\ (matchBox?* obj class . attributes)
   #|Return #true if OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, #false otherwise.
    |
    |$(fn object class . attributes)
@@ -2334,7 +2334,7 @@
    |#
   %matchType?)
 
-(def\ (matchType*? obj class . attributes)
+(def\ (matchType?* obj class . attributes)
   #|Return #true if OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, #false otherwise.
    |
    |$(fn object class . attributes)
@@ -2565,12 +2565,12 @@
 (defMacro (break . forms) (list* 'throwTag (list 'mkTag "break" 0) forms))
 (defMacro (break- n . forms) (list* 'throwTag (list 'mkTag "break" n) forms))
 (defMacro (break? b . forms) (list 'if b (list* 'throwTag (list 'mkTag "break" 0) forms)))
-(defMacro (break-? n b . forms) (list 'if b (list* 'throwTag (list 'mkTag "break" n) forms)))
+(defMacro (break?- n b . forms) (list 'if b (list* 'throwTag (list 'mkTag "break" n) forms)))
 
 (defMacro (continue . forms) (list* 'throwTag (list 'mkTag "continue" 0) forms))
 (defMacro (continue- n . forms) (list* 'throwTag (list 'mkTag "continue" n) forms))
 (defMacro (continue? b . forms) (list 'if b (list* 'throwTag (list 'mkTag "continue" 0) forms)))
-(defMacro (continue-? n b . forms) (list 'if b (list* 'throwTag (list 'mkTag "continue" n) forms)))
+(defMacro (continue?- n b . forms) (list 'if b (list* 'throwTag (list 'mkTag "continue" n) forms)))
 
 (defMacro (until? b . forms) (list 'if b        (list* 'throwTag (list 'mkTag "break" 0) forms)))
 (defMacro (while? b . forms) (list 'if b #inert (list* 'throwTag (list 'mkTag "break" 0) forms)))
@@ -2588,11 +2588,11 @@
    |$(syntax form (break . forms))
    |$(syntax form (break- n . forms))
    |$(syntax form (break? testForm . forms))
-   |$(syntax form (break-? n testForm . forms))
+   |$(syntax form (break?- n testForm . forms))
    |$(syntax form (continue . forms))
    |$(syntax form (continue- n . forms))
    |$(syntax form (continue? testForm . forms))
-   |$(syntax form (continue-? n testForm . forms))
+   |$(syntax form (continue?- n testForm . forms))
    |$(syntax form (while? testForm . forms))
    |$(syntax form (until? testForm . forms))
    |$(syntax form ...)
@@ -2774,9 +2774,9 @@
    |#
   (if (null? lst*)
     ((rec\ (any? lst) (if (null? lst) #f (f (car lst)) #t (any? (cdr lst))) ) lst)
-    ((rec\ (any*? lst*) (if (null? (car lst*)) #f (apply f (map car lst*)) #t (any*? (map cdr lst*))) ) (cons lst lst*)) ))
+    ((rec\ (any?* lst*) (if (null? (car lst*)) #f (apply f (map car lst*)) #t (any?* (map cdr lst*))) ) (cons lst lst*)) ))
 
-(defMacro (any*? f . lst)
+(defMacro (any?* f . lst)
   #|Return #true if the apply of the FUNCTION to every element of VALUES return #true, #false otherwise.
    |
    |$(fn function . values).
@@ -2792,9 +2792,9 @@
    |#
   (if (null? lst*)
     ((rec\ (all? lst) (if (null? lst) #t (f (car lst)) (all? (cdr lst)) #f) ) lst)
-    ((rec\ (all*? lst*) (if (null? (car lst*)) #t (apply f (map car lst*)) (all*? (map cdr lst*)) #f) ) (cons lst lst*)) ))
+    ((rec\ (all?* lst*) (if (null? (car lst*)) #t (apply f (map car lst*)) (all?* (map cdr lst*)) #f) ) (cons lst lst*)) ))
 
-(defMacro (all*? f . lst)
+(defMacro (all?* f . lst)
   #|Return #true if the apply of the FUNCTION to one element of VALUES return #true, #false otherwise.
    |
    |$(fn function . values).
@@ -3125,7 +3125,7 @@
             (if (end? r semicolon sep) (%error "! without value")
               (expd2 lev sep mk (cons (list bang (car r)) t) (cdr r)) )
           (== f sep)
-            (if (member*? (car r) apostrophe bang)
+            (if (member?* (car r) apostrophe bang)
               (expd2 lev sep mk t r)
               (expd2 lev sep mk (cons (car r) (if (cons? t) t (cons t))) (cdr r)) )
           (%error ("invalid syntax " f)) ))))
