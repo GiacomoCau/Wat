@@ -1349,6 +1349,8 @@
    |#
   %test)
 
+(def\ (printFrames k) (unless (null? k) (printFrames (.nxt k)) (log "v" k)))
+
 (def\ (printStacktrace throwable)
   #|Throw the THROWABLE after print the message of THROWABLE and the stacktrace if `(prStk)'.
    |
@@ -1358,7 +1360,7 @@
   (when (prStk)
     (log "-" (@getMessage throwable)) 
     (takeSubcont rootPrompt k
-      ((rec\ (printFrames k) (unless (null? k) (printFrames (.nxt k)) (log "v" k))) k)
+      (printFrames k)
       (pushDelimSubcont rootPrompt k) ))
   (throw throwable) )
 
@@ -3369,7 +3371,7 @@
               (expd2 lev sep mk (cons (car r) (if (cons? t) t (cons t))) (cdr r)) )
           (%error ("invalid syntax " f)) ))))
   (def\ (expd0 x)
-     (map [_ (if (>= (@indexOf ";!,'…_" (%subString _ 0 1)) 0) (symbol _) (car (@toLispList vm _)))]
+     (map [_ (if (>= (@indexOf ";!,'…_" (%subString _ 0 1)) 0) (symbol _) (car (@str2list vm _)))]
        (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (name x) ";|!|,|'|…|_[1-9a-z*]?" -1)) )) )
   (if (symbol? x)
     (expd1 () (expd0 x))

@@ -48,7 +48,7 @@ public class Parser {
 	//*/
 	
 	// static=false
-	public static Object[] toByteCode(String str) throws Exception {
+	public static Object[] str2bc(String str) throws Exception {
 		return new Parser(str).parse();
 	}
 	

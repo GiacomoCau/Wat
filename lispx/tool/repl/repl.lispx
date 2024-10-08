@@ -7,6 +7,11 @@
    |#
    (theEnv))
 
+(def repl:prStk
+  #|The repl print stack flag.
+   |#
+   #f)
+
 (ddef repl:debugLevel
   #|Current debug level. 0 if we are not in the debug.
    |#
@@ -48,7 +53,7 @@
         ((replAbort replEnd) #|Don't print our internal REPL-ABORT restart.|#)
         (else => (\ (restartName) (print "    " restartName))) ))
     (computeRestarts condition) )
-  (when (prStk)
+  (when repl:prStk
     (print "Backtrace:")
     (printFrames k) )
   (repl:run))
@@ -82,14 +87,18 @@
                       (continue (\ () (eval symbol env)) :associatedConditions (list condition))
                       (storeValue (\ (value) (eval (list 'def symbol value) env)) :associatedConditions (list condition)) )
                     (repl:runDebuggerLoop condition k) )) )
+            #|
             ( (Error :type 'type)
+                (let ( (operands (getSlot condition 'operands)) )
                   (restartCase 
-                    ( (useValue (\ (value) value) :associatedConditions (list condition)) )
-                    (repl:runDebuggerLoop condition k) ) )
+                    ( (setOperand (\ (index value) (setCar (nthCdr index operands) value) value) :associatedConditions (list condition)) )
+                    (repl:runDebuggerLoop condition k) )) )
             ( (Error :type 'match)
+                (log condition) 
                   (restartCase 
                     ( (useValue (\ (value) value) :associatedConditions (list condition)) )
                     (repl:runDebuggerLoop condition k) ) )
+            |#
             (else
                (repl:runDebuggerLoop condition k) ) ))))))
 

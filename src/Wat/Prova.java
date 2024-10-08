@@ -672,7 +672,7 @@ public class Prova {
 		""";
 		//var is = new ByteArrayInputStream(s.getBytes());
 		//while (is.available() > 0) out.println(Vm.read(is));
-		out.println(Parser.toString(Parser.toByteCode(s)));
+		out.println(Parser.toString(Parser.str2bc(s)));
 		out.println("fatto");
 	}
 	
