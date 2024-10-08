@@ -1,7 +1,7 @@
 package Wat;
 
 import static List.Parser.string;
-import static List.Parser.toByteCode;
+import static List.Parser.str2bc;
 import static Wat.Utility.$;
 import static Wat.Utility.apply;
 import static Wat.Utility.binOp;
@@ -574,7 +574,7 @@ public class Vm {
 	// Class
 	Object newClass(Symbol className, Class superClass) {
 		try {
-			if (!className.name.matches("[A-Z][a-zA-Z_0-9]*")) return typeError("invalid class name, not {expected}: {datum}", className, toLispList("regex", "[A-Z][a-zA-Z_0-9]*"));
+			if (!className.name.matches("[A-Z][a-zA-Z_0-9]*")) return typeError("invalid class name, not {expected}: {datum}", className, bc2list("regex", "[A-Z][a-zA-Z_0-9]*"));
 			if (superClass != null && !of(Obj.class, Box.class).anyMatch(rc-> rc.isAssignableFrom(superClass))) return typeError("invalid superclass, not {expected}: {datum}", superClass, toChk(or(Obj.class, Box.class)));
 			var c = Class.forName("Ext." + className);
 			if (prWrn) out.println("Warning: class " + className + " is already defined!");
@@ -794,9 +794,9 @@ public class Vm {
 		: typeError("cannot unwrap, not a {expected}: {datum}", arg, symbol("Apv"));
 	}
 	Opv opv(Env e, Object pt, Object pe, List body) { return new Opv(e, pt, pe, body); } 
-	Opv opv(Env e, String s) { List lst = uncked(()-> toLispList(s)); return opv(e, lst.car(), lst.car(1), lst.cdr(1)); } 
+	Opv opv(Env e, String s) { List lst = uncked(()-> str2list(s)); return opv(e, lst.car(), lst.car(1), lst.cdr(1)); } 
 	Apv lambda(Env e, Object pt, List body) { return new Apv(opv(e, pt, ignore, body)); }
-	Apv lambda(Env e, String s) { List lst = uncked(()-> toLispList(s)); return lambda(e, lst.car(), lst.cdr()); }
+	Apv lambda(Env e, String s) { List lst = uncked(()-> str2list(s)); return lambda(e, lst.car(), lst.cdr()); }
 	Apv apv1(Env e, Symbol sym, List body) { return lambda(e, cons(sym), body); }
 	Apv apv0(Env e, List body) { return lambda(e, null, body); }
 	
@@ -1580,8 +1580,8 @@ public class Vm {
 		return true;
 	}
 	Object vmAssert(String str, Object objs) throws Exception {
-		List exp = cons(begin, toLispList(str));
-		return vmAssert.combine(theEnv,  objs instanceof Throwable ? exp : cons(exp, toLispExpr(objs))); 
+		List exp = cons(begin, str2list(str));
+		return vmAssert.combine(theEnv,  objs instanceof Throwable ? exp : cons(exp, bc2expr(objs))); 
 	}
 	Combinable vmAssert = new Combinable() {
 		public Object combine(Env env, List o) {
@@ -1666,22 +1666,22 @@ public class Vm {
 	}
 	Object[] quotes = $(symbol("%'"), symbol("quote"));
 	
-	Object toLispExpr(Object o) {
+	Object bc2expr(Object o) {
 		return switch (o) {
 			case String s-> switch(s) { case "#inert"-> inert; case "#_", "#ignore"-> ignore; case "#:"-> sheColon; default-> intern(intStr ? s.intern() : s); };
-			case Object[] objs-> objs.length == 2 && objs[0] == string ? intStr ? ((String) objs[1]).intern() : objs[1] : toLispList(objs);
+			case Object[] objs-> objs.length == 2 && objs[0] == string ? intStr ? ((String) objs[1]).intern() : objs[1] : bc2list(objs);
 			case null, default-> o;
 		};
 	}
-	<T extends Cons> T toLispList(Object ... objs) {
+	<T extends Cons> T bc2list(Object ... objs) {
 		Object head = null;
 		int i = objs.length - 1;
-		if (i > 1 && ".".equals(objs[i-1])) { head = toLispExpr(objs[i]); i-=2; }
-		for (; i>=0; i-=1) head = cons(toLispExpr(objs[i]), head);
+		if (i > 1 && ".".equals(objs[i-1])) { head = bc2expr(objs[i]); i-=2; }
+		for (; i>=0; i-=1) head = cons(bc2expr(objs[i]), head);
 		return (T) head;
 	}
-	<T extends Cons> T toLispList(String s) throws Exception {
-		return (T) toLispList(toByteCode(s));
+	<T extends Cons> T str2list(String s) throws Exception {
+		return (T) bc2list(str2bc(s));
 	}
 	
 	
@@ -2031,10 +2031,10 @@ public class Vm {
 				"print", wrap(new JFun("Print", (ArgsList) o-> print(array(o)) )),
 				"write", wrap(new JFun("Write", (ArgsList) o-> write(array(o)) )),
 				"load", wrap(new JFun("Load", (n,o)-> checkR(n, o, 1, 2, String.class, Env.class), (l,o)-> uncked(()-> loadText(l==1 ? theEnv : o.<Env>car(1), o.<String>car())) )),
-				"read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> uncked(()-> toLispList(read(l == 0 ? 0 : o.<Integer>car())).car) )),
+				"read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> uncked(()-> str2list(read(l == 0 ? 0 : o.<Integer>car())).car) )),
 				//"eof", new JFun("eof", (n,o)-> checkN(n, o, 0), (l,o)-> List.Parser.eof),
 				//"eof?", wrap(new JFun("eof?", (n,o)-> checkN(n, o, 1), (l,o)-> List.Parser.eof.equals(o.car))),
-				"readString", wrap(new JFun("ReadString", (n,o)-> checkN(n, o, 1), (l,o)-> uncked(()-> toLispList(o.toString())) )),
+				"readString", wrap(new JFun("ReadString", (n,o)-> checkN(n, o, 1), (l,o)-> uncked(()-> str2list(o.toString())) )),
 				"system", wrap(new JFun("System", (n,o)-> checkR(n, o, 1, 2, String.class, Boolean.class), (l,o)-> uncked(()-> system(l==1 ? false : o.<Boolean>car(1),  "cmd.exe", "/e:on", "/c", o.<String>car())) )),
 				// Config
 				"doTco", wrap(new JFun("DoTco", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doTco : inert(doTco=o.car()) )),
@@ -2063,7 +2063,7 @@ public class Vm {
 	
 	// API
 	public Object exec(Env env, Object bytecode) {
-		return pushSubcontBarrier.combine(env, pushRootPrompt(cons(cons(new Begin(true), toLispExpr(bytecode)))));
+		return pushSubcontBarrier.combine(env, pushRootPrompt(cons(cons(new Begin(true), bc2expr(bytecode)))));
 	}
 	public Object call(String funName, Object ... args) {
 		return exec(theEnv, $(funName, ".", $(args)));
@@ -2072,17 +2072,17 @@ public class Vm {
 		return exec(theEnv, symbol(varName));
 	}
 	public Object eval(Env env, String exp) throws Exception {
-		return exec(env, toByteCode(exp));
+		return exec(env, str2bc(exp));
 	}
 	public String readText(String fileName) throws IOException {
 		return Files.readString(Paths.get(fileName), Charset.forName("UTF-8"));
 	}
 	public List readList(String fileName) throws Exception {
-		return toLispList(readText(fileName));
+		return str2list(readText(fileName));
 	}
 	public void writeByteCode(String fileName) throws Exception {
 		try (var oos = new ObjectOutputStream(new FileOutputStream("build/" + fileName))) {
-			oos.writeObject(toByteCode(readText(fileName)));
+			oos.writeObject(str2bc(readText(fileName)));
 		}
 	}
 	public Object readBytecode(String fileName) throws Exception {
