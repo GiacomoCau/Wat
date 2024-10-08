@@ -1,7 +1,7 @@
 package Wat;
 
 import static List.Parser.string;
-import static List.Parser.toByteCode;
+import static List.Parser.str2bc;
 import static Wat.Utility.$;
 import static Wat.Utility.apply;
 import static Wat.Utility.binOp;
@@ -307,10 +307,8 @@ public class Vm {
 		Cons(Object car, Object cdr) { this.car = car; this.cdr = cdr; }
 		public String toString() {
 			if (car instanceof Symbol s && len(cdr) == 1) switch (s.name) {
-				case "%,": return "," + Vm.this.toString(car(1));
-				case "%,@": return ",@" + Vm.this.toString(car(1));
-				case "%`": return "`" + Vm.this.toString(car(1));
-				case "%'", "quote": return "'" + Vm.this.toString(car(1));
+				case "quote": return "'" + Vm.this.toString(car(1));
+				case "%'", "%`", "%,", "%,@", "%\u00b4": return s.name.substring(1) + Vm.this.toString(car(1));
 			}
 			return "(" + toString(this) + ")";
 		}
@@ -574,7 +572,7 @@ public class Vm {
 	// Class
 	Object newClass(Symbol className, Class superClass) {
 		try {
-			if (!className.name.matches("[A-Z][a-zA-Z_0-9]*")) return typeError("invalid class name, not {expected}: {datum}", className, toLispList("regex", "[A-Z][a-zA-Z_0-9]*"));
+			if (!className.name.matches("[A-Z][a-zA-Z_0-9]*")) return typeError("invalid class name, not {expected}: {datum}", className, bc2list("regex", "[A-Z][a-zA-Z_0-9]*"));
 			if (superClass != null && !of(Obj.class, Box.class).anyMatch(rc-> rc.isAssignableFrom(superClass))) return typeError("invalid superclass, not {expected}: {datum}", superClass, toChk(or(Obj.class, Box.class)));
 			var c = Class.forName("Ext." + className);
 			if (prWrn) out.println("Warning: class " + className + " is already defined!");
@@ -755,16 +753,18 @@ public class Vm {
 	}
 	class Colon implements Combinable {
 		Object op; boolean b;
-		Colon(Object op) { this.op = op;  this.b = !op.equals("check"); } 
+		Colon(Object op) { this.op = op;  this.b = !op.equals("check"); }
 		public Object combine(Env e, List o) {
 			var chk = b ? checkM(this, o, 2) : checkN(this, o, 2); // o = (check form . forms) | (form check)
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
-			return pipe(null, ()-> getTco(b ? begin.combine(e, o.cdr()) : evaluate(e, o.car)),
-				(val)->{
+			if (!(chk instanceof Integer len0) || (b ? len0 < 2 : len0 != 2)) return resumeError(chk, and("Integer " + "(" + (b ? ">=" : "==") + " 2)"));
+			return pipe(dbg(e, this, o),
+				()-> getTco(b ? begin.combine(e, o.cdr()) : evaluate(e, o.car)),
+				val->{
 					var eck = getTco(evalChk.combine(e, cons(o.car(b ? 0 : 1))));
 					if (eck instanceof Suspension s) return s;
 					var len = check(op, val, eck);
+					if (len instanceof Suspension s) return s;
 					return b ? val : len;
 				}
 			);
@@ -794,9 +794,9 @@ public class Vm {
 		: typeError("cannot unwrap, not a {expected}: {datum}", arg, symbol("Apv"));
 	}
 	Opv opv(Env e, Object pt, Object pe, List body) { return new Opv(e, pt, pe, body); } 
-	Opv opv(Env e, String s) { List lst = uncked(()-> toLispList(s)); return opv(e, lst.car(), lst.car(1), lst.cdr(1)); } 
+	Opv opv(Env e, String s) { List lst = uncked(()-> str2list(s)); return opv(e, lst.car(), lst.car(1), lst.cdr(1)); } 
 	Apv lambda(Env e, Object pt, List body) { return new Apv(opv(e, pt, ignore, body)); }
-	Apv lambda(Env e, String s) { List lst = uncked(()-> toLispList(s)); return lambda(e, lst.car(), lst.cdr()); }
+	Apv lambda(Env e, String s) { List lst = uncked(()-> str2list(s)); return lambda(e, lst.car(), lst.cdr()); }
 	Apv apv1(Env e, Symbol sym, List body) { return lambda(e, cons(sym), body); }
 	Apv apv0(Env e, List body) { return lambda(e, null, body); }
 	
@@ -809,7 +809,7 @@ public class Vm {
 			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			var pt = o.car;
 			var ep = o.car(1);
-			var msg = checkPt(cons(this, o), pt, ep); if (msg != null) return msg;
+			var err = checkPt(cons(this, o), pt, ep); if (err != null) return err;
 			return new Opv(e, pt, ep, o.cdr(1));
 		}
 		public String toString() { return "%Vau"; }
@@ -822,7 +822,7 @@ public class Vm {
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			var dt = o.car;
-			var msg = checkDt(cons(this, o), dt); if (msg != null) return msg;
+			var err = checkDt(cons(this, o), dt); if (err != null) return err;
 			var dbg = dbg(e, this, o);
 			return switch (bndRes(len != 3 ? ignore : o.car(1))) {
 				case Suspension s-> s;
@@ -951,11 +951,11 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			var chk = checkM(this, o, 1); // o = (tag . forms)
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
-			var dbg = dbg(e, this, o);
-			return pipe(dbg, ()-> getTco(evaluate(e, o.car)),
+			if (!(chk instanceof Integer len) || len < 1) return resumeError(chk, and("Integer (>= 1)"));
+			return pipe(dbg(e, this, o),
+				()-> getTco(evaluate(e, o.car)),
 				tag-> switch (getTco(begin.combine(e, o.cdr()))) { case Suspension s-> s; case Object val->{ throw new Value(tag, val); }}
-			);		
+			);
 		}
 		public String toString() { return "%ThrowTag"; }
 	}
@@ -1123,35 +1123,35 @@ public class Vm {
 	interface ChkList extends BiFunction<Symbol,List,Object> {}
 	interface LenList extends BiFunction<Integer,List,Object> {}
 	class JFun implements Combinable {
-		Symbol symbol; ArgsList jfun; ChkList check;
+		Symbol op; ArgsList jfun; ChkList check;
 		JFun(String name, ChkList check, LenList jfun) { this(name, jfun); this.check = check; };
-		JFun(String name, Object jfun) { this(jfun); this.symbol = symbol(name); };
+		JFun(String name, Object jfun) { this(jfun); this.op = symbol(name); };
 		JFun(Object jfun) {
 			this.jfun = switch (jfun) {
 				case ArgsList al-> al;  
-				case LenList ll-> o-> pipe(null, ()-> check.apply(symbol, o),
+				case LenList ll-> o-> pipe(dbg(null, "%" + op, o), ()-> check.apply(op, o),
 					obj-> obj instanceof Integer len ? ll.apply(len, o)	: resumeError(obj, symbol("Integer")));   
-				case Supplier s-> o-> pipe(null, ()-> checkN(symbol, o, 0),
+				case Supplier s-> o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 0),
 					obj-> obj instanceof Integer /*len*/ ? s.get() : resumeError(obj, symbol("Integer")));  
-				case Consumer c-> o-> pipe(null, ()-> checkN(symbol, o, 1),
+				case Consumer c-> o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 1),
 					obj->{
 						if (! (obj instanceof Integer /*len*/)) return resumeError(obj, symbol("Integer"));
 						c.accept(o.car);
 						return inert;
 					}
 				);
-				case Function f-> o-> pipe(null, ()-> checkN(symbol, o, 1),
+				case Function f-> o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 1),
 					obj-> obj instanceof Integer /*len*/ ? f.apply(o.car) : resumeError(obj, symbol("Integer")));  
-				case BiConsumer bc-> o-> pipe(null, ()-> checkN(symbol, o, 2),
+				case BiConsumer bc-> o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 2),
 					obj->{
 						if (! (obj instanceof Integer /*len*/)) return resumeError(obj, symbol("Integer"));
 						bc.accept(o.car, o.car(1));
 						return inert;
 					}
 				);
-				case BiFunction bf-> o-> pipe(null, ()-> checkN(symbol, o, 2),
+				case BiFunction bf-> o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 2),
 					obj-> obj instanceof Integer /*len*/ ? bf.apply(o.car, o.car(1)) : resumeError(obj, symbol("Integer")));
-				case Field f-> o-> pipe(null, ()-> checkR(symbol, o, 1, 2), obj->{
+				case Field f-> o-> pipe(null, ()-> checkR(op, o, 1, 2), obj->{
 						if (!(obj instanceof Integer len)) return resumeError(obj, symbol("Integer"));
 						if (len == 1) return uncked(()-> f.get(o.car));
 						return uncked(()->{ f.set(o.car, o.car(1)); return inert; });
@@ -1159,16 +1159,16 @@ public class Vm {
 				);
 				case Method m-> o->{
 					var pc = m.getParameterCount();
-					return pipe(null,
-						()-> !m.isVarArgs() ? checkN(symbol, o, pc+1) : checkM(symbol, o, pc),
+					return pipe(dbg(null, "%" + op, o),
+						()-> !m.isVarArgs() ? checkN(op, o, pc+1) : checkM(op, o, pc),
 						obj-> obj instanceof Integer /*len*/
 							? uncked(()-> m.invoke(o.car, reorg(m, array(o.cdr()))))
 							: resumeError(obj, symbol("Integer"))
 					);
 				};
 				case Constructor c-> o->
-					pipe(null,
-						()-> checkN(symbol, o, c.getParameterCount()),
+					pipe(dbg(null, "%" + op, o),
+						()-> checkN(op, o, c.getParameterCount()),
 						obj-> obj instanceof Integer /*len*/ 
 							? uncked(()-> c.newInstance(reorg(c, array(o))))
 							: resumeError(obj, symbol("Integer"))
@@ -1196,13 +1196,13 @@ public class Vm {
 							}
 							default: break;
 						}
-						return javaError("error executing: {member} with: {args}", thw, symbol, o, null);
+						return javaError("error executing: {member} with: {args}", thw, op, o, null);
 					}
 				}
 			);
 		}
 		public String toString() {
-			if (symbol != null) return symbol.name;
+			if (op != null) return op.name;
 			var intefaces = stream(jfun.getClass().getInterfaces()).map(Vm.this::toString).collect(joining(" "));
 			return "{JFun" + eIf(intefaces.isEmpty(), ()-> " " + intefaces) + " " + jfun + "}";
 		}
@@ -1501,6 +1501,9 @@ public class Vm {
 			: error(ie)
 		;
 	}
+	Object and(String s) {
+		return uncked(()-> str2list("and " + s));
+	}
 	
 	
 	// Utilities
@@ -1580,8 +1583,8 @@ public class Vm {
 		return true;
 	}
 	Object vmAssert(String str, Object objs) throws Exception {
-		List exp = cons(begin, toLispList(str));
-		return vmAssert.combine(theEnv,  objs instanceof Throwable ? exp : cons(exp, toLispExpr(objs))); 
+		List exp = cons(begin, str2list(str));
+		return vmAssert.combine(theEnv,  objs instanceof Throwable ? exp : cons(exp, bc2expr(objs))); 
 	}
 	Combinable vmAssert = new Combinable() {
 		public Object combine(Env env, List o) {
@@ -1666,22 +1669,22 @@ public class Vm {
 	}
 	Object[] quotes = $(symbol("%'"), symbol("quote"));
 	
-	Object toLispExpr(Object o) {
+	Object bc2expr(Object o) {
 		return switch (o) {
 			case String s-> switch(s) { case "#inert"-> inert; case "#_", "#ignore"-> ignore; case "#:"-> sheColon; default-> intern(intStr ? s.intern() : s); };
-			case Object[] objs-> objs.length == 2 && objs[0] == string ? intStr ? ((String) objs[1]).intern() : objs[1] : toLispList(objs);
+			case Object[] objs-> objs.length == 2 && objs[0] == string ? intStr ? ((String) objs[1]).intern() : objs[1] : bc2list(objs);
 			case null, default-> o;
 		};
 	}
-	<T extends Cons> T toLispList(Object ... objs) {
+	<T extends Cons> T bc2list(Object ... objs) {
 		Object head = null;
 		int i = objs.length - 1;
-		if (i > 1 && ".".equals(objs[i-1])) { head = toLispExpr(objs[i]); i-=2; }
-		for (; i>=0; i-=1) head = cons(toLispExpr(objs[i]), head);
+		if (i > 1 && ".".equals(objs[i-1])) { head = bc2expr(objs[i]); i-=2; }
+		for (; i>=0; i-=1) head = cons(bc2expr(objs[i]), head);
 		return (T) head;
 	}
-	<T extends Cons> T toLispList(String s) throws Exception {
-		return (T) toLispList(toByteCode(s));
+	<T extends Cons> T str2list(String s) throws Exception {
+		return (T) bc2list(str2bc(s));
 	}
 	
 	
@@ -2031,10 +2034,10 @@ public class Vm {
 				"print", wrap(new JFun("Print", (ArgsList) o-> print(array(o)) )),
 				"write", wrap(new JFun("Write", (ArgsList) o-> write(array(o)) )),
 				"load", wrap(new JFun("Load", (n,o)-> checkR(n, o, 1, 2, String.class, Env.class), (l,o)-> uncked(()-> loadText(l==1 ? theEnv : o.<Env>car(1), o.<String>car())) )),
-				"read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> uncked(()-> toLispList(read(l == 0 ? 0 : o.<Integer>car())).car) )),
+				"read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> uncked(()-> str2list(read(l == 0 ? 0 : o.<Integer>car())).car) )),
 				//"eof", new JFun("eof", (n,o)-> checkN(n, o, 0), (l,o)-> List.Parser.eof),
 				//"eof?", wrap(new JFun("eof?", (n,o)-> checkN(n, o, 1), (l,o)-> List.Parser.eof.equals(o.car))),
-				"readString", wrap(new JFun("ReadString", (n,o)-> checkN(n, o, 1), (l,o)-> uncked(()-> toLispList(o.toString())) )),
+				"readString", wrap(new JFun("ReadString", (n,o)-> checkN(n, o, 1), (l,o)-> uncked(()-> str2list(o.toString())) )),
 				"system", wrap(new JFun("System", (n,o)-> checkR(n, o, 1, 2, String.class, Boolean.class), (l,o)-> uncked(()-> system(l==1 ? false : o.<Boolean>car(1),  "cmd.exe", "/e:on", "/c", o.<String>car())) )),
 				// Config
 				"doTco", wrap(new JFun("DoTco", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doTco : inert(doTco=o.car()) )),
@@ -2063,7 +2066,7 @@ public class Vm {
 	
 	// API
 	public Object exec(Env env, Object bytecode) {
-		return pushSubcontBarrier.combine(env, pushRootPrompt(cons(cons(new Begin(true), toLispExpr(bytecode)))));
+		return pushSubcontBarrier.combine(env, pushRootPrompt(cons(cons(new Begin(true), bc2expr(bytecode)))));
 	}
 	public Object call(String funName, Object ... args) {
 		return exec(theEnv, $(funName, ".", $(args)));
@@ -2072,17 +2075,17 @@ public class Vm {
 		return exec(theEnv, symbol(varName));
 	}
 	public Object eval(Env env, String exp) throws Exception {
-		return exec(env, toByteCode(exp));
+		return exec(env, str2bc(exp));
 	}
 	public String readText(String fileName) throws IOException {
 		return Files.readString(Paths.get(fileName), Charset.forName("UTF-8"));
 	}
 	public List readList(String fileName) throws Exception {
-		return toLispList(readText(fileName));
+		return str2list(readText(fileName));
 	}
 	public void writeByteCode(String fileName) throws Exception {
 		try (var oos = new ObjectOutputStream(new FileOutputStream("build/" + fileName))) {
-			oos.writeObject(toByteCode(readText(fileName)));
+			oos.writeObject(str2bc(readText(fileName)));
 		}
 	}
 	public Object readBytecode(String fileName) throws Exception {
