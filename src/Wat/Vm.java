@@ -675,7 +675,9 @@ public class Vm {
 		catch (InnerException ie) {
 			return error(
 				(def ? "bind" : "sett") + "ing: " + toString(lhs)
-				+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, dbg.os[0])))
+				//+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, dbg.os[0])))
+				+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, switch(dbg.os.length) { case 0-> null; case 1-> dbg.os[0] instanceof Cons c ? c : cons(dbg.os[0]); default-> list(dbg.os); })))
+				//+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, switch(dbg.os.length) { case 0-> null; case 1-> switch(dbg.os[0]) { case Cons c-> c; case Object obj-> cons(obj); }; default-> list(dbg.os); })))
 				+ " with: " + rhs,
 				ie
 			);
@@ -740,7 +742,7 @@ public class Vm {
 			this.e = e; this.pt = pt; this.ep = ep; //this.x = x
 			this.x = x == null || x.car != sheColon ? x 
 				: x.cdr() != null ? cons(cons(new Colon(this), x.cdr()))
-				: matchError("invalid return value check, expected {operands#,%+d} operands, found: {datum} in: " + x /* c + " of: " + expr*/ , null, 1) ;
+				: matchError("invalid return value check, expected {operands#,%+d} operands, found: {datum} in: " + x, null, 1) ;
 		}
 		public Object combine(Env e, List o) {
 			var xe = env(this.e);
@@ -1330,15 +1332,15 @@ public class Vm {
 	class PTree {
 		private Object expr, pt, ep; // ep == null per Def ovvero %def || %set!, ep == (or #ignore Symbol) per Vau 
 		private Set syms = new HashSet();
-		PTree(Object expr, Object pt, Object ep) { this.expr=expr; this.pt = pt; this.ep = ep; }
+		PTree(Object expr, Object pt, Object ep) { this.expr=expr; this.pt=pt; this.ep=ep; }
 		Object check() { 
 			if (!((pt instanceof Symbol || (pt == null || pt == ignore) && ep != null) && syms.add(pt))) {
-				if (!(pt instanceof Cons)) return typeError("invalid parameter tree, not {expected}: {datum} of: {expr}", pt, toChk(ep == null ? or(Symbol.class, Cons.class) : or(null, ignore, Symbol.class, Cons.class)), expr );
+				if (!(pt instanceof Cons)) return typeError("invalid parameter tree, not {expected}: {datum} in: {expr}", pt, toChk(ep == null ? or(Symbol.class, Cons.class) : or(null, ignore, Symbol.class, Cons.class)), expr);
 				var msg = check(pt); if (msg != null) return msg;
 			}
 			if (ep == null || ep == ignore) return syms.size() > 0 ? null : typeError("invalid parameter tree syntax, not one {expected} in: {datum} of: {expr}", pt, toChk(ep == null ? Symbol.class : or(null, ignore, Symbol.class)), expr);
-			if (!(ep instanceof Symbol sym)) return typeError("invalid parameter tree, not {expected}: {datum} of: {expr}", ep, toChk(or(ignore, Symbol.class)), expr);
-			return !syms.contains(sym) ? null : notUniqueError("invalid parameter tree, not a unique symbol: {datum} in: {expr}", ep, expr);
+			if (!(ep instanceof Symbol sym)) return typeError("invalid environment parameter, not {expected}: {datum} in: {expr}", ep, toChk(or(ignore, Symbol.class)), expr);
+			return !syms.contains(sym) ? null : notUniqueError("invalid environment parameter, not a unique symbol: {datum} in: {expr}", ep, expr);
 		}
 		private Object check(Object p) {
 			if (p == null || p == ignore) { if (ep != null) syms.add(p); return null; }
@@ -1346,23 +1348,28 @@ public class Vm {
 			if (!(p instanceof Cons c)) return null;
 			var len = len(c);
 			if (c.car instanceof Symbol sym && member(sym.name, "%'", "quote"))
-				return len != 2
-					? matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: " + c + " of: " + expr, 2 > len ? null : c.cdr(len-2), 2-len)
-					: null
+				return len == 2
+					? null
+					: matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: " + c + " of: " + expr, 2 > len ? null : c.cdr(len-2), 2-len)
 				;
 			if (c.car == sheColon)
 				return len != 3
 					? matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: " + c + " of: " + expr, 3 > len ? null : c.cdr(len-2), 3-len)
 					: !(c.car(2) instanceof Symbol)
-					? typeError("invalid parameter tree, not a {expected}: {datum} in: " + c + " of: " + expr, c.car(2), toChk(Symbol.class))
+					? typeError("invalid parameter tree, not a {expected}: {datum} in: " + c + " of: {expr}", c.car(2), toChk(Symbol.class), expr)
 					: check(c.car(2))
 				;
 			var msg = check(c.car); if (msg != null) return msg;
 			return c.cdr() == null ? null : check(c.cdr());
 		}
 	}
-	Object checkDt(Object exp, Object dt) { return checkPt(exp, dt, null); }
-	Object checkPt(Object exp, Object pt, Object ep) { return new PTree(exp, pt, ep).check(); }
+	Object checkDt(Object expr, Object dt) { return new PTree(expr, dt, null).check(); }
+	Object checkPt(Object expr, Object pt, Object ep) {
+		return ep != null
+			? new PTree(expr, pt, ep).check()
+			: typeError("invalid environment parameter, not {expected}: {datum} in: {expr}", ep, toChk(or(ignore, Symbol.class)), expr)
+		;
+	}
 	int args(Apv apv) {
 		return switch(apv.cmb) {
 			case Opv opv-> opv.pt == null ? 0 : opv.pt instanceof Cons c && c.cdr() == null && (c.car == ignore || c.car instanceof Symbol) ? 1 : more;
@@ -1413,6 +1420,7 @@ public class Vm {
 		return i;
 	}
 	public int checkO(Object o, Object chk) {
+		if (equals(o, chk))	return len(o);
 		if (chk instanceof Object[] chks) {
 			for (int i=0; i<chks.length; i+=1) {
 				try {
@@ -1452,9 +1460,6 @@ public class Vm {
 		}
 		else if (chk instanceof Class chkc) {
 			if (checkC(o, chkc)) return 0;
-		}
-		else if (member(o, chk))  {
-			return 0;
 		}
 		throw new TypeException("not a {expected}: {datum}", o, toChk(chk));
 	}
@@ -1496,6 +1501,7 @@ public class Vm {
 			? error("combining {operator} with {operands}", ie, "operator", op, "operands", o)
 			// con : e check quando va in errore un check in profondità, es. (: (Integer) (#t))
 			// ovvero quando il valore in errore (ie.objs[1]) è diverso dall'intero valore da controllare (o)
+			// ovvero quando il check in errore (ie.objs[3]) è diverso dall'intero check da effettuare (chk)
 			: ie.objs[1] != o // || !ie.objs[3].equals(toChk(chk))
 			? error("checking {operands} with {check}", ie, "operands", o, "check", toChk(chk))
 			: error(ie)
@@ -1642,17 +1648,21 @@ public class Vm {
 	boolean isType(Object object, Class classe) {
 		return classe == null ? object == null : object != null && classe.isAssignableFrom(object.getClass());
 	}
-	private boolean matchType(Object object, List expt) {
+	private boolean matchType(Object object, List chk) {
 		//if (!(expt.car() instanceof Class cls && isType(object, cls))) return false;
-		if (!isType(object, expt.car())) return false;
-		if (object instanceof Box box) return expt.cdr() == null || expt.cdr(1) == null && Vm.this.equals(box.value, expt.car(1));
-		for (var l=expt.cdr(); l != null; l = l.cdr(1)) {
-			var car = l.car;
-			if (car instanceof AtDot ad) {
-				if (!Vm.this.equals(ad.apply(cons(object)), l.car(1))) return false;
+		if (!isType(object, chk.car())) return false;
+		if (object instanceof Box box) return chk.cdr() == null || apply(expt-> expt == null && equals(box.value, expt), chk.cdr(1));
+		for (var l=chk.cdr(); l != null; l = l.cdr(1)) {
+			var key = l.car;
+			var expt = l.car(1);
+			if (key instanceof AtDot ad) {
+				var val = ad.apply(cons(object));
+				try { checkO(val, expt); } catch (InnerException ie) { return false; }
 			}
 			else if (object instanceof Obj obj) {
-				if (!Vm.this.equals(obj.value(car), l.car(1))) return false;
+				var val = obj.value(key);
+				if (val == null && !obj.isBound(key)) return false;
+				try { checkO(val, expt); } catch (InnerException ie) { return false; }
 			}
 			else {
 				return false;
@@ -1745,7 +1755,12 @@ public class Vm {
 				// Env
 				//"%env?", wrap(new JFun("%Env?", (Function<Object, Boolean>) obj-> obj instanceof Env )),
 				"%vmEnv", wrap(new JFun("%VmEnv", (n,o)-> checkN(n, o, 0), (l,o)-> vmEnv() )),
-				"%newEnv", wrap(new JFun("%NewEnv", (n,o)-> check(n, o, or(null, list(2, or(null, Env.class), Obj.class), list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class, String.class), Any.class))), (l,o)-> l==0 ? env() : l==2 ? env(o.car(), o.<Obj>car(1)) : env(o.car(), array(o.cdr())) )),
+				"%newEnv", wrap(new JFun("%NewEnv",
+					(n,o)-> check(n, o,
+						or( null,
+							list(2, or(null, Env.class), Obj.class),
+							list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class, String.class), Any.class))),
+					(l,o)-> l==0 ? env() : l==2 ? env(o.car(), o.<Obj>car(1)) : env(o.car(), array(o.cdr())) )),
 				"%bind", wrap(new JFun("%Bind", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> bind(true, 3, o.<Env>car(), o.car(1), o.car(2)) )),
 				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (InnerException ie) { return false; }} )),
 				"%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } )),
@@ -1985,7 +2000,13 @@ public class Vm {
 				"%addMethod", wrap(new JFun("%AddMethod", (n,o)-> checkN(n, o, 3, or(null, Class.class), Symbol.class, Apv.class), (l,o)-> addMethod(o.car(), o.car(1), o.car(2)) )),
 				"%getMethod", wrap(new JFun("%GetMethod", (n,o)-> checkN(n, o, 2, or(null, Class.class), Symbol.class), (l,o)-> getMethod(o.car(), o.car(1)) )),
 				// Check
-				"%matchType?", wrap(new JFun("%MatchType?", (n,o)-> checkN(n, o, 2, Any.class, or(list(1, 2, Box.class, Any.class), list(1, more, Any.class, list(1, more, Class.class, or(At.class, Dot.class, Symbol.class, Keyword.class, String.class), Any.class)))), (l,o)-> matchType(o.car, o.car(1)) )),
+				"%matchType?", wrap(new JFun("%MatchType?",
+					(n,o)-> checkN(n, o, 2,	Any.class,
+						or( list(1, 2, Box.class, Any.class),
+							list(1, more, Any.class,
+								list(1, more, Class.class,
+									or(At.class, Dot.class, Symbol.class, Keyword.class, String.class), Any.class)))),
+					(l,o)-> matchType(o.car, o.car(1)) )),
 				"%:", new Colon(":"),
 				"%check", new Colon("check"),
 				"%evalChk", opv(vmEnv,"""

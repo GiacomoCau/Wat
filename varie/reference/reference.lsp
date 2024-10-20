@@ -4,7 +4,7 @@
 
 (def milli (@currentTimeMillis System))
 
-(load "varie/html.lsp" (theEnv)) 
+(load "varie/html/html.lsp" (theEnv)) 
 
 (def PrintWriter &java.io.PrintWriter)
 (def FileReader &java.io.FileReader)

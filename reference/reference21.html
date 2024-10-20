@@ -138,6 +138,16 @@
     </div>
     <div>
       <h3>
+        printFrames
+      </h3>
+      <ul>
+        <li>
+          (def\ (printFrames k) (unless (null? k) (printFrames (.nxt k)) (log &quot;v&quot; k)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         printStacktrace
       </h3>
       <ul>

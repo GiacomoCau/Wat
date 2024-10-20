@@ -2408,64 +2408,22 @@
 
 (assert (case 3 ((2 4 6 8) 'pair) ((1 3 5 7 9) 'odd)) 'odd)
 
-#|TODO sostituiti dai seguenti, eliminare
-(def matchObj?
-  #|Return #true if OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, #false otherwise.
-   |
-   |$(fn object class . attributes)
-   |$(type function)
-   |$(syntax attributes (attribute value . attributes))
-   |$(syntax attribute (or Symbol Keyword String .Field @Method))
-   |#
-  %matchObj?)
-
-(def\ (matchObj?* obj class . attributes)
-  #|Return #true if OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, #false otherwise.
-   |
-   |$(fn object class . attributes)
-   |$(type function)
-   |$(syntax attributes (attribute value . attributes))
-   |$(syntax attribute (or Symbol Keyword String .Field @Method))
-   |#
-  (matchObj? obj (cons class attributes)) )
-
-(def matchBox?
-  #|Return #true if OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, #false otherwise.
-   |
-   |$(fn object class . attributes)
-   |$(type function)
-   |$(syntax attributes (attribute value . attributes))
-   |$(syntax attribute (or Symbol Keyword String .Field @Method))
-   |#
-  %matchBox?)
-
-(def\ (matchBox?* obj class . attributes)
-  #|Return #true if OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, #false otherwise.
-   |
-   |$(fn object class . attributes)
-   |$(type function)
-   |$(syntax attributes (attribute value . attributes))
-   |$(syntax attribute (or Symbol Keyword String .Field @Method))
-   |#
-  (matchBox? obj (cons class attributes)) )
-|#
-
 (def matchType?
-  #|Return #true if OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, #false otherwise.
+  #|Return #true if OBJECT is an instance of CLASS and all the optional specified ATTRIBUTE matches the corresponding CHECK, #false otherwise.
    |
    |$(fn object class . attributes)
    |$(type function)
-   |$(syntax attributes (attribute value . attributes))
+   |$(syntax attributes (attribute check . attributes))
    |$(syntax attribute (or Symbol Keyword String .Field @Method))
    |#
   %matchType?)
 
 (def\ (matchType?* obj class . attributes)
-  #|Return #true if OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, #false otherwise.
+  #|Return #true if OBJECT is an instance of CLASS and all the optional specified ATTRIBUTE matches the corresponding CHECK, #false otherwise.
    |
    |$(fn object class . attributes)
    |$(type function)
-   |$(syntax attributes (attribute value . attributes))
+   |$(syntax attributes (attribute check . attributes))
    |$(syntax attribute (or Symbol Keyword String .Field @Method))
    |#
   (matchType? obj (cons class attributes)) )
@@ -2476,7 +2434,7 @@
   #|Multi-armed type test.
    |Evaluate the OBJECT and go through the CLAUSES.
    |If CLAUSES is #null return #inert.
-   |If OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, evaluate FORMS as an implicit `begin'.
+   |If OBJECT is an instance of CLASS and the optional specified ATTRIBUTE matchs the corresponding CHECK, evaluate FORMS as an implicit `begin'.
    |Otherwise go to the next CLAUSE.
    |
    |$(fn object . clauses)
@@ -2484,7 +2442,7 @@
    |$(syntax clauses (clause . clauses))
    |$(syntax clause (class . forms))
    |$(syntax clause ((class . attributes) . forms))
-   |$(syntax attributes (attribute value . attributes))
+   |$(syntax attributes (attribute check . attributes))
    |$(syntax attribute (or Symbol Keyword String .Field @Method))
    |#
   (let1 (key (eval key env))
@@ -2602,7 +2560,7 @@
   (unless boolean (error (new Error "invalid assetion" :type 'assert :datum boolean :expected #t))) )
 
 (def check
-  #|Returns the length of the EXPR value if it matches CHECK, otherwise reports an error.
+  #|Returns the length of the EXPR value if it matches CHECK, signals an error otherwise.
    |
    |$(fn expr check)
    |$(type fexpr)
@@ -2612,7 +2570,7 @@
   %check )
 
 (defMacro (check* o . cks)
-  #|Returns the length of LIST if the elements of LIST match the corresponding CHECKS, signals an error otherwise.
+  #|Returns the length of LIST if the elements of LIST match the corresponding CHECK, signals an error otherwise.
    |
    |$(fn list . checks)
    |$(type macro)
@@ -2642,7 +2600,7 @@
     #t ))
 
 (def :
-  #|Returns the value of the last form of (begin FORM . FORMS) if it matches CHECK, otherwise it reports an error.
+  #|Returns the value of the last form of (begin FORM . FORMS) if it matches CHECK, signals an error otherwise.
    |
    |$(fn check form . forms)
    |$(type fexpr)
@@ -3407,7 +3365,7 @@
 (assert (expand ´(dd _c 1 _b "a" _a _a 'c _ :ff _*) '(\ (_ _a _b _c . _*) (dd _c 1 _b "a" _a _a 'c _ :ff _*)) ))
 
 
-#|! Dynamic Variable
+#|! Dynamic Variables
  |(DVar type Class extends Box)
  |
  |The form ddef ddef* dlet progv and dlet* are defined as macro using the primitive operator %dv\ that return a function.   

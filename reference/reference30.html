@@ -85,7 +85,7 @@
       </h3>
       <ul>
         <li>
-          Return #true if OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, #false otherwise.
+          Return #true if OBJECT is an instance of CLASS and all the optional specified ATTRIBUTE matches the corresponding CHECK, #false otherwise.
           <br/>
             &nbsp;
         </li>
@@ -96,7 +96,7 @@
           (type function)
         </li>
         <li>
-          (syntax attributes (attribute value . attributes))
+          (syntax attributes (attribute check . attributes))
         </li>
         <li>
           (syntax attribute (or Symbol Keyword String .Field @Method))
@@ -109,7 +109,7 @@
       </h3>
       <ul>
         <li>
-          Return #true if OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, #false otherwise.
+          Return #true if OBJECT is an instance of CLASS and all the optional specified ATTRIBUTE matches the corresponding CHECK, #false otherwise.
           <br/>
             &nbsp;
         </li>
@@ -120,7 +120,7 @@
           (type function)
         </li>
         <li>
-          (syntax attributes (attribute value . attributes))
+          (syntax attributes (attribute check . attributes))
         </li>
         <li>
           (syntax attribute (or Symbol Keyword String .Field @Method))
@@ -139,7 +139,7 @@
           <br/>
             If CLAUSES is #null return #inert.
           <br/>
-            If OBJECT is an instance of CLASS and the optional specified ATTRIBUTES are 'eq?' to relative VALUE, evaluate FORMS as an implicit `begin'.
+            If OBJECT is an instance of CLASS and the optional specified ATTRIBUTE matchs the corresponding CHECK, evaluate FORMS as an implicit `begin'.
           <br/>
             Otherwise go to the next CLAUSE.
           <br/>
@@ -161,7 +161,7 @@
           (syntax clause ((class . attributes) . forms))
         </li>
         <li>
-          (syntax attributes (attribute value . attributes))
+          (syntax attributes (attribute check . attributes))
         </li>
         <li>
           (syntax attribute (or Symbol Keyword String .Field @Method))

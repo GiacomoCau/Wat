@@ -87,12 +87,12 @@
                       (continue (\ () (eval symbol env)) :associatedConditions (list condition))
                       (storeValue (\ (value) (eval (list 'def symbol value) env)) :associatedConditions (list condition)) )
                     (repl:runDebuggerLoop condition k) )) )
-            #|
-            ( (Error :type 'type)
+            ( (Error :type 'type :operands List)
                 (let ( (operands (getSlot condition 'operands)) )
                   (restartCase 
                     ( (setOperand (\ (index value) (setCar (nthCdr index operands) value) value) :associatedConditions (list condition)) )
                     (repl:runDebuggerLoop condition k) )) )
+            #|
             ( (Error :type 'match)
                 (log condition) 
                   (restartCase 
