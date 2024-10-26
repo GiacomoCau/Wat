@@ -709,12 +709,12 @@ public class Vm {
 					checkO(rhs, getTco(evalChk.combine(e, cons(lc.car(1)))));
 					yield bind(def, bndRes, e, lc.car(2), rhs); 
 				}
-				else if (!(rhs instanceof Cons rc)) {
-					throw new MatchException("expected {operands#,%+d} operands, found: {datum}", rhs, len(lc));
-				}
-				else {
+				else if (rhs instanceof Cons rc) {
 					var res = bind(def, bndRes, e, lc.car, rc.car);
 					yield lc.cdr() == null && rc.cdr() == null ? res : bind(def, bndRes, e, lc.cdr(), rc.cdr());
+				}
+				else {
+					throw new MatchException("expected {operands#,%+d} operands, found: {datum}", rhs, len(lc));
 				}
 			}
 			default-> {
@@ -1025,7 +1025,7 @@ public class Vm {
 				prp-> switch (getTco(evaluate(e, o.car(1)))) {
 					case Suspension s-> s;
 					case Continuation k-> pushPrompt(null, e, dbg, prp, ()-> k.apply(()-> begin.combine(e, o.cdr(1))));
-					case Object object-> typeError("cannot apply continuation, not a {expected}: {datum}", object, Continuation.class);
+					case Object object-> typeError("cannot apply continuation, not a {expected}: {datum}", object, symbol("Continuation"));
 				}
 			);
 		}
@@ -1103,7 +1103,7 @@ public class Vm {
 						for (int i=0; i<len; i+=1) {
 							if (ndvs[i] instanceof DVar dvar) dvar.value = vals[i]; else de.def(vars[i], new DVar(vals[i]));
 						}
-						if (body == null) return switch (bndRes) { case 0-> inert; case 1-> vals[len-1]; case 2-> olds[len-1]; default-> 1; };  
+						if (body == null) return switch (bndRes) { case 1-> vals[len-1]; case 2-> olds[len-1]; case 3-> de; default-> inert; };  
 						try {
 							Object res = r != null ? r.resume() : getTco(begin.combine(e, body));
 							return res instanceof Suspension s ? s.suspend(dbg(de, this, o), rr-> combine(rr, de, o)) : res;
@@ -1347,7 +1347,7 @@ public class Vm {
 			if (p instanceof Symbol) { return syms.add(p) ? null : notUniqueError("invalid parameter tree, not a unique symbol: {datum} in: " + pt + " of: {expr}", p, expr); }
 			if (!(p instanceof Cons c)) return null;
 			var len = len(c);
-			if (c.car instanceof Symbol sym && member(sym.name, "%'", "quote"))
+			if (c.car instanceof Symbol sym && member(sym, quotes))
 				return len == 2
 					? null
 					: matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: " + c + " of: " + expr, 2 > len ? null : c.cdr(len-2), 2-len)
