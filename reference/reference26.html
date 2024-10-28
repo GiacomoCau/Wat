@@ -31,18 +31,17 @@
       </h3>
       <ul>
         <li>
-          Return the ENVIRONMENT if VALUE match the DEFINIEND-TREE updated with new bindings, signals an error otherwise.
+          Return the <b>environment</b> if <b>value</b> match the <b>definiendTree</b> updated with new bindings, signals an error otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (bind environment definiendTree value)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (eval (list 'def :cnt definiendTree value) environment))
+          <br/>
+            (bind environment definiendTree value)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (eval (list 'def :cnt definiendTree value) environment))
         </li>
       </ul>
     </div>
@@ -52,18 +51,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if VALUE match the DEFINIEND-TREE and update the ENVIRONMENT with the new bindings, #false otherwise.
+          Return #true if <b>value</b> match the <b>definiendTree</b> and update the <b>environment</b> with the new bindings, #false otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (bind? environment definiendTree value)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (catch #f (bind environment definiendTree value) #t))
+          <br/>
+            (bind? environment definiendTree value)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (catch #f (bind environment definiendTree value) #t))
         </li>
       </ul>
     </div>
@@ -73,17 +71,15 @@
       </h3>
       <ul>
         <li>
-          Return the evaluation of THEN into resulting ENVIRONMENT if VALUE match the DEFINIEND-TREE,
+          Return the evaluation of <b>then</b> into resulting <b>environment</b> if <b>value</b> match the <b>definiendTree</b>,
           <br/>
-            the evaluation of ELSE if present, #inert otherwise.
+            the evaluation of <b>else</b> if present, #inert otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (ifBind? (definiendTree value) then . else)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (ifBind? (definiendTree value) then . else)
+          <br/>
+            (type fexpr)
         </li>
       </ul>
     </div>
@@ -93,39 +89,35 @@
       </h3>
       <ul>
         <li>
-          Return a multi-armed vau operator, when applied go through the CLAUSES in order.
+          Return a multi-armed vau operator, when applied go through the <b>clauses</b> in order.
           <br/>
-            If CLAUSES is #null return #inert.
+            If <b>clauses</b> is #null return #inert.
           <br/>
-            If `car' of CLAUSE is else
+            If `car' of <b>clause</b> is else
           <br/>
-            &nbsp;&nbsp;if the `cadr' of CLAUSES is =&gt;, evaluate `caddr' of CLAUSE and apply it to the operands,
+            &nbsp;&nbsp;if the `cadr' of <b>clauses</b> is =&gt;, evaluate `caddr' of <b>clause</b> and apply it to the operands,
           <br/>
-            &nbsp;&nbsp;otherwise evaluate FORMS as an implicit `begin'.
+            &nbsp;&nbsp;otherwise evaluate <b>forms</b> as an implicit `begin'.
           <br/>
-            If the operands match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
+            If the operands match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
           <br/>
-            Otherwise go to the next CLAUSE.
+            Otherwise go to the next <b>clause</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (caseVau . clauses)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (syntax clauses (clause . clauses))
-        </li>
-        <li>
-          (syntax clause (else . forms))
-        </li>
-        <li>
-          (syntax clause (else =&gt; apv1))
-        </li>
-        <li>
-          (syntax clause (definiendTree . forms))
+          <br/>
+            (caseVau . clauses)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax clauses (clause . clauses))
+          <br/>
+            (syntax clause (else . forms))
+          <br/>
+            (syntax clause (else =&gt; apv1))
+          <br/>
+            (syntax clause (definiendTree . forms))
         </li>
       </ul>
     </div>
@@ -135,18 +127,17 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment the named caseVau NAME with the given CLAUSES.
+          Defines into the current environment the named caseVau <b>name</b> with the given <b>clauses</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (defCaseVau name . clauses)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (derivation (def name (caseVau . clauses)))
+          <br/>
+            (defCaseVau name . clauses)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (def name (caseVau . clauses)))
         </li>
       </ul>
     </div>
@@ -156,42 +147,37 @@
       </h3>
       <ul>
         <li>
-          Return a multi-armed \ function, when applied go through the CLAUSES in order.
+          Return a multi-armed \ function, when applied go through the <b>clauses</b> in order.
           <br/>
-            If CLAUSES is #null return #inert.
+            If <b>clauses</b> is #null return #inert.
           <br/>
-            If `car' of CLAUSE is else
+            If `car' of <b>clause</b> is else
           <br/>
-            &nbsp;&nbsp;if the `cadr' of CLAUSES is =&gt;, evaluate `caddr' of CLAUSE and apply it to the arguments,
+            &nbsp;&nbsp;if the `cadr' of <b>clauses</b> is =&gt;, evaluate `caddr' of <b>clause</b> and apply it to the arguments,
           <br/>
-            &nbsp;&nbsp;otherwise evaluate FORMS as an implicit `begin'.
+            &nbsp;&nbsp;otherwise evaluate <b>forms</b> as an implicit `begin'.
           <br/>
-            If the arguments match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
+            If the arguments match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
           <br/>
-            Otherwise go to the next CLAUSE.
+            Otherwise go to the next <b>clause</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (case\ . clauses)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (syntax clauses (clause . clauses))
-        </li>
-        <li>
-          (syntax clause (else . forms))
-        </li>
-        <li>
-          (syntax clause (else =&gt; apv1))
-        </li>
-        <li>
-          (syntax clause (definiendTree . forms))
-        </li>
-        <li>
-          (derivation (wrap (caseVau . clauses)))
+          <br/>
+            (case\ . clauses)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax clauses (clause . clauses))
+          <br/>
+            (syntax clause (else . forms))
+          <br/>
+            (syntax clause (else =&gt; apv1))
+          <br/>
+            (syntax clause (definiendTree . forms))
+          <br/>
+            (derivation (wrap (caseVau . clauses)))
         </li>
       </ul>
     </div>
@@ -201,18 +187,17 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment the named case\ NAME with the given CLAUSES.
+          Defines into the current environment the named case\ <b>name</b> with the given <b>clauses</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (defCase\ name . clauses)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (derivation (def name (case\ . clauses)))
+          <br/>
+            (defCase\ name . clauses)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (def name (case\ . clauses)))
         </li>
       </ul>
     </div>
@@ -222,42 +207,37 @@
       </h3>
       <ul>
         <li>
-          Evaluates VALUE and go through the CLAUSES in order.
+          Evaluates <b>value</b> and go through the <b>clauses</b> in order.
           <br/>
-            If CLAUSES is #null return #inert.
+            If <b>clauses</b> is #null return #inert.
           <br/>
-            If `car' of CLAUSE is else
+            If `car' of <b>clause</b> is else
           <br/>
-            &nbsp;&nbsp;if the `cadr' of CLAUSES is =&gt;, evaluate `caddr' of CLAUSE and apply it to the arguments,
+            &nbsp;&nbsp;if the `cadr' of <b>clauses</b> is =&gt;, evaluate `caddr' of <b>clause</b> and apply it to the arguments,
           <br/>
-            &nbsp;&nbsp;otherwise evaluate FORMS as an implicit `begin'.
+            &nbsp;&nbsp;otherwise evaluate <b>forms</b> as an implicit `begin'.
           <br/>
-            If VALUE match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
+            If <b>value</b> match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
           <br/>
-            Otherwise go to the next CLAUSE.
+            Otherwise go to the next <b>clause</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (match value . clauses)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (syntax clauses (clause . clauses))
-        </li>
-        <li>
-          (syntax clause (else . forms))
-        </li>
-        <li>
-          (syntax clause (else =&gt; apv1))
-        </li>
-        <li>
-          (syntax clause (definiendTree . forms))
-        </li>
-        <li>
-          (derivation (wrap (caseVau . clauses)))
+          <br/>
+            (match value . clauses)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax clauses (clause . clauses))
+          <br/>
+            (syntax clause (else . forms))
+          <br/>
+            (syntax clause (else =&gt; apv1))
+          <br/>
+            (syntax clause (definiendTree . forms))
+          <br/>
+            (derivation (wrap (caseVau . clauses)))
         </li>
       </ul>
     </div>
@@ -269,54 +249,49 @@
         <li>
           Multi-armed conditional.
           <br/>
-            Go through the CLAUSES in order.
+            Go through the <b>clauses</b> in order.
           <br/>
-            If CLAUSES is #null return #inert.
+            If <b>clauses</b> is #null return #inert.
           <br/>
-            If `car' of CLAUSE is else evaluate FORMS as an implicit `begin'.
+            If `car' of <b>clause</b> is else evaluate <b>forms</b> as an implicit `begin'.
           <br/>
-            Otherwise evaluate the TEST.
+            Otherwise evaluate the <b>test</b>.
           <br/>
-            If TEST is a boolean
+            If <b>test</b> is a boolean
           <br/>
-            &nbsp;&nbsp;if is #true, evaluate FORMS as an implicit `begin',
+            &nbsp;&nbsp;if is #true, evaluate <b>forms</b> as an implicit `begin',
           <br/>
-            &nbsp;&nbsp;otherwise go to the next CLAUSE.
+            &nbsp;&nbsp;otherwise go to the next <b>clause</b>.
           <br/>
-            If FORMS is #null return TEST.
+            If <b>forms</b> is #null return <b>test</b>.
           <br/>
-            If `car' di FORMS is =&gt; evaluate the `cadr' of FORMS and apply it to TEST.
+            If `car' di <b>forms</b> is =&gt; evaluate the `cadr' of <b>forms</b> and apply it to <b>test</b>.
           <br/>
-            If `cadr' di FORMS is =&gt; evaluate `car' of FORMS
+            If `cadr' di <b>forms</b> is =&gt; evaluate `car' of <b>forms</b>
           <br/>
-            &nbsp;&nbsp;if is #true evaluate the `caddr' of FORMS and apply it to TEST
+            &nbsp;&nbsp;if is #true evaluate the `caddr' of <b>forms</b> and apply it to <b>test</b>
           <br/>
-            &nbsp;&nbsp;otherwise go to the next CLAUSE.
+            &nbsp;&nbsp;otherwise go to the next <b>clause</b>.
           <br/>
-            Otherwise go to the next CLAUSE.
+            Otherwise go to the next <b>clause</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (cond . clauses)
-        </li>
-        <li>
-          (syntax clauses (clause . clauses))
-        </li>
-        <li>
-          (syntax clause (else . forms))
-        </li>
-        <li>
-          (syntax clause (test-&gt;bool . forms))
-        </li>
-        <li>
-          (syntax clause (test))
-        </li>
-        <li>
-          (syntax clause (test =&gt; apv1))
-        </li>
-        <li>
-          (syntax clause (test guard =&gt; apv1))
+          <br/>
+            (cond . clauses)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax clauses (clause . clauses))
+          <br/>
+            (syntax clause (else . forms))
+          <br/>
+            (syntax clause (test-&gt;bool . forms))
+          <br/>
+            (syntax clause (test))
+          <br/>
+            (syntax clause (test =&gt; apv1))
+          <br/>
+            (syntax clause (test guard =&gt; apv1))
         </li>
       </ul>
     </div>

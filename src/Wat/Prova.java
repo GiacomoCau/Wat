@@ -57,8 +57,10 @@ import Wat.Vm.Symbol;
 public class Prova {
 	
 	public static void main(String[] args) throws Exception {
-		out.println(1 * 1.2);
-		out.println(1.2 * 1);
+		//out.println(1 * 1.2);
+		//out.println(1.2 * 1);
+		//System.out.println(".. __aaa__ dddssd".replaceAll("__([^_]*)__", "<b>$1<b/>"));
+		System.out.println(Utility.encode(".. <b>aaa</b>dddssd<b>"));
 	}
 	
 	public static void functions() {

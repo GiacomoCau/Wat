@@ -28,9 +28,8 @@
     <ul>
       <li>
         An option is either #null (&quot;none&quot;), or a one-element list (&quot;some&quot;).
-      </li>
-      <li>
-        Idea from Taylor R. Campbell's blag. https://mumble.net/~campbell/blag.txt
+        <br/>
+          Idea from Taylor R. Campbell's blag. https://mumble.net/~campbell/blag.txt
       </li>
     </ul>
     <div>
@@ -39,7 +38,7 @@
       </h3>
       <ul>
         <li>
-          Create a one-element list from the VALUE.
+          Create a one-element list from the <b>value</b>.
           <br/>
             Alias of cons!.
         </li>
@@ -51,19 +50,17 @@
       </h3>
       <ul>
         <li>
-          Single-value OPTION destructuring.
+          Single-value <b>option</b> destructuring.
           <br/>
-            Evaluate the THEN form with the NAME bound to the contents of the OPTION if the evaluation of OPTION is !#null,
+            Evaluate the <b>then</b> form with the <b>name</b> bound to the contents of the <b>option</b> if the evaluation of <b>option</b> is !#null,
           <br/>
-            evaluate the ELSE forms as an implicit `begin' otherwise.
+            evaluate the <b>else</b> forms as an implicit `begin' otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (ifOpt (name option) then . else)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (ifOpt (name option) then . else)
+          <br/>
+            (type fexpr)
         </li>
       </ul>
     </div>
@@ -73,16 +70,15 @@
       </h3>
       <ul>
         <li>
-          Multi-valued OPTION destructuring.
+          Multi-valued <b>option</b> destructuring.
           <br/>
-            Evaluate THEN form with the DEFINIEND-TREE bound to OPTION value if the evaluation of OPTION is !#null,
+            Evaluate <b>then</b> form with the <b>definiendTree</b> bound to <b>option</b> value if the evaluation of <b>option</b> is !#null,
           <br/>
-            evaluate the ELSE forms as an implicit `begin' otherwise.
+            evaluate the <b>else</b> forms as an implicit `begin' otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (ifOpt* (definiendTree option) then . else)
+          <br/>
+            (ifOpt* (definiendTree option) then . else)
         </li>
       </ul>
     </div>
@@ -92,19 +88,17 @@
       </h3>
       <ul>
         <li>
-          Destructure the OPTION.
+          Destructure the <b>option</b>.
           <br/>
-            Return #null if the evaluation of OPTION it's #null,
+            Return #null if the evaluation of <b>option</b> it's #null,
           <br/>
-            evaluate FORMS as an implicit `begin' with the NAME bound to the contents of the OPTION, otherwise.
+            evaluate <b>forms</b> as an implicit `begin' with the <b>name</b> bound to the contents of the <b>option</b>, otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (whenOpt (name option) . forms)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (whenOpt (name option) . forms)
+          <br/>
+            (type fexpr)
         </li>
       </ul>
     </div>
@@ -114,17 +108,15 @@
       </h3>
       <ul>
         <li>
-          Destructure the OPTION.
+          Destructure the <b>option</b>.
           <br/>
-            Return the evaluation of FORMS as an implicit `begin' if the evaluation of OPTION is #null, #null otherwise.
+            Return the evaluation of <b>forms</b> as an implicit `begin' if the evaluation of <b>option</b> is #null, #null otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (unlessOpt option . forms)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (unlessOpt option . forms)
+          <br/>
+            (type fexpr)
         </li>
       </ul>
     </div>
@@ -136,34 +128,31 @@
         <li>
           Multi-armed ifOpt.
           <br/>
-            Evaluate OPTION and go through the CLAUSES in order.
+            Evaluate <b>option</b> and go through the <b>clauses</b> in order.
           <br/>
-            If OPTION is #null return #null.
+            If <b>option</b> is #null return #null.
           <br/>
-            If CLAUSES is #null return #null.
+            If <b>clauses</b> is #null return #null.
           <br/>
-            If `car' of CLAUSE is else evaluate FORMS as an implicit `begin'.
+            If `car' of <b>clause</b> is else evaluate <b>forms</b> as an implicit `begin'.
           <br/>
-            If the OPTION match the DEFINIEND-TREE evaluate FORMS as an implicit `begin' into resulting ENVIRONMENT.
+            If the <b>option</b> match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
           <br/>
-            Otherwise go to the next CLAUSE.
+            Otherwise go to the next <b>clause</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (caseOpt option . clauses)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (syntax clauses (clause . clauses))
-        </li>
-        <li>
-          (syntax clause (else . forms))
-        </li>
-        <li>
-          (syntax clause (definiendTree . forms))
+          <br/>
+            (caseOpt option . clauses)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax clauses (clause . clauses))
+          <br/>
+            (syntax clause (else . forms))
+          <br/>
+            (syntax clause (definiendTree . forms))
         </li>
       </ul>
     </div>
@@ -173,19 +162,17 @@
       </h3>
       <ul>
         <li>
-          Return the contents of the OPTION if the option is !#null,
+          Return the contents of the <b>option</b> if the option is !#null,
           <br/>
-            the evaluation if DEFAULT if present, #inert otherwise.
+            the evaluation if <b>default</b> if present, #inert otherwise.
           <br/>
-            The DEFAULT is evaluated lazily, only when the OPTION is #null.
+            The <b>default</b> is evaluated lazily, only when the <b>option</b> is #null.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (optDft option . default)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (optDft option . default)
+          <br/>
+            (type fexpr)
         </li>
       </ul>
     </div>
@@ -195,22 +182,21 @@
       </h3>
       <ul>
         <li>
-          Similar to `optdft', but provides DEFAULT for any elements of LIST.
+          Similar to `optdft', but provides <b>default</b> for any elements of <b>list</b>.
           <br/>
             This is useful for implementing functions that take multiple optional arguments.
           <br/>
-            Each DEFAULT is evaluated lazily, only when needed.
+            Each <b>default</b> is evaluated lazily, only when needed.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (optDft* list . defaults)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (syntax defaults (default . defaults))
+          <br/>
+            (optDft* list . defaults)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax defaults (default . defaults))
         </li>
       </ul>
     </div>
@@ -220,15 +206,13 @@
       </h3>
       <ul>
         <li>
-          Returns the contents of the OPTION or signals an error if it is #null.
+          Returns the contents of the <b>option</b> or signals an error if it is #null.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (optDft! option)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (optDft! option)
+          <br/>
+            (type fexpr)
         </li>
       </ul>
     </div>

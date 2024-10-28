@@ -94,12 +94,12 @@
               (buttons)
               (h2 (pr chapter))
               (unless (startsWith (set! l :rhs (readLine r)) " |#")
-                (ul (loop (li (pr (encode (subSeq l 2))) (until? (startsWith (set! l :rhs (readLine r)) " |#")) ))))
+                (ul (li (pr (encode (subSeq l 2))) (until (startsWith (set! l :rhs (readLine r)) " |#") (br (pr (encode (subSeq l 2))))))))
               (loop
                 (set! l :rhs (readLine r)) 
                 (continue?- 1 (|| (null? l) (startsWith l "#|!")) (buttons))
                 (continue? (startsWith l ";;!") (ul (li (pr (encode (subSeq l 3))))))
-                (continue? (startsWith l "  #|!") (ul (until (startsWith (set! l :rhs (readLine r)) "   |#") (li (pr (encode (subSeq l 4)))) )))
+                (continue? (startsWith l "  #|!") (ul (li (until (startsWith (set! l :rhs (readLine r)) "   |#") (br (pr (encode (subSeq l 4))))) )))
                 (continue? (startsWith l "#|") (until (or (startsWith (set! l :rhs (readLine r)) "|#") (startsWith l "  |#")) ))
                 (continue? (! (|| (startsWith l "\x28;def") (startsWith l "\x28;%def"))))
                 (def l0 l)
@@ -117,13 +117,8 @@
                       (li
                         (pr (encode (subSeq l 4)))
                         (loop 
-                          (until? (startsWith (set! l :rhs (readLine r)) "   |$"))
-                          (until? (startsWith l "   |#"))
-                          (br (pr (encode (subSeq l 4)))) ))
-                      (if (startsWith l "   |$")
-                        (loop
-                          (li (pr (encode (@replace (subSeq l 5) "fn" name))))
-                          (until? (startsWith (def l :rhs (readLine r)) "   |#")) )))) 
+                          (until? (startsWith (set! l :rhs (readLine r)) "   |#"))
+                          (br (pr (encode ((\ (s) (if (startsWith s "\x28;fn") (@replace s "fn" name) s)) (subSeq l 4)) ))) ))))
                   (div
                     (h3 (pr (encode (nm l0))))
                     (ul (li (pr (encode l0)))) )))) )))) ))

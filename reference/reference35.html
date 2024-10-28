@@ -34,12 +34,10 @@
           Array to proper list.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (array-&gt;list array)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (array-&gt;list array)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -54,12 +52,10 @@
             The last element of the array becomes the last `cdr' of the list.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (array-&gt;cons array)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (array-&gt;cons array)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -72,12 +68,10 @@
           List to array.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (list-&gt;array list)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (list-&gt;array list)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -90,12 +84,10 @@
           List to array.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (array . list)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (array . list)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -105,15 +97,13 @@
       </h3>
       <ul>
         <li>
-          Return a new array by applying the FUNCTION to each element of the ARRAY.
+          Return a new array by applying the <b>function</b> to each element of the <b>array</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (arrayMap function array)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (arrayMap function array)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -123,15 +113,13 @@
       </h3>
       <ul>
         <li>
-          Returns a new array with the elements of the ARRAY for which the application of the FUNCTION returns #true.
+          Returns a new array with the elements of the <b>array</b> for which the application of the <b>function</b> returns #true.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (arrayFilter function array)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (arrayFilter function array)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -141,18 +129,17 @@
       </h3>
       <ul>
         <li>
-          Returns a new array with the elements of CLASS tipe and the specified DIMENSIONS.
+          Returns a new array with the elements of <b>class</b> tipe and the specified <b>dimensions</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (newInstance class . dimensions)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (syntax dimension (integer . dimensions)
+          <br/>
+            (newInstance class . dimensions)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax dimension (integer . dimensions)
         </li>
       </ul>
     </div>
@@ -162,15 +149,13 @@
       </h3>
       <ul>
         <li>
-          Returns the element at INDEX position int the ARRAY.
+          Returns the element at <b>index</b> position int the <b>array</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (arrayGet array index)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (arrayGet array index)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -180,18 +165,17 @@
       </h3>
       <ul>
         <li>
-          Returns the element at INDEXES position int the multi-dimensions ARRAY.
+          Returns the element at <b>indexes</b> position int the multi-dimensions <b>array</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (arrayGet* array . indexes)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (syntax indexes (integer . indexes)
+          <br/>
+            (arrayGet* array . indexes)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax indexes (integer . indexes)
         </li>
       </ul>
     </div>
@@ -201,15 +185,13 @@
       </h3>
       <ul>
         <li>
-          Returns the ARRAY after update the element at INDEX position with VALUE.
+          Returns the <b>array</b> after update the element at <b>index</b> position with <b>value</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (arraySet array index value)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (arraySet array index value)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -219,18 +201,17 @@
       </h3>
       <ul>
         <li>
-          Returns the multi-dimensions ARRAY after update the element at INDEXES position with VALUE.
+          Returns the multi-dimensions <b>array</b> after update the element at <b>indexes</b> position with <b>value</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (arraySet* array value . indexes)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (syntax indexes (integer . indexes)
+          <br/>
+            (arraySet* array value . indexes)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax indexes (integer . indexes)
         </li>
       </ul>
     </div>

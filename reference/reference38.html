@@ -28,75 +28,52 @@
     <ul>
       <li>
         (DVar type Class extends Box)
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        The form ddef ddef* dlet progv and dlet* are defined as macro using the primitive operator %dv\ that return a function.   
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        (%dv\ symbols . forms)
-      </li>
-      <li>
-        (type fexpr)
-      </li>
-      <li>
-        (syntax symbols (symbol . symbols))
-      </li>
-      <li>
-        (derivation
-      </li>
-      <li>
-        &nbsp;&nbsp;(vau (var* . forms) #ignore
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;(wrau val* env
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(def\ (ckdvar var)
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(def lkp (@get env var))
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(def ndv (.value lkp))
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;;(if (or (and (null? forms) (null? ndv)) (type? ndv DVar)) ndv
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;;  (error ($ &quot;not &quot; (if (null? forms) &quot;null or &quot; &quot;&quot;) &quot;a dynamic value: &quot; var)) )
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(if (or (and (null? forms) (! (.isBound lkp))) (type? ndv DVar)) ndv
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(error ($ &quot;not &quot; (if (null? forms) &quot;unbound or &quot; &quot;&quot;) &quot;a dynamic value: &quot; var)) ))
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(def ndv* (map ckdvar var*))
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(unless (null? forms) (def old* (map (\ (ndv) (if (null? ndv) ndv (ndv))) ndv*)))
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(forEach (\ (ndv var val) (if (type? ndv DVar) (ndv val) (env var (newDVar val)) )) ndv* var* (if (null? val*) (map (\ (var) (boxDft)) var*) val*))
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(unless (null? forms)
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(atEnd
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(forEach (\ (ndv old) (ndv old)) ndv* old*)  
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(eval (list* 'begin forms) env) )))))
+        <br/>
+          &nbsp;
+        <br/>
+          The form ddef ddef* dlet progv and dlet* are defined as macro using the primitive operator %dv\ that return a function.   
+        <br/>
+          &nbsp;
+        <br/>
+          (%dv\ symbols . forms)
+        <br/>
+          (type fexpr)
+        <br/>
+          (syntax symbols (symbol . symbols))
+        <br/>
+          (derivation
+        <br/>
+          &nbsp;&nbsp;(vau (var* . forms) #ignore
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(wrau val* env
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(def\ (ckdvar var)
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(def lkp (@get env var))
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(def ndv (.value lkp))
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;;(if (or (and (null? forms) (null? ndv)) (type? ndv DVar)) ndv
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;;  (error ($ &quot;not &quot; (if (null? forms) &quot;null or &quot; &quot;&quot;) &quot;a dynamic value: &quot; var)) )
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(if (or (and (null? forms) (! (.isBound lkp))) (type? ndv DVar)) ndv
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(error ($ &quot;not &quot; (if (null? forms) &quot;unbound or &quot; &quot;&quot;) &quot;a dynamic value: &quot; var)) ))
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(def ndv* (map ckdvar var*))
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(unless (null? forms) (def old* (map (\ (ndv) (if (null? ndv) ndv (ndv))) ndv*)))
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(forEach (\ (ndv var val) (if (type? ndv DVar) (ndv val) (env var (newDVar val)) )) ndv* var* (if (null? val*) (map (\ (var) (boxDft)) var*) val*))
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(unless (null? forms)
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(atEnd
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(forEach (\ (ndv old) (ndv old)) ndv* old*)  
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(eval (list* 'begin forms) env) )))))
       </li>
     </ul>
     <div>
@@ -105,15 +82,13 @@
       </h3>
       <ul>
         <li>
-          Define a new dynamic variable with optional VALUE.
+          Define a new dynamic variable with optional <b>value</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (newDVar . value)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (newDVar . value)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -123,15 +98,13 @@
       </h3>
       <ul>
         <li>
-          Return the current value of the DYNAMIC-VARIABLE.
+          Return the current value of the <b>dynamicVariable</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (dval dynamicVariable)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (dval dynamicVariable)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -141,15 +114,13 @@
       </h3>
       <ul>
         <li>
-          Define a new or update an existing dynamic variable with the given NAME and optional VALUE.
+          Define a new or update an existing dynamic variable with the given <b>name</b> and optional <b>value</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (ddef name . value)
-        </li>
-        <li>
-          (type macro)
+          <br/>
+            (ddef name . value)
+          <br/>
+            (type macro)
         </li>
       </ul>
     </div>
@@ -159,18 +130,15 @@
       </h3>
       <ul>
         <li>
-          Define a new or update an existing dynamic variable with the given NAMES and optional VALUES.
+          Define a new or update an existing dynamic variable with the given <b>names</b> and optional <b>values</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (ddef* names . values)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax names (name . names))
+          <br/>
+            (ddef* names . values)
+          <br/>
+            (type macro)
+          <br/>
+            (syntax names (name . names))
         </li>
       </ul>
     </div>
@@ -180,15 +148,13 @@
       </h3>
       <ul>
         <li>
-          Return the current value of the DYNAMIC-VARIABLE.
+          Return the current value of the <b>dynamicVariable</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (dget dynamicVariable)
-        </li>
-        <li>
-          (type macro)
+          <br/>
+            (dget dynamicVariable)
+          <br/>
+            (type macro)
         </li>
       </ul>
     </div>
@@ -198,15 +164,13 @@
       </h3>
       <ul>
         <li>
-          Set the current value of the DYNAMIC-VARIABLE.
+          Set the current value of the <b>dynamicVariable</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (dset dynamicVariable value)
-        </li>
-        <li>
-          (type macro)
+          <br/>
+            (dset dynamicVariable value)
+          <br/>
+            (type macro)
         </li>
       </ul>
     </div>
@@ -216,20 +180,19 @@
       </h3>
       <ul>
         <li>
-          With the dynamic variables specified by NAMES temporarily bound to new VALUES, evaluate FORMS as an implicit `begin'.
+          With the dynamic variables specified by <b>names</b> temporarily bound to new <b>values</b>, evaluate <b>forms</b> as an implicit `begin'.
           <br/>
             Bindings are established parallely as per `let'.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (dlet bindings . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax bindings ((name value) . bindings))
+          <br/>
+            (dlet bindings . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindings ((name value) . bindings))
         </li>
       </ul>
     </div>
@@ -239,20 +202,19 @@
       </h3>
       <ul>
         <li>
-          With the dynamic variables specified by NAME temporarily bound to new VALUE, evaluate FORMS as an implicit `begin'.
+          With the dynamic variables specified by <b>name</b> temporarily bound to new <b>value</b>, evaluate <b>forms</b> as an implicit `begin'.
           <br/>
             Bindings are established parallely as per `let'.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (dlet1 binding . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax binding (name value))
+          <br/>
+            (dlet1 binding . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax binding (name value))
         </li>
       </ul>
     </div>
@@ -262,23 +224,23 @@
       </h3>
       <ul>
         <li>
-          With the dynamic variables specified by NAMES temporarily bound to new VALUES, evaluate FORMS as an implicit `begin'.
+          With the dynamic variables specified by <b>names</b> temporarily bound to new <b>values</b>, evaluate <b>forms</b> as an implicit `begin'.
           <br/>
-            The NAMES and VALUES lists must have the same length.
+            The <b>names</b> and <b>values</b> lists must have the same length.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (progv names values . forms)
-        </li>
-        <li>
-          (syntax names (name . names))
-        </li>
-        <li>
-          (syntax values (value . values))
-        </li>
-        <li>
-          (type macro)
+          <br/>
+            (progv names values . forms)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax names (name . names))
+          <br/>
+            (syntax values (value . values))
+          <br/>
+            (type macro)
         </li>
       </ul>
     </div>
@@ -288,20 +250,19 @@
       </h3>
       <ul>
         <li>
-          With the dynamic variables specified by NAMES temporarily bound to new VALUES, evaluate FORMS as an implicit `begin'.
+          With the dynamic variables specified by <b>names</b> temporarily bound to new <b>values</b>, evaluate <b>forms</b> as an implicit `begin'.
           <br/>
             Bindings are established serially as per `let*'.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (dlet* bindings . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax bindings ((name value) . bindings))
+          <br/>
+            (dlet* bindings . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindings ((name value) . bindings))
         </li>
       </ul>
     </div>

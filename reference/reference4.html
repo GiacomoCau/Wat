@@ -31,18 +31,17 @@
       </h3>
       <ul>
         <li>
-          Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
+          Call the <b>function</b> with a dynamically-supplied list of <b>arguments</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (apply* fun . args)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (apply fun args (newEnv)))
+          <br/>
+            (apply* function . arguments)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (apply function arguments (newEnv)))
         </li>
       </ul>
     </div>
@@ -52,18 +51,17 @@
       </h3>
       <ul>
         <li>
-          Call the FUNCTION with a dynamically-supplied list of ARGUMENTS.
+          Call the <b>function</b> with a dynamically-supplied list of <b>arguments</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (apply** fun . args)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (apply fun (apply list* args) (newEnv)))
+          <br/>
+            (apply** function . arguments)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (apply function (apply list* arguments) (newEnv)))
         </li>
       </ul>
     </div>
@@ -73,7 +71,7 @@
       </h3>
       <ul>
         <li>
-          Match the DEFINIEND-TREE against the VALUE in the ENVIRONMENT-PARAMETER, creating or updating existing bindings.
+          Match the <b>definiendTree</b> against the <b>value</b> in the <b>environmentParameter</b>, creating or updating existing bindings.
           <br/>
             Unlike Common Lisp `setq' (or Scheme `set!') that allows updating arbitrary bindings
           <br/>
@@ -82,12 +80,10 @@
             Therefore, we usually use boxes instead of mutating bindings directly.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (set environmentParameter definiendTree value)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (set environmentParameter definiendTree value)
+          <br/>
+            (type fexpr)
         </li>
       </ul>
     </div>
@@ -99,33 +95,31 @@
         <li>
           Update the bindings defined of the environment, signals an error if the binding is not defined.
           <br/>
-            As 'def' match the DEFINIEND-TREE against the VALUE and update the resulting bindings into environment if exist.
+            As 'def' match the <b>definiendTree</b> against the <b>value</b> and update the resulting bindings into environment if exist.
           <br/>
             &nbsp;
           <br/>
-            without bindResult or with bindResult #ignore use as bindResult `(bndRes)'
+            without <b>bindResult</b> or with <b>bindResult</b> #ignore use as bindResult `(bndRes)'
           <br/>
-            with bindResult #inert return #inert
+            with <b>bindResult</b> #inert return #inert
           <br/>
-            with bindResult :rhs return the right side of the last binding
+            with <b>bindResult</b> :rhs return the right side of the last binding
           <br/>
-            with bindResult :prv return the previous value of the last binding
+            with <b>bindResult</b> :prv return the previous value of the last binding
           <br/>
-            with bindResult :cnt return the env
+            with <b>bindResult</b> :cnt return the env
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (set! definiendTree value)
-        </li>
-        <li>
-          (set! definiendTree bindResult value)
-        </li>
-        <li>
-          (syntax bindResult (or #ignore #inert :rhs :prv))
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (set! definiendTree value)
+          <br/>
+            (set! definiendTree bindResult value)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
         </li>
       </ul>
     </div>
@@ -135,17 +129,15 @@
       </h3>
       <ul>
         <li>
-          Return the underlying operator of a FUNCTION.
+          Return the underlying operator of a <b>function</b>.
           <br/>
             Unwraps the `Apv`, wraps the `java functions` in a `JFun` and does not unwrap the remaining `Combinator`.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (unwrap function)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (unwrap function)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -155,22 +147,21 @@
       </h3>
       <ul>
         <li>
-          Return an anonymous function with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER and FORMS as body,
+          Return an anonymous function with the given <b>parameterTree</b>, <b>environmentParameter</b> and <b>forms</b> as body,
           <br/>
-            which may use the execution environment in the ENVIRONMENT-PARAMETER, rather than the definition environment, for evaluate FORMS as an implicit `begin'.
+            which may use the execution environment in the <b>environmentParameter</b>, rather than the definition environment, for evaluate <b>forms</b> as an implicit `begin'.
           <br/>
             Used for defining the dynamic environment and variable lambda de\ and dv\.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (wrau parameterTree environmentParameter . forms)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (wrap (vau parameterTree environmentParameter . forms))
+          <br/>
+            (wrau parameterTree environmentParameter . forms)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (wrap (vau parameterTree environmentParameter . forms))
         </li>
       </ul>
     </div>
@@ -180,22 +171,21 @@
       </h3>
       <ul>
         <li>
-          Return an anonymous function with the given PARAMETER-TREE and FORMS as body,
+          Return an anonymous function with the given <b>parameterTree</b> and <b>forms</b> as body,
           <br/>
-            which use the execution environment for evaluate FORMS as an implicit `begin' and get the values of the free variables.
+            which use the execution environment for evaluate <b>forms</b> as an implicit `begin' and get the values of the free variables.
           <br/>
             The first type of lambda before Scheme.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (de\ parameterTree . forms)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (derivation (wrau args env (apply begin forms (bind (newEnv env) parameterTree args))))
+          <br/>
+            (de\ parameterTree . forms)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (wrau args env (apply begin forms (bind (newEnv env) parameterTree args))))
         </li>
       </ul>
     </div>
@@ -205,18 +195,15 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment the named dynamic environment function NAME with the given PARAMETER-TREE and FORMS as body.
+          Defines into the current environment the named dynamic environment function <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (defde\ name parameterTree . forms)
-        </li>
-        <li>
-          (defde\ (name parameterTree) . forms)
-        </li>
-        <li>
-          (type macro)
+          <br/>
+            (defde\ name parameterTree . forms)
+          <br/>
+            (defde\ (name parameterTree) . forms)
+          <br/>
+            (type macro)
         </li>
       </ul>
     </div>

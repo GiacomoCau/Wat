@@ -31,7 +31,7 @@
       </h3>
       <ul>
         <li>
-          Establishes a block named BLOCK-NAME after evaluate FORMS as an implicit `begin'.
+          Establishes a block named <b>blockName</b> after evaluate <b>forms</b> as an implicit `begin'.
           <br/>
             The forms may use `returnFrom' to nonlocally exit from the block.
           <br/>
@@ -40,12 +40,10 @@
             a block is named in the normal variable namespace.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (block blockName . forms)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (block blockName . forms)
+          <br/>
+            (type fexpr)
         </li>
       </ul>
     </div>
@@ -55,17 +53,15 @@
       </h3>
       <ul>
         <li>
-          Abort evaluation and return the optional VALUE (which defaults to #inert) from the block named BLOCK-NAME.
+          Abort evaluation and return the optional <b>value</b> (which defaults to #inert) from the block named <b>blockName</b>.
           <br/>
             It is an error to return from a block whose dynamic extent has ended.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (returnFrom (blockName . value))
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (returnFrom blockName . value)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -75,17 +71,15 @@
       </h3>
       <ul>
         <li>
-          Evaluate FORMS as an implicit `begin' while TEST-FORM evaluates to #true.
+          Evaluate <b>forms</b> as an implicit `begin' while <b>testForm</b> evaluates to #true.
           <br/>
             Defined using block and returnFrom.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (while testForm . forms)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (while testForm . forms)
+          <br/>
+            (type fexpr)
         </li>
       </ul>
     </div>
@@ -95,19 +89,17 @@
       </h3>
       <ul>
         <li>
-          Return a tag for the break/continue throws forms of into the loop form by joining TAG and N.
+          Return a tag for the break/continue throws forms of into the loop form by joining <b>tag</b> and N.
           <br/>
             Get the %deep of the enhanced loop form in the dynamic environment.
           <br/>
             Used from break, continue, until and while forms for the enhanced loops.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (mkTag tag n)
-        </li>
-        <li>
-          (type dynamic function)
+          <br/>
+            (mkTag tag n)
+          <br/>
+            (type dynamic function)
         </li>
       </ul>
     </div>
@@ -217,63 +209,47 @@
       </h3>
       <ul>
         <li>
-          Redefine the primitive %loop to add the clauses for and for1 and the forms break, continue, while and until.
+          Redefine the primitive %loop to add the clauses <b>for</b> and <b>for1</b> and the forms <b>break</b>, <b>continue</b>, <b>while</b> and <b>until</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (%loop . forms)
-        </li>
-        <li>
-          (%loop for1 binding . forms)
-        </li>
-        <li>
-          (%loop for bindings . forms)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (syntax bindings (binding . bindings))
-        </li>
-        <li>
-          (syntax binding (symbol initForm . incrFrom))
-        </li>
-        <li>
-          (syntax forms (form . forms) )
-        </li>
-        <li>
-          (syntax form (break . forms))
-        </li>
-        <li>
-          (syntax form (break- n . forms))
-        </li>
-        <li>
-          (syntax form (break? testForm . forms))
-        </li>
-        <li>
-          (syntax form (break?- n testForm . forms))
-        </li>
-        <li>
-          (syntax form (continue . forms))
-        </li>
-        <li>
-          (syntax form (continue- n . forms))
-        </li>
-        <li>
-          (syntax form (continue? testForm . forms))
-        </li>
-        <li>
-          (syntax form (continue?- n testForm . forms))
-        </li>
-        <li>
-          (syntax form (while? testForm . forms))
-        </li>
-        <li>
-          (syntax form (until? testForm . forms))
-        </li>
-        <li>
-          (syntax form ...)
+          <br/>
+            (%loop . forms)
+          <br/>
+            (%loop for1 binding . forms)
+          <br/>
+            (%loop for bindings . forms)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindings (binding . bindings))
+          <br/>
+            (syntax binding (symbol initForm . incrFrom))
+          <br/>
+            (syntax forms (form . forms) )
+          <br/>
+            (syntax form (break . forms))
+          <br/>
+            (syntax form (break- n . forms))
+          <br/>
+            (syntax form (break? testForm . forms))
+          <br/>
+            (syntax form (break?- n testForm . forms))
+          <br/>
+            (syntax form (continue . forms))
+          <br/>
+            (syntax form (continue- n . forms))
+          <br/>
+            (syntax form (continue? testForm . forms))
+          <br/>
+            (syntax form (continue?- n testForm . forms))
+          <br/>
+            (syntax form (while? testForm . forms))
+          <br/>
+            (syntax form (until? testForm . forms))
+          <br/>
+            (syntax form ...)
         </li>
       </ul>
     </div>
@@ -296,15 +272,14 @@
           Single variabile for loop.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (for1 binding whileForm . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax binding (symbol initForm . incrFrom))
+          <br/>
+            (for1 binding whileForm . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax binding (symbol initForm . incrFrom))
         </li>
       </ul>
     </div>
@@ -317,18 +292,16 @@
           Multile variabiles for loop.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (for bindings whileForm . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax bindings (binding . bindings))
-        </li>
-        <li>
-          (syntax binding (symbol initForm . incrForm))
+          <br/>
+            (for bindings whileForm . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindings (binding . bindings))
+          <br/>
+            (syntax binding (symbol initForm . incrForm))
         </li>
       </ul>
     </div>
@@ -338,15 +311,13 @@
       </h3>
       <ul>
         <li>
-          Evaluate FORMS as an implicit `begin' while WHILE-FORM evaluates to #true.
+          Evaluate <b>forms</b> as an implicit `begin' while <b>whileForm</b> evaluates to #true.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (while whileForm . forms)
-        </li>
-        <li>
-          (type macro)
+          <br/>
+            (while whileForm . forms)
+          <br/>
+            (type macro)
         </li>
       </ul>
     </div>
@@ -356,15 +327,13 @@
       </h3>
       <ul>
         <li>
-          Evaluate FORMS as an implicit `begin' until UNTIL-FORM evaluates to #false.
+          Evaluate <b>forms</b> as an implicit `begin' until <b>untilForm</b> evaluates to #false.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (until whileForm . forms)
-        </li>
-        <li>
-          (type macro)
+          <br/>
+            (until whileForm . forms)
+          <br/>
+            (type macro)
         </li>
       </ul>
     </div>
@@ -374,18 +343,15 @@
       </h3>
       <ul>
         <li>
-          Evaluate FORMS as an implicit `begin' TIMES times.
+          Evaluate <b>forms</b> as an implicit `begin' <b>times</b> times.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (repeat times . forms)
-        </li>
-        <li>
-          (repeat (symbol times . endForms) . forms)
-        </li>
-        <li>
-          (type macro)
+          <br/>
+            (repeat times . forms)
+          <br/>
+            (repeat (symbol times . endForms) . forms)
+          <br/>
+            (type macro)
         </li>
       </ul>
     </div>
@@ -395,15 +361,13 @@
       </h3>
       <ul>
         <li>
-          Cf. Common Lisp's DOTIMES.
+          Cf. Common Lisp's <b>dotimes</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (doTimes (symbol times . endForms) . forms)
-        </li>
-        <li>
-          (type macro)
+          <br/>
+            (doTimes (symbol times . endForms) . forms)
+          <br/>
+            (type macro)
         </li>
       </ul>
     </div>
@@ -413,15 +377,13 @@
       </h3>
       <ul>
         <li>
-          Cf. Common Lisp's DOLIST.
+          Cf. Common Lisp's <b>dolist</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (doList (symbol list . endForms) . forms)
-        </li>
-        <li>
-          (type macro)
+          <br/>
+            (doList (symbol list . endForms) . forms)
+          <br/>
+            (type macro)
         </li>
       </ul>
     </div>

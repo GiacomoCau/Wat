@@ -28,57 +28,42 @@
     <ul>
       <li>
         The Box are functions that encapsulates a mutable value.
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        Calling the box:
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        - without arguments returns the value in the box.
-      </li>
-      <li>
-        - with an argument update the value in the box.
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        - without bindResult or with bindResult #ignore use as bindResult `(bndRes)'
-      </li>
-      <li>
-        - with bindResult #inert return #inert
-      </li>
-      <li>
-        - with bindResult :rhs return the right side of the last binding
-      </li>
-      <li>
-        - with bindResult :prv return the previous value of the last binding
-      </li>
-      <li>
-        - with bindResult :cnt return the box
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        $(box)
-      </li>
-      <li>
-        $(box value)
-      </li>
-      <li>
-        $(box bindResult value)
-      </li>
-      <li>
-        $(type function)
-      </li>
-      <li>
-        $(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+        <br/>
+          &nbsp;
+        <br/>
+          Calling the box:
+        <br/>
+          &nbsp;
+        <br/>
+          - without arguments returns the value in the box.
+        <br/>
+          - with an argument update the value in the box.
+        <br/>
+          &nbsp;
+        <br/>
+          - without <b>bindResult</b> or with <b>bindResult</b> #ignore use as bindResult `(bndRes)'
+        <br/>
+          - with <b>bindResult</b> #inert return #inert
+        <br/>
+          - with <b>bindResult</b> :rhs return the right side of the last binding
+        <br/>
+          - with <b>bindResult</b> :prv return the previous value of the last binding
+        <br/>
+          - with <b>bindResult</b> :cnt return the box
+        <br/>
+          &nbsp;
+        <br/>
+          (box)
+        <br/>
+          (box value)
+        <br/>
+          (box bindResult value)
+        <br/>
+          (type function)
+        <br/>
+          &nbsp;
+        <br/>
+          (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
       </li>
     </ul>
     <div>
@@ -87,19 +72,17 @@
       </h3>
       <ul>
         <li>
-          Return a new box with the optional VALUE.
+          Return a new box with the optional <b>value</b>.
           <br/>
             The Box are functions that encapsulates a mutable value.
           <br/>
-            Without VALUE use as VALUE `(boxDft)'.
+            Without <b>value</b> use as <b>value</b> `(boxDft)'.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (newBox . value)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (newBox . value)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -109,17 +92,15 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment the named box NAME with the optional VALUE.
+          Defines into the current environment the named box <b>name</b> with the optional <b>value</b>.
           <br/>
-            Without VALUE use as VALUE `(boxDft)'.
+            Without <b>value</b> use as <b>value</b> `(boxDft)'.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (defBox name . value)
-        </li>
-        <li>
-          (type macro)
+          <br/>
+            (defBox name . value)
+          <br/>
+            (type macro)
         </li>
       </ul>
     </div>

@@ -27,13 +27,11 @@
     </h2>
     <ul>
       <li>
-        The following implementation of fibers follows the one at URL `http://okmij.org/ftp/continuations/implementations.html#dget-wind'
-      </li>
-      <li>
-        We're calling them fibers instead of coroutines so as to not conflict with the built-in coroutine operators.
-      </li>
-      <li>
-        We use it for testing that built-in operators properly suspend and resume.
+        The following implementation of fibers follows the one at <b>url</b> `http://okmij.org/ftp/continuations/implementations.html#dget-wind'
+        <br/>
+          We're calling them fibers instead of coroutines so as to not conflict with the built-in coroutine operators.
+        <br/>
+          We use it for testing that built-in operators properly suspend and resume.
       </li>
     </ul>
     <div>
@@ -55,12 +53,10 @@
           Instances of this class are yielded.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (type class extends Obj)
-        </li>
-        <li>
-          (attributes (value continuation))
+          <br/>
+            (type class extends Obj)
+          <br/>
+            (attributes (value continuation))
         </li>
       </ul>
     </div>
@@ -70,15 +66,13 @@
       </h3>
       <ul>
         <li>
-          Create a new yield record with the given yielded VALUE and resume CONTINUATION.
+          Create a new yield record with the given yielded <b>value</b> and resume <b>continuation</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (makeYieldRecord value continuation)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (makeYieldRecord value continuation)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -88,15 +82,13 @@
       </h3>
       <ul>
         <li>
-          Yield a optional VALUE (which defaults to #inert).
+          Yield a optional <b>value</b> (which defaults to #inert).
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (fiberYield . value)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (fiberYield . value)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -106,15 +98,13 @@
       </h3>
       <ul>
         <li>
-          Resume a suspended fiber YIELD-RECORD with an optional VALUE (which defaults to #inert).
+          Resume a suspended fiber <b>yieldRecord</b> with an optional <b>value</b> (which defaults to #inert).
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (fiberResume yieldRecord . value)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (fiberResume yieldRecord . value)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -127,12 +117,10 @@
           Evaluate the forms expressions as a fiber.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (fiber . forms)
-        </li>
-        <li>
-          (type macro)
+          <br/>
+            (fiber . forms)
+          <br/>
+            (type macro)
         </li>
       </ul>
     </div>
@@ -147,12 +135,10 @@
             Uses the optional list of values to sent to the fiber with `fiberResume'.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (runFiber thunk . forms)
-        </li>
-        <li>
-          (type macro)
+          <br/>
+            (runFiber thunk . forms)
+          <br/>
+            (type macro)
         </li>
       </ul>
     </div>

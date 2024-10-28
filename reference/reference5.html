@@ -28,87 +28,64 @@
     <ul>
       <li>
         The Env are functions that encapsulates mutable values.
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        Calling the env:
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        - without arguments returns the env.
-      </li>
-      <li>
-        - with an attribute return the value of the attribute in the env.
-      </li>
-      <li>
-        - with couples of attribute and value defines or update the attribute with the value in the env.
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        - without bindResult or with bindResult #ignore use as bindResult `(bndRes)'
-      </li>
-      <li>
-        - with bindResult #inert return #inert
-      </li>
-      <li>
-        - with bindResult :rhs return the right side of the last binding
-      </li>
-      <li>
-        - with bindResult :prv return the previous value of the last binding
-      </li>
-      <li>
-        - with bindResult :cnt return the env
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        - without bindType use the bindType :def
-      </li>
-      <li>
-        - with bindType :def define or update the bindings in the env
-      </li>
-      <li>
-        - with bindType :set! update the bindings in env, signals an error if the binding is not defined.
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        $(env)
-      </li>
-      <li>
-        $(env attribute)
-      </li>
-      <li>
-        $(env attribute value . attributes)
-      </li>
-      <li>
-        $(env bindType attribute value . attributes)
-      </li>
-      <li>
-        $(env bindResult attribute value . attributes)
-      </li>
-      <li>
-        $(env bindType bindResult attribute value . attributes)
-      </li>
-      <li>
-        $(syntax attributes (attribute value . attributes))
-      </li>
-      <li>
-        $(syntax attribute (or Symbol Keyword String))
-      </li>
-      <li>
-        $(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
-      </li>
-      <li>
-        $(syntax bindType (or :def :set!))
+        <br/>
+          &nbsp;
+        <br/>
+          Calling the env:
+        <br/>
+          &nbsp;
+        <br/>
+          - without arguments returns the env.
+        <br/>
+          - with an attribute return the value of the attribute in the env.
+        <br/>
+          - with couples of attribute and value defines or update the attribute with the value in the env.
+        <br/>
+          &nbsp;
+        <br/>
+          - without <b>bindResult</b> or with <b>bindResult</b> #ignore use as bindResult `(bndRes)'
+        <br/>
+          - with <b>bindResult</b> #inert return #inert
+        <br/>
+          - with <b>bindResult</b> :rhs return the right side of the last binding
+        <br/>
+          - with <b>bindResult</b> :prv return the previous value of the last binding
+        <br/>
+          - with <b>bindResult</b> :cnt return the env
+        <br/>
+          &nbsp;
+        <br/>
+          - without <b>bindType</b> use the bindType :def
+        <br/>
+          - with <b>bindType</b> :def define or update the bindings in the env
+        <br/>
+          - with <b>bindType</b> :set! update the bindings in env, signals an error if the binding is not defined.
+        <br/>
+          &nbsp;
+        <br/>
+          (env)
+        <br/>
+          (env attribute)
+        <br/>
+          (env attribute value . attributes)
+        <br/>
+          (env bindType attribute value . attributes)
+        <br/>
+          (env bindResult attribute value . attributes)
+        <br/>
+          (env bindType bindResult attribute value . attributes)
+        <br/>
+          (type function)
+        <br/>
+          &nbsp;
+        <br/>
+          (syntax attributes (attribute value . attributes))
+        <br/>
+          (syntax attribute (or Symbol Keyword String))
+        <br/>
+          (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+        <br/>
+          (syntax bindType (or :def :set!))
       </li>
     </ul>
     <div>
@@ -117,34 +94,29 @@
       </h3>
       <ul>
         <li>
-          Return a new environment with an optional PARENT environment in which bindings are looked up if they are not found.
+          Return a new environment with an optional <b>parent</b> environment in which bindings are looked up if they are not found.
           <br/>
-            The BINDINGS must be of even length, and alternately contain bindings names (symbols, keywords or string) and values.
+            The <b>bindings</b> must be of even length, and alternately contain bindings names (symbols, keywords or string) and values.
           <br/>
             When called with an obj the obj bindings also become env bindings.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (newEnv)
-        </li>
-        <li>
-          (newEnv parent . bindings)
-        </li>
-        <li>
-          (newEnv parent obj)
-        </li>
-        <li>
-          (syntax parent (or () Env))
-        </li>
-        <li>
-          (syntax bindings (attribute value . bindings))
-        </li>
-        <li>
-          (syntax attribute (or Symbol Keyword String))
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (newEnv)
+          <br/>
+            (newEnv parent . bindings)
+          <br/>
+            (newEnv parent obj)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax parent (or () Env))
+          <br/>
+            (syntax bindings (attribute value . bindings))
+          <br/>
+            (syntax attribute (or Symbol Keyword String))
         </li>
       </ul>
     </div>
@@ -157,15 +129,14 @@
           Return the current environment.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (theEnv)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (derivation (vau () environment environment))
+          <br/>
+            (theEnv)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (vau () environment environment))
         </li>
       </ul>
     </div>

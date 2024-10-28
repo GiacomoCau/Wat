@@ -33,49 +33,41 @@
         <li>
           Multi-armed value test.
           <br/>
-            Evaluate KEY and go through the CLAUSES.
+            Evaluate <b>key</b> and go through the <b>clauses</b>.
           <br/>
-            If CLAUSES is #null return #inert.
+            If <b>clauses</b> is #null return #inert.
           <br/>
-            If `car' of CLAUSE is else or `eq?' KEY VALUE or `member? :cmp eq?' KEY VALUES
+            If `car' of <b>clause</b> is else or `eq?' <b>key</b> <b>value</b> or `member? :cmp eq?' <b>key</b> <b>values</b>
           <br/>
-            &nbsp;&nbsp;if `car' FORMS is =&gt; apply evaluate `cadr' FORMS to VALUE
+            &nbsp;&nbsp;if `car' <b>forms</b> is =&gt; apply evaluate `cadr' <b>forms</b> to <b>value</b>
           <br/>
-            &nbsp;&nbsp;otherwise evaluate FORMS as an implicit `begin'.
+            &nbsp;&nbsp;otherwise evaluate <b>forms</b> as an implicit `begin'.
           <br/>
-            Otherwise go to the next CLAUSE.
+            Otherwise go to the next <b>clause</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (case key . clauses)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (syntax clauses (clause . clauses))
-        </li>
-        <li>
-          (syntax clause (else . forms))
-        </li>
-        <li>
-          (syntax clause (else =&gt; apv1))
-        </li>
-        <li>
-          (syntax clause (value . forms))
-        </li>
-        <li>
-          (syntax clause (value =&gt; apv1))
-        </li>
-        <li>
-          (syntax clause (values . forms))
-        </li>
-        <li>
-          (syntax clause (values =&gt; apv1))
-        </li>
-        <li>
-          (syntax values (value . values))
+          <br/>
+            (case key . clauses)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax clauses (clause . clauses))
+          <br/>
+            (syntax clause (else . forms))
+          <br/>
+            (syntax clause (else =&gt; apv1))
+          <br/>
+            (syntax clause (value . forms))
+          <br/>
+            (syntax clause (value =&gt; apv1))
+          <br/>
+            (syntax clause (values . forms))
+          <br/>
+            (syntax clause (values =&gt; apv1))
+          <br/>
+            (syntax values (value . values))
         </li>
       </ul>
     </div>
@@ -85,21 +77,19 @@
       </h3>
       <ul>
         <li>
-          Return #true if OBJECT is an instance of CLASS and all the optional specified ATTRIBUTE matches the corresponding CHECK, #false otherwise.
+          Return #true if <b>object</b> is an instance of <b>class</b> and all the optional specified <b>attribute</b> matches the corresponding <b>check</b>, #false otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (matchType? object class . attributes)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (syntax attributes (attribute check . attributes))
-        </li>
-        <li>
-          (syntax attribute (or Symbol Keyword String .Field @Method))
+          <br/>
+            (matchType? object class . attributes)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax attributes (attribute check . attributes))
+          <br/>
+            (syntax attribute (or Symbol Keyword String .Field @Method))
         </li>
       </ul>
     </div>
@@ -109,21 +99,19 @@
       </h3>
       <ul>
         <li>
-          Return #true if OBJECT is an instance of CLASS and all the optional specified ATTRIBUTE matches the corresponding CHECK, #false otherwise.
+          Return #true if <b>object</b> is an instance of <b>class</b> and all the optional specified <b>attribute</b> matches the corresponding <b>check</b>, #false otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (matchType?* object class . attributes)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (syntax attributes (attribute check . attributes))
-        </li>
-        <li>
-          (syntax attribute (or Symbol Keyword String .Field @Method))
+          <br/>
+            (matchType?* object class . attributes)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax attributes (attribute check . attributes))
+          <br/>
+            (syntax attribute (or Symbol Keyword String .Field @Method))
         </li>
       </ul>
     </div>
@@ -135,36 +123,31 @@
         <li>
           Multi-armed type test.
           <br/>
-            Evaluate the OBJECT and go through the CLAUSES.
+            Evaluate the <b>object</b> and go through the <b>clauses</b>.
           <br/>
-            If CLAUSES is #null return #inert.
+            If <b>clauses</b> is #null return #inert.
           <br/>
-            If OBJECT is an instance of CLASS and the optional specified ATTRIBUTE matchs the corresponding CHECK, evaluate FORMS as an implicit `begin'.
+            If <b>object</b> is an instance of <b>class</b> and the optional specified <b>attribute</b> matchs the corresponding <b>check</b>, evaluate <b>forms</b> as an implicit `begin'.
           <br/>
-            Otherwise go to the next CLAUSE.
+            Otherwise go to the next <b>clause</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (caseType object . clauses)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (syntax clauses (clause . clauses))
-        </li>
-        <li>
-          (syntax clause (class . forms))
-        </li>
-        <li>
-          (syntax clause ((class . attributes) . forms))
-        </li>
-        <li>
-          (syntax attributes (attribute check . attributes))
-        </li>
-        <li>
-          (syntax attribute (or Symbol Keyword String .Field @Method))
+          <br/>
+            (caseType object . clauses)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax clauses (clause . clauses))
+          <br/>
+            (syntax clause (class . forms))
+          <br/>
+            (syntax clause ((class . attributes) . forms))
+          <br/>
+            (syntax attributes (attribute check . attributes))
+          <br/>
+            (syntax attribute (or Symbol Keyword String .Field @Method))
         </li>
       </ul>
     </div>
@@ -177,18 +160,14 @@
           Return a sigle argument function for multi-armed type test, useful as a catch handler.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (caseType\ (symbol) . clauses))
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (derivation (\ (symbol) (caseType symbol . clauses)))
-        </li>
-        <li>
-          (use (catchWth (caseType\ (e) ...) ...)
+          <br/>
+            (caseType\ (symbol) . clauses))
+          <br/>
+            (type macro)
+          <br/>
+            (derivation (\ (symbol) (caseType symbol . clauses)))
+          <br/>
+            (use (catchWth (caseType\ (e) ...) ...)
         </li>
       </ul>
     </div>

@@ -41,15 +41,13 @@
       </h3>
       <ul>
         <li>
-          Evaluate FORM and return the result after evaluate FORMS as an implicit `begin'.
+          Evaluate <b>form</b> and return the result after evaluate <b>forms</b> as an implicit `begin'.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (prog1 form . forms)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (prog1 form . forms)
+          <br/>
+            (type fexpr)
         </li>
       </ul>
     </div>
@@ -59,15 +57,13 @@
       </h3>
       <ul>
         <li>
-          If TEST yields #true evaluate FORMS as an implicit `begin', #inert otherwise.
+          If <b>test</b> yields #true evaluate <b>forms</b> as an implicit `begin', #inert otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (when test . forms)
-        </li>
-        <li>
-          (type macro)
+          <br/>
+            (when test . forms)
+          <br/>
+            (type macro)
         </li>
       </ul>
     </div>
@@ -77,15 +73,13 @@
       </h3>
       <ul>
         <li>
-          If TEST yields #false evaluate FORMS as an implicit `begin', #inert otherwise.
+          If <b>test</b> yields #false evaluate <b>forms</b> as an implicit `begin', #inert otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (unless test . forms)
-        </li>
-        <li>
-          (type macro)
+          <br/>
+            (unless test . forms)
+          <br/>
+            (type macro)
         </li>
       </ul>
     </div>
@@ -95,19 +89,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if all OPERANDS evaluate to #true, #false otherwise.
+          Return #true if all <b>operands</b> evaluate to #true, #false otherwise.
           <br/>
             If an operand evaluates to #false, later operands are not evaluated.
           <br/>
             If there are no operands, return #false.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (&amp;&amp; . operands)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (&amp;&amp; . operands)
+          <br/>
+            (type fexpr)
         </li>
       </ul>
     </div>
@@ -127,19 +119,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if one of the OPERANDS evaluates to #true, #false otherwise.
+          Return #true if one of the <b>operands</b> evaluates to #true, #false otherwise.
           <br/>
             If an operand evaluates to #true, later operands are not evaluated.
           <br/>
             If there are no operands, return #true.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (|| . operands)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (|| . operands)
+          <br/>
+            (type fexpr)
         </li>
       </ul>
     </div>
@@ -159,15 +149,13 @@
       </h3>
       <ul>
         <li>
-          Return #true if FUNCTION evaluate to #true when applied to KEY and all element of LIST, #false otherwise.
+          Return #true if <b>function</b> evaluate to #true when applied to <b>key</b> and all element of <b>list</b>, #false otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (&amp;&amp;b function key . list)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (&amp;&amp;b function key . list)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -177,15 +165,13 @@
       </h3>
       <ul>
         <li>
-          Return #true if FUNCTION evaluate to #true when applied to KEY and any element of LIST, #false otherwise.
+          Return #true if <b>function</b> evaluate to #true when applied to <b>key</b> and any element of <b>list</b>, #false otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (||b function key . list)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (||b function key . list)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -195,21 +181,19 @@
       </h3>
       <ul>
         <li>
-          Return a function the return #true if all FUNCTIONS evaluate to #true when applied to the arguments, #false otherwise.
+          Return a function the return #true if all <b>functions</b> evaluate to #true when applied to the arguments, #false otherwise.
           <br/>
-            If an function evaluates to #false, later FUNCTIONS are not evaluated.
+            If an function evaluates to #false, later <b>functions</b> are not evaluated.
           <br/>
-            If there are no FUNCTIONS, when applied return #false.
+            If there are no <b>functions</b>, when applied return #false.
           <br/>
             Idea stolen from Anarki https://github.com/arclanguage/anarki
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (&amp;&amp;f . functions)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (&amp;&amp;f . functions)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -219,21 +203,19 @@
       </h3>
       <ul>
         <li>
-          Return a function the return #true if one FUNCTIONS evaluate to #true when applied to the arguments, #false otherwise.
+          Return a function the return #true if one <b>functions</b> evaluate to #true when applied to the arguments, #false otherwise.
           <br/>
-            If an function evaluates to #true, later FUNCTIONS are not evaluated.
+            If an function evaluates to #true, later <b>functions</b> are not evaluated.
           <br/>
-            If there are no FUNCTIONS, when applied return #true.
+            If there are no <b>functions</b>, when applied return #true.
           <br/>
             Idea stolen from Anarki https://github.com/arclanguage/anarki
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (||f . functions)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (||f . functions)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>

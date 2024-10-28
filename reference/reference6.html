@@ -28,66 +28,50 @@
     <ul>
       <li>
         The Obj are functions that encapsulates mutable values.
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        Calling the obj:
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        - without arguments returns the env.
-      </li>
-      <li>
-        - with an attribute return the value of the attribute in the obj.
-      </li>
-      <li>
-        - with couples of attribute and value defines or update the attribute with the value in the obj.
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        - without bindResult or with bindResult #ignore use as bindResult `(bndRes)'
-      </li>
-      <li>
-        - with bindResult #inert return #inert
-      </li>
-      <li>
-        - with bindResult :rhs return the right side of the last binding
-      </li>
-      <li>
-        - with bindResult :prv return the previous value of the last binding
-      </li>
-      <li>
-        - with bindResult :cnt return the obj
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        $(obj)
-      </li>
-      <li>
-        $(obj attribute)
-      </li>
-      <li>
-        $(obj attribute value . attributes)
-      </li>
-      <li>
-        $(obj bindResult attribute value . attributes)
-      </li>
-      <li>
-        $(syntax attributes (attribute value . attributes))
-      </li>
-      <li>
-        $(syntax attribute (or Symbol Keyword String))
-      </li>
-      <li>
-        $(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+        <br/>
+          &nbsp;
+        <br/>
+          Calling the obj:
+        <br/>
+          &nbsp;
+        <br/>
+          - without arguments returns the env.
+        <br/>
+          - with an attribute return the value of the attribute in the obj.
+        <br/>
+          - with couples of attribute and value defines or update the attribute with the value in the obj.
+        <br/>
+          &nbsp;
+        <br/>
+          - without <b>bindResult</b> or with <b>bindResult</b> #ignore use as bindResult `(bndRes)'
+        <br/>
+          - with <b>bindResult</b> #inert return #inert
+        <br/>
+          - with <b>bindResult</b> :rhs return the right side of the last binding
+        <br/>
+          - with <b>bindResult</b> :prv return the previous value of the last binding
+        <br/>
+          - with <b>bindResult</b> :cnt return the obj
+        <br/>
+          &nbsp;
+        <br/>
+          (obj)
+        <br/>
+          (obj attribute)
+        <br/>
+          (obj attribute value . attributes)
+        <br/>
+          (obj bindResult attribute value . attributes)
+        <br/>
+          (type function)
+        <br/>
+          &nbsp;
+        <br/>
+          (syntax attributes (attribute value . attributes))
+        <br/>
+          (syntax attribute (or Symbol Keyword String))
+        <br/>
+          (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
       </li>
     </ul>
     <div>
@@ -96,21 +80,19 @@
       </h3>
       <ul>
         <li>
-          Return a new obj with the given BINDING.
+          Return a new obj with the given <b>binding</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (newObj . bindings)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (syntax bindings (attribute value . bindings))
-        </li>
-        <li>
-          (syntax attribute (or Symbol Keyword String))
+          <br/>
+            (newObj . bindings)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindings (attribute value . bindings))
+          <br/>
+            (syntax attribute (or Symbol Keyword String))
         </li>
       </ul>
     </div>
@@ -120,21 +102,19 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment the named box NAME with the given BINDINGS.
+          Defines into the current environment the named box <b>name</b> with the given <b>bindings</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (defObj name . bindings)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax bindings (attribute value . bindings))
-        </li>
-        <li>
-          (syntax attribute (or Symbol Keyword String))
+          <br/>
+            (defObj name . bindings)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindings (attribute value . bindings))
+          <br/>
+            (syntax attribute (or Symbol Keyword String))
         </li>
       </ul>
     </div>

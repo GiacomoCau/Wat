@@ -27,7 +27,7 @@
     </h2>
     <ul>
       <li>
-        These operators follow the API put forth in the delimcc library at URL `http://okmij.org/ftp/continuations/implementations.html'.
+        These operators follow the <b>api</b> put forth in the delimcc library at <b>url</b> `http://okmij.org/ftp/continuations/implementations.html'.
       </li>
     </ul>
     <div>
@@ -36,17 +36,15 @@
       </h3>
       <ul>
         <li>
-          Abort outwards to the PROMPT.
+          Abort outwards to the <b>prompt</b>.
           <br/>
-            When the prompt is reached, evaluate FORMS as an implicit `begin' with SYMBOL bound to the captured continuation (which does not include the prompt).
+            When the prompt is reached, evaluate <b>forms</b> as an implicit `begin' with <b>symbol</b> bound to the captured continuation (which does not include the prompt).
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (takeSubcont prompt symbol . forms)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (takeSubcont prompt symbol . forms)
+          <br/>
+            (type fexpr)
         </li>
       </ul>
     </div>
@@ -56,17 +54,15 @@
       </h3>
       <ul>
         <li>
-          Push the PROMPT and evaluate FORMS as an implicit `begin' inside the PROMPT.
+          Push the <b>prompt</b> and evaluate <b>forms</b> as an implicit `begin' inside the <b>prompt</b>.
           <br/>
             This delimits the continuation.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (pushPrompt prompt . forms)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (pushPrompt prompt . forms)
+          <br/>
+            (type fexpr)
         </li>
       </ul>
     </div>
@@ -76,17 +72,15 @@
       </h3>
       <ul>
         <li>
-          Push the PROMPT and compose the previously captured CONTINUATION inside it
+          Push the <b>prompt</b> and compose the previously captured <b>continuation</b> inside it
           <br/>
-            before evaluated FORMS as an implicit `begin' inside the new continuation.
+            before evaluated <b>forms</b> as an implicit `begin' inside the new continuation.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (pushDelimSubcont prompt continuation . forms)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (pushDelimSubcont prompt continuation . forms)
+          <br/>
+            (type fexpr)
         </li>
       </ul>
     </div>
@@ -99,15 +93,14 @@
           We don't have `pushSubcont' but we can emulate it with a `pushDelimSubcont' that pushes an #ignore prompt.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (pushSubcont continuation . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (derivation (pushDelimSubcont #ignore continuation . forms))
+          <br/>
+            (pushSubcont continuation . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (pushDelimSubcont #ignore continuation . forms))
         </li>
       </ul>
     </div>
@@ -117,15 +110,13 @@
       </h3>
       <ul>
         <li>
-          Evaluate FORMS as an implicit `begin' after push a continuation barrier that prevent FORMS from capturing any continuations to the outside 
+          Evaluate <b>forms</b> as an implicit `begin' after push a continuation barrier that prevent <b>forms</b> from capturing any continuations to the outside 
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (pushSubcontBarrier . forms)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (pushSubcontBarrier . forms)
+          <br/>
+            (type fexpr)
         </li>
       </ul>
     </div>

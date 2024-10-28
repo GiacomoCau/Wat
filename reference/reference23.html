@@ -34,12 +34,10 @@
           Identity function.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (idf object)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (idf object)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -52,15 +50,12 @@
           &quot;Implicit&quot; Argument Lambda.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (_ . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (derivation (\ (_) . forms))
+          <br/>
+            (_ . forms)
+          <br/>
+            (type macro)
+          <br/>
+            (derivation (\ (_) . forms))
         </li>
       </ul>
     </div>
@@ -73,15 +68,14 @@
           Single arg partial evaluation.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (peval f v)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (\ args (apply f (cons v args))))
+          <br/>
+            (peval f v)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (\ args (apply f (cons v args))))
         </li>
       </ul>
     </div>
@@ -94,15 +88,14 @@
           Multiple args partial evaluation.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (peval* f v*)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (\ args (apply f (append v* args))))
+          <br/>
+            (peval* f v*)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (\ args (apply f (append v* args))))
         </li>
       </ul>
     </div>
@@ -115,15 +108,14 @@
           Return a function equivalent to the composition of the two functions.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (compose f g)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (\ args (f (apply g args))))
+          <br/>
+            (compose f g)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (\ args (f (apply g args))))
         </li>
       </ul>
     </div>
@@ -136,15 +128,14 @@
           Return a function equivalent to the composition of the functions.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (compose* . f*)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (\ args ((rec\ (loop (f . f*)) (if (null? f*) (apply f args) (f (loop f*)))) f*)))
+          <br/>
+            (compose* . f*)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (\ args ((rec\ (loop (f . f*)) (if (null? f*) (apply f args) (f (loop f*)))) f*)))
         </li>
       </ul>
     </div>
@@ -154,17 +145,15 @@
       </h3>
       <ul>
         <li>
-          Return VALUE, after lexically bind NAME with #inert,
+          Return <b>value</b>, after lexically bind <b>name</b> with #inert,
           <br/>
-            and update NAME with VALUE so that it can reference itself.
+            and update <b>name</b> with <b>value</b> so that it can reference itself.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (rec name value)
-        </li>
-        <li>
-          (type macro)
+          <br/>
+            (rec name value)
+          <br/>
+            (type macro)
         </li>
       </ul>
     </div>
@@ -184,20 +173,17 @@
       </h3>
       <ul>
         <li>
-          Return the function with given PARAMETER-TREE and FORMS as body, after lexically bind NAME with #inert,
+          Return the function with given <b>parameterTree</b> and <b>forms</b> as body, after lexically bind <b>name</b> with #inert,
           <br/>
-            and updated NAME with the function so that it can reference to itself.
+            and updated <b>name</b> with the function so that it can reference to itself.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (rec\ name parameterTree . forms)
-        </li>
-        <li>
-          (rec\ (name . parameterTree) . forms)
-        </li>
-        <li>
-          (type macro)
+          <br/>
+            (rec\ name parameterTree . forms)
+          <br/>
+            (rec\ (name . parameterTree) . forms)
+          <br/>
+            (type macro)
         </li>
       </ul>
     </div>
@@ -217,36 +203,30 @@
       </h3>
       <ul>
         <li>
-          Return a new list by applying the FUNCTION to each element of the LIST or the LISTS which must be of the same length
+          Return a new list by applying the <b>function</b> to each element of the <b>list</b> or the <b>lists</b> which must be of the same length
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (map function list)
-        </li>
-        <li>
-          (map function list1 list2 ... listN)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (map function list)
+          <br/>
+            (map function list1 list2 ... listN)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
     <ul>
       <li>
-        Some importanti equivalences with eval apply list and map:
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        apply: (eval (cons opv args) env) &lt;=&gt; (apply opv args env)
-      </li>
-      <li>
-        apply: (eval (cons apv args) env) &lt;=&gt; (apply apv (evlis env args) env)
-      </li>
-      <li>
-        evlis: (eval (cons 'list args) env) &lt;=&gt; (map (\ (arg) (eval arg env)) args)
+        <br/>
+          Some importanti equivalences with eval apply list and map:
+        <br/>
+          &nbsp;
+        <br/>
+          apply: (eval (cons opv args) env) &lt;=&gt; (apply opv args env)
+        <br/>
+          apply: (eval (cons apv args) env) &lt;=&gt; (apply apv (evlis env args) env)
+        <br/>
+          evlis: (eval (cons 'list args) env) &lt;=&gt; (map (\ (arg) (eval arg env)) args)
       </li>
     </ul>
     <div>
@@ -255,36 +235,31 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment the named functions NAMES with given PARAMETER-TREES and FORMS as body. 
+          Defines into the current environment the named functions <b>names</b> with given <b>parameterTrees</b> and <b>forms</b> as body. 
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (def*\ definiendTrees . bodies)
-        </li>
-        <li>
-          (def*\ ((name parameterTree) . definiendTrees) . (forms . bodies))
-        </li>
-        <li>
-          (def*\ (name . definiendTrees) . ((parameterTree . forms) . bodies))
-        </li>
-        <li>
-          (syntax definiendTrees ((name parameterTree) . definiendTrees)
-        </li>
-        <li>
-          (syntax bodies (forms . bodies)
-        </li>
-        <li>
-          (syntax definiendTrees (name . definiendTrees)
-        </li>
-        <li>
-          (syntax bodies ((parameterTree . forms) . bodies)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (example (def*\ ((f a) g) ((1+ a)) ((a) (1+ a))) )
+          <br/>
+            (def*\ definiendTrees . bodies)
+          <br/>
+            (def*\ ((name parameterTree) . definiendTrees) . (forms . bodies))
+          <br/>
+            (def*\ (name . definiendTrees) . ((parameterTree . forms) . bodies))
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax definiendTrees ((name parameterTree) . definiendTrees)
+          <br/>
+            (syntax bodies (forms . bodies)
+          <br/>
+            (syntax definiendTrees (name . definiendTrees)
+          <br/>
+            (syntax bodies ((parameterTree . forms) . bodies)
+          <br/>
+            &nbsp;
+          <br/>
+            (example (def*\ ((f a) g) ((1+ a)) ((a) (1+ a))) )
         </li>
       </ul>
     </div>

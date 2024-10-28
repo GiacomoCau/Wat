@@ -31,33 +31,67 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment the resulting bindings from the match of the DEFINIEND-TREE against VALUE, signals an error otherwise.
+          Defines into the current environment the resulting bindings from the match of the <b>definiendTree</b> against <b>value</b>, signals an error otherwise.
           <br/>
             &nbsp;
           <br/>
-            without bindResult or with bindResult #ignore use as bindResult `(bndRes)'
+            without <b>bindResult</b> or with <b>bindResult</b> #ignore use as bindResult `(bndRes)'
           <br/>
-            with bindResult #inert return #inert
+            with <b>bindResult</b> #inert return #inert
           <br/>
-            with bindResult :rhs return the right side of the last binding
+            with <b>bindResult</b> :rhs return the right side of the last binding
           <br/>
-            with bindResult :prv return the previous value of the last binding
+            with <b>bindResult</b> :prv return the previous value of the last binding
           <br/>
-            with bindResult :cnt return the env
+            with <b>bindResult</b> :cnt return the env
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (def definiendTree value)
-        </li>
-        <li>
-          (def definiendTree bindResult value)
-        </li>
-        <li>
-          (syntax bindResult (or #ignore #inert :rhs :prv))
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (def definiendTree value)
+          <br/>
+            (def definiendTree bindResult value)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax definiendTree (or symbol decomposeTree))
+          <br/>
+            (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax decomposeTree (parametersTree . decomposeTree))
+          <br/>
+            (syntax parametersTree (or #null ignore symbol decomposeTree))
+          <br/>
+            (syntax symbol (or Symbol (#: check Symbol)))
+          <br/>
+            (syntax ignore (or #ignore (#: check #ignore)))
+          <br/>
+            (syntax check Any)
+          <br/>
+            (syntax check Class)
+          <br/>
+            (syntax check checks)
+          <br/>
+            (syntax checks (check . checks))
+          <br/>
+            (syntax check (min . checks))
+          <br/>
+            (syntax check (min max . checks))
+          <br/>
+            (syntax check (min oo . checks))
+          <br/>
+            (syntax check (or . checks))
+          <br/>
+            (syntax check (and . checks))
+          <br/>
+            (syntax check (Apv . arguments))
+          <br/>
+            (syntax check value)
+          <br/>
+            (syntax arguments (value . arguments))
         </li>
       </ul>
     </div>
@@ -67,18 +101,53 @@
       </h3>
       <ul>
         <li>
-          Return a anonymous fexpr with the given PARAMETER-TREE, ENVIRONMENT-PARAMETER and FORMS as body.
+          Return a anonymous fexpr with the given <b>parameterTree</b>, <b>environmentParameter</b> and <b>body</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (vau parameterTree environmentParameter . forms)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (derivation (vau (parameterTree environmentParameter . forms) env (eval (vau parameterTree environmentParameter (begin . forms)) env)))
+          <br/>
+            (vau parametersTree environmentParameter . body)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax parametersTree (or #null ignore symbol decomposeTree))
+          <br/>
+            (syntax environmentParameter (or #ignore Symbol))
+          <br/>
+            (syntax body (or forms (#: check . forms)))
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax decomposeTree (parametersTree . decomposeTree))
+          <br/>
+            (syntax symbol (or Symbol (#: check Symbol)))
+          <br/>
+            (syntax ignore (or #ignore (#: check #ignore)))
+          <br/>
+            (syntax check Any)
+          <br/>
+            (syntax check Class)
+          <br/>
+            (syntax check checks)
+          <br/>
+            (syntax checks (check . checks))
+          <br/>
+            (syntax check (min . checks))
+          <br/>
+            (syntax check (min max . checks))
+          <br/>
+            (syntax check (min oo . checks))
+          <br/>
+            (syntax check (or . checks))
+          <br/>
+            (syntax check (and . checks))
+          <br/>
+            (syntax check (Apv . arguments))
+          <br/>
+            (syntax check value)
+          <br/>
+            (syntax arguments (value . arguments))
         </li>
       </ul>
     </div>
@@ -88,22 +157,21 @@
       </h3>
       <ul>
         <li>
-          Return an anonymous function with the given PARAMETER-TREE and FORMS as body,
+          Return an anonymous function with the given <b>parameterTree</b> and <b>forms</b> as body,
           <br/>
-            which use the definition environment for evaluate FORMS as an implicit `begin' and get the values of the free variables.
+            which use the definition environment for evaluate <b>forms</b> as an implicit `begin' and get the values of the free variables.
           <br/>
             The classic Scheme static lambda.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (\ parameterTree . forms)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (vau (parameterTree . forms) env (wrap (eval (list* 'vau parameterTree #ignore forms) env))))
+          <br/>
+            (\ parameterTree . forms)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (vau (parameterTree . forms) env (wrap (eval (list* 'vau parameterTree #ignore forms) env))))
         </li>
       </ul>
     </div>
@@ -123,17 +191,15 @@
       </h3>
       <ul>
         <li>
-          Return a new function that wraps around the underlying OPERATOR, and induces argument evaluations around it.
+          Return a new function that wraps around the underlying <b>operator</b>, and induces argument evaluations around it.
           <br/>
             Does not wrap the `Apv` and the `java functions`, but wraps the remaining `Combinator`.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (wrap operator)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (wrap operator)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -145,31 +211,27 @@
         <li>
           Signals an error if:
           <br/>
-            - EXPRESSION does not equal VALUE
+            - <b>expression</b> does not equal <b>value</b>
           <br/>
-            - VALUE is not present and the EXPRESSION does not throws
+            - <b>value</b> is not present and the <b>expression</b> does not throws
           <br/>
-            - EXPRESSION throws or returns an object and the object is not of the same CLASS with the ATTRIBUTES of the given VALUE.
+            - <b>expression</b> throws or returns an object and the object is not of the same <b>class</b> with the <b>attributes</b> of the given <b>value</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (assert expression value)
-        </li>
-        <li>
-          (assert expression)
-        </li>
-        <li>
-          (assert expression class attribute value . attributes)
-        </li>
-        <li>
-          (syntax attributes (attribute value . attributes))
-        </li>
-        <li>
-          (syntax attribute (or Symbol Keyword String .Field @Method))
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (assert expression value)
+          <br/>
+            (assert expression)
+          <br/>
+            (assert expression class attribute value . attributes)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax attributes (attribute value . attributes))
+          <br/>
+            (syntax attribute (or Symbol Keyword String .Field @Method))
         </li>
       </ul>
     </div>
@@ -179,18 +241,15 @@
       </h3>
       <ul>
         <li>
-          Call the FUNCTION with a dynamically-supplied list of ARGUMENTS in the optional ENVIRONMENT.
+          Call the <b>function</b> with a dynamically-supplied list of <b>arguments</b> in the optional <b>environment</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (apply fun args . environment)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (eval (cons (unwrap fun) args) (if (null? environment) (newEnv) (car! environment)) ))
+          <br/>
+            (apply fun args . environment)
+          <br/>
+            (type function)
+          <br/>
+            (derivation (eval (cons (unwrap fun) args) (if (null? environment) (newEnv) (car! environment)) ))
         </li>
       </ul>
     </div>
@@ -200,15 +259,13 @@
       </h3>
       <ul>
         <li>
-          Sequentially evaluate FORMS returning the value of the last one, #inert if FORMS is #null.
+          Sequentially evaluate <b>forms</b> returning the value of the last one, #inert if <b>forms</b> is #null.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (begin . forms)
-        </li>
-        <li>
-          (type fexpr)
+          <br/>
+            (begin . forms)
+          <br/>
+            (type fexpr)
         </li>
       </ul>
     </div>
@@ -221,18 +278,16 @@
           Return the contents of the address part of the register.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (car cons)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation ((\ ((car . #_)) car)) cons)
-        </li>
-        <li>
-          (derivation (@car cons))
+          <br/>
+            (car cons)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation ((\ ((car . #_)) car)) cons)
+          <br/>
+            (derivation (@car cons))
         </li>
       </ul>
     </div>
@@ -247,15 +302,14 @@
             if decrement part of the register is #null, signals an error otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (car! cons)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation ((\ ((car)) car)) cons)
+          <br/>
+            (car! cons)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation ((\ ((car)) car)) cons)
         </li>
       </ul>
     </div>
@@ -265,24 +319,21 @@
       </h3>
       <ul>
         <li>
-          Return the `car' of the `cdr' of the CONS.
+          Return the `car' of the `cdr' of the <b>cons</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (cadr cons)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation ((\ ((#_ cadr . #_)) cadr)) cons)
-        </li>
-        <li>
-          (derivation (car (cdr cons)))
-        </li>
-        <li>
-          (derivation (@car cons 1))
+          <br/>
+            (cadr cons)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation ((\ ((#_ cadr . #_)) cadr)) cons)
+          <br/>
+            (derivation (car (cdr cons)))
+          <br/>
+            (derivation (@car cons 1))
         </li>
       </ul>
     </div>
@@ -295,18 +346,16 @@
           Return the contents of the decrement part of the register.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (cdr cons)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation ((\ ((#_ . cdr)) cdr)) cons)
-        </li>
-        <li>
-          (derivation (@cdr cons))
+          <br/>
+            (cdr cons)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation ((\ ((#_ . cdr)) cdr)) cons)
+          <br/>
+            (derivation (@cdr cons))
         </li>
       </ul>
     </div>
@@ -316,18 +365,17 @@
       </h3>
       <ul>
         <li>
-          Return a cons with the given CAR and CDR.
+          Return a cons with the given <b>car</b> and <b>cdr</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (cons car cdr)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (@new vm Cons car cdr))
+          <br/>
+            (cons car cdr)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (@new vm Cons car cdr))
         </li>
       </ul>
     </div>
@@ -337,18 +385,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if the OBJECT is a cons, #false otherwise.
+          Return #true if the <b>object</b> is a cons, #false otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (cons? object)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (type? object Cons))
+          <br/>
+            (cons? object)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (type? object Cons))
         </li>
       </ul>
     </div>
@@ -358,18 +405,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if the OBJECT is not a cons, #false otherwise.
+          Return #true if the <b>object</b> is not a cons, #false otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (atom? object)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (! (cons? object)))
+          <br/>
+            (atom? object)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (! (cons? object)))
         </li>
       </ul>
     </div>
@@ -379,18 +425,17 @@
       </h3>
       <ul>
         <li>
-          Return the result of evaluation of FORM in the optional ENVIRONMENT.
+          Return the result of evaluation of <b>form</b> in the optional <b>environment</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (eval form . environment)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (eval form (if (null? environment) (theEnv) (car! environment))))
+          <br/>
+            (eval form . environment)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (eval form (if (null? environment) (theEnv) (car! environment))))
         </li>
       </ul>
     </div>
@@ -400,25 +445,25 @@
       </h3>
       <ul>
         <li>
-          Evaluate the TEST which must yield a boolean.
+          Evaluate the <b>test</b> which must yield a boolean.
           <br/>
-            Then evaluate either the THEN or ELSE expression depending on whether the TEST yielded #true or #false.
+            Then evaluate either the <b>then</b> or <b>else</b> expression depending on whether the <b>test</b> yielded #true or #false.
           <br/>
             Idea stolen from Anarki https://github.com/arclanguage/anarki
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (if test then . forms)
-        </li>
-        <li>
-          (syntax forms (or (else) (test then . forms)))
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (derivation (vau (test then . forms) env (if (eval test env) (eval then env) (null? forms) #inert (null? (cdr forms)) (eval (car forms) env) (apply if forms env))))
+          <br/>
+            (if test then . forms)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax forms (or () (else) (test then . forms)))
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (vau (test then . forms) env (if (eval test env) (eval then env) (null? forms) #inert (null? (cdr forms)) (eval (car forms) env) (apply if forms env))))
         </li>
       </ul>
     </div>
@@ -428,18 +473,17 @@
       </h3>
       <ul>
         <li>
-          Return the list of evaluated ARGUMENTS.
+          Return the list of evaluated <b>arguments</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (list . arguments)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (wrap (vau arguments #ignore arguments)))
+          <br/>
+            (list . arguments)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (wrap (vau arguments #ignore arguments)))
         </li>
       </ul>
     </div>
@@ -449,20 +493,19 @@
       </h3>
       <ul>
         <li>
-          Return a list of evaluated ARGUMENTS so that
+          Return a list of evaluated <b>arguments</b> so that
           <br/>
             the last argument becomes the `cdr' of the list.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (list* . arguments)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (if (! (cons? arguments)) arguments ((rec\ (loop (if (null? (cdr arguments) (car argument) (cons (car argument) (loop (cdr arguments))))))) arguments)))
+          <br/>
+            (list* . arguments)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (if (atom? arguments) arguments ((rec\ (loop arguments) (if (null? (cdr arguments)) (car argument) (cons (car argument) (loop (cdr arguments))))) arguments)))
         </li>
       </ul>
     </div>
@@ -472,11 +515,11 @@
       </h3>
       <ul>
         <li>
-          Return a new box with the optional VALUE.
+          Return a new box with the optional <b>value</b>.
           <br/>
             The Box are functions that encapsulates a mutable value.
           <br/>
-            Without VALUE use as VALUE `(boxDft)'.
+            Without <b>value</b> use as <b>value</b> `(boxDft)'.
           <br/>
             &nbsp;
           <br/>
@@ -485,12 +528,10 @@
             Calling the box with an argument update the value in the box.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (newBox . value)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (newBox . value)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -500,18 +541,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if the OBJECT is #null, #false otherwise.
+          Return #true if the <b>object</b> is #null, #false otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (null? object)
-        </li>
-        <li>
-          (type function)
-        </li>
-        <li>
-          (derivation (type? object Null))
+          <br/>
+            (null? object)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (type? object Null))
         </li>
       </ul>
     </div>
@@ -521,18 +561,17 @@
       </h3>
       <ul>
         <li>
-          Return the unevaluated OPERAND.
+          Return the unevaluated <b>operand</b>.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (quote operand)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (derivation (vau (operand) #ignore operand))
+          <br/>
+            (quote operand)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (vau (operand) #ignore operand))
         </li>
       </ul>
     </div>

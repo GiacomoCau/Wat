@@ -28,138 +28,96 @@
     <ul>
       <li>
         Type and value checks are possible with (#: check symbol) wherever there is a Symbol in a definined or parameters tree including all lexical bindings.
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        A `check' can be:
-      </li>
-      <li>
-        - a `value',
-      </li>
-      <li>
-        - the `Any' class,
-      </li>
-      <li>
-        - a `Class',
-      </li>
-      <li>
-        - a `List' with zero, one or two `Integers' followed by zero or more `checks',
-      </li>
-      <li>
-        - a `List' with an `Integer' and the symbol `oo' followed by zero or more `checks',
-      </li>
-      <li>
-        - a `List' with `car' equals `or' followed by two or more `check',
-      </li>
-      <li>
-        - a `List' with `car' equals `and' followed by two or more `check',
-      </li>
-      <li>
-        - a `List' with `car' `Apv' followed by zero o more arguments.
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        When the `check' is:
-      </li>
-      <li>
-        - a `value': the parameter value must be equal to that `value'
-      </li>
-      <li>
-        - the `Any' class : the parameter can be any value
-      </li>
-      <li>
-        - a `Class': the parameter value can be an instance of that `Class' or a class that extends that `Class'
-      </li>
-      <li>
-        - a `List': the parameter value must be a `List' where, in the `check' `List',
-      </li>
-      <li>
-        &nbsp;&nbsp;- the first `Integer' indicates the minimum number of elements, default is `0'
-      </li>
-      <li>
-        &nbsp;&nbsp;- the second `Integer' indicates the maximum number of elements
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;default is the value of the first `Integer' if present, otherwise `oo' for `Integer.maxValue'
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;for the second `Integer' can be also specified the symbol `oo' for `Integer.maxValue'
-      </li>
-      <li>
-        &nbsp;&nbsp;- if the number of `check' arguments in the list is
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;- less than the minimum: parameters values that exceed the minimum can have any value
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;- greater than the minimum: the parameters values exceeding the minimum will be checked cyclically using `check' arguments exceeding the minimum
-      </li>
-      <li>
-        &nbsp;&nbsp;- if the first element of the list is:
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;- `or': the parameter value must match one of the `check' arguments of the `or'
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;- `and': the parameter value must match all the `check' arguments of the `and'
-      </li>
-      <li>
-        &nbsp;&nbsp;&nbsp;&nbsp;- `Apv': applying `Apv' to the cons of the parameter value and the remaining arguments must return #true
-      </li>
-      <li>
-        &nbsp;
-      </li>
-      <li>
-        $(syntax definiendTree (or symbol decomposeTree))
-      </li>
-      <li>
-        $(syntax parametersTree (or #null #ignore symbol decomposeTree))
-      </li>
-      <li>
-        $(syntax decomposeTree (parametersTree . decomposeTree))
-      </li>
-      <li>
-        $(syntax symbol (or Symbol (#: check Symbol)))
-      </li>
-      <li>
-        $(syntax check Any)
-      </li>
-      <li>
-        $(syntax check Class)
-      </li>
-      <li>
-        $(syntax check checks)
-      </li>
-      <li>
-        $(syntax checks (check . checks))
-      </li>
-      <li>
-        $(syntax check (min . checks))
-      </li>
-      <li>
-        $(syntax check (min max . checks))
-      </li>
-      <li>
-        $(syntax check (min oo . checks))
-      </li>
-      <li>
-        $(syntax check (or . checks))
-      </li>
-      <li>
-        $(syntax check (and . checks))
-      </li>
-      <li>
-        $(syntax check (Apv . arguments))
-      </li>
-      <li>
-        $(syntax check value)
-      </li>
-      <li>
-        $(syntax arguments (value . arguments))
+        <br/>
+          &nbsp;
+        <br/>
+          A `check' can be:
+        <br/>
+          - a `value',
+        <br/>
+          - the `Any' class,
+        <br/>
+          - a `Class',
+        <br/>
+          - a `List' with zero, one or two `Integers' followed by zero or more `checks',
+        <br/>
+          - a `List' with an `Integer' and the symbol `oo' followed by zero or more `checks',
+        <br/>
+          - a `List' with `car' equals `or' followed by two or more `check',
+        <br/>
+          - a `List' with `car' equals `and' followed by two or more `check',
+        <br/>
+          - a `List' with `car' `Apv' followed by zero o more arguments.
+        <br/>
+          &nbsp;
+        <br/>
+          When the `check' is:
+        <br/>
+          - a `value': the parameter value must be equal to that `value'
+        <br/>
+          - the `Any' class : the parameter can be any value
+        <br/>
+          - a `Class': the parameter value can be an instance of that `Class' or a class that extends that `Class'
+        <br/>
+          - a `List': the parameter value must be a `List' where, in the `check' `List',
+        <br/>
+          &nbsp;&nbsp;- the first `Integer' indicates the minimum number of elements, default is `0'
+        <br/>
+          &nbsp;&nbsp;- the second `Integer' indicates the maximum number of elements
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;default is the value of the first `Integer' if present, otherwise `oo' for `Integer.maxValue'
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;for the second `Integer' can be also specified the symbol `oo' for `Integer.maxValue'
+        <br/>
+          &nbsp;&nbsp;- if the number of `check' arguments in the list is
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;- less than the minimum: parameters values that exceed the minimum can have any value
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;- greater than the minimum: the parameters values exceeding the minimum will be checked cyclically using `check' arguments exceeding the minimum
+        <br/>
+          &nbsp;&nbsp;- if the first element of the list is:
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;- `or': the parameter value must match one of the `check' arguments of the `or'
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;- `and': the parameter value must match all the `check' arguments of the `and'
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;- `Apv': applying `Apv' to the cons of the parameter value and the remaining arguments must return #true
+        <br/>
+          &nbsp;
+        <br/>
+          (syntax definiendTree (or symbol decomposeTree))
+        <br/>
+          (syntax parametersTree (or #null ignore symbol decomposeTree))
+        <br/>
+          (syntax decomposeTree (parametersTree . decomposeTree))
+        <br/>
+          (syntax symbol (or Symbol (#: check Symbol)))
+        <br/>
+          (syntax ignore (or #ignore (#: check #ignore)))
+        <br/>
+          (syntax check Any)
+        <br/>
+          (syntax check Class)
+        <br/>
+          (syntax check checks)
+        <br/>
+          (syntax checks (check . checks))
+        <br/>
+          (syntax check (min . checks))
+        <br/>
+          (syntax check (min max . checks))
+        <br/>
+          (syntax check (min oo . checks))
+        <br/>
+          (syntax check (or . checks))
+        <br/>
+          (syntax check (and . checks))
+        <br/>
+          (syntax check (Apv . arguments))
+        <br/>
+          (syntax check value)
+        <br/>
+          (syntax arguments (value . arguments))
       </li>
     </ul>
     <div>
@@ -168,15 +126,13 @@
       </h3>
       <ul>
         <li>
-          Return #inert if BOOLEAN is #true, signals an error otherwise.
+          Return #inert if <b>boolean</b> is #true, signals an error otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (assert#t boolean)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (assert#t boolean)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -186,21 +142,17 @@
       </h3>
       <ul>
         <li>
-          Returns the length of the EXPR value if it matches CHECK, signals an error otherwise.
+          Returns the length of the <b>expr</b> value if it matches <b>check</b>, signals an error otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (check expr check)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (derivation ((\ ((#: check value)) (len value)) expr))
-        </li>
-        <li>
-          (derivation (let ( (value (eval exor env)) (chk (%evalChk check env)) ) (@check vm value chk))) 
+          <br/>
+            (check expr check)
+          <br/>
+            (type fexpr)
+          <br/>
+            (derivation ((\ ((#: check value)) (len value)) expr))
+          <br/>
+            (derivation (let ( (value (eval exor env)) (chk (%evalChk check env)) ) (@check vm value chk))) 
         </li>
       </ul>
     </div>
@@ -210,21 +162,19 @@
       </h3>
       <ul>
         <li>
-          Returns the length of LIST if the elements of LIST match the corresponding CHECK, signals an error otherwise.
+          Returns the length of <b>list</b> if the elements of <b>list</b> match the corresponding <b>check</b>, signals an error otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (check* list . checks)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (derivation ((\ (#: checks list) (len list)) . list) 
-        </li>
-        <li>
-          (derivation (check list checks)) 
+          <br/>
+            (check* list . checks)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation ((\ (#: checks list) (len list)) . list) 
+          <br/>
+            (derivation (check list checks)) 
         </li>
       </ul>
     </div>
@@ -234,21 +184,19 @@
       </h3>
       <ul>
         <li>
-          Return #true if OBJECT match CHECK, #false otherwise.
+          Return #true if <b>object</b> match <b>check</b>, #false otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (check? object check)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (derivation wat (catchWth #f (apply check args env) #t)) 
-        </li>
-        <li>
-          (derivation lispx (catch (handlerBind ( (Error (_ (throw #f))) ) (apply check args env) #t))) 
+          <br/>
+            (check? object check)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation wat (catchWth #f (apply check args env) #t)) 
+          <br/>
+            (derivation lispx (catch (handlerBind ( (Error (_ (throw #f))) ) (apply check args env) #t))) 
         </li>
       </ul>
     </div>
@@ -258,21 +206,19 @@
       </h3>
       <ul>
         <li>
-          Returns the value of the last form of (begin FORM . FORMS) if it matches CHECK, signals an error otherwise.
+          Returns the value of the last form of (begin <b>form</b> . <b>forms</b>) if it matches <b>check</b>, signals an error otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (: check form . forms)
-        </li>
-        <li>
-          (type fexpr)
-        </li>
-        <li>
-          (derivation ((\ ((#: check value)) value) (begin form . forms)))
-        </li>
-        <li>
-          (derivation (let ( (value (eval (list* 'begin form . forms) env)) (chk (%evalChk check env)) ) (@check vm value chk) value)) 
+          <br/>
+            (: check form . forms)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation ((\ ((#: check value)) value) (begin form . forms)))
+          <br/>
+            (derivation (let ( (value (eval (list* 'begin form . forms) env)) (chk (%evalChk check env)) ) (@check vm value chk) value)) 
         </li>
       </ul>
     </div>

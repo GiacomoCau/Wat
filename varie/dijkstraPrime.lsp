@@ -23,7 +23,7 @@
         (then 
           (set! primes (append primes (cons n)))
           (set! pool (append pool (cons (list (* n n) n)))) )
-        (forEach (\ (x) (while (<= (car x) n) (@setCar x (apply + x)))) pool) ))
+        (forEach (\ (x) (while (<= (car x) n) (setCar x (apply + x)))) pool) ))
      primes ))
      
 (def\ (primes max)
@@ -32,14 +32,14 @@
       (let1 (t (all? (\ (x) (< n (car x))) pool))
         (next (+ 1 n)
           (if t (append primes (cons n)) primes)
-          (if t (append pool (cons (list (* n n) n))) (forEach (\ (e) (while (<= (car e) n) (@setCar e (apply + e)))) pool)) )))))
+          (if t (append pool (cons (list (* n n) n))) (forEach (\ (e) (while (<= (car e) n) (setCar e (apply + e)))) pool)) )))))
 
 (def\ (primes max)
   (let next ( (n 3) (primes (2)) (pool ((4 2))) )
     (if (> n max) primes
       (all? (\ (x) (< n (car x))) pool)
         (next (1+ n) (append primes (cons n)) (append pool (cons (list (* n n) n))) )
-        (next (1+ n) primes (forEach (\ (e) (while (<= (car e) n) (@setCar e (apply + e)))) pool)) )))
+        (next (1+ n) primes (forEach (\ (e) (while (<= (car e) n) (setCar e (apply + e)))) pool)) )))
 
 (primes 50)
 
@@ -48,6 +48,6 @@
     (if (> n max) primes
       (< n (caar pool))
         (next (1+ n) (append primes (cons n)) (append pool (cons (list (* n n) n))) )
-        (next (1+ n) primes (sort (forEach (\ (e) (while (<= (car e) n) (@setCar e (apply + e)))) pool) :key car)) )))
+        (next (1+ n) primes (sort (forEach (\ (e) (while (<= (car e) n) (setCar e (apply + e)))) pool) :key car)) )))
 
 (primes2 50)

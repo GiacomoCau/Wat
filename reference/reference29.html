@@ -31,17 +31,15 @@
       </h3>
       <ul>
         <li>
-          Search for the KEYWORD in the property LIST (a list of alternating keywords and values)
+          Search for the <b>keyword</b> in the property <b>list</b> (a list of alternating keywords and values)
           <br/>
             and return the next value as an option if found it, #null otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (optValue keyword list)
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (optValue keyword list)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -51,19 +49,25 @@
       </h3>
       <ul>
         <li>
-          Search for ITEM in the LIST according to the CMP predicate (defaults to `==').
+          Search for <b>item</b> in the <b>list</b> according to the <b>cmp</b> predicate (defaults to `==').
           <br/>
-            Return, if found it, the tail of the list starting with ITEM after apply the GET function (defaults to 'idf'), #null otherwise.
+            Return, if found it, the tail of the list starting with <b>item</b> after apply the <b>get</b> function (defaults to 'idf'), #null otherwise.
           <br/>
-            The KEY function is applied to each list element before comparison (defaults to `idf').
+            The <b>key</b> function is applied to each list element before comparison (defaults to `idf').
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (member item list &amp;Value cmp key ret))
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (member item list . keywords))
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax keywords (:cmp function . keywords))
+          <br/>
+            (syntax keywords (:key function . keywords))
+          <br/>
+            (syntax keywords (:get function . keywords))
         </li>
       </ul>
     </div>
@@ -73,15 +77,21 @@
       </h3>
       <ul>
         <li>
-          Return #true if the ITEM is in the LIST, #false otherwise.
+          Return #true if the <b>item</b> is in the <b>list</b>, #false otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (member? (item list &amp;key cmp key ret))
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (member? item list . keywords)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax keywords (:cmp function . keywords))
+          <br/>
+            (syntax keywords (:key function . keywords))
+          <br/>
+            (syntax keywords (:get function . keywords))
         </li>
       </ul>
     </div>
@@ -91,15 +101,21 @@
       </h3>
       <ul>
         <li>
-          Return #false if the ITEM is in the LIST, #true otherwise.
+          Return #false if the <b>item</b> is in the <b>list</b>, #true otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (!member? (item list &amp;key cmp key ret))
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (!member? item list . keywords)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax keywords (:cmp function . keywords))
+          <br/>
+            (syntax keywords (:key function . keywords))
+          <br/>
+            (syntax keywords (:get function . keywords))
         </li>
       </ul>
     </div>
@@ -109,17 +125,15 @@
       </h3>
       <ul>
         <li>
-          Return ITEM if the ITEM is in the LIST, #true otherwise.
+          Return <b>item</b> if the <b>item</b> is in the <b>list</b>, #null otherwise.
           <br/>
-            ITEM can be an sigle element or a list of element
+            <b>item</b> can be an sigle element or a list of element
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (optKey (item list))
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (optKey item list)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -129,15 +143,13 @@
       </h3>
       <ul>
         <li>
-          Return the `car' of a assoc LIST (a list of lists of keywords and values) is ITEM is the `caar' if == to ITEM, #null otherwise.
+          Return the `car' of a assoc <b>list</b> (a list of lists of keywords and values) is <b>item</b> is the `caar' if == to <b>item</b>, #null otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (assoc (item list))
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (assoc item list)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
@@ -147,15 +159,13 @@
       </h3>
       <ul>
         <li>
-          Return #true if the ITEM is in the LIST, #false otherwise.
+          Return #true if the <b>item</b> is in the <b>list</b>, #false otherwise.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (member?* (item . list))
-        </li>
-        <li>
-          (type function)
+          <br/>
+            (member?* item . list)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>

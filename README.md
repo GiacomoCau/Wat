@@ -50,13 +50,32 @@ These are the differences compared to the original Wat/LispX
 		* preceded by `:def` to bind in the last frame or `:set!` to bind in the frame where the single key is present `(env (or :def :set!) (or #inert :rhs :prv :cnt) key value ...)`
 * The keys used for `Obj` assignments and `Env` bindings can be `(or Keyword Symbol String)`
 * The __eval__ function can be called with only the expression to evaluate, the `Env` will be the current one `(eval exp)`
+* The __def__ and __vau__ (i.e. __\\__ or __lambda__) operators allow the decomposition of `Object[]` `Obj` and `Object` in addition to lists.
+
+	the decomposition of the `Object[]` is for the position
+	* `(def (a b) (array 1 2 3))`
+	* `((\ ((a b)) (+ a b)) (array 1 2 3))`
+
+	the `Obj` decomposition is for the attribute name
+	* `(def (a b) (newObj :a 1 :b 2))`
+	* `((\ ((a b)) (+ a b)) (newObj :a 1 :b 2))`
+
+	in the decomposition lists you can
+	* insert `.field` or `@method` or `(@method ...)` to have the resulting value with the name of the specified field or method
+	* specify a symbol in the last cdr, for `Object[]` it is the residual array while for all other objects it is the object itself
+
+* The __def__ operator allows control over the type and value of bindings.
+	
+	for checking the type and value of the
+	* bindings: instead of the single `symbol` in the definiend tree, must be specified the expression `(#: check symbol)`
+
 * The __vau__ operator (i.e. __\\__ or __lambda__) allows control over the type and value of parameters and value returned.
 
 	for checking the type and value of the
 	* return value: the body of the vau must start with a `#:` followed by the `check` followed by the `forms` of the body `(vau pt ep #: check . forms)`
-	* parameters: instead of the single `symbol` parameter in the parameter tree, must be specified the expression `(#: check symbol)`,
+	* parameters: instead of the single `symbol` in the parameter tree, must be specified the expression `(#: check symbol)`,
 	
-	where `check` can be:
+* The `check` can be:
 	* a `value`,
 	* the `Any` class,
 	* a `Class`,

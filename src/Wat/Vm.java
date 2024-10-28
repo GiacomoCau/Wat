@@ -1,7 +1,7 @@
 package Wat;
 
-import static List.Parser.string;
 import static List.Parser.str2bc;
+import static List.Parser.string;
 import static Wat.Utility.$;
 import static Wat.Utility.apply;
 import static Wat.Utility.binOp;
@@ -40,6 +40,7 @@ import static java.lang.Runtime.version;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.System.out;
 import static java.lang.reflect.Array.getLength;
+import static java.util.Arrays.copyOfRange;
 import static java.util.Arrays.fill;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
@@ -347,11 +348,13 @@ public class Vm {
 		<T> T value(Object key);
 		boolean isBound(Object key);
 		<T> T get(Object key);
+		Lookup lookup(Object obj);
 		List keys();
 		List symbols();
 		List keywords();
 		boolean remove(Object key);
 	}
+	record Lookup(boolean isBound, Object value) {}
 	class Env implements ArgsList, ObjEnv {
 		Env parent; LinkedHashMap<String,Object> map = new LinkedHashMap();
 		Env(Env parent, Obj obj) {
@@ -363,8 +366,7 @@ public class Vm {
 			if (objs == null) return;
 			for (int i=0, e=objs.length; i<e; i+=1) map.put(toKey(objs[i]), objs[i+=1]);
 		}
-		record Lookup(boolean isBound, Object value) {}
-		Lookup lookup(Object obj) {
+		public Lookup lookup(Object obj) {
 			var key = toKey(obj);
 			for (var env=this; env != null; env=env.parent) {
 				Object res = env.map.get(key);
@@ -495,6 +497,11 @@ public class Vm {
 			var val = map.get(key);
 			return val != null || map.containsKey(key) ? val : unboundSlotError(key, this);
 		}
+		public Lookup lookup(Object obj) {
+			var key = toKey(obj);
+			Object res = map.get(key);
+			return new Lookup(res != null || map.containsKey(key), res); 
+		};
 		Object puts(Object ... objs) {
 			if (objs == null) return null;
 			Object last = null;
@@ -546,8 +553,8 @@ public class Vm {
 				var s = matcher.group(1);
 				var i = s.indexOf(","); 
 				var k = toKey(i == -1 ? s : s.substring(0, i));
-				var v = value(k);
-				matcher.appendReplacement(sb, (v != null || isBound(k) ? (i == -1 ? Vm.this.toString(true, v) : s.substring(i+1).formatted(v)) : "{"+ s +"}" ).replace("\\", "\\\\").replace("$", "\\$"));
+				var v = lookup(k);
+				matcher.appendReplacement(sb, (v.isBound ? (i == -1 ? Vm.this.toString(true, v.value) : s.substring(i+1).formatted(v.value)) : "{"+ s +"}" ).replace("\\", "\\\\").replace("$", "\\$"));
 			} while(matcher.find());
 			matcher.appendTail(sb);
 			return sb.toString();
@@ -713,6 +720,47 @@ public class Vm {
 					var res = bind(def, bndRes, e, lc.car, rc.car);
 					yield lc.cdr() == null && rc.cdr() == null ? res : bind(def, bndRes, e, lc.cdr(), rc.cdr());
 				}
+				else if (rhs instanceof Object) {
+					Object res=null, head=lc; int i=0;
+					/* TODO da problemi ...
+					Object res=null, head=lc; int i=0, len=len(lc);
+					if (len > 1) {
+						res = getTco(evaluate(e, lc.car));
+						if (!(res instanceof Class cls)) throw new TypeException("expected an {expected}, found: {datum}", res, symbol("Class"));
+						if (!isType(rhs, cls)) yield false;
+						head=lc.cdr();
+					}
+					//*/
+					var objEnv = rhs instanceof ObjEnv oe ? oe : null; var isObjEnv = objEnv != null;
+					var array = rhs instanceof Object[] oa ? oa : null; var isArray = array != null;
+					for (; head instanceof Cons cons; i+=1, head=cons.cdr()) {
+						var car = cons.car;
+						if (car == sheColon) break;
+						if (car instanceof List lst && lst.car instanceof List lst2 && lst2.car.equals(symbol("%at")) /*&& len(lst2) == 2*/) {
+							res = getTco(evaluate(e, lst2));
+							if (!(res instanceof At at)) throw new TypeException("expected an {expected}, found: {datum}", res, symbol("At"));
+							res = map("evalArgs", arg-> getTco(evaluate(e, arg)), lst.cdr());
+							if (!(res instanceof List list)) throw new TypeException("expected a {expected}, found: {datum}", res, symbol("List"));
+							res = bind(def, bndRes, e, symbol(at.name), at.apply(cons(rhs, list)));
+						}
+						else if (car instanceof List lst && member(lst.car, atdots) /*&& len(lst) == 2*/) {
+							res = getTco(evaluate(e, lst));
+							if (!(res instanceof AtDot ad)) throw new TypeException("expected an {expected}, found: {datum}", res, symbol("AtDot"));
+							res = bind(def, bndRes, e, symbol(ad.name), ad.apply(cons(rhs)));
+						}
+						else if (isObjEnv) {
+							res = bind(def, bndRes, e, car, objEnv.get(car));
+						}
+						else if (isArray) {
+						//   if (rhs.getClass().isArray()) { ... Array.get(rhs, i) ... Array.getLength(rhs) ...
+							res = bind(def, bndRes, e, car, array[i]);
+						}
+						else {
+							throw new MatchException("expected {operands#,%+d} operands, found: {datum}", rhs, len(lc));
+						}
+					}
+					yield head == null ? res : bind(def, bndRes, e, head, isArray ? copyOfRange(array, i, array.length) : rhs);
+				}
 				else {
 					throw new MatchException("expected {operands#,%+d} operands, found: {datum}", rhs, len(lc));
 				}
@@ -778,6 +826,7 @@ public class Vm {
 		Apv(Combinable cmb) { this.cmb = cmb; }
 		public Object combine(Env e, List o) {
 			return tco(()-> pipe(dbg(e, this, o), ()-> map("evalArgs", car-> getTco(evaluate(e, car)), o), args-> tco(()-> cmb.combine(e, (List) args)))); 
+			//return tco(()-> pipe(dbg(e, this, o), ()-> getTco(evaluate(e, cons(symbol("%list"), o))), args-> tco(()-> cmb.combine(e, (List) args)))); 
 		}
 		public String toString() {
 			return "{%Apv " + Vm.this.toString(cmb) + "}";
@@ -1121,9 +1170,10 @@ public class Vm {
 	
 	
 	// Java Native Interface
-	interface ArgsList extends Function<List,Object> {}
-	interface ChkList extends BiFunction<Symbol,List,Object> {}
-	interface LenList extends BiFunction<Integer,List,Object> {}
+	interface ArgsList extends Function<List, Object> {}
+	interface ChkList extends BiFunction<Symbol, List, Object> {}
+	interface LenList extends BiFunction<Integer, List, Object> {}
+	
 	class JFun implements Combinable {
 		Symbol op; ArgsList jfun; ChkList check;
 		JFun(String name, ChkList check, LenList jfun) { this(name, jfun); this.check = check; };
@@ -1153,6 +1203,10 @@ public class Vm {
 				);
 				case BiFunction bf-> o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 2),
 					obj-> obj instanceof Integer /*len*/ ? bf.apply(o.car, o.car(1)) : resumeError(obj, symbol("Integer")));
+				/* TODO verificare
+				case Combinable cb-> o-> pipe(dbg(null, "%" + op, o), ()-> checkM(op, o, 1, Env.class),
+					obj-> obj instanceof Integer /*len* / ? cb.combine(o.car(), o.cdr()) : resumeError(obj, symbol("Integer")));
+				*/
 				case Field f-> o-> pipe(null, ()-> checkR(op, o, 1, 2), obj->{
 						if (!(obj instanceof Integer len)) return resumeError(obj, symbol("Integer"));
 						if (len == 1) return uncked(()-> f.get(o.car));
@@ -1212,80 +1266,85 @@ public class Vm {
 	boolean isjFun(Object obj) {
 		return isInstance(obj, Supplier.class, Consumer.class, Function.class, BiConsumer.class, BiFunction.class, Executable.class, Field.class);
 	}
-	interface AtDot extends ArgsList {}
-	interface At extends AtDot {}
+	
+	abstract class AtDot implements ArgsList { String name; }
+	
+	class At extends AtDot {
+		At(String name) { super.name = name; }
+		public Object apply(List o) {
+			var chk = checkM("At", o, 1, Object.class);
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
+			Object o0 = o.car;
+			Object[] args = array(o, 1);
+			// (@new class . objects)            -> class.getConstructor(getClasses(objects)).newInstance(objects) -> constructor.newInstance(objects)
+			// (@<name> object . objects)        -> object.getClass().getMethod(name, getClasses(objects)).invocke(object, objects) -> method.invoke(object, objects)
+			// (@getConstructor class . classes) -> class.getConstructor(classes) -> constructor
+			// (@getMethod class name . classes) -> class.getMethod(name, classes) -> method
+			// (@getField class name)            -> class.getField(name, classes) -> field
+			if (name.equals("new") && o0 instanceof Class c && c.getDeclaringClass() == Vm.class && (args.length == 0 || args[0].getClass() != Vm.class)) {
+				// (@new Error "assert error!") -> (@new Error vm "assert error!")
+				args = headAdd(args, Vm.this);
+			}
+			var classes = getClasses(args);
+			Executable executable = getExecutable(o0, name, classes);
+			if (executable == null) return unboundExecutableError(Vm.this.toString(name, classes) + " not found in: {class}", symbol(name), list((Object[]) classes), o0 instanceof Class cl ? cl : o0.getClass());
+			try {
+				executable.setAccessible(true);
+				args = reorg(executable, args);
+				return switch (executable) { 
+					case Method m-> m.invoke(o0, args);
+					case Constructor c-> c.newInstance(args);
+				};
+			}
+			catch (Throwable thw) {
+				if (thw instanceof InvocationTargetException ite) {
+					switch (thw = ite.getTargetException()) {
+						case Value val: throw val;
+						case Condition cnd: throw cnd;
+						case InnerException ie: throw ie;
+						default: // in errore senza!
+					}
+				}
+				return javaError("error executing " + Vm.this.toString(name, classes) + " of: {object} with: {args}", thw, symbol(name), list(args), o0);
+			}
+		}
+		public String toString() { return "@" + name; }
+	}
 	Object at(String name) {
 		if (name == null) return typeError("method name is null, not a {expected}", name, symbol("String"));
-		return new At() {
-			@Override public Object apply(List o) {
-				var chk = checkM("At", o, 1, Object.class);
-				if (chk instanceof Suspension s) return s;
-				if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
-				Object o0 = o.car;
-				Object[] args = array(o, 1);
-				// (@new class . objects)            -> class.getConstructor(getClasses(objects)).newInstance(objects) -> constructor.newInstance(objects)
-				// (@<name> object . objects)        -> object.getClass().getMethod(name, getClasses(objects)).invocke(object, objects) -> method.invoke(object, objects)
-				// (@getConstructor class . classes) -> class.getConstructor(classes) -> constructor
-				// (@getMethod class name . classes) -> class.getMethod(name, classes) -> method
-				// (@getField class name)            -> class.getField(name, classes) -> field
-				if (name.equals("new") && o0 instanceof Class c && c.getDeclaringClass() == Vm.class && (args.length == 0 || args[0].getClass() != Vm.class)) {
-					// (@new Error "assert error!") -> (@new Error vm "assert error!")
-					args = headAdd(args, Vm.this);
-				}
-				var classes = getClasses(args);
-				Executable executable = getExecutable(o0, name, classes);
-				if (executable == null) return unboundExecutableError(Vm.this.toString(name, classes) + " not found in: {class}", symbol(name), list((Object[]) classes), o0 instanceof Class cl ? cl : o0.getClass());
-				try {
-					executable.setAccessible(true);
-					args = reorg(executable, args);
-					return switch (executable) { 
-						case Method m-> m.invoke(o0, args);
-						case Constructor c-> c.newInstance(args);
-					};
-				}
-				catch (Throwable thw) {
-					if (thw instanceof InvocationTargetException ite) {
-						switch (thw = ite.getTargetException()) {
-							case Value val: throw val;
-							case Condition cnd: throw cnd;
-							case InnerException ie: throw ie;
-							default: // in errore senza!
-						}
-					}
-					return javaError("error executing " + Vm.this.toString(name, classes) + " of: {object} with: {args}", thw, symbol(name), list(args), o0);
-				}
-			}
-			@Override public String toString() { return "@" + name; }
-		};
+		return new At(name);
 	}
-	interface Dot extends AtDot {};
+	
+	class Dot extends AtDot {
+		Dot(String name) { super.name = name; }
+		public Object apply(List o) {
+			var chk = checkR("Dot", o, 1, 2);
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+			var o0 = o.car;
+			if ("length".equals(name) && len == 1 && o0.getClass().isArray()) return getLength(o0);
+			// (.<name> object)       -> object.getclass().getField(name).get(object) -> field.get(object) 
+			// (.<name> object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
+			//TODO (.<name> object (or #ignore #inert :rhs :prv :cnt) value) 
+			Field field = getField(o0 instanceof Class ? (Class) o0 : o0.getClass(), name);
+			if (field == null) return unboundFieldError(name, o0 instanceof Class cl ? cl : o0.getClass());
+			try {
+				if (len == 1) return field.get(o0);
+				field.set(o0, o.car(1)); return inert;
+			}
+			catch (Throwable thw) {
+				return len==1
+					? javaError("error getting field {member} of: {object}", thw, symbol(name), null, o0)
+					: javaError("error setting field {member} of: {object} with: {args}", thw, symbol(name), o.cdr(), o0)
+				;
+			}
+		}
+		public String toString() { return "." + name; }		
+	}
 	Object dot(String name) {
 		if (name == null) return typeError("field name is null, not a {expected}", name, symbol("String"));
-		return new Dot() {
-			@Override public Object apply(List o) {
-				var chk = checkR("Dot", o, 1, 2);
-				if (chk instanceof Suspension s) return s;
-				if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
-				var o0 = o.car;
-				if ("length".equals(name) && len == 1 && o0.getClass().isArray()) return getLength(o0);
-				// (.<name> object)       -> object.getclass().getField(name).get(object) -> field.get(object) 
-				// (.<name> object value) -> object.getClass().getField(name).set(object,value) -> field.set(object, value) 
-				//TODO (.<name> object (or #ignore #inert :rhs :prv :cnt) value) 
-				Field field = getField(o0 instanceof Class ? (Class) o0 : o0.getClass(), name);
-				if (field == null) return unboundFieldError(name, o0 instanceof Class cl ? cl : o0.getClass());
-				try {
-					if (len == 1) return field.get(o0);
-					field.set(o0, o.car(1)); return inert;
-				}
-				catch (Throwable thw) {
-					return len==1
-						? javaError("error getting field {member} of: {object}", thw, symbol(name), null, o0)
-						: javaError("error setting field {member} of: {object} with: {args}", thw, symbol(name), o.cdr(), o0)
-					;
-				}
-			}
-			@Override public String toString() { return "." + name; }
-		};
+		return new Dot(name);
 	}
 	
 	
@@ -1344,10 +1403,10 @@ public class Vm {
 		}
 		private Object check(Object p) {
 			if (p == null || p == ignore) { if (ep != null) syms.add(p); return null; }
-			if (p instanceof Symbol) { return syms.add(p) ? null : notUniqueError("invalid parameter tree, not a unique symbol: {datum} in: " + pt + " of: {expr}", p, expr); }
+			if (p instanceof Symbol) { return syms.add(p) || member(p, atdots) ? null : notUniqueError("invalid parameter tree, not a unique symbol: {datum} in: " + pt + " of: {expr}", p, expr); }
 			if (!(p instanceof Cons c)) return null;
 			var len = len(c);
-			if (c.car instanceof Symbol sym && member(sym, quotes))
+			if (member(c.car, quotes))
 				return len == 2
 					? null
 					: matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: " + c + " of: " + expr, 2 > len ? null : c.cdr(len-2), 2-len)
@@ -1355,8 +1414,8 @@ public class Vm {
 			if (c.car == sheColon)
 				return len != 3
 					? matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: " + c + " of: " + expr, 3 > len ? null : c.cdr(len-2), 3-len)
-					: !(c.car(2) instanceof Symbol)
-					? typeError("invalid parameter tree, not a {expected}: {datum} in: " + c + " of: {expr}", c.car(2), toChk(Symbol.class), expr)
+					: !apply(v-> v instanceof Symbol || v == ignore, c.car(2))
+					? typeError("invalid parameter tree, not a {expected}: {datum} in: " + c + " of: {expr}", c.car(2), toChk(or(Symbol.class, ignore)), expr)
 					: check(c.car(2))
 				;
 			var msg = check(c.car); if (msg != null) return msg;
@@ -1659,10 +1718,10 @@ public class Vm {
 				var val = ad.apply(cons(object));
 				try { checkO(val, expt); } catch (InnerException ie) { return false; }
 			}
-			else if (object instanceof Obj obj) {
-				var val = obj.value(key);
-				if (val == null && !obj.isBound(key)) return false;
-				try { checkO(val, expt); } catch (InnerException ie) { return false; }
+			else if (object instanceof ObjEnv obj) {
+				var lookup = obj.lookup(key);
+				if (!lookup.isBound) return false;
+				try { checkO(lookup.value, expt); } catch (InnerException ie) { return false; }
 			}
 			else {
 				return false;
@@ -1678,6 +1737,7 @@ public class Vm {
 		return (T) interns.computeIfAbsent(name, n-> n.startsWith(":") && n.length() > 1 ? new Keyword(n.substring(1)) : new Symbol(n));
 	}
 	Object[] quotes = $(symbol("%'"), symbol("quote"));
+	Object[] atdots = $(symbol("%at"), symbol("%dot"));
 	
 	Object bc2expr(Object o) {
 		return switch (o) {

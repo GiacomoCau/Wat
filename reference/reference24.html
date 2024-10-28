@@ -61,20 +61,19 @@
       </h3>
       <ul>
         <li>
-          Establishes the BINDING, before the evaluation of FORMS as an implicit `begin'.
+          Establishes the <b>binding</b>, before the evaluation of <b>forms</b> as an implicit `begin'.
           <br/>
             Idea stolen from Anarki https://github.com/arclanguage/anarki
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (wth1 binding . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax binding . (definiendTree initForm))
+          <br/>
+            (wth1 binding . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax binding . (definiendTree initForm))
         </li>
       </ul>
     </div>
@@ -84,22 +83,21 @@
       </h3>
       <ul>
         <li>
-          Establishes BINDINGS serially, so that every binding can refer to previous one,
+          Establishes <b>bindings</b> serially, so that every binding can refer to previous one,
           <br/>
-            before the evaluation of FORMS as an implicit `begin'.
+            before the evaluation of <b>forms</b> as an implicit `begin'.
           <br/>
             Idea stolen from Anarki https://github.com/arclanguage/anarki
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (wth* bindings . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax bindings (definiendTree intiForm . bindings))
+          <br/>
+            (wth* bindings . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindings (definiendTree intiForm . bindings))
         </li>
       </ul>
     </div>
@@ -109,25 +107,23 @@
       </h3>
       <ul>
         <li>
-          Establishes BINDINGS parallelly, so that no binding can refer to itself or the other ones,
+          Establishes <b>bindings</b> parallelly, so that no binding can refer to itself or the other ones,
           <br/>
-            after evaluate FORMS as an implicit `begin'.
+            after evaluate <b>forms</b> as an implicit `begin'.
           <br/>
             Idea stolen from Anarki https://github.com/arclanguage/anarki
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (wth bindings . forms)
-        </li>
-        <li>
-          (wth name bindings . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax bindings (definiendTree initForm . bindings))
+          <br/>
+            (wth bindings . forms)
+          <br/>
+            (wth name bindings . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindings (definiendTree initForm . bindings))
         </li>
       </ul>
     </div>
@@ -139,27 +135,25 @@
         <li>
           Labelled recursive loop.
           <br/>
-            Lexically bind NAME with the function with the specified PARAMETER-TREE and FORMS as body,
+            Lexically bind <b>name</b> with the function with the specified <b>parameterTree</b> and <b>forms</b> as body,
           <br/>
             so that it can recursively refer to itself.
           <br/>
-            The function is immediately applied to the list containing the value of the INIT_FORMS evaluate as an implicit `begin',
+            The function is immediately applied to the list containing the value of the <b>initForms</b> evaluate as an implicit `begin',
           <br/>
-            after evaluate FORMS as an implicit `begin'.
+            after evaluate <b>forms</b> as an implicit `begin'.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (let1Loop name binding . forms)
-        </li>
-        <li>
-          (let1Loop (name . binding) . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax binding (parameterTree . initForms))
+          <br/>
+            (let1Loop name binding . forms)
+          <br/>
+            (let1Loop (name . binding) . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax binding (parameterTree . initForms))
         </li>
       </ul>
     </div>
@@ -169,25 +163,23 @@
       </h3>
       <ul>
         <li>
-          Establishes the BINDING, after evaluate FORMS as an implicit `begin'.
+          Establishes the <b>binding</b>, after evaluate <b>forms</b> as an implicit `begin'.
           <br/>
-            The INIT_FORMS is evaluate as an implicit `begin'.
+            The <b>initForms</b> is evaluate as an implicit `begin'.
           <br/>
             If the first argument is a symbol is like 'let1Loop'.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (let1 binding . forms)
-        </li>
-        <li>
-          (let1 name binding . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax binding (definiendTree . initForms))
+          <br/>
+            (let1 binding . forms)
+          <br/>
+            (let1 name binding . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax binding (definiendTree . initForms))
         </li>
       </ul>
     </div>
@@ -197,21 +189,19 @@
       </h3>
       <ul>
         <li>
-          Establishes the FUNCTION-BINDINGS, after evaluate of FORMS as an implicit `begin'.
+          Establishes the <b>functionBindings</b>, after evaluate of <b>forms</b> as an implicit `begin'.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (let1\ functionBinding . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax functionBinding (name parameterTree . bodyForms))
-        </li>
-        <li>
-          (syntax functionBinding ((name . parameterTree) . bodyForms))
+          <br/>
+            (let1\ functionBinding . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax functionBinding (name parameterTree . bodyForms))
+          <br/>
+            (syntax functionBinding ((name . parameterTree) . bodyForms))
         </li>
       </ul>
     </div>
@@ -221,22 +211,21 @@
       </h3>
       <ul>
         <li>
-          Establishes the BINDING recursively so that the binding can recursively refer to itself,
+          Establishes the <b>binding</b> recursively so that the binding can recursively refer to itself,
           <br/>
-            after evaluate FORMS as an implicit `begin'.
+            after evaluate <b>forms</b> as an implicit `begin'.
           <br/>
-            The binding is initializated to #inert before evaluating INIT_FORMS as an implicit `begin'.
+            The binding is initializated to #inert before evaluating <b>initForms</b> as an implicit `begin'.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (let1rec binding . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax binding (name . intForms))
+          <br/>
+            (let1rec binding . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax binding (name . intForms))
         </li>
       </ul>
     </div>
@@ -246,25 +235,23 @@
       </h3>
       <ul>
         <li>
-          Establishes the FUNCTION-BINDING recursively, so that the function can refer to itself,
+          Establishes the <b>functionBinding</b> recursively, so that the function can refer to itself,
           <br/>
-            after evaluate FORMS as an implicit `begin'.
+            after evaluate <b>forms</b> as an implicit `begin'.
           <br/>
             The binding is initializated to #inert before the bind of the function.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (let1rec\ functionBinding . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax functionBinding (name parameterTree . bodyForms))
-        </li>
-        <li>
-          (syntax functionBinding ((name . parameterTree) . bodyForms))
+          <br/>
+            (let1rec\ functionBinding . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax functionBinding (name parameterTree . bodyForms))
+          <br/>
+            (syntax functionBinding ((name . parameterTree) . bodyForms))
         </li>
       </ul>
     </div>
@@ -274,22 +261,21 @@
       </h3>
       <ul>
         <li>
-          Establishes BINDINGS serially, so that every binding can refer to previous one,
+          Establishes <b>bindings</b> serially, so that every binding can refer to previous one,
           <br/>
-            after evaluate FORMS as an implicit `begin'.
+            after evaluate <b>forms</b> as an implicit `begin'.
           <br/>
-            The INIT_FORMS are evaluate as an implicit `begin'.
+            The <b>initForms</b> are evaluate as an implicit `begin'.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (let* bindings . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax bindings ((definiendTree . intiForms) . bindings))
+          <br/>
+            (let* bindings . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindings ((definiendTree . intiForms) . bindings))
         </li>
       </ul>
     </div>
@@ -301,27 +287,25 @@
         <li>
           Labelled recursive loop.
           <br/>
-            Lexically bind NAME with the function with the specified multiple PARAMETER-TREES and FORMS as body,
+            Lexically bind <b>name</b> with the function with the specified multiple <b>parameterTrees</b> and <b>forms</b> as body,
           <br/>
             so that it can recursively refer to itself.
           <br/>
-            The function is immediately applied to the list containing the values of INIT_FORM evaluate as an implicit `begin',
+            The function is immediately applied to the list containing the values of <b>initForm</b> evaluate as an implicit `begin',
           <br/>
-            after evaluates FORMS as an implicit `begin'.
+            after evaluates <b>forms</b> as an implicit `begin'.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (letLoop name bindings . forms)
-        </li>
-        <li>
-          (letLoop (name . bindings) . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax bindings ((parameterTree . initForms) . bindings))
+          <br/>
+            (letLoop name bindings . forms)
+          <br/>
+            (letLoop (name . bindings) . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindings ((parameterTree . initForms) . bindings))
         </li>
       </ul>
     </div>
@@ -331,27 +315,25 @@
       </h3>
       <ul>
         <li>
-          Establishes the BINDINGS parallelly, so that no binding can refer to itself or the other ones,
+          Establishes the <b>bindings</b> parallelly, so that no binding can refer to itself or the other ones,
           <br/>
-            after evaluates FORMS as an implicit `begin'.
+            after evaluates <b>forms</b> as an implicit `begin'.
           <br/>
-            The INIT_FORMS are evaluate as an implicit `begin'.
+            The <b>initForms</b> are evaluate as an implicit `begin'.
           <br/>
             If the first argument is a symbol is like 'letLoop'.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (let bindings . forms)
-        </li>
-        <li>
-          (let name bindings . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax bindings ((definiendTree . initForms) . bindings))
+          <br/>
+            (let bindings . forms)
+          <br/>
+            (let name bindings . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindings ((definiendTree . initForms) . bindings))
         </li>
       </ul>
     </div>
@@ -361,26 +343,23 @@
       </h3>
       <ul>
         <li>
-          Establishes the FUNCTION-BINDINGS parallelly, so that no function can refer to itself or the other ones,
+          Establishes the <b>functionBindings</b> parallelly, so that no function can refer to itself or the other ones,
           <br/>
-            after evaluate FORMS as an implicit `begin'.
+            after evaluate <b>forms</b> as an implicit `begin'.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (let\ functionBindings . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax functionBindings (functionBinding . functionBindings))
-        </li>
-        <li>
-          (syntax functionBinding (name parameterTree . bodyForms))
-        </li>
-        <li>
-          (syntax functionBinding ((name . parameterTree) . bodyForms))
+          <br/>
+            (let\ functionBindings . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax functionBindings (functionBinding . functionBindings))
+          <br/>
+            (syntax functionBinding (name parameterTree . bodyForms))
+          <br/>
+            (syntax functionBinding ((name . parameterTree) . bodyForms))
         </li>
       </ul>
     </div>
@@ -390,22 +369,21 @@
       </h3>
       <ul>
         <li>
-          Establishes the BINDINGS recursively, so that the bindings can refer to itself and the other ones,
+          Establishes the <b>bindings</b> recursively, so that the bindings can refer to itself and the other ones,
           <br/>
-            after evaluate FORMS as an implicit `begin'.
+            after evaluate <b>forms</b> as an implicit `begin'.
           <br/>
-            The bindings are initializated to #inert before evaluating the INIT_FORMS as an implicit `begin'.
+            The bindings are initializated to #inert before evaluating the <b>initForms</b> as an implicit `begin'.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (letrec bindings . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax bindings ((name . intForms) . bindings))
+          <br/>
+            (letrec bindings . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindings ((name . intForms) . bindings))
         </li>
       </ul>
     </div>
@@ -415,28 +393,25 @@
       </h3>
       <ul>
         <li>
-          Establishes the FUNCTION-BINDINGS recursively, so that the functions can refer to itself and the other ones,
+          Establishes the <b>functionBindings</b> recursively, so that the functions can refer to itself and the other ones,
           <br/>
-            after evaluate FORMS as an implicit `begin'.
+            after evaluate <b>forms</b> as an implicit `begin'.
           <br/>
             The bindings are initializated to #inert before the bind of the functions.
           <br/>
             &nbsp;
-        </li>
-        <li>
-          (letrec\ functionBindings . forms)
-        </li>
-        <li>
-          (type macro)
-        </li>
-        <li>
-          (syntax functionBindings (functionBinding . functionBindings))
-        </li>
-        <li>
-          (syntax functionBinding ((name parameterTree . bodyForms) . functionBindings))
-        </li>
-        <li>
-          (syntax functionBinding (((name . parameterTree) . bodyForms) . functionBindings))
+          <br/>
+            (letrec\ functionBindings . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax functionBindings (functionBinding . functionBindings))
+          <br/>
+            (syntax functionBinding ((name parameterTree . bodyForms) . functionBindings))
+          <br/>
+            (syntax functionBinding (((name . parameterTree) . bodyForms) . functionBindings))
         </li>
       </ul>
     </div>
