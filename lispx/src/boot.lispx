@@ -3469,7 +3469,7 @@
   (if (cons? (car args))
     (def ((name receiverName . parameters) . properties) args)
     (def (name (receiverName . parameters) . properties) args) )
-  (let1\ (generic args ((%getMethod (classOf (car args)) name) args))
+  (let1\ (generic args ((%getMethod! (classOf (car args)) name) args))
     (eval (list 'def name generic) env) ))
 
 (defVau (defMethod . args) env

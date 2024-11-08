@@ -7,6 +7,8 @@
 ; boot.lispx
 ; commentate stringhe in eccesso nelle (%def name expr "..."), troppi parametri per la %def!
 
+(log "vm lispx")
+
 (%resetEnv)
 
 (%def milli (@currentTimeMillis &java.lang.System))
