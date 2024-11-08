@@ -1121,9 +1121,10 @@ public class Vm {
 			}
 			catch (Throwable thw) {
 				if (tag != ignore && thw instanceof Value val && val.tag != tag) throw thw;
+				//if (thw instanceof Value val && !(tag == ignore || val.tag == tag)) throw thw;
 				if (hdl != ignore) return combine2(null, e, tag, hdl, thw);
-				if (thw instanceof Value val) return val.value;
-				throw thw instanceof Condition cnd ? cnd : new Error("catch exception: " + Vm.this.toString(thw.getClass()), thw);
+				if (thw instanceof Value val /*&& (tag == ignore || val.tag == tag)*/) return val.value;
+				throw new Value(ignore, thw instanceof Condition cnd ? cnd : new Error("catch exception: " + Vm.this.toString(thw.getClass()), thw));
 			}
 		}
 		public Object combine2(Resumption r, Env e, Object tag, Object hdl, Throwable thw) {
@@ -1169,8 +1170,7 @@ public class Vm {
 			return tco(()-> pipe(dbg(e, this, cln, success, res), ()-> getTco(evaluate(e, cln)), ()-> {
 					if (success) return res;
 					throw res instanceof Value val ? val
-						: res instanceof Condition cnd ? cnd
-						: new Error("cleanup error!", (Throwable) res)
+						: new Value(ignore, new Error("cleanup error!", (Throwable) res))
 					;
 				}
 			));
@@ -1397,12 +1397,10 @@ public class Vm {
 					catch (Throwable thw) {
 						switch (thw) {
 							case Value val: throw val;
-							case Condition cnd: throw cnd;
 							case InnerException ie /*when name.equals("%CheckO")*/: throw ie;
 							case RuntimeException rte when rte.getCause() instanceof InvocationTargetException ite: {
 								switch (ite.getTargetException()) {
 									case Value val: throw val;
-									case Condition cnd: throw cnd;
 									case InnerException ie: throw ie;
 									default: break;
 								}
@@ -1458,7 +1456,6 @@ public class Vm {
 				if (thw instanceof InvocationTargetException ite) {
 					switch (thw = ite.getTargetException()) {
 						case Value val: throw val;
-						case Condition cnd: throw cnd;
 						case InnerException ie: throw ie;
 						default: // in errore senza!
 					}
@@ -1510,14 +1507,14 @@ public class Vm {
 	List pushRootPrompt(List lst) { return cons(listStar(pushPrompt, rootPrompt, lst)); }
 	<T> T error(Error err) {
 		var userBreak = theEnv.lookup(symbol("userBreak")).value;
-		if (userBreak == null) throw err;
+		if (userBreak == null) throw new Value(ignore, err);
 		return (T) pipe(dbg(theEnv, "userBreak", err), ()-> getTco(evaluate(theEnv, list(userBreak, err)))
 			/* TODO da problemi al debuger
-			, val->{ throw thwErr ? err : new Value(ignore, val); }
+			, val->{ throw new Value(ignore, thwErr ? err : val); }
 			*/
 		);
 	}
-	<T> T error(String msg, Object ... objs) { return error(new Error(msg, objs)); }
+	<T> T error(String msg, Object ... objs) { return error(msg, null, objs); }
 	<T> T error(Throwable thw, Object ... objs) { return error(null, thw, objs); }
 	<T> T error(String msg, Throwable thw, Object ... objs) {
 		if (thw instanceof InnerException ie) {
@@ -1703,7 +1700,7 @@ public class Vm {
 					throw new TypeException("not a {expected}: {datum}", o, toChk(chkl));
 				}
 			}
-			if (o != null && !(o instanceof List)) throw new TypeException("not a {expected}: {datum}", o, toChk(or(null, List.class)));
+			if (o != null && !(o instanceof List))	throw new TypeException("not a {expected}: {datum}", o, toChk(or(null, List.class)));
 			var ol = (List) o;
 			int min=0, max=more;
 			if (chkl.car instanceof Integer mn) { min = max = mn; chkl = chkl.cdr(); }
