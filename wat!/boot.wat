@@ -676,7 +676,7 @@
    |#
   %get )
 
-(def\ (slotBound? object attribute)
+(def\ (keyBound? object attribute)
   #|Return #true if the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, #false otherwise.
    |
    |(fn object attribute)
@@ -686,9 +686,9 @@
    |(syntax attribute (or Symbol Keyword String))
    |(derivation (@isBound object attribute))
    |#
-  (%slotBound? object attribute) )
+  (%keyBound? object attribute) )
 
-(def\ (getSlot object attribute)
+(def\ (getValue object attribute)
   #|Return the value of <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, signals an error otherwise.
    |
    |(fn object attribute)
@@ -698,9 +698,9 @@
    |(syntax attribute (or Symbol Keyword String))
    |(derivation (object attribute))
    |#
-  (%getSlot object attribute) )
+  (%getValue object attribute) )
 
-(def\ (setSlot object attribute value)
+(def\ (setValue object attribute value)
   #|Update or define with <b>value</b> the <b>attribute</b> in the <b>environment</b> or <b>obj</b>.
    |
    |(fn object attribute value)
@@ -710,7 +710,7 @@
    |(syntax attribute (or Symbol Keyword String))
    |(derivation (object attribute value))
    |#
-  (%setSlot object attribute value) )
+  (%setValue object attribute value) )
 
 
 #|! Box
