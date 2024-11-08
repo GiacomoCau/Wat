@@ -3,7 +3,7 @@
 		# print a[0]
 		sub(a[1], "<b>" camelize(tolower(a[1])) "</b>")
 	}
-	print $0
+	print
 }
 
 function camelize(w, a) {

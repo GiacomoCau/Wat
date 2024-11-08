@@ -2624,7 +2624,7 @@
    |#
   (list '\ key (list* 'caseType (car key) clauses) ))
 
-(assert (catchWth (caseType\ (e) ((Error :type 'xx) 1) (else 2)) (error :type 'zz)) 2)
+(assert (catchWth (caseType\ (e) ((Error :type 'xx) 1) (else 2)) (error "errore {type}!" :type 'zz)) 2)
 
 
 #|! Sort
