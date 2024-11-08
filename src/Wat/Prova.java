@@ -61,7 +61,11 @@ public class Prova {
 		//out.println(1.2 * 1);
 		//System.out.println(".. __aaa__ dddssd".replaceAll("__([^_]*)__", "<b>$1<b/>"));
 		//System.out.println(Utility.encode(".. <b>aaa</b>dddssd<b>"));
-		System.out.println(Double.valueOf(0)==Double.valueOf(0));
+		//System.out.println(Double.valueOf(0)==Double.valueOf(0));
+		for (int min=5, len=10, i=0; i<23; i+=1) {
+			if (i >= len && i % min == 0) out.println();
+			out.println(i<len ? i : (min + (i-min) % (len-min)));
+		}
 	}
 	
 	public static void functions() {
