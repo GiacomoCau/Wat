@@ -738,6 +738,17 @@ public class Vm {
 				ie
 			);
 		}
+		catch (Value ie) {
+			if (!(ie.value instanceof Error err)) throw ie;
+			return error(
+				(def ? "bind" : "sett") + "ing: " + toString(lhs)
+				//+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, dbg.os[0])))
+				+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, switch(dbg.os.length) { case 0-> null; case 1-> dbg.os[0] instanceof Cons c ? c : cons(dbg.os[0]); default-> list(dbg.os); })))
+				//+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, switch(dbg.os.length) { case 0-> null; case 1-> switch(dbg.os[0]) { case Cons c-> c; case Object obj-> cons(obj); }; default-> list(dbg.os); })))
+				+ " with: " + rhs,
+				err
+			);
+		}
 	}
 	Object bind(boolean def, int bndRes, Env e, Object lhs, Object rhs) {
 		var res = bind0(def, bndRes, e, lhs, rhs);
@@ -1485,9 +1496,16 @@ public class Vm {
 			error.puts(ie.objs);
 			return error(error);
 		}
+		if (thw instanceof Error ie) {
+			var error = new Error(ie.getMessage() + eIfnull(msg, ()->" " + msg), "type", symbol(ie.getClass().getSimpleName().replace("Exception", "").toLowerCase()));
+			error.puts(objs);
+			error.map.putAll(ie.map);
+			return error(error);
+		}
 		return error(new Error(msg, thw, objs));
 	}
 	<T> T typeError(String msg, Object datum, Object expected) { return error(msg, "type", symbol("type"), "datum", datum, "expected", expected); }
+	<T> T typeError(String msg, Throwable thw, Object datum, Object expected) { return error(msg, thw, "type", symbol("type"), "datum", datum, "expected", expected); }
 	<T> T typeError(String msg, Object datum, Object expected, Object expr) { return error(msg, "type", symbol("type"), "datum", datum, "expected", expected, "expr", expr); }
 	<T> T notUniqueError(String msg, Object datum, Object expr) { return error(msg, "type", symbol("syntax"), "datum", datum, "expr", expr); }
 	<T> T resumeError(Object datum, Object expected) { return typeError("invalid resume value, not a {expected}: {datum}", datum, expected); }
@@ -1572,6 +1590,10 @@ public class Vm {
 		catch (InnerException ie) {
 			return innerError(ie, op, o, chks);
 		}
+		catch (Value ie) {
+			if (!(ie.value instanceof Error err)) throw ie;
+			return innerError(err, op, o, chks);
+		}
 	}
 	int checkL(int min, int max, List o, Object ... chks) {
 		var len = chks.length == 0 ? len(o) : checkT(min, max, o, chks);
@@ -1583,10 +1605,11 @@ public class Vm {
 		;
 	}
 	int checkT(int min, int max, List o, Object ... chks) {
-		var len=chks.length;
-		int i=0; for (; o != null; i+=1, o=o.cdr()) {
-			if (len == 0 || i >= max) continue;
-			var cksn = i < len && i < min ? chks[i] : len <= min ? Any.class : chks[min + (i-min) % (len-min)];
+		int i=0, len=chks.length, mdl=len-min;
+		if (min >= len) max = len;
+		for (; o != null; i+=1, o=o.cdr()) {
+			if (i >= max) continue;
+			var cksn = i < len ? chks[i] : chks[min + (i-min) % mdl];
 			if (cksn instanceof Object[] cksna && cksna[0] instanceof List) {
 				var res = checkO(o, cksn);
 				if (res > 0) return i+res;
@@ -1603,6 +1626,7 @@ public class Vm {
 			case Class chkc:
 				if (checkC(o, chkc)) return 0;
 				throw new TypeException("not a {expected}: {datum}", o, toChk(chk));
+				//return typeError("not a {expected}: {datum}", o, toChk(chk));
 			case Object[] chks:
 				for (int i=0; i<chks.length; i+=1) {
 					try {
@@ -1612,6 +1636,7 @@ public class Vm {
 					}
 				}
 				throw new TypeException("not a {expected}: {datum}", o, toChk(chk));
+				//return typeError("not a {expected}: {datum}", o, toChk(chk));
 			case List chkl:
 				if (chkl.car instanceof Object[] chks && chkl.cdr() == null) return checkO(o, chks);
 				if (chkl.car == symbol("and")) {
@@ -1621,6 +1646,7 @@ public class Vm {
 						}
 						catch (Throwable thw) {
 							throw new TypeException("not a {expected}: {datum}", o, toChk(chkl));
+							//return typeError("not a {expected}: {datum}", thw, o, toChk(chkl));
 						}
 					}
 					return 0;
@@ -1645,6 +1671,7 @@ public class Vm {
 				return checkL(min, max, ol, array(chkl));
 			default:
 				throw new TypeException("not a {expected}: {datum}", o, toChk(chk));
+				//return typeError("not a {expected}: {datum}", o, toChk(chk));
 		}
 	}
 	public Object toChk(Object chk) {
@@ -1677,6 +1704,10 @@ public class Vm {
 		catch (InnerException ie) {
 			return innerError(ie, op, o, chk);
 		}
+		catch (Value ie) {
+			if (!(ie.value instanceof Error err)) throw ie;
+			return innerError(err, op, o, chk);
+		}
 	}
 	private Object innerError(InnerException ie, Object op, Object o, Object chk) {
 		return op instanceof Opv
@@ -1687,6 +1718,19 @@ public class Vm {
 			// ovvero quando il valore in errore (ie.objs[1]) è diverso dall'intero valore da controllare (o)
 			// ovvero quando il check in errore (ie.objs[3]) è diverso dall'intero check da effettuare (chk)
 			: ie.objs[1] != o // || !ie.objs[3].equals(toChk(chk))
+			? error("checking {operands} with {check}", ie, "operands", o, "check", toChk(chk))
+			: error(ie)
+		;
+	}
+	private Object innerError(Error ie, Object op, Object o, Object chk) {
+		return op instanceof Opv
+			? error("returning from {opv}", ie, "opv", op)
+			: !member(op, ":", "check")
+			? error("combining {operator} with {operands}", ie, "operator", op, "operands", o)
+			// con : e check quando va in errore un check in profondità, es. (: (Integer) (#t))
+			// ovvero quando il valore in errore (ie.value("datum")) è diverso dall'intero valore da controllare (o)
+			// ovvero quando il check in errore (ie.value("expected")) è diverso dall'intero check da effettuare (chk)
+			: !ie.value("datum").equals(o) // || !ie.value("expected").equals(toChk(chk))
 			? error("checking {operands} with {check}", ie, "operands", o, "check", toChk(chk))
 			: error(ie)
 		;
@@ -1954,6 +1998,7 @@ public class Vm {
 				"%popEnv", wrap(new JFun("%PopEnv", (Supplier) ()-> theEnv = theEnv.parent)),
 				// Obj
 				//"%obj?", wrap(new JFun("%Obj?", (Function<Object, Boolean>) obj-> obj instanceof Obj )),
+				"%new!", wrap(new JFun("%New!", (ArgsList) o-> ((ArgsList) at("new")).apply(listStar(o.car, Vm.this, o.cdr())) )),
 				"%new", wrap(new JFun("%New",
 					(n,o)-> checkM(n, o, 1,
 						or( list(1, 2, Box.class),
@@ -2185,6 +2230,7 @@ public class Vm {
 				// Method
 				"%addMethod", wrap(new JFun("%AddMethod", (n,o)-> checkN(n, o, 3, or(null, Class.class), Symbol.class, Apv.class), (l,o)-> addMethod(o.car(), o.car(1), o.car(2)) )),
 				"%getMethod", wrap(new JFun("%GetMethod", (n,o)-> checkN(n, o, 2, or(null, Class.class), Symbol.class), (l,o)-> getMethod(o.car(), o.car(1)) )),
+				"%getMethod!", wrap(new JFun("%GetMethod", (ArgsList) o-> getMethod(o.car(), o.car(1)) )),
 				// Check
 				"%matchType?", wrap(new JFun("%MatchType?",
 					(n,o)-> checkN(n, o, 2,	Any.class,
