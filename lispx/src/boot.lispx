@@ -1441,6 +1441,7 @@
     (takeSubcont rootPrompt k
       (printFrames k)
       (pushDelimSubcont rootPrompt k) ))
+  ;(log "throw" throwable)
   (throw throwable) )
 
 

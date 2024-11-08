@@ -191,9 +191,9 @@
         :handlerFunction
            (the Apv (eval functionForm env))
         :interactiveFunction
-           (whenOpt (iFnForm (optValue :interactiveFunction properties)) (some (the Apv (eval iFnForm env))))
+           (whenOpt (iFn (optValue :interactiveFunction properties)) (some (the Apv (eval iFn env))))
         :associatedConditions
-           (whenOpt (aCnForm (optValue :associatedConditions properties)) (the List (eval aCnForm env))) ))
+           (whenOpt (aCn (optValue :associatedConditions properties)) (the List (eval aCn env))) ))
     *restartHandlerFrame* ))
 
 

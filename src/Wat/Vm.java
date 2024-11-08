@@ -34,6 +34,7 @@ import static Wat.Utility.BinOp.Sl;
 import static Wat.Utility.BinOp.Sr;
 import static Wat.Utility.BinOp.Sr0;
 import static Wat.Utility.BinOp.Xor;
+import static Wat.Utility.PrimitiveWrapper.isWrapper;
 import static java.lang.Character.isISOControl;
 import static java.lang.Integer.toHexString;
 import static java.lang.Runtime.version;
@@ -147,6 +148,8 @@ public class Vm {
 	boolean prInert = false; // print inert
 	boolean aQuote = true; // auto quote list
 	boolean hdlAny = true; // any value for catch handler
+	boolean bndSmt = false; // bind simil match type
+	boolean thwErr = true; // error throw err (or val returned from userBreak)
 	
 	Object boxDft = null; // box/dinamic default: null, inert, ...
 	
@@ -766,17 +769,19 @@ public class Vm {
 					var res = bind(def, bndRes, e, lc.car, rc.car);
 					yield lc.cdr() == null && rc.cdr() == null ? res : bind(def, bndRes, e, lc.cdr(), rc.cdr());
 				}
-				else if (rhs instanceof Object) {
+				else if (rhs != null) {
+				//se if (rhs instanceof Object) {
 					Object res=null, head=lc; int i=0;
-					/* TODO da problemi ...
-					Object res=null, head=lc; int i=0, len=len(lc);
-					if (len > 1) {
+					//if (bndSmt && !(rhs instanceof Number) && !(rhs instanceof String)) {
+					//if (bndSmt && !(rhs instanceof Number || rhs instanceof String)) {
+					//if (bndSmt && !isInstance(rhs, Number.class, String.class)) {
+					//if (!bndSmt && !isWrapper(rhs.getClass()) && !(rhs instanceof String) && lc.cdr() != null) {
+					if (bndSmt && lc.cdr() != null && !(isWrapper(rhs.getClass()) || rhs instanceof String)) {
 						res = getTco(evaluate(e, lc.car));
 						if (!(res instanceof Class cls)) throw new TypeException("expected an {expected}, found: {datum}", res, symbol("Class"));
 						if (!isType(rhs, cls)) yield false;
-						head=lc.cdr();
+						head = lc.cdr();
 					}
-					//*/
 					var objEnv = rhs instanceof ObjEnv oe ? oe : null; var isObjEnv = objEnv != null;
 					var array = rhs instanceof Object[] oa ? oa : null; var isArray = array != null;
 					for (; head instanceof Cons cons; i+=1, head=cons.cdr()) {
@@ -795,10 +800,10 @@ public class Vm {
 							res = bind(def, bndRes, e, symbol(ad.name), ad.apply(cons(rhs)));
 						}
 						else if (isObjEnv) {
-							res = bind(def, bndRes, e, car, objEnv.get(car));
+							res = bind(def, bndRes, e, car, objEnv.get(car instanceof Cons car2 && car2.car == sheColon ? car2.car(2) : car));
 						}
 						else if (isArray) {
-						//   if (rhs.getClass().isArray()) { ... Array.get(rhs, i) ... Array.getLength(rhs) ...
+							//f (rhs.getClass().isArray()) { ... Array.get(rhs, i) ... Array.getLength(rhs) ...
 							res = bind(def, bndRes, e, car, array[i]);
 						}
 						else {
@@ -1466,8 +1471,12 @@ public class Vm {
 	List pushRootPrompt(List lst) { return cons(listStar(pushPrompt, rootPrompt, lst)); }
 	<T> T error(Error err) {
 		var userBreak = theEnv.lookup(symbol("userBreak")).value;
-		if (userBreak == null) throw err; // TODO or new Value(ignore, err) come eventualmente la userBreak?
-		return (T) pipe(dbg(theEnv, "userBreak", err), ()-> getTco(evaluate(theEnv, list(userBreak, err))));
+		if (userBreak == null) throw err;
+		return (T) pipe(dbg(theEnv, "userBreak", err), ()-> getTco(evaluate(theEnv, list(userBreak, err)))
+			/* TODO da problemi al debuger
+			, val->{ throw thwErr ? err : new Value(ignore, val); }
+			*/
+		);
 	}
 	<T> T error(String msg, Object ... objs) { return error(new Error(msg, objs)); }
 	<T> T error(Throwable thw, Object ... objs) { return error(null, thw, objs); }
@@ -1596,9 +1605,13 @@ public class Vm {
 		if (chk instanceof Object[] chks) {
 			for (int i=0; i<chks.length; i+=1) {
 				try {
+					//*// TODO probabilmente è sufficiente!
+					return checkO(o, chks[i]);
+					/*/
 					if (chks[i] instanceof List) return checkO(o, chks[i]);
 					checkO(o, chks[i]);
 					return 0;
+					//*/
 				}
 				catch (Throwable thw) {
 				}
@@ -1618,9 +1631,14 @@ public class Vm {
 				return 0;
 			}
 			if (chkl.car instanceof Apv) {
-				switch (getTco(combine(env(), chkl.car, cons(o, chkl.cdr(1))))) {
-					case Boolean b when b: return 0;
-					case Object obj: throw new TypeException("not a {expected}: {datum}", o, toChk(chkl.cdr()));
+				try {
+					switch (getTco(combine(env(), chkl.car, cons(o, chkl.cdr(1))))) {
+						case Boolean b when b: return 0;
+						case Object obj: throw new TypeException("not a {expected}: {datum}", o, toChk(chkl.cdr()));
+					}
+				}
+				catch (Throwable thw) {
+					throw new TypeException("not a {expected}: {datum}", o, toChk(chkl));
 				}
 			}
 			if (o != null && !(o instanceof List)) throw new TypeException("not a {expected}: {datum}", o, toChk(or(null, List.class)));
@@ -1823,7 +1841,8 @@ public class Vm {
 	private boolean matchType(Object object, List chk) {
 		//if (!(expt.car() instanceof Class cls && isType(object, cls))) return false;
 		if (!isType(object, chk.car())) return false;
-		if (object instanceof Box box) return chk.cdr() == null || apply(expt-> expt == null && equals(box.value, expt), chk.cdr(1));
+		// TODO manca l'errore se la lista per Box ha più di un argomento ma comunque ritorna false!
+		if (object instanceof Box box) return chk.cdr() == null || chk.cdr(1) == null && equals(box.value, chk.car(1));
 		for (var l=chk.cdr(); l != null; l = l.cdr(1)) {
 			var key = l.car;
 			var expt = l.car(1);
@@ -2252,6 +2271,9 @@ public class Vm {
 				"prWrn", wrap(new JFun("PrWrn", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prWrn : inert(prWrn=o.car()) )),
 				"prAttr", wrap(new JFun("PrAttr", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prAttr : inert(prAttr=o.car()) )),
 				"prInert", wrap(new JFun("PrInert", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prInert : inert(prInert=o.car()) )),
+				//"bndSmt", wrap(new JFun("BndSmt", (n,o)-> checkN(n, o, 0), (l,o)-> bndSmt )),
+				"bndSmt", wrap(new JFun("BndSmt", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? bndSmt : inert(bndSmt=o.car()) )),
+				"thwErr", wrap(new JFun("ThwErr", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? thwErr : inert(thwErr=o.car()) )),
 				"hdlAny", wrap(new JFun("HdlAny", (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? hdlAny : inert(hdlAny=o.car()) ))
 			)
 		);

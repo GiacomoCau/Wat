@@ -300,6 +300,14 @@ public class Utility {
 			for (var p: values()) if (type == p.wrapper) return p.primitive;
 			return type;
 		}
+		public static boolean isWrapper(Class type) {
+			for (var p: values()) if (type == p.wrapper) return true;
+			return false;
+		}
+		public static boolean isPrimitive(Class type) {
+			for (var p: values()) if (type == p.primitive) return true;
+			return false;
+		}
 	}
 	
 	public static Class <?> classForName(String name) {
