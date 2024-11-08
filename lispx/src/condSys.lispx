@@ -267,7 +267,7 @@
         ;; Handler found; call it, passing along frame.
         (lispx::callConditionHandler handler frame condition)
         ;; Signal unhandled: continue search for handlers.
-        (signal (getSlot frame 'parentFrame)))
+        (signal (getValue frame 'parentFrame)))
       ;; No handler found, return #inert.
       #inert )))
 
@@ -281,7 +281,7 @@
    |This is the so-called "condition firewall".
    |The chain gets passed in as the value of <b>handlerFrame</b>.
    |#
-  (dlet1 (*conditionHandlerFrame* (getSlot handlerFrame 'parentFrame))
+  (dlet1 (*conditionHandlerFrame* (getValue handlerFrame 'parentFrame))
     (lispx::applyHandlerFunction handler (list condition)) ))
 
 (def\ lispx::applyHandlerFunction (handler arguments)
@@ -290,7 +290,7 @@
    |
    |Utility to call a condition or restart <b>handler</b>'s handler function with a list of <b>arguments</b>.
    |#
-  (apply (getSlot handler 'handlerFunction) arguments) )
+  (apply (getValue handler 'handlerFunction) arguments) )
 
 (def\ _error_ (condition)
   #|($nm condition)
@@ -372,7 +372,7 @@
   (lispx::invokeRestartWithArgumentsProducingFunction
     restartDesignator
     (\ (restartHandler)
-      (whenOpt (iFn (getSlot restartHandler 'interactiveFunction))
+      (whenOpt (iFn (getValue restartHandler 'interactiveFunction))
         (iFn) ))))
 
 (def\ lispx::invokeRestartWithArgumentsProducingFunction (restartDesignator function)
@@ -409,10 +409,10 @@
    |#
   (whenOpt (handlerFrame handlerFrame)
     (block found
-      (doList (handler (getSlot handlerFrame 'handlers))
+      (doList (handler (getValue handlerFrame 'handlers))
         (when (lispx::handlerApplicable? handler object payload)
           (returnFrom found (some (list handler handlerFrame)))))
-      (lispx::findHandler object (getSlot handlerFrame 'parentFrame) payload))))
+      (lispx::findHandler object (getValue handlerFrame 'parentFrame) payload))))
 
 (def\ findRestart (name . condition)
   #|($nm name . condition)
@@ -441,7 +441,7 @@
    |
    |A condition handler is applicable if the condition is an instance of its condition class.
    |#
-  (let1 (conditionClass (getSlot handler 'conditionClass))
+  (let1 (conditionClass (getValue handler 'conditionClass))
     (if (cons? conditionClass)
       (matchType? condition conditionClass)
       (type? condition conditionClass) )))
@@ -453,7 +453,7 @@
    |A restart handler is applicable to a restart name and optional condition ...
    |#
   ;; ...if the restart name matches the handler's restart name, and ...
-  (&& (== restartName (getSlot handler 'restartName))
+  (&& (== restartName (getValue handler 'restartName))
       ;; ...the handler is applicable to the condition.
       (lispx::restartHandlerApplicableToCondition? handler condition)))
 
@@ -466,7 +466,7 @@
   (ifOpt (condition condition)
     ;; ...if we are looking for restarts associated with a
     ;; particular condition...
-    (let1 (aCn (getSlot handler 'associatedConditions))
+    (let1 (aCn (getValue handler 'associatedConditions))
       (if (null? aCn)
           ;; ...if the restart handler is not associated with
           ;; particular conditions,...
@@ -494,8 +494,8 @@
         (append restarts
           (remove
             (\ (restart) (not (lispx::restartHandlerApplicableToCondition? restart condition)))
-            (getSlot handlerFrame 'handlers) ))
-        (getSlot handlerFrame 'parentFrame) )
+            (getValue handlerFrame 'handlers) ))
+        (getValue handlerFrame 'parentFrame) )
       restarts )))
 
 

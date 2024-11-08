@@ -8,27 +8,27 @@
   (defTest \|SIGNALS-ERROR returns true if the expression signals|
     (signalsError?
      x
-     Error :type 'unboundSymbol))
+     Error :type 'unboundKey))
 
   (defTest \|SIGNALS-ERROR returns true if the expression signals a subclass|
     (signalsError?
      x
      Error))
 
-  (defTest \|SIGNALS-ERROR returns true if the expression signals and slots match|
+  (defTest \|SIGNALS-ERROR returns true if the expression signals and keys match|
     (signalsError?
      x
-     Error :type 'unboundSymbol :symbol 'x))
+     Error :type 'unboundKey :key 'x))
 
-  (defTest \|SIGNALS-ERROR returns true if the expression signals a subclass and slots match|
+  (defTest \|SIGNALS-ERROR returns true if the expression signals a subclass and keys match|
     (signalsError?
      x
-     Error :symbol 'x))
+     Error :key 'x))
 
-  (defTest \|SIGNALS-ERROR returns false if the expression signals but slots don't match|
+  (defTest \|SIGNALS-ERROR returns false if the expression signals but keys don't match|
     (signalsError?
      x
-     Error :type 'unboundSymbol :symbol 'y)
+     Error :type 'unboundKey :key 'y)
     #f)
 
   (defTest \|SIGNALS-ERROR returns false if the expression doesn't signal|
@@ -147,8 +147,8 @@
       (assert#t (matchType?* e Error :type 'type :datum "foo" :expected 'Number))
       (assert#t (type? e Error))
       (assert#t (type? e Condition))
-      (assert#t (eq? "foo" (getSlot e 'datum)))
-      (assert#t (eq? 'Number (getSlot e 'expected))))
+      (assert#t (eq? "foo" (getValue e 'datum)))
+      (assert#t (eq? 'Number (getValue e 'expected))))
     #inert))
 
 (defSuite simpleError
@@ -178,7 +178,7 @@
       (assert#t (type? e RestartError))
       (assert#t (type? e Error))
       (assert#t (type? e Condition))
-      (assert#t (eq? 'continue (getSlot e 'restartName))))
+      (assert#t (eq? 'continue (getValue e 'restartName))))
     #inert))
 
 (defSuite vau
@@ -618,7 +618,7 @@
   (defTest eval.5
     (signalsError?
      (eval 'x (theEnv))
-     Error :type 'unboundSymbol :symbol 'x))
+     Error :type 'unboundKey :key 'x))
 
   (defTest eval.6
     (signalsError?
@@ -1366,7 +1366,7 @@
   (defTest findClass.4
     (signalsError?
      (findClass 'does-not-exist (theEnv))
-     Error :type 'unboundSymbol :symbol 'does-not-exist)))
+     Error :type 'unboundKey :key 'does-not-exist)))
 
 (defSuite newEnv
 
@@ -2361,10 +2361,10 @@
   (defTest obj.1
     (begin
       (def obj (new Error :type 'type :datum 1 :expected 'String))
-      (assert#t (eq? (getSlot obj 'datum) 1))
-      (assert#t (eq? (getSlot obj :datum) 1))
-      (assert#t (eq? (getSlot obj 'expected) 'String))
-      (assert#t (eq? (getSlot obj :expected) 'String)))
+      (assert#t (eq? (getValue obj 'datum) 1))
+      (assert#t (eq? (getValue obj :datum) 1))
+      (assert#t (eq? (getValue obj 'expected) 'String))
+      (assert#t (eq? (getValue obj :expected) 'String)))
     #inert)
 
   (defTest obj.2
@@ -2387,87 +2387,86 @@
      (new Obj :x)
      Error :type 'type :datum '(&Wat.Vm$Obj :x) :expected '(or (1 2 Box) (1 oo Obj (or (1 Env) ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) )) )
 
-(defSuite slots
-
-  (defTest slots.1
+(defSuite keys
+  (defTest keys.1
     (begin
       (def obj (new Obj))
-      (assert#t (not (slotBound? obj 'x)))
-      (assert#t (not (slotBound? obj :x)))
+      (assert#t (not (keyBound? obj 'x)))
+      (assert#t (not (keyBound? obj :x)))
       (assert#t
-        (signalsError? (getSlot obj 'x)
-          Error :type 'unboundSlot :obj obj :slot "x"))
+        (signalsError? (getValue obj 'x)
+          Error :type 'unboundKey :key "x" :objEnv obj))
       (assert#t
-        (signalsError? (getSlot obj :x)
-          Error :type 'unboundSlot :obj obj :slot "x"))
-      (setSlot obj 'x 1)
-      (assert#t (slotBound? obj 'x))
-      (assert#t (slotBound? obj :x))
-      (assert#t (eq? (getSlot obj 'x) 1))
-      (assert#t (eq? (getSlot obj :x) 1))
-      (setSlot obj 'x 2)
-      (assert#t (eq? (getSlot obj 'x) 2))
-      (assert#t (eq? (getSlot obj :x) 2)))
+        (signalsError? (getValue obj :x)
+          Error :type 'unboundKey :key "x" :objEnv obj))
+      (setValue obj 'x 1)
+      (assert#t (keyBound? obj 'x))
+      (assert#t (keyBound? obj :x))
+      (assert#t (eq? (getValue obj 'x) 1))
+      (assert#t (eq? (getValue obj :x) 1))
+      (setValue obj 'x 2)
+      (assert#t (eq? (getValue obj 'x) 2))
+      (assert#t (eq? (getValue obj :x) 2)))
     #inert)
 
-  (defTest getSlot.1
+  (defTest getValue.1
     (signalsError?
-     (getSlot "foo" 'x)
+     (getValue "foo" 'x)
      Error :type 'type :datum "foo" :expected 'ObjEnv))
 
-  (defTest getSlot.1a
+  (defTest getValue.1a
     (signalsError?
-     (getSlot (new Obj) "x")
+     (getValue (new Obj) "x")
      Error :type 'type :datum "x" :expected 'Intern))
 
-  (defTest getSlot.2
+  (defTest getValue.2
     (signalsError?
-     (getSlot (new Obj))
+     (getValue (new Obj))
      Error :type 'match :operands# +1))
 
-  (defTest getSlot.3
+  (defTest getValue.3
     (signalsError?
-     (getSlot)
+     (getValue)
      Error :type 'match :operands# +2))
 
-  (defTest setSlot.1
+  (defTest setValue.1
     (signalsError?
-     (setSlot "foo" 'x 1)
+     (setValue "foo" 'x 1)
      Error :type 'type :datum "foo" :expected 'ObjEnv))
 
-  (defTest setSlot.1a
+  (defTest setValue.1a
     (signalsError?
-     (setSlot (new Obj) "x" 1)
+     (setValue (new Obj) "x" 1)
      Error :type 'type :datum "x" :expected 'Intern))
 
-  (defTest setSlot.2
+  (defTest setValue.2
     (signalsError?
-     (setSlot (new Obj))
+     (setValue (new Obj))
      Error :type 'match :operands# +2))
 
-  (defTest setSlot.3
+  (defTest setValue.3
     (signalsError?
-     (setSlot (new Obj) 'x)
+     (setValue (new Obj) 'x)
      Error :type 'match :operands# +1))
 
-  (defTest slotBound?.1
+  (defTest keyBound?.1
     (signalsError?
-     (slotBound? "foo" 'x)
+     (keyBound? "foo" 'x)
      Error :type 'type :datum "foo" :expected 'ObjEnv))
 
-  (defTest slotBound?.1a
+  (defTest keyBound?.1a
     (signalsError?
-     (slotBound? (new Obj) "x")
+     (keyBound? (new Obj) "x")
      Error :type 'type :datum "x" :expected 'Intern))
 
-  (defTest slotBound?.2
+  (defTest keyBound?.2
     (signalsError?
-     (slotBound?)
+     (keyBound?)
      Error :type 'match :operands# +2))
 
-  (defTest slotBound?.3
+  (defTest keyBound?.3
     (signalsError?
-     (slotBound? (new Obj))
+     (keyBound? (new Obj))
      Error :type 'match :operands# +1)))
 
 (defSuite let
@@ -2883,7 +2882,7 @@
   (defTest ifOpt6
     (signalsError?
      (ifOpt (name option) then)
-     Error :type 'unboundSymbol :symbol 'option)))
+     Error :type 'unboundKey :key 'option)))
 
 (defSuite whenOpt
 
@@ -3040,8 +3039,8 @@
   (assert#t (type? p c))
   (assert#t (type? p Obj))
   (assert#t (type? p Object))
-  (assert#t (eq? (getSlot p 'x) 1))
-  (assert#t (eq? (getSlot p 'y) 2))
+  (assert#t (eq? (getValue p 'x) 1))
+  (assert#t (eq? (getValue p 'y) 2))
 
   (assert#t (type? d Class))
   (assert#t (type? d Object))
@@ -3054,9 +3053,9 @@
   (assert#t (type? q c))
   (assert#t (type? q Obj))
   (assert#t (type? q Object))
-  (assert#t (eq? (getSlot q 'x) 1))
-  (assert#t (eq? (getSlot q 'y) 2))
-  (assert#t (eq? (getSlot q 'z) 3)))
+  (assert#t (eq? (getValue q 'x) 1))
+  (assert#t (eq? (getValue q 'y) 2))
+  (assert#t (eq? (getValue q 'z) 3)))
 
 (defSuite %newClass
 
@@ -3104,7 +3103,7 @@
       (assert#t (subClass? c e))
       (assert#t (subClass? c d))
       (assert#t (subClass? c b)))
-     Error :type 'unboundSymbol :symbol '%reinitialize-standard-class ))
+     Error :type 'unboundKey :key '%reinitialize-standard-class ))
 
 (defSuite defClass
 
