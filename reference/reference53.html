@@ -204,7 +204,11 @@
           <br/>
             Instances of this class make up the condition and restart handler chains.
           <br/>
+<<<<<<< Upstream, based on main
             Each frame stores a list of <b>handlers</b> and an optional <b>parentFrame</b>.
+=======
+            (keys (handlers parentFrame))
+>>>>>>> 896e86c definito UnboundKeyError in Vm
         </li>
       </ul>
     </div>
@@ -224,7 +228,11 @@
           <br/>
             A condition handler is handling a particular <b>conditionClass</b> (can be `object' to handle all conditions).
           <br/>
+<<<<<<< Upstream, based on main
             The <b>handlerFunction</b> receives a signalled condition as its single argument.
+=======
+            (keys (conditionClass handlerFunction))
+>>>>>>> 896e86c definito UnboundKeyError in Vm
         </li>
       </ul>
     </div>
@@ -255,6 +263,15 @@
             If the list is empty, the handler is applicable to any condition.
           <br/>
             If it's not empty, the handler is applicable only to conditions in the list.
+<<<<<<< Upstream, based on main
+=======
+          <br/>
+            &nbsp;
+          <br/>
+            (type class extends Obj)
+          <br/>
+            (keys (restartName handlerFunction interactiveFunction associatedConditions))
+>>>>>>> 896e86c definito UnboundKeyError in Vm
         </li>
       </ul>
     </div>

@@ -683,7 +683,7 @@
    |#
   %get )
 
-(def\ (slotBound? object attribute)
+(def\ (keyBound? object attribute)
   #|($nm object attribute)
    |(type function)
    |
@@ -694,9 +694,9 @@
    |
    |Return #true if the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, #false otherwise.
    |#
-  (%slotBound? object attribute) )
+  (%keyBound? object attribute) )
 
-(def\ (getSlot object attribute)
+(def\ (getValue object attribute)
   #|($nm object attribute)
    |(type function)
    |
@@ -707,9 +707,9 @@
    |
    |Return the value of <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, signals an error otherwise.
    |#
-  (%getSlot object attribute) )
+  (%getValue object attribute) )
 
-(def\ (setSlot object attribute value)
+(def\ (setValue object attribute value)
   #|($nm object attribute value)
    |(type function)
    |
@@ -720,7 +720,7 @@
    |
    |Update or define with <b>value</b> the <b>attribute</b> in the <b>environment</b> or <b>obj</b>.
    |#
-  (%setSlot object attribute value) )
+  (%setValue object attribute value) )
 
 
 #|! Box

@@ -10,7 +10,7 @@
     (begin
       (def yield-record (fiber 1 2 (+ (fiberYield (eq? 1 1)) 3)))
       (assert#t (type? yield-record YieldRecord))
-      (assert#t (eq? #t (getSlot yield-record 'value)))
+      (assert#t (eq? #t (getValue yield-record 'value)))
       (assert#t (eq? 33 (fiberResume yield-record 30))))
     #inert)
 
