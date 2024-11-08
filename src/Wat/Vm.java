@@ -427,7 +427,7 @@ public class Vm {
 		public boolean isBound(Object obj) { return lookup(obj).isBound; }
 		public Object get(Object obj) {
 			var lookup = lookup(obj);
-			if (!lookup.isBound) return unboundSymbolError(obj, this);
+			if (!lookup.isBound) return unboundKeyError(obj, this);
 			if (prTrc >= 6) print("  lookup: ", lookup.value); return lookup.value;
 		}
 		Object def(Object obj, Object value) {
@@ -442,7 +442,7 @@ public class Vm {
 				if (prTrc >= 6) print("     set: ", key, "=", value, " in: ", env);
 				return env.map.put(key, value);
 			}
-			return unboundSymbolError(obj, this);
+			return unboundKeyError(obj, this);
 		};
 		boolean isParent(Env other) {
 			for (var env=this; env != null; env=env.parent) if (other == env) return true;
@@ -544,7 +544,7 @@ public class Vm {
 		public Object get(Object obj) {
 			var key = toKey(obj);
 			var val = map.get(key);
-			return val != null || map.containsKey(key) ? val : unboundSlotError(key, this);
+			return val != null || map.containsKey(key) ? val : unboundKeyError(key, this);
 		}
 		public Lookup lookup(Object obj) {
 			var key = toKey(obj);
@@ -800,7 +800,8 @@ public class Vm {
 							res = bind(def, bndRes, e, symbol(ad.name), ad.apply(cons(rhs)));
 						}
 						else if (isObjEnv) {
-							res = bind(def, bndRes, e, car, objEnv.get(car instanceof Cons car2 && car2.car == sheColon ? car2.car(2) : car));
+							var key = car instanceof Cons car2 && car2.car == sheColon ? car2.car(2) : (Symbol) car;
+							res = bind(def, bndRes, e, car, objEnv.get(key));
 						}
 						else if (isArray) {
 							//f (rhs.getClass().isArray()) { ... Array.get(rhs, i) ... Array.getLength(rhs) ...
@@ -1493,8 +1494,7 @@ public class Vm {
 	<T> T typeError(String msg, Object datum, Object expected, Object expr) { return error(msg, "type", symbol("type"), "datum", datum, "expected", expected, "expr", expr); }
 	<T> T notUniqueError(String msg, Object datum, Object expr) { return error(msg, "type", symbol("syntax"), "datum", datum, "expr", expr); }
 	<T> T resumeError(Object datum, Object expected) { return typeError("invalid resume value, not a {expected}: {datum}", datum, expected); }
-	<T> T unboundSymbolError(Object name, Env env) { return error("unbound symbol: {symbol} in: {env}", "type", symbol("unboundSymbol"), "symbol", name, "env", env); }
-	<T> T unboundSlotError(String slot, Obj obj) { return error("unbound slot: {slot} in: {obj}", "type", symbol("unboundSlot"), "slot", slot, "obj", obj); }
+	<T> T unboundKeyError(Object key, ObjEnv objEnv) { return error("unbound key: {key} in: {objEnv}", "type", symbol("unboundKey"), "key", key, "objEnv", objEnv); }
 	<T> T unboundFieldError(String field, Object object) { return error("unbound field: {field} in: {object}", "type", symbol("unboundField"), "field", field, "object", object); }
 	<T> T unboundExecutableError(String msg, Symbol executable, Object object) { return error(msg, "type", symbol("unboundExecutable"), "executable", executable, "class", object); }
 	<T> T unboundExecutableError(String msg, Symbol executable, List classes, Object object) { return error(msg, "type", symbol("unboundExecutable"), "executable", executable, "classes", classes, "class", object); }
@@ -1602,56 +1602,53 @@ public class Vm {
 	}
 	public int checkO(Object o, Object chk) {
 		if (equals(o, chk))	return len(o);
-		if (chk instanceof Object[] chks) {
-			for (int i=0; i<chks.length; i+=1) {
-				try {
-					//*// TODO probabilmente è sufficiente!
-					return checkO(o, chks[i]);
-					/*/
-					if (chks[i] instanceof List) return checkO(o, chks[i]);
-					checkO(o, chks[i]);
-					return 0;
-					//*/
-				}
-				catch (Throwable thw) {
-				}
-			}
-		}
-		else if (chk instanceof List chkl) {
-			if (chkl.car instanceof Object[] chks && chkl.cdr() == null) return checkO(o, chks);
-			if (chkl.car == symbol("and")) {
-				for (var chka = chkl.cdr(); chka != null; chka = chka.cdr()) {
+		switch (chk) { 
+			case Class chkc:
+				if (checkC(o, chkc)) return 0;
+				throw new TypeException("not a {expected}: {datum}", o, toChk(chk));
+			case Object[] chks:
+				for (int i=0; i<chks.length; i+=1) {
 					try {
-						checkO(o, chka.car);
+						return checkO(o, chks[i]);
+					}
+					catch (Throwable thw) {
+					}
+				}
+				throw new TypeException("not a {expected}: {datum}", o, toChk(chk));
+			case List chkl:
+				if (chkl.car instanceof Object[] chks && chkl.cdr() == null) return checkO(o, chks);
+				if (chkl.car == symbol("and")) {
+					for (var chka = chkl.cdr(); chka != null; chka = chka.cdr()) {
+						try {
+							checkO(o, chka.car);
+						}
+						catch (Throwable thw) {
+							throw new TypeException("not a {expected}: {datum}", o, toChk(chkl));
+						}
+					}
+					return 0;
+				}
+				if (chkl.car instanceof Apv) {
+					try {
+						switch (getTco(combine(env(), chkl.car, cons(o, chkl.cdr(1))))) {
+							case Boolean b when b: return 0;
+								default: throw new TypeException("not a {expected}: {datum}", o, toChk(chkl.cdr()));
+						}
 					}
 					catch (Throwable thw) {
 						throw new TypeException("not a {expected}: {datum}", o, toChk(chkl));
 					}
 				}
-				return 0;
-			}
-			if (chkl.car instanceof Apv) {
-				try {
-					switch (getTco(combine(env(), chkl.car, cons(o, chkl.cdr(1))))) {
-						case Boolean b when b: return 0;
-						case Object obj: throw new TypeException("not a {expected}: {datum}", o, toChk(chkl.cdr()));
-					}
-				}
-				catch (Throwable thw) {
-					throw new TypeException("not a {expected}: {datum}", o, toChk(chkl));
-				}
-			}
-			if (o != null && !(o instanceof List)) throw new TypeException("not a {expected}: {datum}", o, toChk(or(null, List.class)));
-			var ol = (List) o;
-			int min=0, max=more;
-			if (chkl.car instanceof Integer mn) { min = max = mn; chkl = chkl.cdr(); }
-			if (chkl != null && chkl.car instanceof Integer mx) { max = mx; chkl = chkl.cdr(); }
-			return checkL(min, max, ol, array(chkl));
+				if (o != null && !(o instanceof List))
+					throw new TypeException("not a {expected}: {datum}", o, toChk(or(null, List.class)));
+				var ol = (List) o;
+				int min=0, max=more;
+				if (chkl.car instanceof Integer mn) { min = max = mn; chkl = chkl.cdr(); }
+				if (chkl != null && chkl.car instanceof Integer mx) { max = mx; chkl = chkl.cdr(); }
+				return checkL(min, max, ol, array(chkl));
+			default:
+				throw new TypeException("not a {expected}: {datum}", o, toChk(chk));
 		}
-		else if (chk instanceof Class chkc) {
-			if (checkC(o, chkc)) return 0;
-		}
-		throw new TypeException("not a {expected}: {datum}", o, toChk(chk));
 	}
 	public Object toChk(Object chk) {
 		return chk instanceof Class cl ? symbol(cl.getSimpleName())
@@ -1825,7 +1822,7 @@ public class Vm {
 				if (prStk)
 					thw.printStackTrace(out);
 				else {
-					var val = thw instanceof Value v ? v.value : thw;
+					var val = thw instanceof Value v /*&& v.value instanceof Error*/ ? v.value : thw;
 					var expt = (List) map("evalExpt", x-> pushSubcontBarrier.combine(env, pushRootPrompt(cons(x))), o.cdr(1));
 					if (expt.car instanceof Class && matchType(val, expt)) return true;
 					print(name, exp, " should be ", expt, " but is ", val);
@@ -1848,12 +1845,12 @@ public class Vm {
 			var expt = l.car(1);
 			if (key instanceof AtDot ad) {
 				var val = ad.apply(cons(object));
-				try { checkO(val, expt); } catch (InnerException ie) { return false; }
+				try { checkO(val, expt); } catch (Throwable ie) { return false; }
 			}
 			else if (object instanceof ObjEnv obj) {
 				var lookup = obj.lookup(key);
 				if (!lookup.isBound) return false;
-				try { checkO(lookup.value, expt); } catch (InnerException ie) { return false; }
+				try { checkO(lookup.value, expt); } catch (Throwable ie) { return false; }
 			}
 			else {
 				return false;
@@ -1954,7 +1951,7 @@ public class Vm {
 							list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class, String.class), Any.class))),
 					(l,o)-> l==0 ? env() : l==2 ? env(o.car(), o.<Obj>car(1)) : env(o.car(), array(o.cdr())) )),
 				"%bind", wrap(new JFun("%Bind", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> bind(true, 3, o.<Env>car(), o.car(1), o.car(2)) )),
-				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (InnerException ie) { return false; }} )),
+				"%bind?", wrap(new JFun("%Bind?", (n,o)-> checkN(n, o, 3, Env.class), (l,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (Throwable ie) { return false; }} )),
 				"%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } )),
 				"%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnv = env(theEnv))),
 				"%popEnv", wrap(new JFun("%PopEnv", (Supplier) ()-> theEnv = theEnv.parent)),
