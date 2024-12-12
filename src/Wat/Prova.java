@@ -60,7 +60,8 @@ public class Prova {
 		//out.println(1 * 1.2);
 		//out.println(1.2 * 1);
 		//System.out.println(".. __aaa__ dddssd".replaceAll("__([^_]*)__", "<b>$1<b/>"));
-		System.out.println(Utility.encode(".. <b>aaa</b>dddssd<b>"));
+		//System.out.println(Utility.encode(".. <b>aaa</b>dddssd<b>"));
+		System.out.println(Double.valueOf(0)==Double.valueOf(0));
 	}
 	
 	public static void functions() {

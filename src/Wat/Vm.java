@@ -530,6 +530,7 @@ public class Vm {
 	public class Obj extends RuntimeException implements ArgsList, ObjEnv {
 		private static final long serialVersionUID = 1L;
 		LinkedHashMap<String,Object> map = new LinkedHashMap();
+		public Obj(Env env) { map = env.map; }
 		public Obj(Object ... objs) { puts(objs); }
 		public Obj(String msg, Object ... objs) { super(msg); puts(objs); }
 		public Obj(Throwable t, Object ... objs) { super(t); puts(objs); }
@@ -1573,7 +1574,7 @@ public class Vm {
 			return checkL(min, max, o, chks);
 		}
 		catch (InnerException ie) {
-			return innerError(ie, op, o, chks);
+			return innerError(ie, op, o, listStar(min, max, list(chks)));
 		}
 	}
 	int checkL(int min, int max, List o, Object ... chks) {
@@ -1585,21 +1586,45 @@ public class Vm {
 			: new MatchException("expected {operands#,%+d} operands in {datum}", o, len<min ? min-len : max-len)
 		;
 	}
+	/*
 	int checkT(int min, int max, List o, Object ... chks) {
-		var len=chks.length;
-		int i=0; for (; o != null; i+=1, o=o.cdr()) {
-			if (len == 0 || i >= max) continue;
-			var cksn = i < len && i < min ? chks[i] : len <= min ? Any.class : chks[min + (i-min) % (len-min)];
-			if (cksn instanceof Object[] cksna && cksna[0] instanceof List) {
-				var res = checkO(o, cksn);
-				if (res > 0) return i+res;
+		int i=0, len=chks.length, lst=len-1, mdl=len-min;
+		if (min >= len) max = len;
+		for (; o != null; i+=1, o=o.cdr()) {
+			if (i >= max) continue;
+			var cksi = i < len ? chks[i] : chks[min + (i-min) % mdl];
+			if (i == lst // i is the last index
+			&& cksi instanceof Object[] cksor // is an or
+			&& (cksor[0] instanceof List // and the first is a list
+			||  cksor.length > 1 && cksor[0] == null && cksor[1] instanceof List) // or length > 1 and the first is null and the second is a list
+			) {
+				// check the rest of o!
+				return i + checkO(o, cksi);
 			}
-			else {
-				checkO(o.car, cksn);
-			}
+			checkO(o.car, cksi);
 		}
 		return i;
 	}
+	/*/
+	static private Object none = new Object();
+	int checkT(int min, int max, List o, Object ... chks) {
+		int i=0, len=chks.length, mdl=len-min;
+		Object chkl = chks[len-1] instanceof Object[] cksor // is an or
+				&& (cksor[0] instanceof List // and the first is a list
+				||  cksor.length > 1 && cksor[0] == null && cksor[1] instanceof List) // or len > 1 and the first is null and the second is a list
+			? cksor
+			: none
+		;
+		if (min >= len) max = len;
+		for (; o != null; i+=1, o=o.cdr()) {
+			if (i >= max) continue;
+			var cksi = i < len ? chks[i] : chks[min + (i-min) % mdl];
+			if (cksi == chkl) return i + checkO(o, cksi); // check the rest of o!
+			checkO(o.car, cksi);
+		}
+		return i;
+	}
+	//*/
 	public int checkO(Object o, Object chk) {
 		if (equals(o, chk))	return len(o);
 		if (chk instanceof Object[] chks) {
@@ -1948,7 +1973,7 @@ public class Vm {
 				//"%env?", wrap(new JFun("%Env?", (Function<Object, Boolean>) obj-> obj instanceof Env )),
 				"%vmEnv", wrap(new JFun("%VmEnv", (n,o)-> checkN(n, o, 0), (l,o)-> vmEnv() )),
 				"%newEnv", wrap(new JFun("%NewEnv",
-					(n,o)-> check(n, o,
+					(n,o)-> checkR(n, o, 0, more,
 						or( null,
 							list(2, or(null, Env.class), Obj.class),
 							list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class, String.class), Any.class))),
@@ -1964,12 +1989,14 @@ public class Vm {
 					(n,o)-> checkM(n, o, 1,
 						or( list(1, 2, Box.class),
 							list(1, more, Obj.class,
-								or( list(or(Symbol.class, Keyword.class, String.class), Any.class),
+								or( list(1, Env.class),
+									list(or(Symbol.class, Keyword.class, String.class), Any.class),
 									list(1, more, Throwable.class,
 										or(Symbol.class, Keyword.class, String.class), Any.class),
 									list(1, more, String.class,
 										or(	list(or(Symbol.class, Keyword.class, String.class), Any.class),
-											list(1, more, Throwable.class, or(Symbol.class, Keyword.class, String.class), Any.class) )))))),
+											list(1, more, Throwable.class,
+												or(Symbol.class, Keyword.class, String.class), Any.class) )))))),
 					(l,o)-> ((ArgsList) at("new")).apply(listStar(o.car, Vm.this, o.cdr()))
 				)),
 				// Env & Obj

@@ -29,7 +29,13 @@ These are the differences compared to the original Wat/LispX
 	`#inert`, the assigned value (`:rhs`) or the previous value (`:prv`) of the last bind made, or the current environment (`:cnt`)
 	specifying it directly in the expression `(def symbol (or #inert :rhs :prv :cnt) value)`
 	or indirectly by setting `(bndRes (or #inert :rhs :prv :cnt))`
-* The `Obj` can be defined with key value pairs which will become attribute value pairs of the new obj `(new Obj key value ...)`
+* The `Obj` extends `Throwable` and can be defined with
+	* key value pairs which will become attribute value pairs of the new obj `(new Obj key value ...)`
+	these pairs will become obj attribute value pairs `(obj key value ...)` which can be preceded by a
+		* String `(obj string key value ...)`
+		* Throwable `(obj throwable key value ...)`
+		* String and a Trowable `(obj Obj string throwable key value ...)`
+	* an `Env` whose symbol value pairs from the first frame will become attribute value pairs of the new obj `(new Obj env)`
 * The `Obj` are `Combinable` and combined with
 	* a key return the value associated with that key `(obj key)`
 	* key value pairs
