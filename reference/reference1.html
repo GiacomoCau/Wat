@@ -97,6 +97,76 @@
     </div>
     <div>
       <h3>
+        set!
+      </h3>
+      <ul>
+        <li>
+          Update into the environment the resulting bindings from the match of the <b>definiendTree</b> against <b>value</b>, signals an error if a binding is not defined.
+          <br/>
+            &nbsp;
+          <br/>
+            without <b>bindResult</b> or with <b>bindResult</b> #ignore use as bindResult `(bndRes)'
+          <br/>
+            with <b>bindResult</b> #inert return #inert
+          <br/>
+            with <b>bindResult</b> :rhs return the right side of the last binding
+          <br/>
+            with <b>bindResult</b> :prv return the previous value of the last binding
+          <br/>
+            with <b>bindResult</b> :cnt return the env
+          <br/>
+            &nbsp;
+          <br/>
+            (set! definiendTree value)
+          <br/>
+            (set! definiendTree bindResult value)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax definiendTree (or symbol decomposeTree))
+          <br/>
+            (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax decomposeTree (parametersTree . decomposeTree))
+          <br/>
+            (syntax parametersTree (or #null ignore symbol decomposeTree))
+          <br/>
+            (syntax symbol (or Symbol (#: check Symbol)))
+          <br/>
+            (syntax ignore (or #ignore (#: check #ignore)))
+          <br/>
+            (syntax check Any)
+          <br/>
+            (syntax check Class)
+          <br/>
+            (syntax check checks)
+          <br/>
+            (syntax checks (check . checks))
+          <br/>
+            (syntax check (min . checks))
+          <br/>
+            (syntax check (min max . checks))
+          <br/>
+            (syntax check (min oo . checks))
+          <br/>
+            (syntax check (or . checks))
+          <br/>
+            (syntax check (and . checks))
+          <br/>
+            (syntax check (Apv . arguments))
+          <br/>
+            (syntax check value)
+          <br/>
+            (syntax arguments (value . arguments))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         vau
       </h3>
       <ul>
@@ -153,6 +223,92 @@
     </div>
     <div>
       <h3>
+        if
+      </h3>
+      <ul>
+        <li>
+          Evaluate the <b>test</b> which must yield a boolean.
+          <br/>
+            Then evaluate either the <b>then</b> or <b>else</b> expression depending on whether the <b>test</b> yielded #true or #false.
+          <br/>
+            Idea stolen from Anarki https://github.com/arclanguage/anarki
+          <br/>
+            &nbsp;
+          <br/>
+            (if test then . forms)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax forms (or () (else) (test then . forms)))
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (vau (test then . forms) env (if (eval test env) (eval then env) (null? forms) #inert (null? (cdr forms)) (eval (car forms) env) (apply if forms env))))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        wrap
+      </h3>
+      <ul>
+        <li>
+          Return a new function that wraps around the underlying <b>operator</b>, and induces argument evaluations around it.
+          <br/>
+            Does not wrap the `Apv` and the `java functions`, but wraps the remaining `Combinator`.
+          <br/>
+            &nbsp;
+          <br/>
+            (wrap operator)
+          <br/>
+            (type function)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        theEnv
+      </h3>
+      <ul>
+        <li>
+          Return the current environment.
+          <br/>
+            &nbsp;
+          <br/>
+            (theEnv)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (vau () environment environment))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        eval
+      </h3>
+      <ul>
+        <li>
+          Return the result of evaluation of <b>form</b> in the optional <b>environment</b>.
+          <br/>
+            &nbsp;
+          <br/>
+            (eval form . environment)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (eval form (if (null? environment) (theEnv) (car! environment))))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         \
       </h3>
       <ul>
@@ -187,51 +343,19 @@
     </div>
     <div>
       <h3>
-        wrap
+        unwrap
       </h3>
       <ul>
         <li>
-          Return a new function that wraps around the underlying <b>operator</b>, and induces argument evaluations around it.
+          Return the underlying operator of a <b>function</b>.
           <br/>
-            Does not wrap the `Apv` and the `java functions`, but wraps the remaining `Combinator`.
+            Unwraps the `Apv`, wraps the `java functions` in a `JFun` and does not unwrap the remaining `Combinator`.
           <br/>
             &nbsp;
           <br/>
-            (wrap operator)
+            (unwrap function)
           <br/>
             (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        assert
-      </h3>
-      <ul>
-        <li>
-          Signals an error if:
-          <br/>
-            - <b>expression</b> does not equal <b>value</b>
-          <br/>
-            - <b>value</b> is not present and the <b>expression</b> does not throws
-          <br/>
-            - <b>expression</b> throws or returns an object and the object is not of the same <b>class</b> with the <b>attributes</b> of the given <b>value</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (assert expression value)
-          <br/>
-            (assert expression)
-          <br/>
-            (assert expression class attribute value . attributes)
-          <br/>
-            (type fexpr)
-          <br/>
-            &nbsp;
-          <br/>
-            (syntax attributes (attribute value . attributes))
-          <br/>
-            (syntax attribute (or Symbol Keyword String .Field @Method))
         </li>
       </ul>
     </div>
@@ -415,55 +539,7 @@
           <br/>
             &nbsp;
           <br/>
-            (derivation (! (cons? object)))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        eval
-      </h3>
-      <ul>
-        <li>
-          Return the result of evaluation of <b>form</b> in the optional <b>environment</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (eval form . environment)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            (derivation (eval form (if (null? environment) (theEnv) (car! environment))))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        if
-      </h3>
-      <ul>
-        <li>
-          Evaluate the <b>test</b> which must yield a boolean.
-          <br/>
-            Then evaluate either the <b>then</b> or <b>else</b> expression depending on whether the <b>test</b> yielded #true or #false.
-          <br/>
-            Idea stolen from Anarki https://github.com/arclanguage/anarki
-          <br/>
-            &nbsp;
-          <br/>
-            (if test then . forms)
-          <br/>
-            (type fexpr)
-          <br/>
-            &nbsp;
-          <br/>
-            (syntax forms (or () (else) (test then . forms)))
-          <br/>
-            &nbsp;
-          <br/>
-            (derivation (vau (test then . forms) env (if (eval test env) (eval then env) (null? forms) #inert (null? (cdr forms)) (eval (car forms) env) (apply if forms env))))
+            (derivation (if (cons? object) #f #t))
         </li>
       </ul>
     </div>
@@ -511,32 +587,6 @@
     </div>
     <div>
       <h3>
-        newBox
-      </h3>
-      <ul>
-        <li>
-          Return a new box with the optional <b>value</b>.
-          <br/>
-            The Box are functions that encapsulates a mutable value.
-          <br/>
-            Without <b>value</b> use as <b>value</b> `(boxDft)'.
-          <br/>
-            &nbsp;
-          <br/>
-            Calling the box without arguments returns the value in the box.
-          <br/>
-            Calling the box with an argument update the value in the box.
-          <br/>
-            &nbsp;
-          <br/>
-            (newBox . value)
-          <br/>
-            (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
         null?
       </h3>
       <ul>
@@ -572,6 +622,38 @@
             &nbsp;
           <br/>
             (derivation (vau (operand) #ignore operand))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        assert
+      </h3>
+      <ul>
+        <li>
+          Signals an error if:
+          <br/>
+            - <b>expression</b> does not equal <b>value</b>
+          <br/>
+            - <b>value</b> is not present and the <b>expression</b> does not throws
+          <br/>
+            - <b>expression</b> throws or returns an object and the object is not of the same <b>class</b> with the <b>attributes</b> of the given <b>value</b>.
+          <br/>
+            &nbsp;
+          <br/>
+            (assert expression value)
+          <br/>
+            (assert expression)
+          <br/>
+            (assert expression class attribute value . attributes)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax attributes (attribute value . attributes))
+          <br/>
+            (syntax attribute (or Symbol Keyword String .Field @Method))
         </li>
       </ul>
     </div>
