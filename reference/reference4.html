@@ -89,60 +89,6 @@
     </div>
     <div>
       <h3>
-        set!
-      </h3>
-      <ul>
-        <li>
-          Update the bindings defined of the environment, signals an error if the binding is not defined.
-          <br/>
-            As 'def' match the <b>definiendTree</b> against the <b>value</b> and update the resulting bindings into environment if exist.
-          <br/>
-            &nbsp;
-          <br/>
-            without <b>bindResult</b> or with <b>bindResult</b> #ignore use as bindResult `(bndRes)'
-          <br/>
-            with <b>bindResult</b> #inert return #inert
-          <br/>
-            with <b>bindResult</b> :rhs return the right side of the last binding
-          <br/>
-            with <b>bindResult</b> :prv return the previous value of the last binding
-          <br/>
-            with <b>bindResult</b> :cnt return the env
-          <br/>
-            &nbsp;
-          <br/>
-            (set! definiendTree value)
-          <br/>
-            (set! definiendTree bindResult value)
-          <br/>
-            (type fexpr)
-          <br/>
-            &nbsp;
-          <br/>
-            (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        unwrap
-      </h3>
-      <ul>
-        <li>
-          Return the underlying operator of a <b>function</b>.
-          <br/>
-            Unwraps the `Apv`, wraps the `java functions` in a `JFun` and does not unwrap the remaining `Combinator`.
-          <br/>
-            &nbsp;
-          <br/>
-            (unwrap function)
-          <br/>
-            (type function)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
         wrau
       </h3>
       <ul>

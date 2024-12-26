@@ -6,6 +6,7 @@
 
 ;;; ``72. An adequate bootstrap is a contradiction in terms.''
 
+
 #|! Core Built-Ins for Macro and Definition Forms
  |#
 
@@ -44,6 +45,41 @@
    |#
   %def )
 
+(def set!
+  #|Update into the environment the resulting bindings from the match of the <b>definiendTree</b> against <b>value</b>, signals an error if a binding is not defined.
+   |
+   |without <b>bindResult</b> or with <b>bindResult</b> #ignore use as bindResult `(bndRes)'
+   |with <b>bindResult</b> #inert return #inert
+   |with <b>bindResult</b> :rhs return the right side of the last binding
+   |with <b>bindResult</b> :prv return the previous value of the last binding
+   |with <b>bindResult</b> :cnt return the env
+   |
+   |(fn definiendTree value)
+   |(fn definiendTree bindResult value)
+   |(type fexpr)
+   |
+   |(syntax definiendTree (or symbol decomposeTree))
+   |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+   |
+   |(syntax decomposeTree (parametersTree . decomposeTree))
+   |(syntax parametersTree (or #null ignore symbol decomposeTree))
+   |(syntax symbol (or Symbol (#: check Symbol)))
+   |(syntax ignore (or #ignore (#: check #ignore)))
+   |(syntax check Any)
+   |(syntax check Class)
+   |(syntax check checks)
+   |(syntax checks (check . checks))
+   |(syntax check (min . checks))
+   |(syntax check (min max . checks))
+   |(syntax check (min oo . checks))
+   |(syntax check (or . checks))
+   |(syntax check (and . checks))
+   |(syntax check (Apv . arguments))
+   |(syntax check value)
+   |(syntax arguments (value . arguments))
+   |#
+  %set! )
+
 (def vau
   #|Return a anonymous fexpr with the given <b>parameterTree</b>, <b>environmentParameter</b> and <b>body</b>.
    |
@@ -72,6 +108,15 @@
    |#
   %vau )
 
+(def wrap
+  #|Return a new function that wraps around the underlying <b>operator</b>, and induces argument evaluations around it.
+   |Does not wrap the `Apv` and the `java functions`, but wraps the remaining `Combinator`.
+   |
+   |(fn operator)
+   |(type function)
+   |#
+  %wrap )
+
 (def \
   #|Return an anonymous function with the given <b>parameterTree</b> and <b>forms</b> as body,
    |which use the definition environment for evaluate <b>forms</b> as an implicit `begin' and get the values of the free variables.
@@ -89,30 +134,14 @@
    |#
   \ )
 
-(def wrap
-  #|Return a new function that wraps around the underlying <b>operator</b>, and induces argument evaluations around it.
-   |Does not wrap the `Apv` and the `java functions`, but wraps the remaining `Combinator`.
+(def unwrap
+  #|Return the underlying operator of a <b>function</b>.
+   |Unwraps the `Apv`, wraps the `java functions` in a `JFun` and does not unwrap the remaining `Combinator`.
    |
-   |(fn operator)
+   |(fn function)
    |(type function)
    |#
-  %wrap )
-
-(def assert
-  #|Signals an error if:
-   |- <b>expression</b> does not equal <b>value</b>
-   |- <b>value</b> is not present and the <b>expression</b> does not throws
-   |- <b>expression</b> throws or returns an object and the object is not of the same <b>class</b> with the <b>attributes</b> of the given <b>value</b>.
-   |
-   |(fn expression value)
-   |(fn expression)
-   |(fn expression class attribute value . attributes)
-   |(type fexpr)
-   |
-   |(syntax attributes (attribute value . attributes))
-   |(syntax attribute (or Symbol Keyword String .Field @Method))
-   |#
-  %assert )
+  %unwrap )
 
 (def apply
   #|Call the <b>function</b> with a dynamically-supplied list of <b>arguments</b> in the optional <b>environment</b>.
@@ -202,9 +231,9 @@
    |(fn object)
    |(type function)
    |
-   |(derivation (! (cons? object)))
+   |(derivation (if (cons? object) #f #t))
    |#
-  (\ (object) (! (cons? object)) ))
+  (\ (object) (if (cons? object) #f #t)) )
 
 (def eval
   #|Return the result of evaluation of <b>form</b> in the optional <b>environment</b>.
@@ -251,19 +280,6 @@
    |#
   %list* )
 
-(def newBox
-  #|Return a new box with the optional <b>value</b>.
-   |The Box are functions that encapsulates a mutable value.
-   |Without <b>value</b> use as <b>value</b> `(boxDft)'.
-   |
-   |Calling the box without arguments returns the value in the box.
-   |Calling the box with an argument update the value in the box.
-   |
-   |(fn . value)
-   |(type function)
-   |#
-  (\ value (apply %new (cons Box value))) )
-
 (def null?
   #|Return #true if the <b>object</b> is #null, #false otherwise.
    |
@@ -284,15 +300,31 @@
    |#
   %' )
 
+(def assert
+  #|Signals an error if:
+   |- <b>expression</b> does not equal <b>value</b>
+   |- <b>value</b> is not present and the <b>expression</b> does not throws
+   |- <b>expression</b> throws or returns an object and the object is not of the same <b>class</b> with the <b>attributes</b> of the given <b>value</b>.
+   |
+   |(fn expression value)
+   |(fn expression)
+   |(fn expression class attribute value . attributes)
+   |(type fexpr)
+   |
+   |(syntax attributes (attribute value . attributes))
+   |(syntax attribute (or Symbol Keyword String .Field @Method))
+   |#
+  %assert )
+
 
 #|! Macro
  |#
 
 (def evalMacro
-  #|A box to discriminate when to evaluate or simply expand a macro.
+  #|A boolean to discriminate when to evaluate or simply expand a macro.
    |Used from expand and makeMacro. 
    |#
-  (newBox #t))
+  #t)
 
 (def makeMacro
   #|Return a macro from an <b>expander</b> operator.
@@ -306,9 +338,25 @@
   (wrap
     (vau (expander) #ignore
       (vau operands env
-        (def evalMacro (evalMacro :prv #t))
+        (def evalMacro (set! evalMacro :prv #t))
         (def exp (apply expander operands))
         (if evalMacro (eval exp env) exp) ))))
+
+;TODO da valutare in sostituzione della precedente 
+(def makeMacro
+  #|Return a macro from an <b>expander</b> operator.
+   |A macro is an operator that receives an operand and produces a form
+   |(by calling the expander with the operand as argument)
+   |that is then evaluated in place of the operand.
+   |
+   |(fn expander)
+   |(type function)
+   |#
+  (\ (expander)
+    (vau operands env
+      (def evalMacro (set! evalMacro :prv #t))
+      (def exp (apply expander operands))
+      (if evalMacro (eval exp env) exp) )))
 
 (def macro
   #|Return an anonymous macro with the given <b>parameterTree</b> and <b>forms</b> as body.
@@ -327,7 +375,7 @@
    |(type macro)
    |#
   (macro (form)
-    (list 'begin (list 'evalMacro #f) form) ))
+    (list 'begin (list 'set! 'evalMacro #f) form) ))
 
 
 #|! Definition Forms
@@ -436,33 +484,6 @@
   (eval
     (list 'def dt (list (unwrap eval) value env))
     (eval ep env) ))
-
-(def set!
-  #|Update the bindings defined of the environment, signals an error if the binding is not defined.
-   |As 'def' match the <b>definiendTree</b> against the <b>value</b> and update the resulting bindings into environment if exist.
-   |
-   |without <b>bindResult</b> or with <b>bindResult</b> #ignore use as bindResult `(bndRes)'
-   |with <b>bindResult</b> #inert return #inert
-   |with <b>bindResult</b> :rhs return the right side of the last binding
-   |with <b>bindResult</b> :prv return the previous value of the last binding
-   |with <b>bindResult</b> :cnt return the env
-   |
-   |(fn definiendTree value)
-   |(fn definiendTree bindResult value)
-   |(type fexpr)
-   |
-   |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
-   |#
-  %set! )
-
-(def unwrap
-  #|Return the underlying operator of a <b>function</b>.
-   |Unwraps the `Apv`, wraps the `java functions` in a `JFun` and does not unwrap the remaining `Combinator`.
-   |
-   |(fn function)
-   |(type function)
-   |#
-  %unwrap )
 
 (defMacro (wrau pt ep . forms)
   #|Return an anonymous function with the given <b>parameterTree</b>, <b>environmentParameter</b> and <b>forms</b> as body,

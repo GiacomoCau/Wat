@@ -31,9 +31,31 @@
       </h3>
       <ul>
         <li>
-          A box to discriminate when to evaluate or simply expand a macro.
+          A boolean to discriminate when to evaluate or simply expand a macro.
           <br/>
             Used from expand and makeMacro. 
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        makeMacro
+      </h3>
+      <ul>
+        <li>
+          Return a macro from an <b>expander</b> operator.
+          <br/>
+            A macro is an operator that receives an operand and produces a form
+          <br/>
+            (by calling the expander with the operand as argument)
+          <br/>
+            that is then evaluated in place of the operand.
+          <br/>
+            &nbsp;
+          <br/>
+            (makeMacro expander)
+          <br/>
+            (type function)
         </li>
       </ul>
     </div>
