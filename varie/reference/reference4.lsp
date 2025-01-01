@@ -45,9 +45,9 @@
         (ol (@ 'start 0)
           (li (a (@ 'href "https://github.com/GiacomoCau/Wat?tab=readme-ov-file") (pr "Wat")))
           (doList (file files)
-            (close1 (r (@new BufferedReader (@new FileReader file)))
+            (close1 (fr (@new BufferedReader (@new FileReader file)))
               (log file)
-              (for1 (l (readLine r)) (! (null? l)) 
+              (for1 (l (readLine fr)) (! (null? l)) 
                 (continue? (! (startsWith l "#|!")))
                 ;(until? (>= chapters 2))
                 (+= chapters 1)
@@ -94,12 +94,12 @@
               (buttons)
               (h2 (pr chapter))
               (unless (startsWith (set! l :rhs (readLine r)) " |#")
-                (ul (li (pr (encode (subSeq l 2))) (until (startsWith (set! l :rhs (readLine r)) " |#") (br (pr (encode (subSeq l 2))))))))
+                (ul (loop (li (pr (encode (subSeq l 2))) (until? (startsWith (set! l :rhs (readLine r)) " |#")) ))))
               (loop
                 (set! l :rhs (readLine r)) 
                 (continue?- 1 (|| (null? l) (startsWith l "#|!")) (buttons))
                 (continue? (startsWith l ";;!") (ul (li (pr (encode (subSeq l 3))))))
-                (continue? (startsWith l "  #|!") (ul (li (until (startsWith (set! l :rhs (readLine r)) "   |#") (br (pr (encode (subSeq l 4))))) )))
+                (continue? (startsWith l "  #|!") (ul (until (startsWith (set! l :rhs (readLine r)) "   |#") (li (pr (encode (subSeq l 4)))) )))
                 (continue? (startsWith l "#|") (until (or (startsWith (set! l :rhs (readLine r)) "|#") (startsWith l "  |#")) ))
                 (continue? (! (|| (startsWith l "\x28;def") (startsWith l "\x28;%def"))))
                 (def l0 l)
@@ -117,8 +117,13 @@
                       (li
                         (pr (encode (subSeq l 4)))
                         (loop 
-                          (until? (startsWith (set! l :rhs (readLine r)) "   |#"))
-                          (br (pr (encode ((\ (s) (if (startsWith s "\x28;fn") (@replace s "fn" name) s)) (subSeq l 4)) ))) ))))
+                          (until? (startsWith (set! l :rhs (readLine r)) "   |$"))
+                          (until? (startsWith l "   |#"))
+                          (br (pr (encode (subSeq l 4)))) ))
+                      (if (startsWith l "   |$")
+                        (loop
+                          (li (pr (encode (@replace (subSeq l 5) "fn" name))))
+                          (until? (startsWith (def l :rhs (readLine r)) "   |#")) )))) 
                   (div
                     (h3 (pr (encode (nm l0))))
                     (ul (li (pr (encode l0)))) )))) )))) ))

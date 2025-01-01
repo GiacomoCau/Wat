@@ -198,6 +198,7 @@ TOKEN:	// literals
 //|	< String: "\"" ("\\" ["\\","\"","n","r","f","b","t"] | ~["\\","\"","\n","\r","\f","\b","\t"])* "\"" >
 |	< String: "\"" ( "\\\\" | "\\\"" | ~["\"" /*, "\\"*/] )* "\"" >
 |	< DSym:	"\\|" ( "\\\\" | "\\|" | ~["|" /*, "\\", "\u0000"-"\u001f", "\u007f"-"\u009f"*/] )+ "|" >
+|	< Binary: "1" ( ("_")? ("0" | "1")+ )* ( "b" | "B") >
 }
 
 TOKEN:	// identifiers
@@ -244,6 +245,7 @@ Object Elt() throws Exception: {
 	|	t=<BInteger> { return new java.math.BigInteger(t.image.substring(0,t.image.length()-2).replaceAll("_","")); }
 	|	t=<Long>     { return java.lang.Long.parseLong(t.image.substring(0,t.image.length()-1).replaceAll("_","")); }
 	|	t=<Integer>  { return java.lang.Integer.parseInt(t.image.replaceAll("_","")); }
+	|	t=<Binary>   { return java.lang.Integer.parseInt(t.image.substring(0,t.image.length()-1).replaceAll("_",""), 2); }
 	|	t=<String>   { return $(string, toStringTokenImage(t.image)); }
 	|	t=<DSym>     { return t.image.substring(2,t.image.length()-1).replaceAll("\\\\\\|", "|").replaceAll("\\\\\\\\", "\\\\"); }
 	|	t=<Prim>     { return classForName(t.image.substring(1)); }	

@@ -373,10 +373,31 @@ public class Vm {
 		}
 		public <T> T car() { return (T) car; }
 		public <T> T cdr() { return (T) cdr; }
-		public <T> T car(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? o.car() : error("cannot get car", "type", symbol("outOfBounds")); }
-		public <T> T cdr(int i) { Cons o=this; for (; i>0 && o.cdr instanceof Cons c; i-=1, o=c); return i==0 ? o.cdr() : error("cannot get cdr", "type", symbol("outOfBounds")); }
+		public <T> T car(int i) {
+			Cons o=this; int i0 = i; for (; i>0 && o.cdr() instanceof Cons c; i-=1, o=c);
+			return i==0 ? o.car() : error("cannot get {a/d} of {datum}", "type", symbol("outOfBounds"), "a/d", symbol("c" + "a" + "d".repeat(i0) + "r"),  "datum", this);
+		}
+		public <T> T cdr(int i) {
+			Cons o=this; int i0 = i; for (; i>0 && o.cdr() instanceof Cons c; i-=1, o=c);
+			return i==0 ? o.cdr() : error("cannot get {a/d} of {datum}", "type", symbol("outOfBounds"), "a/d", symbol("c" + "d" + "d".repeat(i0) + "r"),  "datum", this);
+		}
 		Object setCar(Object car) { this.car = car; return this; }
 		Object setCdr(Object cdr) { this.cdr = cdr; return this; }
+		public <T> T cxr(int i0) {
+			Object o=this;
+			int i=i0; for (; i>1 && o instanceof Cons c; o = (i&1) == 1 ? c.car() : c.cdr(), i >>= 1);
+			if (i==1) return (T) o;
+			String n=""; for(i=i0; i>1; n = "da".charAt(i&1) + n, i >>= 1);
+			return error("cannot get {a/d} of {datum}", "type", symbol("outOfBounds"), "a/d", symbol("c" + n + "r"), "datum", this);
+		}
+		public <T> T cxr(String n) {
+			Object o=this; int i = n.length()-1;
+			for(; i>=0 && o instanceof Cons c; i-=1) {
+				//char ch = n.charAt(i); o = ch == 'a' ? c.car() : ch == 'd' ? c.cdr() : typeError("invalid ca..dr index, not {expected}: {datum}", symbol(n), symbol("[ad]+"));
+				o = switch (n.charAt(i)) { case 'a'-> c.car(); case 'd'-> c.cdr(); default-> typeError("invalid a/d index, not {expected}: {datum}", symbol(n), symbol("[ad]+")); };
+			}
+			return i==-1 ? (T) o : error("cannot get {a/d} of {datum}", "type", symbol("outOfBounds"), "a/d", symbol("c" + n + "r"), "datum", this);
+		}
 	}
 	public class List extends Cons {
 		List(Object car, List cdr) { super(car, cdr); }
@@ -2011,6 +2032,10 @@ public class Vm {
 				// Cons
 				"%car", wrap(new JFun("%Car", (n,o)-> checkR(n, o, 1, 2, Cons.class, Integer.class), (l,o)-> apply(c-> l == 1 ? c.car() : c.car(o.<Integer>car(1)), o.<Cons>car()) )),
 				"%cdr", wrap(new JFun("%Car", (n,o)-> checkR(n, o, 1, 2, Cons.class, Integer.class), (l,o)-> apply(c-> l == 1 ? c.cdr() : c.cdr(o.<Integer>car(1)), o.<Cons>car()) )),
+				"%cnr", wrap(new JFun("%Cnr", (n,o)-> checkN(n, o, 2, Cons.class, Integer.class), (l,o)-> o.<Cons>car().cxr(o.<Integer>car(1)) )),
+				"%csr", wrap(new JFun("%Csr", (n,o)-> checkN(n, o, 2, Cons.class, or(Symbol.class, Keyword.class)), (l,o)-> o.<Cons>car().cxr(o.<Intern>car(1).name) )),
+				"%csr", wrap(new JFun("%Csr", (n,o)-> checkN(n, o, 2, Cons.class, or(Symbol.class, Keyword.class, String.class)), (l,o)-> o.<Cons>car().cxr(apply(a-> a instanceof Intern i ? i.name : (String) a, o.car(1))) )),		
+				"%cxr", wrap(new JFun("%Cxr", (n,o)-> checkN(n, o, 2, Cons.class, or(Symbol.class, Keyword.class, String.class, Integer.class)), (l,o)-> ((ArgsList) at("cxr")).apply(list(o.car(), apply(a-> a instanceof Intern i ? i.name : a, o.car(1)) )) )),
 				"%cadr", wrap(new JFun("%Cadr", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().car(1) )),
 				"%cddr", wrap(new JFun("%Cddr", (n,o)-> checkN(n, o, 1, Cons.class), (l,o)-> o.<Cons>car().cdr(1) )),
 				"%cons", wrap(new JFun("%Cons", (n,o)-> checkR(n, o, 1, 2), (l,o)-> cons(o.car, l == 1 ? null : o.car(1)) )),

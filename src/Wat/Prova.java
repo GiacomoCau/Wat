@@ -61,7 +61,12 @@ public class Prova {
 		//out.println(1.2 * 1);
 		//System.out.println(".. __aaa__ dddssd".replaceAll("__([^_]*)__", "<b>$1<b/>"));
 		//System.out.println(Utility.encode(".. <b>aaa</b>dddssd<b>"));
-		System.out.println(Double.valueOf(0)==Double.valueOf(0));
+		//System.out.println(Double.valueOf(0)==Double.valueOf(0));
+		//var a  = 0b1;
+		for (int min=5, len=10, i=0; i<23; i+=1) {
+			if (i >= len && i % min == 0) out.println();
+			out.println(i<len ? i : (min + (i-min) % (len-min)));
+		}
 	}
 	
 	public static void functions() {
@@ -421,10 +426,10 @@ public class Prova {
 		out.println(WatObj0.class.isAssignableFrom(Wat1.class));
 		Wat0.methods.put("m", 1);
 		Wat0 w0 = new Wat0();
-		w0.slot.put("a", 1);
+		w0.map.put("a", 1);
 		Wat1.methods.put("m", 2);
 		Wat1 w1 = new Wat1();
-		w1.slot.put("b", 2);
+		w1.map.put("b", 2);
 		out.println(Wat1.class.getSuperclass());
 		var wat1 = Wat1.class;
 		@SuppressWarnings("unused")
@@ -442,7 +447,7 @@ public class Prova {
 	
 	static class WatObj0 {
 		static Map<String, Object> methods = new LinkedHashMap();
-		Map<String,Object> slot = new LinkedHashMap();
+		Map<String,Object> map = new LinkedHashMap();
 	}
 	static class Wat0 extends WatObj0 {
 		static Map<String, Object> methods = new LinkedHashMap();
@@ -485,7 +490,7 @@ public class Prova {
 			package Wat;
 			class %1$s extends %2$s { 
 				static Map<String, Object> methods = new LinkedHashMap();
-				@Override public String toString() { return "{%1$s" + vm.reverseMap(slot) + "}"; }
+				@Override public String toString() { return "{%1$s" + vm.reverseMap(map) + "}"; }
 			}
 			""".formatted(className, superClass == null ? "WatObj0" : superClass.getSimpleName())
 		;
@@ -509,12 +514,12 @@ public class Prova {
 				}	
 			}
 		}
-		private Map<Keyword,Object> slot = new LinkedHashMap();
+		private Map<Keyword,Object> map = new LinkedHashMap();
 		WatObj(Vm.List list) {
 	        for (var l=list; l!=null; l=l.cdr()) {
 	        	var car = l.car; if (!(car instanceof Keyword key)) throw new RuntimeException("not a keyword: " + car + " in: " + list); 
 	        	l = l.cdr(); if (l == null) throw new RuntimeException("a value expected in: " + list);
-	        	slot.put(key, l.car);
+	        	map.put(key, l.car);
 	        }
 		}
 		@Override public String toString() { return "{WatObject" /*+ reverseMap(this)*/ + "}"; }
