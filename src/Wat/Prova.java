@@ -62,6 +62,7 @@ public class Prova {
 		//System.out.println(".. __aaa__ dddssd".replaceAll("__([^_]*)__", "<b>$1<b/>"));
 		//System.out.println(Utility.encode(".. <b>aaa</b>dddssd<b>"));
 		System.out.println(Double.valueOf(0)==Double.valueOf(0));
+		var a  = 0b1;
 	}
 	
 	public static void functions() {
