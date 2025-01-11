@@ -108,6 +108,14 @@
    |#
   %vau )
 
+(def begin
+  #|Sequentially evaluate <b>forms</b> returning the value of the last one, #inert if <b>forms</b> is #null.
+   |
+   |(fn . forms)
+   |(type fexpr)
+   |#
+  %begin )
+
 (def if
   #|Evaluate the <b>test</b> which must yield a boolean.
    |Then evaluate either the <b>then</b> or <b>else</b> expression depending on whether the <b>test</b> yielded #true or #false.
@@ -185,14 +193,6 @@
    |(derivation (eval (cons (unwrap fun) args) (if (null? environment) (newEnv) (car! environment)) ))
    |#
   %apply )
-
-(def begin
-  #|Sequentially evaluate <b>forms</b> returning the value of the last one, #inert if <b>forms</b> is #null.
-   |
-   |(fn . forms)
-   |(type fexpr)
-   |#
-  %begin )
 
 (def car
   #|Return the contents of the address part of the register.
@@ -286,7 +286,8 @@
    |(fn . arguments)
    |(type function)
    |
-   |(derivation (if (atom? arguments) arguments ((rec\ (loop arguments) (if (null? (cdr arguments)) (car argument) (cons (car argument) (loop (cdr arguments))))) arguments)))
+   |(derivation (if (null? arguments) () (((\ (loop) (def loop :rhs (\ ((car . cdr)) (if (null? cdr) car (cons car (loop cdr)))))) #inert) arguments))) 
+   |(derivation (if (null? arguments) () ((rec\ (loop (car . cdr)) (if (null? cdr) car (cons car (loop cdr)))) arguments)))
    |#
   %list* )
 

@@ -223,6 +223,22 @@
     </div>
     <div>
       <h3>
+        begin
+      </h3>
+      <ul>
+        <li>
+          Sequentially evaluate <b>forms</b> returning the value of the last one, #inert if <b>forms</b> is #null.
+          <br/>
+            &nbsp;
+          <br/>
+            (begin . forms)
+          <br/>
+            (type fexpr)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         if
       </h3>
       <ul>
@@ -374,22 +390,6 @@
             (type function)
           <br/>
             (derivation (eval (cons (unwrap fun) args) (if (null? environment) (newEnv) (car! environment)) ))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        begin
-      </h3>
-      <ul>
-        <li>
-          Sequentially evaluate <b>forms</b> returning the value of the last one, #inert if <b>forms</b> is #null.
-          <br/>
-            &nbsp;
-          <br/>
-            (begin . forms)
-          <br/>
-            (type fexpr)
         </li>
       </ul>
     </div>
@@ -581,7 +581,9 @@
           <br/>
             &nbsp;
           <br/>
-            (derivation (if (atom? arguments) arguments ((rec\ (loop arguments) (if (null? (cdr arguments)) (car argument) (cons (car argument) (loop (cdr arguments))))) arguments)))
+            (derivation (if (null? arguments) () (((\ (loop) (def loop :rhs (\ ((car . cdr)) (if (null? cdr) car (cons car (loop cdr)))))) #inert) arguments))) 
+          <br/>
+            (derivation (if (null? arguments) () ((rec\ (loop (car . cdr)) (if (null? cdr) car (cons car (loop cdr)))) arguments)))
         </li>
       </ul>
     </div>
