@@ -1343,10 +1343,6 @@ public class Vm {
 				);
 				case BiFunction bf-> o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 2),
 					obj-> obj instanceof Integer /*len*/ ? bf.apply(o.car, o.car(1)) : resumeError(obj, symbol("Integer")));
-				/* TODO verificare
-				case Combinable cb-> o-> pipe(dbg(null, "%" + op, o), ()-> checkM(op, o, 1, Env.class),
-					obj-> obj instanceof Integer /*len* / ? cb.combine(o.car(), o.cdr()) : resumeError(obj, symbol("Integer")));
-				*/
 				case Field f-> o-> pipe(null, ()-> checkR(op, o, 1, 2), obj->{
 						if (!(obj instanceof Integer len)) return resumeError(obj, symbol("Integer"));
 						if (len == 1) return uncked(()-> f.get(o.car));
@@ -2298,7 +2294,15 @@ public class Vm {
 				"log", wrap(new JFun("Log", (ArgsList) o-> log(array(o)) )),
 				"print", wrap(new JFun("Print", (ArgsList) o-> print(array(o)) )),
 				"write", wrap(new JFun("Write", (ArgsList) o-> write(array(o)) )),
-				"load", wrap(new JFun("Load", (n,o)-> checkR(n, o, 1, 2, String.class, Env.class), (l,o)-> uncked(()-> loadText(l==1 ? theEnv : o.<Env>car(1), o.<String>car())) )),
+				"load", wrap(new Combinable() {
+					@Override public final <T> T combine(Env e, List o) {
+						var chk = checkR(this, o, 1, 2, String.class, Env.class); // o = (string env)
+						if (chk instanceof Suspension s) return (T) s;
+						if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+						return (T) uncked(()-> loadText(len==1 ? e : o.<Env>car(1), o.<String>car()));
+					}
+					@Override public String toString() { return "%Load"; }
+				}),
 				"read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> uncked(()-> str2list(read(l == 0 ? 0 : o.<Integer>car())).car) )),
 				//"eof", new JFun("eof", (n,o)-> checkN(n, o, 0), (l,o)-> List.Parser.eof),
 				//"eof?", wrap(new JFun("eof?", (n,o)-> checkN(n, o, 1), (l,o)-> List.Parser.eof.equals(o.car))),

@@ -9,3 +9,5 @@
 (def\ (bi f g) (\ (x y) (f (g x y))))
 (def\ (psi f g) (\ (x y) (f (g x) (g y))))
 (def\ (phi f g h) (\ (x) (g (f x) (h x))))
+(def\ (b1 f g) (\ (x y) (f (g x y))))
+(def\ (phi1 f g h) (\ (x y) (g (f x y) (h x y))))

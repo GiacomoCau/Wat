@@ -37,6 +37,9 @@ public class Parser {
 	public static Object eof = new Object() {
 		@Override public String toString() { return "#eof"; }
 	};
+	public static Object skip = new Object() {
+		@Override public String toString() { return "#skip"; }
+	};
 	
 	/* static=true
 	public static <T> T parse(String line) throws Exception {
@@ -150,7 +153,6 @@ TOKEN_MGR_DECLS : {
 
 SKIP:	// white spaces
 {	"#|" { MLCD++; } : MLC | ";" : CMT | < (" " | "\t" | "\r" | "\n")+ >
-//| "#;" { try { parser.Elt(); } catch (Throwable t) { }
 }
 <MLC> SKIP: { "|#" { SwitchTo( --MLCD == 0 ? DEFAULT : MLC ); } }
 <MLC> MORE: { "#|" { MLCD++; } | "\"" : SMLC | ";" : CMLC | < ~[] > }
@@ -173,10 +175,10 @@ TOKEN:	// reserved words
 {	< Null: "()" | "#null" >
 |	< True: "#t" | "#true" >
 |	< False: "#f" | "#false" >
+|	< Cmt: "#;" >
 |	< SheColon: "#:" >
 |	< Inert: "#inert" >
 |	< Ignore: "#_" | "#ignore" >
-|	< Cmt: "#;" >
 |	< Symbol1: "#s" ["#", "," , "'" , "`" , "\u00b4" , "\"" , "|"] >
 |	< # hex: ["0"-"9", "a"-"f", "A"-"f"] >
 |   < Char: "#\\" ( [ "\u0000" - "\uffff" ] | "x" <hex> ( <hex> ( <hex> ( <hex> )? )? )? ) >
@@ -228,13 +230,14 @@ TOKEN:	// identifiers
 	>
 }
 
-Object Elt() throws Exception: {
+Object Elt(): {
 	Token t, t2=null;
 	Object o, o2=null;
 	List l = new ArrayList(); 
 }	{	<Null>       { return null; }
 	|	<True>       { return true; }    
 	|	<False>      { return false; }    
+	|	<Cmt> Elt()  { return skip; }
 	|	t=<Inert>    { return t.image; }    
 	|	t=<Ignore>   { return t.image; }    
 	|	t=<SheColon> { return t.image; }    
@@ -253,17 +256,16 @@ Object Elt() throws Exception: {
 	|	t=<Dot>      { return $("%dot", $(string, t.image.substring(1))); }
 	|	t=<At>       { return $("%at", $(string, t.image.substring(1))); } 
 	|	t=<Mac> o=Elt() { return $("%"+t, o); }
-	|	<Cmt> Elt()  { return "#inert"; }
 	|	t=<Kwd>      { return t.image; }
 	|	t=<Sym>      { return t.image; }  	
 	//|	t=<Sym> ["::" t2=<Sym>] { return t2 == null ? t.image : $("%eval", $("%'", t2.image), t.image); }  	
-	|	"(" ( o=Elt(){ l.add(o); } )+ ")" { return l.toArray(); }
-	|	"[" ( o=Elt(){ l.add(o); } )+ "]" { return l.toArray(); }
+	|	"(" ( o=Elt(){ if (o != skip) l.add(o); } )+ ")" { return l.toArray(); }
+	|	"[" ( o=Elt(){ if (o != skip) l.add(o); } )+ "]" { return l.toArray(); }
 }
 
 Object[] parse() throws Exception: {
 	Object o = null;
 	List l = new ArrayList(); 
 }
-{	( o=Elt(){ l.add(o); } )* <EOF> { return l.toArray(); }
+{	( o=Elt(){ if (o != skip) l.add(o); } )* <EOF> { return l.toArray(); }
 }

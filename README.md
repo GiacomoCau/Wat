@@ -12,7 +12,7 @@ simple throw and catch for Wat and similar to Common Lisp for LispX.
 Here the [language reference](https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference.html)
 
 These are the differences compared to the original Wat/LispX
-* LispX was converted from lisp-2 to lisp-1
+* LispX was converted from lisp-3 (value,function,class) to lisp-1
 * LispX's `#nil` has been converted to `#null`
 * `#null` and `()` are the same value and implemented with java `null`
 * Lispx `#void` has been converted to `#inert`
@@ -25,16 +25,16 @@ These are the differences compared to the original Wat/LispX
 * Lists can be delimited by either `()` or `[]`
 * The __if__ operator can have multiple `test` and `then` forms, idea stolen from [Anarki](https://github.com/arclanguage/anarki)
 * The expressions can be `true` if is equals to `#t`, `!#f`, `!(or #f #null)`, `!(or #f #null #inert)` or `!(or #f #null #inert 0)` by setting `(typeT (or 0 1 2 3 4))`
-* The __def__ operator can return:
+* The __def__ and __set!__ operators can return:
 	`#inert`, the assigned value (`:rhs`) or the previous value (`:prv`) of the last bind made, or the current environment (`:cnt`)
-	specifying it directly in the expression `(def symbol (or #inert :rhs :prv :cnt) value)`
+	specifying it directly in the expression `(def/set! symbol (or #inert :rhs :prv :cnt) value)`
 	or indirectly by setting `(bndRes (or #inert :rhs :prv :cnt))`
 * The `Obj` extends `Throwable` and can be defined with
 	* key value pairs which will become attribute value pairs of the new obj `(new Obj key value ...)`
-	these pairs will become obj attribute value pairs `(obj key value ...)` which can be preceded by a
-		* String `(obj string key value ...)`
-		* Throwable `(obj throwable key value ...)`
-		* String and a Trowable `(obj Obj string throwable key value ...)`
+	<br>these pairs can be preceded by a
+		* String `(new Obj string key value ...)`
+		* Throwable `(new Obj throwable key value ...)`
+		* String and a Trowable `(new Obj string throwable key value ...)`
 	* an `Env` whose symbol value pairs from the first frame will become attribute value pairs of the new obj `(new Obj env)`
 * The `Obj` are `Combinable` and combined with
 	* a key return the value associated with that key `(obj key)`
@@ -56,21 +56,21 @@ These are the differences compared to the original Wat/LispX
 		* preceded by `:def` to bind in the last frame or `:set!` to bind in the frame where the single key is present `(env (or :def :set!) (or #inert :rhs :prv :cnt) key value ...)`
 * The keys used for `Obj` assignments and `Env` bindings can be `(or Keyword Symbol String)`
 * The __eval__ function can be called with only the expression to evaluate, the `Env` will be the current one `(eval exp)`
-* The __def__ and __vau__ (i.e. __\\__ or __lambda__) operators allow the decomposition of `Object[]` `Obj` and `Object` in addition to lists.
+* The __def__, __set!__ and __vau__ (i.e. __\\__ or __lambda__) operators allow the decomposition of `Object[]` `Obj` and `Object` in addition to lists.
 
 	the decomposition of the `Object[]` is for the position
-	* `(def (a b) (array 1 2 3))`
+	* `(def/set! (a b) (array 1 2 3))`
 	* `((\ ((a b)) (+ a b)) (array 1 2 3))`
 
 	the `Obj` decomposition is for the attribute name
-	* `(def (a b) (newObj :a 1 :b 2))`
+	* `(def/set! (a b) (newObj :a 1 :b 2))`
 	* `((\ ((a b)) (+ a b)) (newObj :a 1 :b 2))`
 
 	in the decomposition lists you can
 	* insert `.field` or `@method` or `(@method ...)` to have the resulting value with the name of the specified field or method
 	* specify a symbol in the last cdr, for `Object[]` it is the residual array while for all other objects it is the object itself
 
-* The __def__ operator allows control over the type and value of bindings.
+* The __def__ and __set!__ operators allows control over the type and value of bindings.
 	
 	for checking the type and value of the
 	* bindings: instead of the single `symbol` in the definiend tree, must be specified the expression `(#: check symbol)`
@@ -130,9 +130,10 @@ These are the differences compared to the original Wat/LispX
 * __wrap__ does not wrap the `Apv` and the `java functions`, but wraps the remaining `Combinator`
 * __unwrap__ unwraps the `Apv`, wraps the `java functions` in a `JFun` and does not unwrap the remaining `Combinator`
 * `String` can be interned depending on `intStr = (or true false)`, if interned they can be compared with `==`
-* __defMacro__, __defVau__, __def\\__, , __defde\\__, __def*\\__, __rec\\__, __let1\\__, __let1rec\\__, __let\\__ and __letrec\\__ allow the definition of `Combinable` with two equivalent forms
+* __defMacro__, __defVau__, __def\\__, __defde\\__, __def*\\__, __rec\\__, __let1\\__, __let1rec\\__, __let\\__ and __letrec\\__ allow the definition of `Combinable` with two equivalent forms
 	* `(___ name parameters . body)`
 	* `(___ (name . parameters) . body)`
 * __rec__, __rec\\__, __let1rec__, __let1rec\\__, __letrec__ and __letrec\\__ initialize definitions to `#inert` before evaluation
-* Unified the various types of comments internal to LispX definitions with only the multiline comment `#| ... |#`
-* Ability to enable and disable Tail Call Optimization `(doTco (or #t #f))`
+* Unified the various types of comments within LispX definitions with only the nestable multiline comment `#| ... |#`
+* The special symbol semicolon #; makes the following expression a comment
+* Ability to enable or disable Tail Call Optimization `(doTco (or #t #f))`

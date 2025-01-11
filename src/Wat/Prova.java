@@ -63,10 +63,18 @@ public class Prova {
 		//System.out.println(Utility.encode(".. <b>aaa</b>dddssd<b>"));
 		//System.out.println(Double.valueOf(0)==Double.valueOf(0));
 		//var a  = 0b1;
+		/*
 		for (int min=5, len=10, i=0; i<23; i+=1) {
 			if (i >= len && i % min == 0) out.println();
 			out.println(i<len ? i : (min + (i-min) % (len-min)));
 		}
+		*/
+		System.out.println(3/2.0);
+		System.out.println(3.0/2);
+		System.out.println(3/2);
+		System.out.println(3/(double)2);
+		System.out.println((double)3/2);
+		var $$__a = 1;
 	}
 	
 	public static void functions() {
