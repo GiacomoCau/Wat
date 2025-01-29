@@ -119,7 +119,7 @@
                         (pr (encode (subSeq l 4)))
                         (loop 
                           (until? (startsWith (set! l :rhs (readLine r)) "   |#"))
-                          (br (pr (encode ((\ (s) (if (startsWith s "\x28;fn") (@replace s "fn" name) s)) (subSeq l 4)) ))) ))))
+                          (br (pr (encode ((\ (s) (if (startsWith s "\x28;$nm") (@replace s "$nm" name) s)) (subSeq l 4)) ))) ))))
                   (div
                     (h3 (pr (encode (nm l0))))
                     (ul (li (pr (encode l0)))) )))) )))) ))

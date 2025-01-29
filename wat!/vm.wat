@@ -111,6 +111,8 @@
 (def SimpleError
   #|Class for simple errors with a MESSAGE.
    |For minimal lispx test compatibility
+   |
+   |(type Class)
    |#
   Error )
 
@@ -118,8 +120,8 @@
   #|Signal a simple error with a MESSAGE.
    |For minimal lispx test compatibility
    |
-   |$(fn message)
-   |$(type function)
+   |($nm message)
+   |(type function)
    |#
   (error message :type 'simple) )
 
@@ -152,5 +154,5 @@
 (load "wat!/test.wat")
 (load "test/testMsg.lsp")
 
-(%def milli (%- (@currentTimeMillis &java.lang.System) milli))
-(%$ "vm started in " (%$ milli "ms"))
+(def milli (- (@currentTimeMillis &java.lang.System) milli))
+($ "vm started in " (%$ milli "ms"))

@@ -1,6 +1,6 @@
 ;;; fast fourier trasform
 
-(def\ (cx r . i) (list :complex r (opt? i 0d)))
+(def\ (cx r . i) (list :complex r (optDft i 0d)))
 
 (def\ (c+ (:complex rx ix) (:complex ry iy))
   (cx (+ rx ry) (+ ix iy)) )
@@ -49,7 +49,7 @@
         (odd (fft (odds x)))
         ;(k -1)
         ;(++k (\ () (@set (%theEnv) 'k (+ k 1)) k))
-        ;(++ ($vau (k) e (eval (list 'begin (list 'def k (list '+ k 1)) k) (.parent e))))
+        ;(++ (vau (k) e (eval (list 'begin (list 'def k (list '+ k 1)) k) (.parent e))))
         ;(++ (macro (k) (list '%set! k :rhs (list '+ k 1))))
         (k (newBox -1))
         (aux (map (\ (j) (c* (cexp (c/ (c* (cx 0 -2) (cx (* pi (++ k)))) (cx (len x)))) j)) odd)) )

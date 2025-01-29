@@ -1,0 +1,156 @@
+{	name: "Lisp",
+	scopeName : "source.lisp",
+	fileTypes: ["lsp","lispx","wat"],
+	patterns : [
+		{ include: "#expr" }
+	],
+	repository: {
+		constant: {
+			name: "constant",
+			match: "(?<=(\\s|\\(|\\)|\\[|\\]))(#null|\\(\\)|#inert|#_|#ignore|#t|#true|#f|#false|#:)(?=(\\s|\\(|\\)|\\[|\\]))"
+			//match: "(?<=[\\s()\\[\\]])(#null|\\(\\)|#inert|#_|#ignore|#t|#true|#f|#false|#:)(?=[\\s()\\[\\]])"
+		},
+		primitive: {
+			name: "primitive",
+			match: "(?<=(\\s|\\(|\\)))(%(\\w|['´`<>^|~=$!?+\\-*%@/\\\\&#])+|if|begin|vau|def(\\\\|Vau|Macro)?|set!|lambda|\\\\|(un)?wrap|apply\\*?\\*?|eval|list\\*?|cons|c(a|d)+r!?|(cons|atom|null)\\?|assert|loop|atEnd|finally|rec\\\\?|let(\\*|1)?((rec)?\\\\?|Loop)?|catch(Tag)?(Wth)?|throw(Tag)?|takeSubcont|pushPrompt|push(Delim)?Subcont|pushSubcontBarrier)(?=(\\s|\\(|\\)))"
+		},
+		string: {
+			name: "string",		
+			match: "\"(\\\\\"|[^\"])*\""
+		},
+		character: {
+			name: "character",		
+			match: "(?<=(\\s|\\(|\\)))(#\\\\(x\\h(\\h(\\h\\h?)?)?|[\\x0021-\\xffff]| ))(?=(\\s|\\(|\\)))" 
+		},
+		keyword: {
+			name: "keyword",		
+			//match: ":\\w+"
+			 match: "(?<=[\\s()\\[\\]]):[^ ()]+(?=[\\s()\\[\\]])"
+		},
+		java: {
+			name: "java",		
+			match: "(&|@|\\.)([A-Za-z0-9$_.]|\\[\\])+(?=(\\s|\\(|\\)|\\[|\\]))"
+		},
+		number: {
+			name: "number",
+			match: "(?<=(\\s|\\(|\\)))(\\+|-)?\\d(_|\\d+)*(l|L|bi|BI|d|D|Bd|Bd|(\\.\\d(_|\\d+)*((e|E)(\\+|-)?\\d(_|\\d+)*)?(d|D|bd|BD)?)?)?(?=(\\s|\\(|\\)))"
+		},
+		//*
+		quoteSym: {
+			name: "quote",		
+			begin: "'\\s*",
+			end: "(?=(\\s|\\(|\\)))"
+		},
+		quoteList: {
+			name: "quote",		
+			begin: "'\\s*\\(",
+			end: "\\)",
+			patterns: [
+		        { include: "#qlist" }
+			]
+		},
+		qlist: {
+			begin: "\\(",
+			end: "\\)",
+			patterns: [
+		        { include: "#qlist" }
+			]
+		},
+		/*/
+		quote: {
+			name: "quote",		
+			match: "'\\s*",
+			patterns: [
+				{ include: "#quotelist" },
+				{ match: "\\w+" }
+			]
+		},
+		quotelist: {
+			begin: "\\(",
+			end: "\\)",
+			patterns: [
+				{ include: "#quotelist" }
+			]
+		},
+		//*/
+		symbol: {
+			name: "symbol",		
+			match: "(?<!')\\w+"
+		},
+		list: {
+			begin: "\\(",
+			beginCaptures: {
+				"0": { "name": "lPar" }
+			},
+			end: "\\)",
+			endCaptures: {
+				"0": { "name": "rPar" }
+			},	
+			patterns: [
+		        { include: "#expr" }
+			]
+		},
+		scomment: {
+			name: "comment",		
+			begin: "#;\\s*",
+			end: "(?=(\\s|\\(|\\)))",
+			patterns: [
+				{ name: "comment",		
+				  match: "\\w+"
+				}			
+			]
+		},
+		ecomment: {
+			name: "comment",		
+			begin: "#;\\s*\\(",
+			end: "\\)",
+			patterns: [
+		        { name: "comment", include: "#expr" },
+			]
+		},
+		lcomment: {
+			name: "comment",		
+			begin: "(?<!#);",
+			end: "$",
+			patterns: [
+		        {	match: "\"(\\\"|[^\"])+\"" }
+			]
+		},
+		comment: {
+			name: "comment",		
+			begin: "#\\|",
+			end: "\\|#",
+			patterns: [
+		        {	name: "doc",
+					match: "(?<=(\\s|\\())(syntax|type|derivation|class|extends|\\$nm|example)(?=(\\s|\\)))"
+				},
+		        {	match: "\"(\\\"|[^\"])+\"" },
+		        {	include: "#lcomment" },
+		        {	include: "#comment" }
+			]
+		},
+		expr: {
+			patterns: [
+		        { include: "#comment" },
+		        { include: "#lcomment" },
+		        { include: "#scomment" },
+		        { include: "#ecomment" },
+		        { include: "#constant" },
+		        { include: "#java" },
+				{ include: "#primitive" },
+				//*
+				{ include: "#quoteList" },
+				{ include: "#quoteSym" },
+				/*/
+				{ include: "#quote" },
+				//*/
+		        { include: "#string" },
+		        { include: "#character" },
+				{ include: "#keyword" },
+				{ include: "#number" },
+				{ include: "#symbol" },
+				{ include: "#list" }
+			]
+		}
+	}
+}

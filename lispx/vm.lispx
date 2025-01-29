@@ -120,23 +120,23 @@
 (defClass SimpleError (Error)
   #|Class for simple errors with a MESSAGE.
    |
-   |$(type class extends Error)
+   |(type Class extends Error)
    |#
   (message) )
 
 (def\ makeSimpleError (message)
   #|Create a new simple error with a MESSAGE.
    |
-   |$(fn message)
-   |$(type function)
+   |($nm message)
+   |(type function)
    |#
   (new SimpleError message :type 'simple) )
 
 (def\ simpleError (message)
   #|Signal a simple error with a MESSAGE.
    |
-   |$(fn message)
-   |$(type function)
+   |($nm message)
+   |(type function)
    |#
   (error (makeSimpleError message)) )
 
@@ -210,5 +210,5 @@ x
 (assert x Error :type 'unboundSymbol :symbol 'x)
 |#
 
-(%def milli (%- (@currentTimeMillis &java.lang.System) milli))
-(%$ "vm started in " (%$ milli "ms"))
+(def milli (- (@currentTimeMillis &java.lang.System) milli))
+($ "vm started in " (%$ milli "ms"))
