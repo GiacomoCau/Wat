@@ -1,0 +1,9 @@
+.comment { color: #008080; }
+.constant { color: #0000ff; }
+.keyword { color: #0000ff; }
+.string { color: #0000ff; }
+.character { color: #0000ff; }
+.quote { color: #0000ff; }
+.symbol { color: #000000; }
+.primitive { font-weight: bold; color: #7f0055; }
+.number { color: #008000;}

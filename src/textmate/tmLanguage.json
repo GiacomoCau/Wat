@@ -1,0 +1,82 @@
+{	name: "Lisp",
+	scopeName : "source.lisp",
+	fileTypes: ["lsp","lispx","wat"],
+	patterns : [
+		{ include: "#expr" }
+	],
+	repository: {
+		constant: {
+			name: "constant",
+			match: "(?<=(\\s|\\(|\\)))(#null|\\(\\)|#inert|#_|#ignore|#t|#true|#f|#false)(?=(\\s|\\(|\\)))"
+		},
+		primitive: {
+			name: "primitive",
+			match: "(?<=(\\s|\\(|\\)))%?(if|begin|vau|def|set!|lambda|\\\\|wrap|unwrap|apply|eval|list|list\\*|cons|c(a|d)+r|cons\\?|null\\?)(?=(\\s|\\(|\\)))"
+		},
+		string: {
+			name: "string",		
+			match: "\"(\\\"|[^\"])+\""
+		},
+		character: {
+			name: "character",		
+			match: "(?<=(\\s|\\(|\\)))(#\\\\(x\\h(\\h(\\h\\h?)?)?|[\\x0021-\\xffff]| ))(?=(\\s|\\(|\\)))" 
+		},
+		keyword: {
+			name: "keyword",		
+			match: ":\\w+"
+		},
+		number: {
+			name: "number",
+			match: "(?<=(\\s|\\(|\\)))(\\+|-)?\\d+(?=(\\s|\\(|\\)))"
+		},
+		quoteSym: {
+			name: "quote",		
+			begin: "'\\s*",
+			end: "(?=(\\s|\\(|\\)))",
+			patterns: [
+				{ name: "quote",		
+				  match: "\\w+"
+				}			
+			]
+		},
+		quoteList: {
+			name: "quote",		
+			begin: "'\\s*\\(",
+			end: "\\)",
+			patterns: [
+		        { name: "quote", include: "#expr" },
+			]
+		},
+		symbol: {
+			name: "symbol",		
+			match: "(?<!')\\w+"
+		},
+		list: {
+			begin: "\\(",
+			beginCaptures: {
+				"0": { "name": "lPar" }
+			},
+			end: "\\)",
+			endCaptures: {
+				"0": { "name": "rPar" }
+			},	
+			patterns: [
+		        { include: "#expr" }
+			]
+		},
+		expr: {
+			patterns: [
+		        { include: "#constant" },
+				{ include: "#primitive" },
+				{ include: "#quoteList" },
+				{ include: "#quoteSym" },
+		        { include: "#string" },
+		        { include: "#character" },
+				{ include: "#keyword" },
+				{ include: "#number" },
+				{ include: "#symbol" },
+				{ include: "#list" }
+			]
+		}
+	}
+}
