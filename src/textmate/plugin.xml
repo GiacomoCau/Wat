@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension point="org.eclipse.core.contenttype.contentTypes">
+      <content-type
+         file-extensions="lsp,wat,lispx"
+         id="userCreated1738254549263"
+         name="Lisp"
+         priority="normal">
+      </content-type>
+   </extension>
+   
+   <extension point="org.eclipse.ui.editors">
+      <editorContentTypeBinding
+         contentTypeId="userCreated1738254549263"
+         editorId="org.eclipse.ui.genericeditor.GenericEditor">
+      </editorContentTypeBinding>
+   </extension>
+   
+   <extension point="org.eclipse.tm4e.registry.grammars">
+      <grammar
+         scopeName="source.lisp"
+         path="textmate/tmLanguage.json" >
+      </grammar>
+      <scopeNameContentTypeBinding
+         contentTypeId="userCreated1738254549263"
+         scopeName="source.lisp">
+      </scopeNameContentTypeBinding>
+   </extension>
+   
+   <extension point="org.eclipse.tm4e.languageconfiguration.languageConfigurations">
+      <languageConfiguration
+         contentTypeId="userCreated1738254549263"
+         path="texmate/language-configuration.json" >
+      </languageConfiguration>
+   </extension>
+
+   <extension point="org.eclipse.tm4e.ui.themes">
+      <theme
+         id="org.eclipse.tm4e.ui.themes.lisp"
+   		 name="Lisp"
+         path="texmate/lisp.css" >
+      </theme>
+   </extension>   
+</plugin>

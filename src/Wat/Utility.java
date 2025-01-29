@@ -27,6 +27,8 @@ import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -400,6 +402,19 @@ public class Utility {
 		return null;
 	}
 	
+	static boolean cache = true;
+	record Signature(String name, Class classe, Class[] arguments) {
+		@Override public boolean equals(Object obj) {
+			if (this == obj) return true;
+			if (!(obj instanceof Signature firma)) return false;
+			return name.equals(firma.name)
+				&& classe.equals(firma.classe)
+				&& Arrays.equals(arguments, firma.arguments)
+			;
+		}
+	}
+	static HashMap<Signature, Executable> executable = new HashMap(); 
+	
 	public static <T extends Executable> T getExecutable(Object obj, String name, Class <?> ... classes) {
 		return getExecutable(obj, publicMember, name, classes);
 	}
@@ -407,6 +422,10 @@ public class Utility {
 		boolean constructor = name.equals("new");
 		Class <?> classe = constructor || obj instanceof Class ? (Class) obj : obj.getClass();
 		if (trace) out.println(classe + " " + toString(name, argumentsClass));
+		if (cache) {
+			var executable = Utility.executable.get(new Signature(name, classe, argumentsClass));
+			if (executable != null) return (T) executable;
+		}
 		// per i costruttori obj deve essere una classe e vanno cercati solo su quella
 		// per i metodi se obj è una classe vanno cercati 
 		// su Class (la classe di obj), su obj e le sue super classi
@@ -445,7 +464,10 @@ public class Utility {
 					bestCost = cost;
 					bestMatch = executable;
 				}
-				if (bestMatch != null) return (T) bestMatch;
+				if (bestMatch != null) {
+					if (cache) executable.put(new Signature(name, classe, argumentsClass), bestMatch);
+					return (T) bestMatch;
+				}
 				throw new RuntimeException((name.equals("new") ? "Costruttore" : "Metodo") + " non univoco." + executables);
 			}
 		}

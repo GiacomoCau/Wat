@@ -21,6 +21,7 @@
 (def cos (let1 (cos (@getMethod &java.lang.Math "cos" &double)) (\ (x) (cos #null x))))
 (def sin (let1 (sin (@getMethod &java.lang.Math "sin" &double)) (\ (x) (sin #null x))))
 
+
 (def\ exp (x) (@exp &java.lang.Math x))
 (def\ cos (x) (@cos &java.lang.Math x))
 (def\ sin (x) (@sin &java.lang.Math x))
@@ -50,7 +51,7 @@
         (odd (fft (odds x)))
         (k -1)
         ;(++k (\ () (@set (%theEnv) 'k (+ k 1)) k))
-        (++ ($vau (k) e (eval (list 'begin (list 'def k (list '+ k 1)) k) (.parent e))))
+        (++ (vau (k) e (eval (list 'begin (list 'def k (list '+ k 1)) k) (.parent e))))
         (aux (map (\ (j) (c* (cexp (c/ (c* (cx 0 -2) (cx (* pi (++ k)) 0)) (cx (len x) 0))) j)) odd)) )
       (append (map c+ even aux) (map c- even aux)) )))
 

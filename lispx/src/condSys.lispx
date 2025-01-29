@@ -135,7 +135,7 @@
    |and produces handlers from them, as well as the dynamic variable holding the handler chain
    |(the variable itself as a first class object, not its value, so it can be used with `progv').
    |
-   |(fn handlerSpecParser handlerFrameDynamic)
+   |($nm handlerSpecParser handlerFrameDynamic)
    |(type function)
    |#
   (vau (handlerSpecs . forms) env
@@ -152,7 +152,7 @@
 (def handlerBind
   #|Establish condition handlers specified by <b>handlerSpecs</b> around <b>forms</b>.
    |
-   |(fn handlerSpecs . forms)
+   |($nm handlerSpecs . forms)
    |(type fexpr)
    |
    |(syntax handlerSpecs (handlerSpec . handlerSpecs))
@@ -175,7 +175,7 @@
   #|Establish restart handlers specified by <b>handlerSpecs</b> around <b>forms</b>.
    |You should usually prefer `restartCase'.
    |
-   |(fn handlerSpecs . forms)
+   |($nm handlerSpecs . forms)
    |(type fexpr)
    |
    |(syntax handlerSpecs (handlerSpec . handlerSpecs))
@@ -206,7 +206,7 @@
    |they unwind the stack by jumping into the trampoline, and call the original handler function there.
    |If no condition is signalled / no restart is invoked, we return from the outer exit, ignoring the trampoline.
    |
-   |(fn handlerBindOperator)
+   |($nm handlerBindOperator)
    |(type function)
    |#
   (vau (handlerSpecs . forms) env
@@ -216,17 +216,15 @@
                      (map (\ ((name functionForm . properties))
                              (list* name
                                     (\ args (returnFrom trampoline (\ () (apply (eval functionForm env) args))))
-                                    ; permetterebbe functionForm arbitrarie che verrebbero restituite come valore dell'handler senza però definire l'handler
-                                    ;(\ args (returnFrom trampoline (\ () (let1 (f (eval functionForm env)) (if (type? f Combinable) (apply f args env) f)) )))
                                     properties ))
                           handlerSpecs)
-                     (list returnFrom exit (cons 'begin forms)) )
+                     (list 'returnFrom exit (cons 'begin forms)) )
                env ))))))
 
 (def handlerCase
   #|Like `handlerBind', but the stack is unwound before a handler function is called.
    |
-   |(fn handlerSpecs . forms)
+   |($nm handlerSpecs . forms)
    |(type fexpr)
    |
    |(syntax handlerSpecs (handlerSpec . handlerSpecs))
@@ -240,7 +238,7 @@
 (def restartCase
   #|Like `restartBind', but the stack is unwound before a handler function is called.
    |
-   |(fn handlerSpecs . forms)
+   |($nm handlerSpecs . forms)
    |(type fexpr)
    |
    |(syntax handlerSpecs (handlerSpec . handlerSpecs))
@@ -256,7 +254,7 @@
    |If the signal is unhandled, return #inert.
    |See `signal'.
    |
-   |(fn condition)
+   |($nm condition)
    |(type function)
    |#
   (let1 signal (handlerFrame (dget *conditionHandlerFrame*))
@@ -277,7 +275,7 @@
    |This is the so-called "condition firewall".
    |The chain gets passed in as the value of <b>handlerFrame</b>.
    |
-   |(fn handler handlerFrame condition)
+   |($nm handler handlerFrame condition)
    |(type function)
    |#
   (dlet1 (*conditionHandlerFrame* (getSlot handlerFrame 'parentFrame))
@@ -286,7 +284,7 @@
 (def\ lispx::applyHandlerFunction (handler arguments)
   #|Utility to call a condition or restart <b>handler</b>'s handler function with a list of <b>arguments</b>.
    |
-   |(fn handler arguments)
+   |($nm handler arguments)
    |(type function)
    |#
   (apply (getSlot handler 'handlerFunction) arguments) )
@@ -296,7 +294,7 @@
    |If the condition is unhandled, invoke the debugger. Therefore never returns normally.
    |See `error'.
    |
-   |(fn condition)
+   |($nm condition)
    |(type function)
    |#
   (signal condition)
@@ -307,7 +305,7 @@
   #|Metaprogramming utility to create the `signal' / `error' operators that
    |take restart handlerSpecs from the `_signal_' / `_error_' ones that don't.
    |
-   |(fn signalOperator)
+   |($nm signalOperator)
    |(type function)
    |#
   (vau (condition . handlerSpecs) env
@@ -325,7 +323,7 @@
    |Restart handlers that are associated with the condition can be bound as per `restartCase'.
    |The handlers should not specify the `:associatedConditions' property, as it will be set automatically.
    |
-   |(fn condition . handlerSpecs)
+   |($nm condition . handlerSpecs)
    |(type fexpr)
    |
    |(syntax handlerSpecs (handlerSpec . handlerSpecs))
@@ -340,7 +338,7 @@
    |Restart handlers that are associated with the condition can be bound as per `restartCase'.
    |The handlers should not specify the `:associatedConditions' property, as it will be set automatically.
    |
-   |(fn condition . handlerSpecs)
+   |($nm condition . handlerSpecs)
    |(type fexpr)
    |
    |(syntax handlerSpecs (handlerSpec . handlerSpecs))
@@ -353,7 +351,7 @@
   #|Invoke the restart designated by <b>restartDesignator</b>, which can be a symbol or a `restartHandler', with the given <b>arguments</b>.
    |Signal an error if the restart is not found.
    |
-   |(fn conrestartDesignator . arguments)
+   |($nm conrestartDesignator . arguments)
    |(type function)
    |#
   (lispx::invokeRestartWithArgumentsProducingFunction
@@ -365,7 +363,7 @@
    |by prompting the user for arguments via the restart's optional interactive function.
    |Signal an error if the restart is not found.
    |
-   |(fn restartDesignator)
+   |($nm restartDesignator)
    |(type function)
    |#
   (lispx::invokeRestartWithArgumentsProducingFunction
@@ -378,7 +376,7 @@
   #|Utility to invoke the restart designated by <b>restartDesignator</b>, which can be a symbol or a `RestartHandler',
    |with an arguments list produced by <b>function</b> (which receives a `restartHandler' as argument).
    |
-   |(fn restartDesignator function)
+   |($nm restartDesignator function)
    |(type function)
    |#
   (caseType restartDesignator
@@ -403,7 +401,7 @@
    |The <b>payload</b> parameter can be used to pass in an optional condition if we are looking for a restart handler (see `findRestart').
    |If we are looking for a condition handler, it is always #null.
    |
-   |(fn object handlerFrame payload)
+   |($nm object handlerFrame payload)
    |(type function)
    |#
   (whenOpt (handlerFrame handlerFrame)
@@ -416,7 +414,7 @@
 (def\ findRestart (name . condition)
   #|Find a restart handler by <b>name</b>, optionally limited to restarts associated with a particular <b>condition</b>.
    |
-   |(fn name . condition)
+   |($nm name . condition)
    |(type function)
    |#
   (whenOpt
@@ -429,14 +427,14 @@
    |The <b>object</b> can be a condition or a restart name.
    |The <b>payload</b> is only used for restart handlers, is always #null for condition handlers.
    |
-   |(fn handler object payload)
+   |($nm handler object payload)
    |(type generic)
    |# )
 
 (defMethod lispx::handlerApplicable? ((handler ConditionHandler) condition #null)
   #|A condition handler is applicable if the condition is an instance of its condition class.
    |
-   |(fn (handler ConditionHandler) condition #null)
+   |($nm (handler ConditionHandler) condition #null)
    |(type method)
    |#
   (let1 (conditionClass (getSlot handler 'conditionClass))
@@ -447,7 +445,7 @@
 (defMethod lispx::handlerApplicable? ((handler RestartHandler) restartName condition)
   #|A restart handler is applicable to a restart name and optional condition ...
    |
-   |(fn (handler RestartHandler) restartName condition)
+   |($nm (handler RestartHandler) restartName condition)
    |(type method)
    |#
   ;; ...if the restart name matches the handler's restart name, and ...
@@ -458,7 +456,7 @@
 (def\ lispx::restartHandlerApplicableToCondition? (handler condition)
   #|A restart handler is applicable to an optional condition ...
    |
-   |(fn handler condition)
+   |($nm handler condition)
    |(type function)
    |#
   (ifOpt (condition condition)
@@ -481,7 +479,7 @@
    |optionally limited to those that are explicitly associated with the supplied <b>condition</b>
    |or not associated with any condition.
    |
-   |(fn . condition)
+   |($nm . condition)
    |(type function)
    |#
   (let computeRestarts
@@ -507,7 +505,7 @@
 (def\ makeRestartError (restartName)
   #|Create a new `restart-error' for the given <b>restartName</b>.
    |
-   |(fn restartName)
+   |($nm restartName)
    |(type function)
    |#
   (new RestartError :type 'restart :restartName restartName) )
@@ -515,7 +513,7 @@
 (def\ restartError (restartName)
   #|Signal a new `restart-error'.
    |
-   |(fn restartName)
+   |($nm restartName)
    |(type function)
    |#
   (error (makeRestartError restartName)) )

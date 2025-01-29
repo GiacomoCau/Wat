@@ -69,12 +69,24 @@ public class Prova {
 			out.println(i<len ? i : (min + (i-min) % (len-min)));
 		}
 		*/
+		/*
 		System.out.println(3/2.0);
 		System.out.println(3.0/2);
 		System.out.println(3/2);
 		System.out.println(3/(double)2);
 		System.out.println((double)3/2);
 		var $$__a = 1;
+		*/
+		record Firma(String name, Class classe, Class... arguments) {
+			@Override public boolean equals(Object obj) {
+				if (this == obj) return true;
+				if (!(obj instanceof Firma other)) return false;
+				return name.equals(other.name)
+				&& classe.equals(other.classe)
+				&& Arrays.equals(arguments, other.arguments);
+			}
+		}
+		out.println(new Firma("a", Integer.class/*, String.class*/).equals(new Firma("a", Integer.class/*, String.class*/)));
 	}
 	
 	public static void functions() {

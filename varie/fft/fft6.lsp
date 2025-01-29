@@ -14,19 +14,20 @@
     (+ (* ix ry) (* rx iy)) ))
 
 (def\ (c/ (:complex rx ix) (:complex ry iy))
-  (let1 (den (+ (* ry ry) (* iy iy)))
-    (cx
-      (/ (+ (* rx ry) (* ix iy)) den)
-      (/ (- (* ix ry) (* rx iy)) den) )))
+  (def den (+ (* ry ry) (* iy iy)))
+  (cx
+    (/ (+ (* rx ry) (* ix iy)) den)
+    (/ (- (* ix ry) (* rx iy)) den) ))
 
 (def exp (let1 (exp (@getMethod Math "exp" &double)) (\ (r) (exp #null r))))
 (def cos (let1 (cos (@getMethod Math "cos" &double)) (\ (r) (cos #null r))))
 (def sin (let1 (sin (@getMethod Math "sin" &double)) (\ (r) (sin #null r))))
 
 (def\ (cexp (:complex r i))
+  (def r (exp r))
   (cx
-   (* (exp r) (cos i))
-   (* (exp r) (sin i)) ))
+    (* r (cos i))
+    (* r (sin i)) ))
 
 (def pi (.PI Math))
 

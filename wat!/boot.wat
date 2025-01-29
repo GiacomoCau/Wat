@@ -19,8 +19,8 @@
    |with <b>bindResult</b> :prv return the previous value of the last binding
    |with <b>bindResult</b> :cnt return the env
    |
-   |(fn definiendTree value)
-   |(fn definiendTree bindResult value)
+   |($nm definiendTree value)
+   |($nm definiendTree bindResult value)
    |(type fexpr)
    |
    |(syntax definiendTree (or symbol decomposeTree))
@@ -54,8 +54,8 @@
    |with <b>bindResult</b> :prv return the previous value of the last binding
    |with <b>bindResult</b> :cnt return the env
    |
-   |(fn definiendTree value)
-   |(fn definiendTree bindResult value)
+   |($nm definiendTree value)
+   |($nm definiendTree bindResult value)
    |(type fexpr)
    |
    |(syntax definiendTree (or symbol decomposeTree))
@@ -83,7 +83,7 @@
 (def vau
   #|Return a anonymous fexpr with the given <b>parameterTree</b>, <b>environmentParameter</b> and <b>body</b>.
    |
-   |(fn parametersTree environmentParameter . body)
+   |($nm parametersTree environmentParameter . body)
    |(type fexpr)
    |
    |(syntax parametersTree (or #null ignore symbol decomposeTree))
@@ -111,7 +111,7 @@
 (def begin
   #|Sequentially evaluate <b>forms</b> returning the value of the last one, #inert if <b>forms</b> is #null.
    |
-   |(fn . forms)
+   |($nm . forms)
    |(type fexpr)
    |#
   %begin )
@@ -121,7 +121,7 @@
    |Then evaluate either the <b>then</b> or <b>else</b> expression depending on whether the <b>test</b> yielded #true or #false.
    |Idea stolen from Anarki https://github.com/arclanguage/anarki
    |
-   |(fn test then . forms)
+   |($nm test then . forms)
    |(type fexpr)
    |
    |(syntax forms (or () (else) (test then . forms)))
@@ -134,7 +134,7 @@
   #|Return a new function that wraps around the underlying <b>operator</b>, and induces argument evaluations around it.
    |Does not wrap the `Apv` and the `java functions`, but wraps the remaining `Combinator`.
    |
-   |(fn operator)
+   |($nm operator)
    |(type function)
    |#
   %wrap )
@@ -142,7 +142,7 @@
 (def theEnv
   #|Return the current environment.
    |
-   |(fn)
+   |($nm)
    |(type fexpr)
    |
    |(derivation (vau () environment environment))
@@ -152,7 +152,7 @@
 (def eval
   #|Return the result of evaluation of <b>form</b> in the optional <b>environment</b>.
    |
-   |(fn form . environment)
+   |($nm form . environment)
    |(type function)
    |
    |(derivation (eval form (if (null? environment) (theEnv) (car! environment))))
@@ -164,7 +164,7 @@
    |which use the definition environment for evaluate <b>forms</b> as an implicit `begin' and get the values of the free variables.
    |The classic Scheme static lambda.
    |
-   |(fn parameterTree . forms)
+   |($nm parameterTree . forms)
    |(type function)
    |
    |(derivation (vau (parameterTree . forms) env (wrap (eval (list* 'vau parameterTree #ignore forms) env))))
@@ -180,7 +180,7 @@
   #|Return the underlying operator of a <b>function</b>.
    |Unwraps the `Apv`, wraps the `java functions` in a `JFun` and does not unwrap the remaining `Combinator`.
    |
-   |(fn function)
+   |($nm function)
    |(type function)
    |#
   %unwrap )
@@ -188,7 +188,7 @@
 (def apply
   #|Call the <b>function</b> with a dynamically-supplied list of <b>arguments</b> in the optional <b>environment</b>.
    |
-   |(fn fun args . environment)
+   |($nm fun args . environment)
    |(type function)
    |(derivation (eval (cons (unwrap fun) args) (if (null? environment) (newEnv) (car! environment)) ))
    |#
@@ -197,7 +197,7 @@
 (def car
   #|Return the contents of the address part of the register.
    |
-   |(fn cons)
+   |($nm cons)
    |(type function)
    |
    |(derivation ((\ ((car . #_)) car)) cons)
@@ -209,7 +209,7 @@
   #|Return the contents of the address part of the register
    |if decrement part of the register is #null, signals an error otherwise.
    |
-   |(fn cons)
+   |($nm cons)
    |(type function)
    |
    |(derivation ((\ ((car)) car)) cons)
@@ -219,7 +219,7 @@
 (def cadr
   #|Return the `car' of the `cdr' of the <b>cons</b>.
    |
-   |(fn cons)
+   |($nm cons)
    |(type function)
    |
    |(derivation ((\ ((#_ cadr . #_)) cadr)) cons)
@@ -231,7 +231,7 @@
 (def cdr
   #|Return the contents of the decrement part of the register.
    |
-   |(fn cons)
+   |($nm cons)
    |(type function)
    |
    |(derivation ((\ ((#_ . cdr)) cdr)) cons)
@@ -242,7 +242,7 @@
 (def cons
   #|Return a cons with the given <b>car</b> and <b>cdr</b>.
    |
-   |(fn car cdr)
+   |($nm car cdr)
    |(type function)
    |
    |(derivation (@new vm Cons car cdr))
@@ -252,7 +252,7 @@
 (def cons?
   #|Return #true if the <b>object</b> is a cons, #false otherwise.
    |
-   |(fn object)
+   |($nm object)
    |(type function)
    |
    |(derivation (type? object Cons))
@@ -262,7 +262,7 @@
 (def atom?
   #|Return #true if the <b>object</b> is not a cons, #false otherwise.
    |
-   |(fn object)
+   |($nm object)
    |(type function)
    |
    |(derivation (if (cons? object) #f #t))
@@ -272,7 +272,7 @@
 (def list
   #|Return the list of evaluated <b>arguments</b>.
    |
-   |(fn . arguments)
+   |($nm . arguments)
    |(type function)
    |
    |(derivation (wrap (vau arguments #ignore arguments)))
@@ -283,7 +283,7 @@
   #|Return a list of evaluated <b>arguments</b> so that
    |the last argument becomes the `cdr' of the list.
    |
-   |(fn . arguments)
+   |($nm . arguments)
    |(type function)
    |
    |(derivation (if (null? arguments) () (((\ (loop) (def loop :rhs (\ ((car . cdr)) (if (null? cdr) car (cons car (loop cdr)))))) #inert) arguments))) 
@@ -294,7 +294,7 @@
 (def null?
   #|Return #true if the <b>object</b> is #null, #false otherwise.
    |
-   |(fn object)
+   |($nm object)
    |(type function)
    |
    |(derivation (type? object Null))
@@ -304,7 +304,7 @@
 (def quote
   #|Return the unevaluated <b>operand</b>.
    |
-   |(fn operand)
+   |($nm operand)
    |(type fexpr)
    |
    |(derivation (vau (operand) #ignore operand))
@@ -317,9 +317,9 @@
    |- <b>value</b> is not present and the <b>expression</b> does not throws
    |- <b>expression</b> throws or returns an object and the object is not of the same <b>class</b> with the <b>attributes</b> of the given <b>value</b>.
    |
-   |(fn expression value)
-   |(fn expression)
-   |(fn expression class attribute value . attributes)
+   |($nm expression value)
+   |($nm expression)
+   |($nm expression class attribute value . attributes)
    |(type fexpr)
    |
    |(syntax attributes (attribute value . attributes))
@@ -335,7 +335,7 @@
   #|A boolean to discriminate when to evaluate or simply expand a macro.
    |Used from expand and makeMacro. 
    |#
-  #t)
+  #t )
 
 #|
 (def makeMacro
@@ -344,7 +344,7 @@
    |(by calling the expander with the operand as argument)
    |that is then evaluated in place of the operand.
    |
-   |(fn expander)
+   |($nm expander)
    |(type function)
    |#
   (wrap
@@ -361,7 +361,7 @@
    |(by calling the expander with the operand as argument)
    |that is then evaluated in place of the operand.
    |
-   |(fn expander)
+   |($nm expander)
    |(type function)
    |#
   (\ (expander)
@@ -373,7 +373,7 @@
 (def macro
   #|Return an anonymous macro with the given <b>parameterTree</b> and <b>forms</b> as body.
    |
-   |(fn parameterTree . forms)
+   |($nm parameterTree . forms)
    |(type macro)
    |#
   (makeMacro
@@ -383,7 +383,7 @@
 (def expand
   #|Expands a macro call rather than evaluates it.
    |
-   |(fn form)
+   |($nm form)
    |(type macro)
    |#
   (macro (form)
@@ -402,8 +402,8 @@
 (def defMacro
   #|Defines into the current environment the named macro <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
    |
-   |(fn name parameterTree . forms)
-   |(fn (name parameterTree) . forms)
+   |($nm name parameterTree . forms)
+   |($nm (name parameterTree) . forms)
    |(type macro)
    |#
   (macro (lhs . rhs)
@@ -417,8 +417,8 @@
 (defMacro (defVau lhs . rhs)
   #|Defines into the current environment the named fexpr <b>name</b> with the given <b>parameterTree</b>, <b>environmentParameter</b> and <b>forms</b> as body.
    |
-   |(fn name parameterTree . forms)
-   |(fn (name parameterTree) . forms)
+   |($nm name parameterTree . forms)
+   |($nm (name parameterTree) . forms)
    |(type macro)
    |#
   (if (cons? lhs)
@@ -438,8 +438,8 @@
 (defMacro (def* lhs . rhs)
   #|Defines into the current environment the resulting bindings from the match of the <b>definiendTree</b> against <b>values</b>, signals an error otherwise.
    |
-   |(fn definiendTree . values)
-   |(fn definiendTree bindResult . values)
+   |($nm definiendTree . values)
+   |($nm definiendTree bindResult . values)
    |(type macro)
    |
    |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
@@ -449,8 +449,8 @@
 (defMacro (def\ lhs . rhs)
   #|Defines into the current environment the named function <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
    |
-   |(fn name parameterTree . forms)
-   |(fn (name parameterTree) . forms)
+   |($nm name parameterTree . forms)
+   |($nm (name parameterTree) . forms)
    |(type macro)
    |#
   (if (cons? lhs)
@@ -467,7 +467,7 @@
 (def apply*
   #|Call the <b>function</b> with a dynamically-supplied list of <b>arguments</b>.
    |
-   |(fn function . arguments)
+   |($nm function . arguments)
    |(type function)
    |
    |(derivation (apply function arguments (newEnv)))
@@ -477,7 +477,7 @@
 (def apply**
   #|Call the <b>function</b> with a dynamically-supplied list of <b>arguments</b>.
    |
-   |(fn function . arguments)
+   |($nm function . arguments)
    |(type function)
    |
    |(derivation (apply function (apply list* arguments) (newEnv)))
@@ -490,7 +490,7 @@
    |you always need to know the environment where a binding is in to change it.
    |Therefore, we usually use boxes instead of mutating bindings directly.
    |
-   |(fn environmentParameter definiendTree value)
+   |($nm environmentParameter definiendTree value)
    |(type fexpr)
    |#
   (eval
@@ -502,7 +502,7 @@
    |which may use the execution environment in the <b>environmentParameter</b>, rather than the definition environment, for evaluate <b>forms</b> as an implicit `begin'.
    |Used for defining the dynamic environment and variable lambda de\ and dv\.
    |
-   |(fn parameterTree environmentParameter . forms)
+   |($nm parameterTree environmentParameter . forms)
    |(type function)
    |
    |(derivation (wrap (vau parameterTree environmentParameter . forms))
@@ -518,7 +518,7 @@
    |which use the execution environment for evaluate <b>forms</b> as an implicit `begin' and get the values of the free variables.
    |The first type of lambda before Scheme.
    |
-   |(fn parameterTree . forms)
+   |($nm parameterTree . forms)
    |(type fexpr)
    |
    |(derivation (wrau args env (apply begin forms (bind (newEnv env) parameterTree args))))
@@ -531,8 +531,8 @@
 (defMacro (defde\ lhs . rhs)
   #|Defines into the current environment the named dynamic environment function <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
    |
-   |(fn name parameterTree . forms)
-   |(fn (name parameterTree) . forms)
+   |($nm name parameterTree . forms)
+   |($nm (name parameterTree) . forms)
    |(type macro)
    |#
   (if (cons? lhs)
@@ -578,9 +578,9 @@
    |The <b>bindings</b> must be of even length, and alternately contain bindings names (symbols, keywords or string) and values.
    |When called with an obj the obj bindings also become env bindings.
    |
-   |(fn)
-   |(fn parent . bindings)
-   |(fn parent obj)
+   |($nm)
+   |($nm parent . bindings)
+   |($nm parent obj)
    |(type function)
    |
    |(syntax parent (or () Env))
@@ -619,7 +619,7 @@
 (def\ (newObj . bindings)
   #|Return a new obj with the given <b>binding</b>.
    |
-   |(fn . bindings)
+   |($nm . bindings)
    |(type function)
    |
    |(syntax bindings (attribute value . bindings))
@@ -630,7 +630,7 @@
 (defMacro (defObj name . bindings)
   #|Defines into the current environment the named box <b>name</b> with the given <b>bindings</b>.
    |
-   |(fn name . bindings)
+   |($nm name . bindings)
    |(type macro)
    |
    |(syntax bindings (attribute value . bindings))
@@ -645,7 +645,7 @@
 (def bound?
   #|Return #true if the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, #false otherwise.
    |
-   |(fn attribute object)
+   |($nm attribute object)
    |(type function)
    |
    |(syntax attribute (or Symbol Keyword String))
@@ -657,7 +657,7 @@
 (def value
   #|Return the value of the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, #null otherwise.
    |
-   |(fn attribute object)
+   |($nm attribute object)
    |(type function)
    |
    |(syntax attribute (or Symbol Keyword String))
@@ -669,7 +669,7 @@
 (def get
   #|Return the value of the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, signals an error otherwise.
    |
-   |(fn attribute object)
+   |($nm attribute object)
    |(type function)
    |
    |(syntax attribute (or Symbol Keyword String))
@@ -681,7 +681,7 @@
 (def\ (slotBound? object attribute)
   #|Return #true if the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, #false otherwise.
    |
-   |(fn object attribute)
+   |($nm object attribute)
    |(type function)
    |
    |(syntax object (or Env Obj))
@@ -693,7 +693,7 @@
 (def\ (getSlot object attribute)
   #|Return the value of <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, signals an error otherwise.
    |
-   |(fn object attribute)
+   |($nm object attribute)
    |(type function)
    |
    |(syntax object (or Env Obj))
@@ -705,7 +705,7 @@
 (def\ (setSlot object attribute value)
   #|Update or define with <b>value</b> the <b>attribute</b> in the <b>environment</b> or <b>obj</b>.
    |
-   |(fn object attribute value)
+   |($nm object attribute value)
    |(type function)
    |
    |(syntax object (or Env Obj))
@@ -742,7 +742,7 @@
    |The Box are functions that encapsulates a mutable value.
    |Without <b>value</b> use as <b>value</b> `(boxDft)'.
    |
-   |(fn . value)
+   |($nm . value)
    |(type function)
    |#
   (apply new (cons Box value)))
@@ -751,7 +751,7 @@
   #|Defines into the current environment the named box <b>name</b> with the optional <b>value</b>.
    |Without <b>value</b> use as <b>value</b> `(boxDft)'.
    |
-   |(fn name . value)
+   |($nm name . value)
    |(type macro)
    |#
   (list 'def name (cons 'newBox value)) )
@@ -763,11 +763,11 @@
 (def new
   #|Return a new instance of <b>class</b> with the given <b>value</b> or <b>bindings</b>.
    |
-   |(fn boxClass)
-   |(fn boxClass value)
-   |(fn objClass . bindings)
-   |(fn objClass string . bindings)
-   |(fn objClass string throwableObject . bindings)
+   |($nm boxClass)
+   |($nm boxClass value)
+   |($nm objClass . bindings)
+   |($nm objClass string . bindings)
+   |($nm objClass string throwableObject . bindings)
    |(syntax bindings (attribute value . bindings))
    |(syntax attribute (or Symbol Keyword String))
    |#
@@ -776,11 +776,11 @@
 (defMacro (defNew name class . args)
   #|Defines into the current environment a named instance <b>name</b> of the given <b>class</b> and <b>value</b> or <b>bindings</b>.
    |
-   |(fn name boxClass)
-   |(fn name boxClass value)
-   |(fn name objClass . bindings)
-   |(fn name objClass string . bindings)
-   |(fn name objClass string throwableObject . bindings)
+   |($nm name boxClass)
+   |($nm name boxClass value)
+   |($nm name objClass . bindings)
+   |($nm name objClass string . bindings)
+   |($nm name objClass string throwableObject . bindings)
    |(type macro)
    |
    |(syntax bindings (attribute value . bindings))
@@ -795,7 +795,7 @@
 (def\ (caar x)
   #|Return the `car' of the `car' of the <b>cons</b>.
    |
-   |(fn cons)
+   |($nm cons)
    |(type function)
    |
    |(derivation ((\ (((caar . #_) . #_)) caar)) cons)
@@ -806,7 +806,7 @@
 (def\ (cadr! (#_ cadr))
   #|Return the `car' of the `cdr' of the <b>cons</b> if 'cddr' is #null, signals an error otherwise.
    |
-   |(fn cons)
+   |($nm cons)
    |(type function)
    |
    |(derivation ((\ ((#_ cadr)) cadr)) cons)
@@ -816,7 +816,7 @@
 (def\ (cdar x)
   #|Return the `cdr' of the `car' of the <b>cons</b>.
    |
-   |(fn cons)
+   |($nm cons)
    |(type function)
    |
    |(derivation ((\ (((#_ . cdar) . #_)) cdar)) cons)
@@ -827,7 +827,7 @@
 (def cddr
   #|Return the `cdr' of the `cdr' of the <b>cons</b>.
    |
-   |(fn cons)
+   |($nm cons)
    |(type function)
    |
    |(derivation ((\ ((#_ #_ . cddr)) cddr)) cons)
@@ -839,7 +839,7 @@
 (def\ (cons! car)
   #|Return a cons with the given <b>car</b> and #null.
    |
-   |(fn car)
+   |($nm car)
    |(type function)
    |
    |(derivarion ((\ (car) (cons car)) car))
@@ -849,7 +849,7 @@
 (def nth
   #|Return element number N of <b>list</b>, where the `car' is element zero.
    |
-   |(fn n list)
+   |($nm n list)
    |(type function)
    |#
   %nth)
@@ -857,7 +857,7 @@
 (def nthCdr
   #|Returns the tail of <b>list</b> that would be obtained by calling `cdr' N times in succession.
    |
-   |(fn n list)
+   |($nm n list)
    |(type function)
    |#
   %nthCdr)
@@ -871,8 +871,8 @@
    |with <b>bindResult</b> :prv return the previous value of the `car'
    |with <b>bindResult</b> :cnt return the Cons or List
    |
-   |(fn value)
-   |(fn bindResult value)
+   |($nm value)
+   |($nm bindResult value)
    |(type function)
    |
    |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
@@ -888,8 +888,8 @@
    |with <b>bindResult</b> :prv return the previous value of the `cdr'
    |with <b>bindResult</b> :cnt return the Cons
    |
-   |(fn value)
-   |(fn bindResult value)
+   |($nm value)
+   |($nm bindResult value)
    |(type function)
    |
    |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
@@ -910,7 +910,7 @@
    |It becomes the `cdr' of the final cons of the first list,
    |or is returned directly if the first list is empty.
    |
-   |(fn list1 list2)
+   |($nm list1 list2)
    |(type function)
    |#
   %append)
@@ -918,7 +918,7 @@
 (def len
   #|Return the number of elements in the <b>list</b>.
    |
-   |(fn list)
+   |($nm list)
    |(type function)
    |#
   %len)
@@ -926,7 +926,7 @@
 (def list?
   #|Return #true if the <b>object</b> is a list, #false otherwise.
    |
-   |(fn object)
+   |($nm object)
    |(type function)
    |
    |(derivation (type? object List))
@@ -936,7 +936,7 @@
 (def reverse
   #|Reverse the <b>list</b>.
    |
-   |(fn list)
+   |($nm list)
    |(type function)
    |#
   %reverse)
@@ -951,7 +951,7 @@
   #|Return the unique symbol or keyword with <b>string</b> as name.
    |Keyword if <b>string</b> start with ':', symbol otherwise
    |
-   |(fn string)
+   |($nm string)
    |(type function)
    |#
   %intern)
@@ -959,7 +959,7 @@
 (def name
   #|Return the name of the <b>intern</b> as a string.
    |
-   |(fn intern)
+   |($nm intern)
    |(type function)
    |#
   %name)
@@ -967,7 +967,7 @@
 (def keyword
   #|Return the unique keyword with <b>string</b> as name.
    |
-   |(fn string)
+   |($nm string)
    |(type function)
    |#
   %keyword)
@@ -975,7 +975,7 @@
 (def keyword?
   #|Return #true if the <b>object</b> is a keyword, #false otherwise.
    |
-   |(fn object)
+   |($nm object)
    |(type function)
    |
    |(derivation (type? object Keyword))
@@ -985,7 +985,7 @@
 (def\ (keywordName (#: Keyword keyword))
   #|Return the name of the <b>keyword</b> as a string.
    |
-   |(fn keyword)
+   |($nm keyword)
    |(type function)
    |#
   (name keyword) )
@@ -993,7 +993,7 @@
 (def symbol
   #|Return the unique symbol with <b>string</b> as name.
    |
-   |(fn string)
+   |($nm string)
    |(type function)
    |#
   %symbol)
@@ -1001,7 +1001,7 @@
 (def symbol?
   #|Return #true if the <b>object</b> is a symbol, #false otherwise.
    |
-   |(fn object)
+   |($nm object)
    |(type function)
    |
    |(derivation (type? object Symbol))
@@ -1011,7 +1011,7 @@
 (def\ (symbolName (#: Symbol symbol))
   #|Return the name of the <b>symbol</b> as a string.
    |
-   |(fn symbol)
+   |($nm symbol)
    |(type function)
    |#
   (name symbol) )
@@ -1023,29 +1023,29 @@
 (def ==
   #|Return #true if <b>a</b> istanceof Number && <b>a</b> equals <b>b</b> || <b>a</b> == <b>b</b>, #false otherwise.
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %==)
+  %== )
 
 (def !=
   #|Return #false if <b>a</b> istanceof Number && <b>a</b> equals <b>b</b> || <b>a</b> == <b>b</b>, #true otherwise.
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %!=)
+  %!= )
 
 (def eq?
   #|Return #true if <b>a</b> is equals <b>b</b>, #false otherwise.
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %eq?)
+  %eq? )
 
 (def\ (ignore? o) (== o #_))
-(def\ (sheColon? o) (== o #:))
+(def\ (sharpColon? o) (== o #:))
 (def\ (inert? o) (== o #inert))
 
 
@@ -1055,27 +1055,27 @@
 (def !
   #|Invert the <b>boolean</b>.
    |
-   |(fn boolean)
+   |($nm boolean)
    |(type function)
    |
    |(derivation (if boolean #f #t))
    |#
-  %!)
+  %! )
 
 (def not
   #|Alias of !.
    |#
-  !)
+  ! )
 
 (def !!
   #|Convert a <b>value</b> to boolean when typeT != 0.
    |
-   |(fn value)
+   |($nm value)
    |(type function)
    |
    |(derivation (if value #t #f))
    |#
-  %!!)
+  %!! )
 
 
 #|! Number
@@ -1084,57 +1084,57 @@
 (def number?
   #|Return #true if the <b>object</b> is a number, #false otherwise.
    |
-   |(fn object)
+   |($nm object)
    |(type function)
    |
    |(derivation (type? object Number))
    |#
-  %number?)
+  %number? )
 
 (def +
   #|Java binary + operator, sums the values after the conversion of the operands to the same type.
    |Converts to BigDecimal, Double, BigInteger, Long or Integer if one operands is BigDecimal, Double, BigInteger, Long or Integer
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %+)
+  %+ )
 
 (def *
   #|Java binary * operator, multiplies the values after the conversion of the operands to the same type.
    |Converts to BigDecimal, Double, BigInteger, Long or Integer if one operands is BigDecimal, Double, BigInteger, Long or Integer
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %*)
+  %* )
 
 (def -
   #|Java binary - operator, subtracts the values after the conversion of the operands to the same type.
    |Converts to BigDecimal, Double, BigInteger, Long or Integer if one operands is BigDecimal, Double, BigInteger, Long or Integer
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %-)
+  %- )
 
 (def /
   #|Java binary / operator, divides the values after the conversion of the operands to the same type.
    |Converts to BigDecimal, Double, BigInteger, Long or Integer if one operands is BigDecimal, Double, BigInteger, Long or Integer
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %/)
+  %/ )
 
 (def %
   #|Java binary % operator, rest of the division of the values after the conversion of the operands to the same type.
    |Converts to BigDecimal, Double, BigInteger, Long or Integer if one operands is BigDecimal, Double, BigInteger, Long or Integer
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %%)
+  %% )
 
 (def\ (1+ n) (+ n 1))
 (def\ (-1+ n) (- n 1))
@@ -1151,20 +1151,20 @@
 (def string?
   #|Return #true if the <b>object</b> is a string, #false otherwise.
    |
-   |(fn object)
+   |($nm object)
    |(type function)
    |
    |(derivation (type? object String))
    |#
-  %string?)
+  %string? )
 
 (def $
   #|Java binary + operator, join the values after the conversion of the operands to string.
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %$)
+  %$ )
 
 
 #|! Comparators
@@ -1173,34 +1173,34 @@
 (def <
   #|Java binary < operator.
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %<)
+  %< )
 
 (def >
   #|Java binary > operator.
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %>)
+  %> )
 
 (def <=
   #|Java binary <= operator.
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %<=)
+  %<= )
 
 (def >=
   #|Java binary >= operator.
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %>=)
+  %>= )
 
 (def\ (min a b) (if (< a b) a b))
 (def\ (max a b) (if (> a b) a b))
@@ -1212,58 +1212,58 @@
 (def ~
   #|Java binary ~ operator.
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %~)
+  %~ )
 
 (def &
   #|Java binary & operator.
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %&)
+  %& )
 
 (def |
   #|Java binary | operator.
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %|)
+  %| )
 
 (def ^
   #|Java binary ^ operator.
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %^)
+  %^ )
 
 (def <<
   #|Java binary << operator.
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %<<)
+  %<< )
 
 (def >>
   #|Java binary >> operator.
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %>>)
+  %>> )
 
 (def >>>
   #|Java binary >>> operator.
    |
-   |(fn a b)
+   |($nm a b)
    |(type function)
    |#
-  %>>>)
+  %>>> )
 
 
 #|! First-Order Controls
@@ -1272,27 +1272,27 @@
 (def loop
   #|Evaluate <b>forms</b> as an implicit `begin' in an infinite loop.
    |
-   |(fn . forms)
+   |($nm . forms)
    |(type fexpr)
    |#
-  %loop)
+  %loop )
 
 (def atEnd
   #|Evaluate the <b>protectedForms</b> as an implicit `begin'.
    |Regardless of whether the protected form returns normally or via a nonlocal exit or panic,
    |the <b>cleanupForm</b> are evaluated after the protected forms.
    |
-   |(fn cleanupForm . protectedForms)
+   |($nm cleanupForm . protectedForms)
    |(type fexpr)
    |#
-  %atEnd)
+  %atEnd )
 
 (defMacro (finally protected . cleanUps)
   #|Evaluate the <b>protectedForm</b> and return its result.
    |Regardless of whether the protected form returns normally or via a nonlocal exit or panic,
    |the <b>cleanupForms</b> are evaluated as an implicit `begin' after the <b>protectedForm</b>.
    |
-   |(fn protectedForm . cleanupForms)
+   |($nm protectedForm . cleanupForms)
    |(type macro)
    |
    |(derivation (atEnd (begin . cleanupForms) protectedForm))
@@ -1302,15 +1302,15 @@
 (def throwTag
   #|Abort to a nesting catch <b>tag</b> established by `catch', evaluate <b>forms</b> as an implicit `begin'.
    |
-   |(fn tag . forms)
+   |($nm tag . forms)
    |(type fexpr)
    |#
-  %throwTag)
+  %throwTag )
 
 (defMacro (throw . forms)
   #|Abort to a nesting generic catch, evaluate <b>forms</b> as an implicit `begin'.
    |
-   |(fn . forms)
+   |($nm . forms)
    |(type fexpr)
    |
    |(derivation (throwTag #ignore forms))
@@ -1322,7 +1322,7 @@
    |The <b>forms</b> may use `throw' to nonlocally exit from the <b>tag</b>. if <b>forms</b> throw and <b>handler</b> is a value, value will be the result of `catchTagWth'
    |otherwise the value of the `throw' is passed to the <b>handler</b> and the value returned by the <b>handler</b> will be the result of the `catchTagWth'
    |
-   |(fn tag handler . forms)
+   |($nm tag handler . forms)
    |(type fexpr)
    |#
   %catchTagWth )
@@ -1332,18 +1332,18 @@
    |The <b>forms</b> may use `throw' to nonlocally exit. if <b>forms</b> throw and <b>handler</b> is a value, value will be the result of `catchWth'
    |otherwise the value of the `throw' is passed to the <b>handler</b> and the value returned by the <b>handler</b> will be the result of the `catchWth'
    |
-   |(fn handler . forms)
+   |($nm handler . forms)
    |(type macro)
    |
    |(derivation (catchTagWth #ignore handler . forms))
    |#
-  (list* 'catchTagWth #_ hdl forms))
+  (list* 'catchTagWth #_ hdl forms) )
 
 (defMacro (catchTag tag . forms)
   #|Establishes a catch <b>tag</b> without handler and evaluate <b>forms</b> as an implicit `begin'.
    |The <b>forms</b> may use `throw' to nonlocally exit from the tag. if <b>forms</b> throw the value returned by the `throw' will be the result of the `catchTag'
    |
-   |(fn tag . forms)
+   |($nm tag . forms)
    |(type macro)
    |
    |(derivation (catchTagWth tag #ignore . forms))
@@ -1354,12 +1354,12 @@
   #|Establishes an generic catch all without handler and evaluate <b>forms</b> as an implicit `begin'.
    |The <b>forms</b> may use `throw' to nonlocally exit. if <b>forms</b> throw the value returned by the `throw' will be the result of the `catch'
    |
-   |(fn . forms)
+   |($nm . forms)
    |(type macro)
    |
    |(derivation (catchTagWth #ignore #ignore . forms))
    |#
-  (list* 'catchTagWth #_ #_ forms))
+  (list* 'catchTagWth #_ #_ forms) )
 
 (assert (catch (throw)) #inert)
 (assert (catch (throw 1)) 1)
@@ -1377,33 +1377,33 @@
   #|Abort outwards to the <b>prompt</b>.
    |When the prompt is reached, evaluate <b>forms</b> as an implicit `begin' with <b>symbol</b> bound to the captured continuation (which does not include the prompt).
    |
-   |(fn prompt symbol . forms)
+   |($nm prompt symbol . forms)
    |(type fexpr)
    |#
-  %takeSubcont)
+  %takeSubcont )
 
 (def pushPrompt
   #|Push the <b>prompt</b> and evaluate <b>forms</b> as an implicit `begin' inside the <b>prompt</b>.
    |This delimits the continuation.
    |
-   |(fn prompt . forms)
+   |($nm prompt . forms)
    |(type fexpr)
    |#
-  %pushPrompt)
+  %pushPrompt )
 
 (def pushDelimSubcont
   #|Push the <b>prompt</b> and compose the previously captured <b>continuation</b> inside it
    |before evaluated <b>forms</b> as an implicit `begin' inside the new continuation.
    |
-   |(fn prompt continuation . forms)
+   |($nm prompt continuation . forms)
    |(type fexpr)
    |#
-  %pushDelimSubcont)
+  %pushDelimSubcont )
 
 (defMacro (pushSubcont continuation . forms)
   #|We don't have `pushSubcont' but we can emulate it with a `pushDelimSubcont' that pushes an #ignore prompt.
    |
-   |(fn continuation . forms)
+   |($nm continuation . forms)
    |(type macro)
    |
    |(derivation (pushDelimSubcont #ignore continuation . forms))
@@ -1413,10 +1413,10 @@
 (def pushSubcontBarrier
   #|Evaluate <b>forms</b> as an implicit `begin' after push a continuation barrier that prevent <b>forms</b> from capturing any continuations to the outside 
    |
-   |(fn . forms)
+   |($nm . forms)
    |(type fexpr)
    |#
-  %pushSubcontBarrier)
+  %pushSubcontBarrier )
 
 
 #|! Errors
@@ -1425,26 +1425,26 @@
 (def rootPrompt
   #|The prompt used for delimiting all.
    |#
-  %rootPrompt)
+  %rootPrompt )
 
 (def error
   #|Simple function to define and signal an error
    |In LispX it will be replaced by a function adapted to the LispX Condition System 
    |
-   |(fn string . attributes)
-   |(fn throwable . attributes)
-   |(fn string throwable . attributes)
+   |($nm string . attributes)
+   |($nm throwable . attributes)
+   |($nm string throwable . attributes)
    |(type function)
    |
    |(syntax attributes (or () (attribute value . attributes)))
    |(syntax attribute (or Symbol Keyword String))
    |#
-  %error)
+  %error )
 
 (def\ makeTypeError (datum expected)
   #|Return a new type error with <b>datum</b> and <b>expected</b>.
    |
-   |(fn datum expected)
+   |($nm datum expected)
    |(type function)
    |#
   (new Error "not a {expected}: {datum}" :type 'type :datum datum :expected expected) )
@@ -1452,7 +1452,7 @@
 (def\ typeError (datum expected)
   #|Signal a type error with <b>datum</b> and <b>expected</b>.
    |
-   |(fn datum expected)
+   |($nm datum expected)
    |(type function)
    |#
   (error (makeTypeError datum expected)) )
@@ -1463,22 +1463,22 @@
    |- <b>value</b> is not present and the <b>expression</b> does not throws
    |- <b>expression</b> throws or returns an object and the object is not of the same <b>class</b> with the <b>attributes</b> of the given <b>value</b>.
    |
-   |(fn name expression value)
-   |(fn name expression)
-   |(fn name expression class attribute value . attributes)
+   |($nm name expression value)
+   |($nm name expression)
+   |($nm name expression class attribute value . attributes)
    |(type fexpr)
    |
    |(syntax attributes (or () (attribute value . attributes)))
    |(syntax attribute (or Symbol Keyword String .Field @Method))
    |#
-  %test)
+  %test )
 
 (def\ (printFrames k) (unless (null? k) (printFrames (.nxt k)) (log "v" k)))
 
 (def\ (printStacktrace throwable)
   #|Throw the <b>throwable</b> after print the message of <b>throwable</b> and the stacktrace if `(prStk)'.
    |
-   |(fn throwable)
+   |($nm throwable)
    |(type function)
    |#
   (when (prStk)
@@ -1495,52 +1495,52 @@
 (def className
   #|Return the name symbol of the <b>class</b>.
    |
-   |(fn class)
+   |($nm class)
    |(type function)
    |
    |(derivation (symbol (@getSimpleName class))))
    |#
-  %className)
+  %className )
 
 (def classOf
   #|Return the class of the <b>object</b>.
    |
-   |(fn object)
+   |($nm object)
    |(type function)
    |
    |(derivation (if (null? object) #null (@getClass object)))
    |#
-  %classOf)
+  %classOf )
 
 (def instanceOf?
   #|Return #true if <b>object</b> is instaceof <b>class</b>.
    |
-   |(fn object class)
+   |($nm object class)
    |(type function)
    |#
-  %instanceOf?)
+  %instanceOf? )
 
 (def subClass?
   #|Return #true if the <b>class</b> is a subclass of the <b>superclass</b>, #false otherwise.
    |A class is considered a subclass of itself.
    |
-   |(fn class superclass)
+   |($nm class superclass)
    |(type function)
    |
    |(derivation (@isAssignableFrom superClass class)))
    |#
-  %subClass?)
+  %subClass? )
 
 (def type?
   #|Return #true if the <b>object</b> is an instance of the <b>class</b>, #false otherwise.
    |
-   |(fn object class)
+   |($nm object class)
    |(type function)
    |
    |(derivation (if (null? class) (null? object) (null? object) #f (subClass? (classOf object) class)))
    |(derivation (if (null? class) (null? object) (instanceOf object class)))
    |#
-  %type?)
+  %type? )
 
 
 #|! Basic Functions and Macros
@@ -1549,15 +1549,15 @@
 (def\ (idf x)
   #|Identity function.
    |
-   |(fn object)
+   |($nm object)
    |(type function)
    |#
-  x)
+  x )
 
 (defMacro _ forms
   #|"Implicit" Argument Lambda.
    |
-   |(fn . forms)
+   |($nm . forms)
    |(type macro)
    |(derivation (\ (_) . forms))
    |#
@@ -1566,7 +1566,7 @@
 (def\ (peval f v)
   #|Single arg partial evaluation.
    |
-   |(fn f v)
+   |($nm f v)
    |(type function)
    |
    |(derivation (\ args (apply f (cons v args))))
@@ -1576,7 +1576,7 @@
 (def\ (peval* f . v*)
   #|Multiple args partial evaluation.
    |
-   |(fn f v*)
+   |($nm f v*)
    |(type function)
    |
    |(derivation (\ args (apply f (append v* args))))
@@ -1586,7 +1586,7 @@
 (def\ (compose f g)
   #|Return a function equivalent to the composition of the two functions.
    |
-   |(fn f g)
+   |($nm f g)
    |(type function)
    |
    |(derivation (\ args (f (apply g args))))
@@ -1596,7 +1596,7 @@
 (def\ (compose* . f*)
   #|Return a function equivalent to the composition of the functions.
    |
-   |(fn . f*)
+   |($nm . f*)
    |(type function)
    |
    |(derivation (\ args ((rec\ (loop (f . f*)) (if (null? f*) (apply f args) (f (loop f*)))) f*)))
@@ -1610,7 +1610,7 @@
   #|Return <b>value</b>, after lexically bind <b>name</b> with #inert,
    |and update <b>name</b> with <b>value</b> so that it can reference itself.
    |
-   |(fn name value)
+   |($nm name value)
    |(type macro)
    |#
   (list (list '\ (list name) (list 'def name :rhs value)) #inert) )
@@ -1627,8 +1627,8 @@
   #|Return the function with given <b>parameterTree</b> and <b>forms</b> as body, after lexically bind <b>name</b> with #inert,
    |and updated <b>name</b> with the function so that it can reference to itself.
    |
-   |(fn name parameterTree . forms)
-   |(fn (name . parameterTree) . forms)
+   |($nm name parameterTree . forms)
+   |($nm (name . parameterTree) . forms)
    |(type macro)
    |#
   (if (cons? lhs)
@@ -1648,8 +1648,8 @@
 (def\ (map f lst . lst*)
   #|Return a new list by applying the <b>function</b> to each element of the <b>list</b> or the <b>lists</b> which must be of the same length
    |
-   |(fn function list)
-   |(fn function list1 list2 ... listN)
+   |($nm function list)
+   |($nm function list1 list2 ... listN)
    |(type function)
    |#
   (if (null? lst*)
@@ -1672,9 +1672,9 @@
 (defMacro (def*\ lhs* . rhs*)
   #|Defines into the current environment the named functions <b>names</b> with given <b>parameterTrees</b> and <b>forms</b> as body. 
    |
-   |(fn definiendTrees . bodies)
-   |(fn ((name parameterTree) . definiendTrees) . (forms . bodies))
-   |(fn (name . definiendTrees) . ((parameterTree . forms) . bodies))
+   |($nm definiendTrees . bodies)
+   |($nm ((name parameterTree) . definiendTrees) . (forms . bodies))
+   |($nm (name . definiendTrees) . ((parameterTree . forms) . bodies))
    |(type macro)
    |
    |(syntax definiendTrees ((name parameterTree) . definiendTrees)
@@ -1704,7 +1704,7 @@
   #|Establishes the <b>binding</b>, before the evaluation of <b>forms</b> as an implicit `begin'.
    |Idea stolen from Anarki https://github.com/arclanguage/anarki
    |
-   |(fn binding . forms)
+   |($nm binding . forms)
    |(type macro)
    |
    |(syntax binding . (definiendTree initForm))
@@ -1716,7 +1716,7 @@
    |before the evaluation of <b>forms</b> as an implicit `begin'.
    |Idea stolen from Anarki https://github.com/arclanguage/anarki
    |
-   |(fn bindings . forms)
+   |($nm bindings . forms)
    |(type macro)
    |
    |(syntax bindings (definiendTree intiForm . bindings))
@@ -1736,8 +1736,8 @@
    |after evaluate <b>forms</b> as an implicit `begin'.
    |Idea stolen from Anarki https://github.com/arclanguage/anarki
    |
-   |(fn bindings . forms)
-   |(fn name bindings . forms)
+   |($nm bindings . forms)
+   |($nm name bindings . forms)
    |(type macro)
    |
    |(syntax bindings (definiendTree initForm . bindings))
@@ -1754,8 +1754,8 @@
    |The function is immediately applied to the list containing the value of the <b>initForms</b> evaluate as an implicit `begin',
    |after evaluate <b>forms</b> as an implicit `begin'.
    |
-   |(fn name binding . forms)
-   |(fn (name . binding) . forms)
+   |($nm name binding . forms)
+   |($nm (name . binding) . forms)
    |(type macro)
    |
    |(syntax binding (parameterTree . initForms))
@@ -1776,8 +1776,8 @@
    |The <b>initForms</b> is evaluate as an implicit `begin'.
    |If the first argument is a symbol is like 'let1Loop'.
    |
-   |(fn binding . forms)
-   |(fn name binding . forms)
+   |($nm binding . forms)
+   |($nm name binding . forms)
    |(type macro)
    |
    |(syntax binding (definiendTree . initForms))
@@ -1794,13 +1794,13 @@
 (defMacro (let1\ binding . forms)
   #|Establishes the <b>functionBindings</b>, after evaluate of <b>forms</b> as an implicit `begin'.
    |
-   |(fn functionBinding . forms)
+   |($nm functionBinding . forms)
    |(type macro)
    |
    |(syntax functionBinding (name parameterTree . bodyForms))
    |(syntax functionBinding ((name . parameterTree) . bodyForms))
    |#
-  (list* 'let1 (->name+lambda binding) forms))
+  (list* 'let1 (->name+lambda binding) forms) )
 
 (assert (let1\ (f (a) a) (f 5)) 5)
 (assert (let1\ ((f a) a) (f 5)) 5)
@@ -1810,7 +1810,7 @@
    |after evaluate <b>forms</b> as an implicit `begin'.
    |The binding is initializated to #inert before evaluating <b>initForms</b> as an implicit `begin'.
    |
-   |(fn binding . forms)
+   |($nm binding . forms)
    |(type macro)
    |
    |(syntax binding (name . intForms))
@@ -1825,7 +1825,7 @@
    |after evaluate <b>forms</b> as an implicit `begin'.
    |The binding is initializated to #inert before the bind of the function.
    |
-   |(fn functionBinding . forms)
+   |($nm functionBinding . forms)
    |(type macro)
    |
    |(syntax functionBinding (name parameterTree . bodyForms))
@@ -1841,12 +1841,12 @@
    |after evaluate <b>forms</b> as an implicit `begin'.
    |The <b>initForms</b> are evaluate as an implicit `begin'.
    |
-   |(fn bindings . forms)
+   |($nm bindings . forms)
    |(type macro)
    |
    |(syntax bindings ((definiendTree . intiForms) . bindings))
    |#
-  ( (rec\ loop (bindings)
+  ( (rec\ (loop bindings)
       (if (null? bindings)
         (cons (list* '\ () forms))
         (list* 'let1 (car bindings) (cons (loop (cdr bindings)))) ))
@@ -1863,8 +1863,8 @@
    |The function is immediately applied to the list containing the values of <b>initForm</b> evaluate as an implicit `begin',
    |after evaluates <b>forms</b> as an implicit `begin'.
    |
-   |(fn name bindings . forms)
-   |(fn (name . bindings) . forms)
+   |($nm name bindings . forms)
+   |($nm (name . bindings) . forms)
    |(type macro)
    |
    |(syntax bindings ((parameterTree . initForms) . bindings))
@@ -1886,8 +1886,8 @@
    |The <b>initForms</b> are evaluate as an implicit `begin'.
    |If the first argument is a symbol is like 'letLoop'.
    |
-   |(fn bindings . forms)
-   |(fn name bindings . forms)
+   |($nm bindings . forms)
+   |($nm name bindings . forms)
    |(type macro)
    |
    |(syntax bindings ((definiendTree . initForms) . bindings))
@@ -1903,14 +1903,14 @@
   #|Establishes the <b>functionBindings</b> parallelly, so that no function can refer to itself or the other ones,
    |after evaluate <b>forms</b> as an implicit `begin'.
    |
-   |(fn functionBindings . forms)
+   |($nm functionBindings . forms)
    |(type macro)
    |
    |(syntax functionBindings (functionBinding . functionBindings))
    |(syntax functionBinding (name parameterTree . bodyForms))
    |(syntax functionBinding ((name . parameterTree) . bodyForms))
    |#
-  (list* 'let (map ->name+lambda bindings) forms))
+  (list* 'let (map ->name+lambda bindings) forms) )
 
 (assert (expand (let\ ((f1 (a) a) ((f2 b) b)) 1)) '(let ((f1 (\ (a) a)) (f2 (\ (b) b))) 1))
 
@@ -1919,7 +1919,7 @@
    |after evaluate <b>forms</b> as an implicit `begin'.
    |The bindings are initializated to #inert before evaluating the <b>initForms</b> as an implicit `begin'.
    |
-   |(fn bindings . forms)
+   |($nm bindings . forms)
    |(type macro)
    |
    |(syntax bindings ((name . intForms) . bindings))
@@ -1936,7 +1936,7 @@
    |after evaluate <b>forms</b> as an implicit `begin'.
    |The bindings are initializated to #inert before the bind of the functions.
    |
-   |(fn functionBindings . forms)
+   |($nm functionBindings . forms)
    |(type macro)
    |
    |(syntax functionBindings (functionBinding . functionBindings))
@@ -1950,7 +1950,7 @@
 (def labels
   #|Alias of letrec\.
    |#
-  letrec\)
+  letrec\ )
 
 (assert (labels ( ((even? n) (if (0? n) #t (odd? (- n 1)))) (odd? (n) (if (0? n) #f (even? (- n 1)))) ) (even? 88) ) #t)
 
@@ -1965,35 +1965,35 @@
 (defVau prog1 (form . forms) env
   #|Evaluate <b>form</b> and return the result after evaluate <b>forms</b> as an implicit `begin'.
    |
-   |(fn form . forms)
+   |($nm form . forms)
    |(type fexpr)
    |#
   (let1 (result (eval form env))
     (apply begin forms env)
-    result))
+    result ))
 
 (defMacro (when test . forms)
   #|If <b>test</b> yields #true evaluate <b>forms</b> as an implicit `begin', #inert otherwise.
    |
-   |(fn test . forms)
+   |($nm test . forms)
    |(type macro)
    |#
-  (list 'if test (cons 'then forms)))
+  (list 'if test (cons 'then forms)) )
 
 (defMacro (unless test . forms)
   #|If <b>test</b> yields #false evaluate <b>forms</b> as an implicit `begin', #inert otherwise.
    |
-   |(fn test . forms)
+   |($nm test . forms)
    |(type macro)
    |#
-  (list 'if test #inert (cons 'else forms)))
+  (list 'if test #inert (cons 'else forms)) )
 
 (defVau && ops env
   #|Return #true if all <b>operands</b> evaluate to #true, #false otherwise.
    |If an operand evaluates to #false, later operands are not evaluated.
-   |If there are no operands, return #false.
+   |If there are no operands, return #true.
    |
-   |(fn . operands)
+   |($nm . operands)
    |(type fexpr)
    |#
   (if
@@ -2004,14 +2004,14 @@
 (def and
   #|Alias of &&.
    |#
-  &&)
+  && )
 
 (defVau || ops env
   #|Return #true if one of the <b>operands</b> evaluates to #true, #false otherwise.
    |If an operand evaluates to #true, later operands are not evaluated.
-   |If there are no operands, return #true.
+   |If there are no operands, return #false.
    |
-   |(fn . operands)
+   |($nm . operands)
    |(type fexpr)
    |#
   (if
@@ -2022,12 +2022,12 @@
 (def or
   #|Alias of ||.
    |#
-  ||)
+  || )
 
 (def\ (&&b f key val . lst)
   #|Return #true if <b>function</b> evaluate to #true when applied to <b>key</b> and all element of <b>list</b>, #false otherwise.
    |
-   |(fn function key . list)
+   |($nm function key . list)
    |(type function)
    |#
   ((rec\ (loop lst) (if (null? lst) #t (f key (car lst)) (loop (cdr lst)) #f) ) (cons val lst)) )
@@ -2035,7 +2035,7 @@
 (def\ (||b f key val . lst)
   #|Return #true if <b>function</b> evaluate to #true when applied to <b>key</b> and any element of <b>list</b>, #false otherwise.
    |
-   |(fn function key . list)
+   |($nm function key . list)
    |(type function)
    |#
   ((rec\ (loop lst) (if (null? lst) #f (f key (car lst)) #t (loop (cdr lst))) ) (cons val lst)) )
@@ -2046,7 +2046,7 @@
    |If there are no <b>functions</b>, when applied return #false.
    |Idea stolen from Anarki https://github.com/arclanguage/anarki
    |
-   |(fn . functions)
+   |($nm . functions)
    |(type function)
    |#
   (\ args
@@ -2063,7 +2063,7 @@
    |If there are no <b>functions</b>, when applied return #true.
    |Idea stolen from Anarki https://github.com/arclanguage/anarki
    |
-   |(fn . functions)
+   |($nm . functions)
    |(type function)
    |#
   (\ args
@@ -2081,28 +2081,28 @@
 (def bind
   #|Return the <b>environment</b> if <b>value</b> match the <b>definiendTree</b> updated with new bindings, signals an error otherwise.
    |
-   |(fn environment definiendTree value)
+   |($nm environment definiendTree value)
    |(type function)
    |
    |(derivation (eval (list 'def :cnt definiendTree value) environment))
    |#
-  %bind)
+  %bind )
 
 (def bind?
   #|Return #true if <b>value</b> match the <b>definiendTree</b> and update the <b>environment</b> with the new bindings, #false otherwise.
    |
-   |(fn environment definiendTree value)
+   |($nm environment definiendTree value)
    |(type function)
    |
    |(derivation (catch #f (bind environment definiendTree value) #t))
    |#
-  %bind?)
+  %bind? )
 
 (defVau (ifBind? (dt exp) then . else) env
   #|Return the evaluation of <b>then</b> into resulting <b>environment</b> if <b>value</b> match the <b>definiendTree</b>,
    |the evaluation of <b>else</b> if present, #inert otherwise.
    |
-   |(fn (definiendTree value) then . else)
+   |($nm (definiendTree value) then . else)
    |(type fexpr)
    |#
   (let1 (env+ (newEnv env))
@@ -2120,7 +2120,7 @@
    |If the operands match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
    |Otherwise go to the next <b>clause</b>.
    |
-   |(fn . clauses)
+   |($nm . clauses)
    |(type fexpr)
    |
    |(syntax clauses (clause . clauses))
@@ -2144,7 +2144,7 @@
 (defMacro (defCaseVau name . clauses)
   #|Defines into the current environment the named caseVau <b>name</b> with the given <b>clauses</b>.
    |
-   |(fn name . clauses)
+   |($nm name . clauses)
    |(type fexpr)
    |
    |(derivation (def name (caseVau . clauses)))
@@ -2160,7 +2160,7 @@
    |If the arguments match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
    |Otherwise go to the next <b>clause</b>.
    |
-   |(fn . clauses)
+   |($nm . clauses)
    |(type function)
    |
    |(syntax clauses (clause . clauses))
@@ -2174,7 +2174,7 @@
 (defMacro (defCase\ name . clauses)
   #|Defines into the current environment the named case\ <b>name</b> with the given <b>clauses</b>.
    |
-   |(fn name . clauses)
+   |($nm name . clauses)
    |(type fexpr)
    |
    |(derivation (def name (case\ . clauses)))
@@ -2194,7 +2194,7 @@
    |If <b>value</b> match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
    |Otherwise go to the next <b>clause</b>.
    |
-   |(fn value . clauses)
+   |($nm value . clauses)
    |(type fexpr)
    |
    |(syntax clauses (clause . clauses))
@@ -2228,7 +2228,7 @@
    |  otherwise go to the next <b>clause</b>.
    |Otherwise go to the next <b>clause</b>.
    |
-   |(fn . clauses)
+   |($nm . clauses)
    |
    |(syntax clauses (clause . clauses))
    |(syntax clause (else . forms))
@@ -2303,7 +2303,7 @@
    |Evaluate the <b>then</b> form with the <b>name</b> bound to the contents of the <b>option</b> if the evaluation of <b>option</b> is !#null,
    |evaluate the <b>else</b> forms as an implicit `begin' otherwise.
    |
-   |(fn (name option) then . else)
+   |($nm (name option) then . else)
    |(type fexpr)
    |#
   (let1 (opt (eval opt env))
@@ -2324,7 +2324,7 @@
    |Evaluate <b>then</b> form with the <b>definiendTree</b> bound to <b>option</b> value if the evaluation of <b>option</b> is !#null,
    |evaluate the <b>else</b> forms as an implicit `begin' otherwise.
    |
-   |(fn (definiendTree option) then . else)
+   |($nm (definiendTree option) then . else)
    |#
   (let1 (opt (eval opt env))
     (if (null? opt)
@@ -2348,7 +2348,7 @@
    |Return #null if the evaluation of <b>option</b> it's #null,
    |evaluate <b>forms</b> as an implicit `begin' with the <b>name</b> bound to the contents of the <b>option</b>, otherwise.
    |
-   |(fn (name option) . forms)
+   |($nm (name option) . forms)
    |(type fexpr)
    |#
   (list 'ifOpt (list pt opt) (if (null? forms) #null (cons 'begin forms))) )
@@ -2357,7 +2357,7 @@
   #|Destructure the <b>option</b>.
    |Return the evaluation of <b>forms</b> as an implicit `begin' if the evaluation of <b>option</b> is #null, #null otherwise.
    |
-   |(fn option . forms)
+   |($nm option . forms)
    |(type fexpr)
    |#
   (list* 'ifOpt (list #ignore opt) #null (if (null? forms) #null (cons 'begin forms))) )
@@ -2371,7 +2371,7 @@
    |If the <b>option</b> match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
    |Otherwise go to the next <b>clause</b>.
    |
-   |(fn option . clauses)
+   |($nm option . clauses)
    |(type fexpr)
    |
    |(syntax clauses (clause . clauses))
@@ -2398,7 +2398,7 @@
    |the evaluation if <b>default</b> if present, #inert otherwise.
    |The <b>default</b> is evaluated lazily, only when the <b>option</b> is #null.
    |
-   |(fn option . default)
+   |($nm option . default)
    |(type fexpr)
    |#
   (ifOpt (opt (eval opt env)) opt
@@ -2413,7 +2413,7 @@
    |This is useful for implementing functions that take multiple optional arguments.
    |Each <b>default</b> is evaluated lazily, only when needed.
    |
-   |(fn list . defaults)
+   |($nm list . defaults)
    |(type fexpr)
    |
    |(syntax defaults (default . defaults))
@@ -2434,7 +2434,7 @@
 (def\ optDft! (opt)
   #|Returns the contents of the <b>option</b> or signals an error if it is #null.
    |
-   |(fn option)
+   |($nm option)
    |(type fexpr)
    |#
   (optDft opt (simpleError "Option is #null")))
@@ -2447,7 +2447,7 @@
   #|Search for the <b>keyword</b> in the property <b>list</b> (a list of alternating keywords and values)
    |and return the next value as an option if found it, #null otherwise.
    |
-   |(fn keyword list)
+   |($nm keyword list)
    |(type function)
    |#
   (let1 loop (lst lst)
@@ -2464,7 +2464,7 @@
    |Return, if found it, the tail of the list starting with <b>item</b> after apply the <b>get</b> function (defaults to 'idf'), #null otherwise.
    |The <b>key</b> function is applied to each list element before comparison (defaults to `idf').
    |
-   |(fn item list . keywords))
+   |($nm item list . keywords))
    |(type function)
    |
    |(syntax keywords (:cmp function . keywords))
@@ -2483,7 +2483,7 @@
 (def\ (member? key lst . keywords)
   #|Return #true if the <b>item</b> is in the <b>list</b>, #false otherwise.
    |
-   |(fn item list . keywords)
+   |($nm item list . keywords)
    |(type function)
    |
    |(syntax keywords (:cmp function . keywords))
@@ -2495,7 +2495,7 @@
 (def\ (!member? key lst . keywords)
   #|Return #false if the <b>item</b> is in the <b>list</b>, #true otherwise.
    |
-   |(fn item list . keywords)
+   |($nm item list . keywords)
    |(type function)
    |
    |(syntax keywords (:cmp function . keywords))
@@ -2511,7 +2511,7 @@
   #|Return <b>item</b> if the <b>item</b> is in the <b>list</b>, #null otherwise.
    |<b>item</b> can be an sigle element or a list of element
    |
-   |(fn item list)
+   |($nm item list)
    |(type function)
    |#
   (if (cons? key) ((rec\ (loop lst) (if (cons? lst) (let1 (k (car lst)) (if (member? k key) k (loop (cdr lst)))) #null)) lst)
@@ -2526,7 +2526,7 @@
 (def\ (assoc k lst)
   #|Return the `car' of a assoc <b>list</b> (a list of lists of keywords and values) is <b>item</b> is the `caar' if == to <b>item</b>, #null otherwise.
    |
-   |(fn item list)
+   |($nm item list)
    |(type function)
    |#
   (member k lst :key car :get car) )
@@ -2536,7 +2536,7 @@
 (def\ (member?* key . lst)
   #|Return #true if the <b>item</b> is in the <b>list</b>, #false otherwise.
    |
-   |(fn item . list)
+   |($nm item . list)
    |(type function)
    |#
   (member? key lst) )
@@ -2554,7 +2554,7 @@
    |  otherwise evaluate <b>forms</b> as an implicit `begin'.
    |Otherwise go to the next <b>clause</b>.
    |
-   |(fn key . clauses)
+   |($nm key . clauses)
    |(type fexpr)
    |
    |(syntax clauses (clause . clauses))
@@ -2582,7 +2582,7 @@
 (def matchType?
   #|Return #true if <b>object</b> is an instance of <b>class</b> and all the optional specified <b>attribute</b> matches the corresponding <b>check</b>, #false otherwise.
    |
-   |(fn object class . attributes)
+   |($nm object class . attributes)
    |(type function)
    |
    |(syntax attributes (attribute check . attributes))
@@ -2593,7 +2593,7 @@
 (def\ (matchType?* obj class . attributes)
   #|Return #true if <b>object</b> is an instance of <b>class</b> and all the optional specified <b>attribute</b> matches the corresponding <b>check</b>, #false otherwise.
    |
-   |(fn object class . attributes)
+   |($nm object class . attributes)
    |(type function)
    |
    |(syntax attributes (attribute check . attributes))
@@ -2610,7 +2610,7 @@
    |If <b>object</b> is an instance of <b>class</b> and the optional specified <b>attribute</b> matchs the corresponding <b>check</b>, evaluate <b>forms</b> as an implicit `begin'.
    |Otherwise go to the next <b>clause</b>.
    |
-   |(fn object . clauses)
+   |($nm object . clauses)
    |(type fexpr)
    |
    |(syntax clauses (clause . clauses))
@@ -2640,7 +2640,7 @@
 (defMacro (caseType\ (#: (1 Symbol) key) . clauses)
   #|Return a sigle argument function for multi-armed type test, useful as a catch handler.
    |
-   |(fn (symbol) . clauses))
+   |($nm (symbol) . clauses))
    |(type macro)
    |(derivation (\ (symbol) (caseType symbol . clauses)))
    |(use (catchWth (caseType\ (e) ...) ...)
@@ -2656,7 +2656,7 @@
 (def\ (sort lst . opts)
   #|Return the sorted <b>list</b>, getting the key with the :key function (defaults to 'idf') and up or down with key :up or :dn (defaults to :up).
    |
-   |(fn list . (#: 0 3 (or (2 :key function) (1 (or :up :dn)) )))
+   |($nm list . (#: 0 3 (or (2 :key function) (1 (or :up :dn)) )))
    |(type function)
    |#
   (def cmp (case (optKey (:up :dn) opts) ((#null :up) <) (:dn >=)))
@@ -2729,7 +2729,7 @@
 (def\ assert#t (boolean)
   #|Return #inert if <b>boolean</b> is #true, signals an error otherwise.
    |
-   |(fn boolean)
+   |($nm boolean)
    |(type function)
    |#
   (unless boolean (error (new Error "invalid assetion" :type 'assert :datum boolean :expected #t))) )
@@ -2737,7 +2737,7 @@
 (def check
   #|Returns the length of the <b>expr</b> value if it matches <b>check</b>, signals an error otherwise.
    |
-   |(fn expr check)
+   |($nm expr check)
    |(type fexpr)
    |(derivation ((\ ((#: check value)) (len value)) expr))
    |(derivation (let ( (value (eval exor env)) (chk (%evalChk check env)) ) (@check vm value chk))) 
@@ -2747,7 +2747,7 @@
 (defMacro (check* o . cks)
   #|Returns the length of <b>list</b> if the elements of <b>list</b> match the corresponding <b>check</b>, signals an error otherwise.
    |
-   |(fn list . checks)
+   |($nm list . checks)
    |(type macro)
    |
    |(derivation ((\ (#: checks list) (len list)) . list) 
@@ -2766,7 +2766,7 @@
 (defVau check? args env
   #|Return #true if <b>object</b> match <b>check</b>, #false otherwise.
    |
-   |(fn object check)
+   |($nm object check)
    |(type fexpr)
    |
    |(derivation wat (catchWth #f (apply check args env) #t)) 
@@ -2779,7 +2779,7 @@
 (def :
   #|Returns the value of the last form of (begin <b>form</b> . <b>forms</b>) if it matches <b>check</b>, signals an error otherwise.
    |
-   |(fn check form . forms)
+   |($nm check form . forms)
    |(type fexpr)
    |
    |(derivation ((\ ((#: check value)) value) (begin form . forms)))
@@ -2808,7 +2808,7 @@
    |Note that unlike in Common Lisp, there is no separate namespace for block names;
    |a block is named in the normal variable namespace.
    |
-   |(fn blockName . forms)
+   |($nm blockName . forms)
    |(type fexpr)
    |#
   (let* ( (tag (cons #inert)) ; cons up a fresh object as tag
@@ -2824,7 +2824,7 @@
   #|Abort evaluation and return the optional <b>value</b> (which defaults to #inert) from the block named <b>blockName</b>.
    |It is an error to return from a block whose dynamic extent has ended.
    |
-   |(fn blockName . value)
+   |($nm blockName . value)
    |(type function)
    |#
   (blockName (optDft value #inert)) )
@@ -2835,7 +2835,7 @@
   #|Evaluate <b>forms</b> as an implicit `begin' while <b>testForm</b> evaluates to #true.
    |Defined using block and returnFrom.
    |
-   |(fn testForm . forms)
+   |($nm testForm . forms)
    |(type fexpr)
    |#
   (let ((forms (cons 'begin forms)))
@@ -2850,7 +2850,7 @@
    |Get the %deep of the enhanced loop form in the dynamic environment.
    |Used from break, continue, until and while forms for the enhanced loops.
    |
-   |(fn tag n)
+   |($nm tag n)
    |(type dynamic function)
    |#
   (symbol ($ tag (- %deep n))) )
@@ -2871,9 +2871,9 @@
 (def %loop
   #|Redefine the primitive %loop to add the clauses <b>for</b> and <b>for1</b> and the forms <b>break</b>, <b>continue</b>, <b>while</b> and <b>until</b>.
    |
-   |(fn . forms)
-   |(fn for1 binding . forms)
-   |(fn for bindings . forms)
+   |($nm . forms)
+   |($nm for1 binding . forms)
+   |($nm for bindings . forms)
    |(type fexpr)
    |
    |(syntax bindings (binding . bindings))
@@ -2931,7 +2931,7 @@
 (defMacro (for1 binding cond . forms)
   #|Single variabile for loop.
    |
-   |(fn binding whileForm . forms)
+   |($nm binding whileForm . forms)
    |(type macro)
    |
    |(syntax binding (symbol initForm . incrFrom))
@@ -2943,7 +2943,7 @@
 (defMacro (for bindings cond . forms)
   #|Multile variabiles for loop.
    |
-   |(fn bindings whileForm . forms)
+   |($nm bindings whileForm . forms)
    |(type macro)
    |
    |(syntax bindings (binding . bindings))
@@ -2971,7 +2971,7 @@
 (defMacro (while cond . forms)
   #|Evaluate <b>forms</b> as an implicit `begin' while <b>whileForm</b> evaluates to #true.
    |
-   |(fn whileForm . forms)
+   |($nm whileForm . forms)
    |(type macro)
    |#
   (list* 'loop (list 'while? cond) forms) )
@@ -2979,7 +2979,7 @@
 (defMacro until (cond . forms)
   #|Evaluate <b>forms</b> as an implicit `begin' until <b>untilForm</b> evaluates to #false.
    |
-   |(fn whileForm . forms)
+   |($nm whileForm . forms)
    |(type macro)
    |#
   (list* 'loop (list 'until? cond) forms) )
@@ -3002,7 +3002,7 @@
 (defMacro doTimes ((var times . endForms) . forms)
   #|Cf. Common Lisp's <b>dotimes</b>.
    |
-   |(fn (symbol times . endForms) . forms)
+   |($nm (symbol times . endForms) . forms)
    |(type macro)
    |#
   (let1\
@@ -3019,8 +3019,8 @@
 (defVau (repeat times . forms) env
   #|Evaluate <b>forms</b> as an implicit `begin' <b>times</b> times.
    |
-   |(fn times . forms)
-   |(fn (symbol times . endForms) . forms)
+   |($nm times . forms)
+   |($nm (symbol times . endForms) . forms)
    |(type macro)
    |#
   (if (cons? times)
@@ -3047,7 +3047,7 @@
 (defMacro doTimes ((var times . endForms) . forms)
   #|Cf. Common Lisp's <b>dotimes</b>.
    |
-   |(fn (symbol times . endForms) . forms)
+   |($nm (symbol times . endForms) . forms)
    |(type macro)
    |#
   (list* 'repeat (list* var times endForms) forms) )
@@ -3056,8 +3056,8 @@
 (defVau (repeat times . forms) env
   #|Evaluate <b>forms</b> as an implicit `begin' <b>times</b> times.
    |
-   |(fn times . forms)
-   |(fn (symbol times . endForms) . forms)
+   |($nm times . forms)
+   |($nm (symbol times . endForms) . forms)
    |(type macro)
    |#
   (if (cons? times)
@@ -3074,7 +3074,7 @@
 (defMacro doTimes ((var times . endForms) . forms)
   #|Cf. Common Lisp's <b>dotimes</b>.
    |
-   |(fn (symbol times . endForms) . forms)
+   |($nm (symbol times . endForms) . forms)
    |(type macro)
    |#
   (list* 'repeat (list* var times (if (null? endForms) (cons #inert) endForms)) forms) )
@@ -3083,7 +3083,7 @@
 (defMacro doList ((var lst . endForms) . forms)
   #|Cf. Common Lisp's <b>dolist</b>.
    |
-   |(fn (symbol list . endForms) . forms)
+   |($nm (symbol list . endForms) . forms)
    |(type macro)
    |#
   (let1rec\
@@ -3104,7 +3104,7 @@
 (def\ (any? f lst . lst*)
   #|Return #true if the apply of the <b>function</b> to every first elements of the <b>lists</b> return #true, #false otherwise.
    |
-   |(fn function . lists).
+   |($nm function . lists).
    |(type function).
    |#
   (if (null? lst*)
@@ -3119,7 +3119,7 @@
 (defMacro (any?* f . lst)
   #|Return #true if the apply of the <b>function</b> to every element of <b>values</b> return #true, #false otherwise.
    |
-   |(fn function . values).
+   |($nm function . values).
    |(type function).
    |#
   (list 'any? f lst))
@@ -3127,7 +3127,7 @@
 (def\ (all? f lst . lst*)
   #|Return #true if the apply of the <b>function</b> to one first elements of the <b>lists</b> return #true, #false otherwise.
    |
-   |(fn function . lists).
+   |($nm function . lists).
    |(type function).
    |#
   (if (null? lst*)
@@ -3142,7 +3142,7 @@
 (defMacro (all?* f . lst)
   #|Return #true if the apply of the <b>function</b> to one element of <b>values</b> return #true, #false otherwise.
    |
-   |(fn function . values).
+   |($nm function . values).
    |(type function).
    |#
   (list 'all? f lst))
@@ -3150,7 +3150,7 @@
 (def\ (forEach# f lst . lst*)
   #|Return #inert after applies the <b>function</b> to every first elements of the <b>lists</b>.
    |
-   |(fn function . lists).
+   |($nm function . lists).
    |(type function).
    |#
   (if (null? lst*)
@@ -3165,7 +3165,7 @@
 (def\ (forEach f lst . lst*)
   #|Return <b>lists</b> after applies the <b>function</b> to every first elements of the <b>lists</b>.
    |
-   |(fn function . lists).
+   |($nm function . lists).
    |(type function).
    |#
   (if (null? lst*)
@@ -3181,7 +3181,7 @@
   #|Return the list of the results of apply the <b>function</b>, which must return a list, to every first elements of the <b>lists</b>.
    |(Note: this currently uses `append', but might be changed to use `nconc' in the future, like Common Lisp.)
    |
-   |(fn function . lists).
+   |($nm function . lists).
    |(type function).
    |#
   (if (null? lst*)
@@ -3194,7 +3194,7 @@
   #|Returns the list of the first elements of the <b>lists</b> for which the application of the <b>function</b> returns #true.
    |(Note: this currently uses `append', but might be changed to use `nconc' in the future, like Common Lisp.)
    |
-   |(fn function . lists).
+   |($nm function . lists).
    |(type function).
    |#
   (if (null? lst*)
@@ -3207,7 +3207,7 @@
 (defMacro (remove f lst . lst*)
   #|Returns the list of the first elements of the <b>list</b> without those for which the application of the <b>function</b> returns #true.
    |
-   |(fn function . lists).
+   |($nm function . lists).
    |(type function).
    |#
   (list* 'filter (list 'compose '! f) lst lst*) )
@@ -3219,7 +3219,7 @@
   #|Use the <b>function</b> to combine the elements of the <b>list</b> from first element.
    |The <b>initialValue</b> is logically placed before the first element of the <b>list</b>.
    |
-   |(fn function  init . lists).
+   |($nm function  init . lists).
    |(type function).
    |#
   (if (null? lst*)
@@ -3239,7 +3239,7 @@
   #|Use the <b>function</b> to combine the elements of the <b>list</b> from last element.
    |The <b>initialValue</b> is logically placed before the last element of the <b>list</b>.
    |
-   |(fn function init . list).
+   |($nm function init . list).
    |(type function).
    |#
   (if (null? lst*)
@@ -3252,27 +3252,27 @@
   #|Use the <b>function</b> to combine the elements of the <b>list</b> from first element.
    |The <b>initialValue</b> is logically placed after the last element of the <b>list</b>.
    |
-   |(fn function init . list).
+   |($nm function init . list).
    |(type function).
    |#
   (if (null? lst*)
     ((rec\ (foldl acc lst) (if (null? lst) acc (f (car lst) (foldl acc (cdr lst)) ) )) init lst)
     ((rec\ (foldl* acc lst*) (if (null? (car lst*)) acc (apply* f (map car lst*) (foldl* acc (map cdr lst*)) ) )) init (cons lst lst*)) ))
 
-(assert (foldL cons () '(1 2 3 4)) '(1 2 3 4))
+(assert (foldL cons () '(1 2 3 4)) '(1 . (2 . (3 . (4 . ())))))
 
 (def\ (foldR f init lst . lst*)
   #|Use the <b>function</b> to combine the elements of the <b>list</b> from last element.
    |The <b>initialValue</b> is logically placed after the last element of the <b>list</b>.
    |
-   |(fn function  init . list).
+   |($nm function  init . list).
    |(type function).
    |#
   (if (null? lst*)
     ((rec\ (foldr acc lst) (if (null? lst) acc (foldr (f (car lst) acc) (cdr lst)) )) init lst)
     ((rec\ (foldr* acc lst*) (if (null? (car lst*)) acc (foldr* (apply* f (map car lst*) acc) (map cdr lst*)) )) init (cons lst lst*)) ))
 
-(assert (foldR cons () '(1 2 3 4)) '(4 3 2 1))
+(assert (foldR cons () '(1 2 3 4)) '(4 . (3 . (2 . (1 . ())))))
 
 
 #|! Arrays
@@ -3281,7 +3281,7 @@
 (def\ (array->list arr)
   #|Array to proper list.
    |
-   |(fn array)
+   |($nm array)
    |(type function)
    |#
   (%array->list #t arr) )
@@ -3290,7 +3290,7 @@
   #|Array to improper list.
    |The last element of the array becomes the last `cdr' of the list.
    |
-   |(fn array)
+   |($nm array)
    |(type function)
    |#
   (%array->list #f arr) )
@@ -3298,7 +3298,7 @@
 (def list->array
   #|List to array.
    |
-   |(fn list)
+   |($nm list)
    |(type function)
    |#
   %list->array)
@@ -3306,7 +3306,7 @@
 (def\ (array . args)
   #|List to array.
    |
-   |(fn . list)
+   |($nm . list)
    |(type function)
    |#
   (list->array args))
@@ -3314,7 +3314,7 @@
 (def\ (arrayMap fun (#: Object[] arr))
   #|Return a new array by applying the <b>function</b> to each element of the <b>array</b>.
    |
-   |(fn function array)
+   |($nm function array)
    |(type function)
    |#
   (list->array (map fun (array->list arr))) )
@@ -3324,7 +3324,7 @@
 (def\ (arrayFilter pred (#: Object[] arr))
   #|Returns a new array with the elements of the <b>array</b> for which the application of the <b>function</b> returns #true.
    |
-   |(fn function array)
+   |($nm function array)
    |(type function)
    |#
   (list->array (filter pred (array->list arr))) )
@@ -3334,7 +3334,7 @@
 (def\ (newInstance class dim . dims)
   #|Returns a new array with the elements of <b>class</b> tipe and the specified <b>dimensions</b>.
    |
-   |(fn class . dimensions)
+   |($nm class . dimensions)
    |(type function)
    |
    |(syntax dimension (integer . dimensions)
@@ -3344,7 +3344,7 @@
 (def\ (arrayGet array index)
   #|Returns the element at <b>index</b> position int the <b>array</b>.
    |
-   |(fn array index)
+   |($nm array index)
    |(type function)
    |#
   (if (cons? index)
@@ -3354,7 +3354,7 @@
 (def\ (arrayGet* array . indexes)
   #|Returns the element at <b>indexes</b> position int the multi-dimensions <b>array</b>.
    |
-   |(fn array . indexes)
+   |($nm array . indexes)
    |(type function)
    |
    |(syntax indexes (integer . indexes)
@@ -3366,7 +3366,7 @@
 (def\ (arraySet array index value)
   #|Returns the <b>array</b> after update the element at <b>index</b> position with <b>value</b>.
    |
-   |(fn array index value)
+   |($nm array index value)
    |(type function)
    |#
   (if (cons? index)
@@ -3376,7 +3376,7 @@
 (def\ (arraySet* array0 value . indexes)
   #|Returns the multi-dimensions <b>array</b> after update the element at <b>indexes</b> position with <b>value</b>.
    |
-   |(fn array value . indexes)
+   |($nm array value . indexes)
    |(type function)
    |
    |(syntax indexes (integer . indexes)
@@ -3399,14 +3399,14 @@
 (def\ (set? lst)
   #|Return #true if all element of <b>list</b> are distinct, #false otherwise.
    |
-   |(fn list)
+   |($nm list)
    |(type function)
    |#
   (if (null? lst) #t (apply /= lst)))
 
 (def\ (set+ lst v)
   #|Return a set, with an <b>value</b> more if <b>value</b> not is in the <b>set</b>.
-   |(fn set value)
+   |($nm set value)
    |(type function)
    |#
   (if (member? v lst) lst (cons v lst)))
@@ -3414,7 +3414,7 @@
 (defVau (defSet+ (#: Symbol plc) v) env
   #|Return the set after update the set of <b>symbol</b> with an <b>value</b> more if <b>value</b> not is in the set.
    |
-   |(fn symbol value)
+   |($nm symbol value)
    |(type function)
    |#
   (let ( (v (eval v env)) (lst (env plc)) )
@@ -3423,7 +3423,7 @@
 (def\ ->set (lst)
   #|Return the <b>list</b> without duplicate elements.
    |
-   |(fn list)
+   |($nm list)
    |(type function)
    |#
   (let loop ( (res ()) (lst lst) )
@@ -3435,7 +3435,7 @@
 (def\ ->set (lst)
   #|Return the <b>list</b> without duplicate elements.
    |
-   |(fn list)
+   |($nm list)
    |(type function)
    |#
   (let1 loop (res ())
@@ -3579,7 +3579,7 @@
 (def newDVar
   #|Define a new dynamic variable with optional <b>value</b>.
    |
-   |(fn . value)
+   |($nm . value)
    |(type function)
    |#
   %newDVar)
@@ -3587,7 +3587,7 @@
 (def dval
   #|Return the current value of the <b>dynamicVariable</b>.
    |
-   |(fn dynamicVariable)
+   |($nm dynamicVariable)
    |(type function)
    |#
   %dVal)
@@ -3595,7 +3595,7 @@
 (defMacro (ddef var . val)
   #|Define a new or update an existing dynamic variable with the given <b>name</b> and optional <b>value</b>.
    |
-   |(fn name . value)
+   |($nm name . value)
    |(type macro)
    |#
   (list* (list '%dv\ (list var)) val) )
@@ -3603,7 +3603,7 @@
 (defMacro (ddef* var* . val*)
   #|Define a new or update an existing dynamic variable with the given <b>names</b> and optional <b>values</b>.
    |
-   |(fn names . values)
+   |($nm names . values)
    |(type macro)
    |(syntax names (name . names))
    |#
@@ -3612,7 +3612,7 @@
 (def\ (dget dvar)
   #|Return the current value of the <b>dynamicVariable</b>.
    |
-   |(fn dynamicVariable)
+   |($nm dynamicVariable)
    |(type macro)
    |#
   (dvar))
@@ -3620,7 +3620,7 @@
 (def\ (dset dvar value)
   #|Set the current value of the <b>dynamicVariable</b>.
    |
-   |(fn dynamicVariable value)
+   |($nm dynamicVariable value)
    |(type macro)
    |#
   (dvar value))
@@ -3629,7 +3629,7 @@
   #|With the dynamic variables specified by <b>names</b> temporarily bound to new <b>values</b>, evaluate <b>forms</b> as an implicit `begin'.
    |Bindings are established parallely as per `let'.
    |
-   |(fn bindings . forms)
+   |($nm bindings . forms)
    |(type macro)
    |
    |(syntax bindings ((name value) . bindings))
@@ -3640,7 +3640,7 @@
   #|With the dynamic variables specified by <b>name</b> temporarily bound to new <b>value</b>, evaluate <b>forms</b> as an implicit `begin'.
    |Bindings are established parallely as per `let'.
    |
-   |(fn binding . forms)
+   |($nm binding . forms)
    |(type macro)
    |
    |(syntax binding (name value))
@@ -3651,7 +3651,7 @@
   #|With the dynamic variables specified by <b>names</b> temporarily bound to new <b>values</b>, evaluate <b>forms</b> as an implicit `begin'.
    |The <b>names</b> and <b>values</b> lists must have the same length.
    |
-   |(fn names values . forms)
+   |($nm names values . forms)
    |(type fexpr)
    |
    |(syntax names (name . names))
@@ -3664,7 +3664,7 @@
   #|With the dynamic variables specified by <b>names</b> temporarily bound to new <b>values</b>, evaluate <b>forms</b> as an implicit `begin'.
    |Bindings are established serially as per `let*'.
    |
-   |(fn bindings . forms)
+   |($nm bindings . forms)
    |(type macro)
    |
    |(syntax bindings ((name value) . bindings))
@@ -3696,7 +3696,7 @@
 (def\ findClass ((#: Symbol name) env)
   #|Look up a class based on its <b>name</b> symbol (evaluated) in the given <b>environment</b>.
    |
-   |(fn name environment)
+   |($nm name environment)
    |(type function)
    |#
   (eval name env))
@@ -3706,7 +3706,7 @@
    |The <b>superclass</b> defaults to `Obj'.
    |The <b>attributes</b> and <b>properties</b> are currently ignored.
    |
-   |(fn superclass attributes . properties)
+   |($nm superclass attributes . properties)
    |(type fexpr)
    |
    |(syntax superclass (or () (symbol)))
@@ -3726,8 +3726,8 @@
   #|Define a new generic function with the given <b>name</b>.
    |<b>receiverName</b>, <b>parameters</b>, and <b>properties</b> are currently ignored.
    |
-   |(fn name receiverName . parameters)
-   |(fn (name receiverName) . parameters)
+   |($nm name receiverName . parameters)
+   |($nm (name receiverName) . parameters)
    |(type fexpr)
    |#
   (if (cons? (car args))
@@ -3739,8 +3739,8 @@
 (defVau (defMethod . args) env
   #|Define a new method for the generic function <b>name</b> specialized for <b>class</b>.
    |
-   |(fn ((name (receiverName class) . parameters) . forms))
-   |(fn (name ((receiverName class) . parameters) . forms))
+   |($nm ((name (receiverName class) . parameters) . forms))
+   |($nm (name ((receiverName class) . parameters) . forms))
    |(type fexpr)
    |#
   (if (cons? (car args))
@@ -3786,7 +3786,7 @@
 (defVau (provide symbols . forms) env
   #|Defines <b>symbols</b> in the current environment with values generated evaluating <b>forms</b> as an implicit `begin'.
    |
-   |(fn symbols . forms)
+   |($nm symbols . forms)
    |(type fexpr)
    |
    |(syntax symbols (symbol . symbols))
@@ -3803,7 +3803,7 @@
 (defVau (module symbols . forms) env
   #|Return an environment where <b>symbols</b> are defined with values generated evaluating <b>forms</b> as an implicit `begin'.
    |
-   |(fn symbols . forms)
+   |($nm symbols . forms)
    |(type fexpr)
    |
    |(syntax symbols (symbol . symbols))
@@ -3817,7 +3817,7 @@
 (defMacro (defModule name symbols . forms)
   #|Define a `environment' with the given <b>name</b>, where <b>symbols</b> are defined with values generated evaluating <b>forms</b> as an implicit `begin'.
    |
-   |(fn name symbols . forms)
+   |($nm name symbols . forms)
    |(type macro)
    |
    |(syntax symbols (symbol . symbols))
@@ -3829,7 +3829,7 @@
 (defVau (import module symbols) env
   #|Define in the current environment the <b>symbols</b> defined in <b>module</b>.
    |
-   |(fn module symbols)
+   |($nm module symbols)
    |(type fexpr)
    |
    |(syntax symbols (symbol . symbols))
@@ -3849,7 +3849,7 @@
 (def\ (relationalOp binop)
   #|Utility to create an n-ary relational operator from a <b>binaryOperator</b>.
    |
-   |(fn binop)
+   |($nm binop)
    |(type function)
    |#
   (rec\ (op arg1 arg2 . args)
@@ -3861,7 +3861,7 @@
 (def <
   #|Return #true if the <b>arguments</b> are in monotonically increasing order, #false otherwise.
    |
-   |(fn arguments)
+   |($nm arguments)
    |(type function)
    |
    |(derivation (relationalOp <))
@@ -3871,7 +3871,7 @@
 (def >
   #|Return #true if the <b>arguments</b> are in monotonically decreasing order, #false otherwise.
    |
-   |(fn arguments)
+   |($nm arguments)
    |(type function)
    |
    |(derivation (relationalOp >))
@@ -3881,7 +3881,7 @@
 (def <=
   #|Return #true if the <b>arguments</b> are in monotonically nondecreasing order, #false otherwise.
    |
-   |(fn arguments)
+   |($nm arguments)
    |(type function)
    |
    |(derivation (relationalOp <=))
@@ -3891,7 +3891,7 @@
 (def >=
   #|Return #true if the <b>arguments</b> are in monotonically nonincreasing order, #false otherwise.
    |
-   |(fn arguments)
+   |($nm arguments)
    |(type function)
    |
    |(derivation (relationalOp >=))
@@ -3901,7 +3901,7 @@
 (def eq?
   #|Return #true if all <b>arguments</b> are equal, #false otherwise.
    |
-   |(fn arguments)
+   |($nm arguments)
    |(type function)
    |
    |(derivation (relationalOp eq?))
@@ -3911,7 +3911,7 @@
 (def ==
   #|Return #true if all <b>arguments</b> are ==, #false otherwise.
    |
-   |(fn arguments)
+   |($nm arguments)
    |(type function)
    |
    |(derivation (relationalOp eq?))
@@ -3928,7 +3928,7 @@
 (def !=
   #|Return #false if all <b>arguments</b> are ==, #true otherwise.
    |
-   |(fn arguments)
+   |($nm arguments)
    |(type function)
    |
    |(derivation (relationalOp !=))
@@ -3938,7 +3938,7 @@
 (def\ /= (arg . args)
   #|Return #true if all <b>arguments</b> are distinct, #false otherwise.
    |
-   |(fn argument . arguments)
+   |($nm argument . arguments)
    |(type function)
    |#
   (if (null? args) #t
@@ -3949,7 +3949,7 @@
 (def\ /= args
   #|Return #true if all <b>arguments</b> are distinct, #false otherwise.
    |
-   |(fn . arguments)
+   |($nm . arguments)
    |(type function)
    |#
   (if (null? args) #t
@@ -3971,7 +3971,7 @@
 (def\ (theticOp binOp unit)
   #|Utility to create an n-ary thetic operator from a <b>binaryOperator</b> and <b>initialValue</b>.
    |
-   |(fn binOp unit)
+   |($nm binOp unit)
    |(type function)
    |#
   (\ args (reduce binOp unit args)) )
@@ -3979,7 +3979,7 @@
 (def +
   #|Return the sum of the <b>arguments</b>, or 0 if no arguments are supplied.
    |
-   |(fn arguments)
+   |($nm arguments)
    |(type function)
    |
    |(derivation (tethicOp + 0))
@@ -3989,7 +3989,7 @@
 (def *
   #|Return the product of the <b>arguments</b>, or 1 if no arguments are supplied.
    |
-   |(fn arguments)
+   |($nm arguments)
    |(type function)
    |
    |(derivation (tethicOp * 1))
@@ -3999,7 +3999,7 @@
 (def $
   #|Return the join of the <b>arguments</b>, or "" if no arguments are supplied.
    |
-   |(fn arguments)
+   |($nm arguments)
    |(type function)
    |
    |(derivation (tethicOp $ ""))
@@ -4013,7 +4013,7 @@
 (def\ (lyticOp binOp unit)
   #|Utility to create an n-ary lytic operator from a <b>binaryOperator</b> and <b>initialValue</b>.
    |
-   |(fn binOp unit)
+   |($nm binOp unit)
    |(type function)
    |#
   (\ (arg1 . args)
@@ -4025,7 +4025,7 @@
   #|If only one number is supplied in the <b>arguments</b>, return the negation of that number.
    |If more than one number is supplied, subtract all of the later ones from the first one and return the result.
    |
-   |(fn arguments)
+   |($nm arguments)
    |(type function)
    |
    |(derivation (lithicOp - 0))
@@ -4036,7 +4036,7 @@
   #|If only one number is supplied in the <b>arguments</b>, return the reciprocal of that number.
    |If more than one number is supplied, divide the first one by all of the later ones and return the result.
    |
-   |(fn arguments)
+   |($nm arguments)
    |(type function)
    |
    |(derivation (lithicOp / 1))
@@ -4050,7 +4050,7 @@
 (def\ (gcd a b . args)
   #|Return the greatest common divisor of two or more integer arguments.
    |
-   |(fn integer integer . integers)
+   |($nm integer integer . integers)
    |(type function)
    |
    |(syntax integers (integer . integers))
@@ -4062,7 +4062,7 @@
 (def abs
   #|Return the abs value of one integer argument.
    |
-   |(fn integer)
+   |($nm integer)
    |(type function)
    |#
   (let1 (abs (@getMethod Math "abs" &int)) (\ (n) (abs #null n))))
@@ -4073,7 +4073,7 @@
 (def\ (lcm a b . args)
   #|Return the lowest common multiple of two or more integer arguments
    |
-   |(fn integer integer . integers)
+   |($nm integer integer . integers)
    |(type function)
    |
    |(syntax integers (integer . integers))
@@ -4093,7 +4093,7 @@
 (defGeneric length (sequence)
   #|Return the number of elements in a <b>sequence</b>.
    |
-   |(fn sequence)
+   |($nm sequence)
    |(type generic)
    |#
 )
@@ -4108,7 +4108,7 @@
 (defGeneric elt (sequence index)
   #|Return the <b>sequence</b> element at the specified <b>index</b>.
    |
-   |(fn sequence index)
+   |($nm sequence index)
    |(type generic)
    |#
 )
@@ -4122,7 +4122,7 @@
   #|Create a sequence that is a copy of the subsequence of the <b>sequence</b> bounded by <b>start</b> and optional <b>end</b>.
    |If <b>end</b> is not supplied, the subsequence stretches until the end of the sequence.
    |
-   |(fn sequence start . end)
+   |($nm sequence start . end)
    |(type generic)
    |#
 )
@@ -4153,7 +4153,7 @@
    |evaluate <b>forms</b> as an implicit `begin' with <b>name</b> bound to the paused coroutine.
    |`resume' can later be used to restart execution inside the coroutine.
    |
-   |(fn name . forms)
+   |($nm name . forms)
    |(type macro)
    |#
   (list* 'takeSubcont 'coroutinePrompt name forms))
@@ -4161,7 +4161,7 @@
 (defMacro resume (k . forms)
   #|Resume the paused coroutine <b>continuation</b> and evaluate <b>forms</b> as an implicit `begin' in the place where `yield' was called in the coroutine, and return the result.
    |
-   |(fn continuation . forms)
+   |($nm continuation . forms)
    |(type macro)
    |#
   (list* 'pushDelimSubcont 'coroutinePrompt k forms))
@@ -4189,7 +4189,7 @@
 (def\ makeYieldRecord (v k)
   #|Create a new yield record with the given yielded <b>value</b> and resume <b>continuation</b>.
    |
-   |(fn value continuation)
+   |($nm value continuation)
    |(type function)
    |#
   (new YieldRecord :value v :continuation k))
@@ -4197,7 +4197,7 @@
 (def\ fiberYield v
   #|Yield a optional <b>value</b> (which defaults to #inert).
    |
-   |(fn . value)
+   |($nm . value)
    |(type function)
    |#
   (takeSubcont fiberPrompt k
@@ -4206,7 +4206,7 @@
 (def\ fiberResume (yieldRecord . v)
   #|Resume a suspended fiber <b>yieldRecord</b> with an optional <b>value</b> (which defaults to #inert).
    |
-   |(fn yieldRecord . value)
+   |($nm yieldRecord . value)
    |(type function)
    |#
   (pushDelimSubcont fiberPrompt (yieldRecord 'continuation)
@@ -4215,7 +4215,7 @@
 (defMacro fiber forms
   #|Evaluate the forms expressions as a fiber.
    |
-   |(fn . forms)
+   |($nm . forms)
    |(type macro)
    |#
   (list* pushPrompt 'fiberPrompt forms))
@@ -4224,7 +4224,7 @@
   #|Get all values yielded by a fiber, and its final result, and collect them in a list.
    |Uses the optional list of values to sent to the fiber with `fiberResume'.
    |
-   |(fn thunk . forms)
+   |($nm thunk . forms)
    |(type macro)
    |#
   (let run ((result (fiber (thunk))) (values values))
@@ -4255,45 +4255,45 @@
 (defVau (++ plc . args) env
   #|Return the incremented value of Number, Box and Obj.
    |
-   |(fn number)
-   |(fn box)
-   |(fn obj field)
+   |($nm number)
+   |($nm box)
+   |($nm obj field)
    |(type fexpr)
    |#
   (def val (eval plc env))
   (caseType val
-    (Box    (let1 (() args) (val :rhs (+ (val) 1))))
-    (Obj    (let1 ((fld) args) (val :rhs fld (+ (val fld) 1))))
-    (Number (let1 (() args) (env :rhs plc (+ val 1))))
+    (Box    (let1 (() args) (val :rhs (1+ (val)))))
+    (Obj    (let1 ((fld) args) (val :rhs fld (1+ (val fld)))))
+    (Number (let1 (() args) (env :set! :rhs plc (1+ val))))
     (else   (error ($ "not valid type: " val))) ))
 
 (defVau (-- plc . args) env
   #|Return the decrenented value of Number, Box and Obj.
    |
-   |(fn number)
-   |(fn box)
-   |(fn obj field)
+   |($nm number)
+   |($nm box)
+   |($nm obj field)
    |(type fexpr)
    |#
   (def val (eval plc env))
   (caseType val
-    (Box    (let1 (() args) (val :rhs (- (val) 1))))
-    (Obj    (let1 ((fld) args) (val :rhs fld (- (val fld) 1))))
-    (Number (let1 (() args) (env :rhs plc (- val 1))))
+    (Box    (let1 (() args) (val :rhs (-1+ (val)))))
+    (Obj    (let1 ((fld) args) (val :rhs fld (-1+ (val fld)))))
+    (Number (let1 (() args) (env :set! :rhs plc (-1+ val))))
     (else   (error ($ "not valid type: " val))) ))
 
-(assert (begin (def obj (newObj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
-(assert (begin (def box (newBox 1)) (++ box) (++ box) (-- box)) 2)
-(assert (begin (def n 1) (++ n) (++ n) (-- n)) 2)
+(assert (let () (def obj (newObj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
+(assert (let () (def box (newBox 1)) (++ box) (++ box) (-- box)) 2)
+(assert (let () (def n 1) (++ n) (++ n) (-- n)) 2)
 
 (def\ (assignOp op)
   #|Return a fexpr which returns the value assigned to Box, Obj and Object after applying the <b>operator</b>.
    |
-   |(fn operator)
+   |($nm operator)
    |(type function)
    |#
   (vau (plc . args) env
-    (def lval (eval plc env))
+    (def lval (env plc))
     (caseType lval
       (Box (match args
         ((rval) (lval (op (lval) (eval rval env))))
@@ -4302,8 +4302,8 @@
         ((fld rval) (lval fld (op (lval fld) (eval rval env))))
         ((key fld rval) (lval key fld (op (lval fld) (eval rval env)))) ))
       (Object (match args
-        ((rval) (eval (list 'set! plc (op lval (eval rval env))) env))
-        ((key rval) (eval (list 'set! plc key (op lval (eval rval env))) env)) )))))
+        ((rval) (env :set! plc (op lval (eval rval env))))
+        ((key rval) (env :set! key plc (op lval (eval rval env)))) )))))
 
 (def $= (assignOp %$))
 (def += (assignOp %+))
@@ -4372,7 +4372,7 @@
 (def getExecutable
   #|Return a constructor or a method with given name also without specify parameter classes.
    |
-   |(fn Class name . classes)
+   |($nm Class name . classes)
    |(type function)
    |#
   (let1 (getExecutable (getMethod Utility "getExecutable" Object String Class[]))
@@ -4382,42 +4382,42 @@
 (def supplier
   #|Return a java Supplier.
    |
-   |(fn () . forms)
+   |($nm () . forms)
    |#
   %supplier)
 
 (def consumer
   #|Return a java Consumer.
    |
-   |(fn (symbol) . forms)
+   |($nm (symbol) . forms)
    |#
   %consumer)
 
 (def function
   #|Return a java Function.
    |
-   |(fn (symbol) . forms)
+   |($nm (symbol) . forms)
    |#
   %function)
 
 (def biConsumer
   #|Return a java BiConsumer.
    |
-   |(fn (symbol symbol) . forms)
+   |($nm (symbol symbol) . forms)
    |#
   %biConsumer)
 
 (def biFunction
   #|Return a java BiFunction.
    |
-   |(fn (symbol symbol) . forms)
+   |($nm (symbol symbol) . forms)
    |#
   %biFunction)
 
 (defMacro (close1 binding . forms)
   #|Single try/resource
    |
-   |(fn binding . forms)
+   |($nm binding . forms)
    |(type macro)
    |
    |(syntax binding (name . initForms))
@@ -4430,7 +4430,7 @@
 (defMacro (close bindings . forms)
   #|Multiple try/resource
    |
-   |(fn bindings . forms)
+   |($nm bindings . forms)
    |(type macro)
    |
    |(syntax bindings ((name . initForms) . bindings))
@@ -4460,7 +4460,7 @@
 (def toString
   #|internal to string function
    |
-   |(fn object)
+   |($nm object)
    |(type function)
    |# 
   toString)
@@ -4468,7 +4468,7 @@
 (def log
   #|Log all <b>arguments</b> to console and return the value of the first if present, #inert otherwise.
    |
-   |(fn . arguments)
+   |($nm . arguments)
    |(type function)
    |# 
   log)
@@ -4476,7 +4476,7 @@
 (def print
   #|Print all <b>arguments</b> to console and return the value of the last argument if present, #inert otherwise.
    |
-   |(fn . arguments)
+   |($nm . arguments)
    |(type function)
    |# 
   print)
@@ -4484,7 +4484,7 @@
 (def write
   #|Write all <b>arguments</b> to console and return the value of the last argument if present, #inert otherwise.
    |
-   |(fn . arguments)
+   |($nm . arguments)
    |(type function)
    |# 
 write)
@@ -4492,7 +4492,7 @@ write)
 (def load
   #|load <b>fileName</b> in the optional <b>environment</b>.
    |
-   |(fn fileName . environment)
+   |($nm fileName . environment)
    |(type function)
    |# 
 load)
@@ -4500,7 +4500,7 @@ load)
 (def read
   #|Read expression from console.
    |
-   |(fn)
+   |($nm)
    |(type function)
    |#
   read)
@@ -4508,7 +4508,7 @@ load)
 (def readString
   #|Read expression from string
    |
-   |(fn string)
+   |($nm string)
    |(type function)
    |#
   readString)
@@ -4516,7 +4516,7 @@ load)
 (def system
   #|Exec system commands
    |
-   |(fn string)
+   |($nm string)
    |(type function)
    |#
   system)
@@ -4524,7 +4524,7 @@ load)
 (defVau (time times . forms) env
   #|Return the elapsed time in milliseconds after evaluate n times <b>forms</b> as implicit `begin'
    |
-   |(fn n . forms)
+   |($nm n . forms)
    |(type fexpr)
    |#
   (let* ( (currentTime (@getMethod System "currentTimeMillis"))
@@ -4538,7 +4538,7 @@ load)
 (def\ (make\* n f)
   #|Returns a function that applies <b>function</b> with the arguments from n placed in a list.
    |
-   |(fn n function)
+   |($nm n function)
    |(type function)
    |#
   (def\ (resize n lst)
@@ -4554,7 +4554,7 @@ load)
 (def\ (minMax a . b)
   #|Returns a cons with the min and the max of the <b>values</b>.
    |
-   |(fn . values)
+   |($nm . values)
    |(type function)
    |#
   (let loop [ (x ((caseType a (Double .POSITIVE_INFINITY) (Long .MAX_VALUE) (Integer .MAX_VALUE)) a))
@@ -4570,7 +4570,7 @@ load)
 (def intStr
   #|Return #true if the string are interned, #false otherwise.
    |
-   |(fn)
+   |($nm)
    |(type function)
    |# 
   intStr)
@@ -4578,7 +4578,7 @@ load)
 (def doTco
   #|Return or update the use of the tail call optimization.
    |
-   |(fn . boolean)
+   |($nm . boolean)
    |(type function)
    |# 
   doTco)
@@ -4586,7 +4586,7 @@ load)
 (def doAsrt
   #|Return or update the execution of the assert.
    |
-   |(fn . boolean)
+   |($nm . boolean)
    |(type function)
    |# 
   doAsrt)
@@ -4594,7 +4594,7 @@ load)
 (def prStk
   #|Return or update the print of the stack for uncatched errors.
    |
-   |(fn . boolean)
+   |($nm . boolean)
    |(type function)
    |# 
   prStk)
@@ -4602,7 +4602,7 @@ load)
 (def prAttr
   #|Return or update the print of the attributes for the uncatched errors.
    |
-   |(fn . boolean)
+   |($nm . boolean)
    |(type function)
    |# 
   prAttr)
@@ -4610,7 +4610,7 @@ load)
 (def prWrn
   #|Return or update the print of warnings.
    |
-   |(fn . boolean)
+   |($nm . boolean)
    |(type function)
    |# 
  prWrn)
@@ -4618,7 +4618,7 @@ load)
 (def aQuote
   #|Return or update the auto quote property for the list without combinable car. 
    |
-   |(fn . boolean)
+   |($nm . boolean)
    |(type function)
    |# 
 aQuote)
@@ -4626,7 +4626,7 @@ aQuote)
 (def hdlAny
   #|Return or update the use of an arbitraty value for the catch handler.
    |
-   |(fn . boolean)
+   |($nm . boolean)
    |(type function)
    |# 
   hdlAny)
@@ -4634,7 +4634,7 @@ aQuote)
 (def prInert
   #|Return or update the print of #inert value in the repl
    |
-   |(fn . boolean)
+   |($nm . boolean)
    |(type function)
    |# 
   prInert)
@@ -4648,7 +4648,7 @@ aQuote)
    |- 3: !(or #false #null #inert)
    |- 4: !(or #false #null #inert 0)
    |
-   |(fn . integer)
+   |($nm . integer)
    |(type function)
    |# 
   typeT)
@@ -4661,7 +4661,7 @@ aQuote)
    |- 2: the previous value of the last binding
    |- 3: the container obj or environment
    |
-   |(fn . integer)
+   |($nm . integer)
    |(type function)
    |# 
   bndRes)
@@ -4677,7 +4677,7 @@ aQuote)
    |- 5: applications executed
    |- 6: bind/lookup symbols
    |
-   |(fn . integer)
+   |($nm . integer)
    |(type function)
    |# 
   prTrc)
@@ -4685,7 +4685,7 @@ aQuote)
 (def prEnv
   #|Return or update the max number of attributes for printable environments.
    |
-   |(fn . integer)
+   |($nm . integer)
    |(type function)
    |# 
   prEnv)
@@ -4693,7 +4693,7 @@ aQuote)
 (def boxDft
   #|Return or update the <b>value</b> to use as default value for the Box.
    |
-   |(fn . value)
+   |($nm . value)
    |(type function)
    |# 
   boxDft)
