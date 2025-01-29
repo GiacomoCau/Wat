@@ -111,6 +111,8 @@
 (def SimpleError
   #|Class for simple errors with a MESSAGE.
    |For minimal lispx test compatibility
+   |
+   |(type Class)
    |#
   Error )
 
@@ -118,8 +120,8 @@
   #|Signal a simple error with a MESSAGE.
    |For minimal lispx test compatibility
    |
-   |$(fn message)
-   |$(type function)
+   |($nm message)
+   |(type function)
    |#
   (error message :type 'simple) )
 

@@ -50,7 +50,7 @@
         (odd (fft (odds x)))
         (k -1)
         ;(++k (\ () (@set (%theEnv) 'k (+ k 1)) k))
-        (++ ($vau (k) e (eval (list 'begin (list 'def k (list '+ k 1)) k) (.parent e))))
+        (++ (vau (k) e (eval (list 'begin (list 'def k (list '+ k 1)) k) (.parent e))))
         (aux (map (\ (j) (c* (cexp (c/ (c* (cx 0 -2) (cx (* pi (++ k)) 0)) (cx (len x) 0))) j)) odd)) )
       (append (map c+ even aux) (map c- even aux)) )))
 
