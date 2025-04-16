@@ -3513,7 +3513,7 @@
               (expd2 lev sep mk (cons (car r) (if (cons? t) t (cons t))) (cdr r)) )
           (%error ("invalid syntax " f)) ))))
   (def\ (expd0 x)
-     (map [_ (if (>= (@indexOf ";!,'…_" (%subString _ 0 1)) 0) (symbol _) (car (@str2list vm _)))]
+     (map [_ (if (>= (@indexOf ";!,'…_" (%subString _ 0 1)) 0) (symbol _) (car (@str2lst vm _)))]
        (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (name x) ";|!|,|'|…|_[1-9a-z*]?" -1)) )) )
   (if (symbol? x)
     (expd1 () (expd0 x))
@@ -4100,7 +4100,7 @@
 (defMethod length ((seq List))
   (%len seq))
 (defMethod length ((seq Null))
-  (%len seq))
+  0)
 (defMethod length ((seq String))
   (@length seq))
 

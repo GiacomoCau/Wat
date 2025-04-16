@@ -98,20 +98,27 @@
                   (restartCase 
                     ( (useValue (\ (value) value) :associatedConditions (list condition))
                       (continue (\ () (eval symbol env)) :associatedConditions (list condition))
-                      (storeValue (\ (value) (eval (list 'def symbol value) env)) :associatedConditions (list condition)) )
-                    (repl:runDebuggerLoop condition k) )) )
-            ( (Error :type 'type :operands List)
-                (let ( (operands (getSlot condition 'operands)) )
-                  (restartCase 
-                    ( (setOperand (\ (index value) (setCar (nthCdr index operands) value) value) :associatedConditions (list condition)) )
+                      (storeValue (\ (value) (eval (list 'def symbol :rhs value) env)) :associatedConditions (list condition)) )
                     (repl:runDebuggerLoop condition k) )) )
             #|
-            ( (Error :type 'match)
-                (log condition) 
+            ( (Error :type 'type :operands List)
+                ;; va corretto il singolo operando
+                (let ( (operands (getSlot condition 'operands)) )
                   (restartCase 
-                    ( (useValue (\ (value) value) :associatedConditions (list condition)) )
-                    (repl:runDebuggerLoop condition k) ) )
+                    ( (useValue (\ (value) value) :associatedConditions (list condition))
+					  (setOperand (\ (index value) (setCar (nthCdr index operands) value) value) :associatedConditions (list condition)) )
+                    (repl:runDebuggerLoop condition k) )) )
+            ( (Error :type 'match)
+                ;; va allungata o ridotta, anche a null, la lista degli operandi
+                (log condition) 
+                (restartCase
+                  ( (useValue (\ (value) value) :associatedConditions (list condition)) )
+                  (repl:runDebuggerLoop condition k) ) )
             |#
+            ( (Error)
+                (restartCase 
+                  ( (useValue (\ (value) value) :associatedConditions (list condition)) )
+                  (repl:runDebuggerLoop condition k) ) )
             (else
                (repl:runDebuggerLoop condition k) ) ))))))
 

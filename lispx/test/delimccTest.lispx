@@ -215,7 +215,7 @@
     '(1 1 2))
 
   ;; It's probably a happy accident that this test works, since
-  ;; our `dsetPrv' is pretty different from DBplusDC's.
+  ;; our `dset:prv' is pretty different from DBplusDC's.
   (defTest test12
     (begin
       (ddef *p*)

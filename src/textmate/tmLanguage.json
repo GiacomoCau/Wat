@@ -12,11 +12,12 @@
 		},
 		primitive: {
 			name: "primitive",
-			match: "(?<=(\\s|\\(|\\)))(%(\\w|['´`<>^|~=$!?+\\-*%@/\\\\&#])+|if|begin|vau|def(\\\\|Vau|Macro)?|set!|lambda|\\\\|(un)?wrap|apply\\*?\\*?|eval|list\\*?|cons|c(a|d)+r!?|(cons|atom|null)\\?|assert|loop|atEnd|finally|rec\\\\?|let(\\*|1)?((rec)?\\\\?|Loop)?|catch(Tag)?(Wth)?|throw(Tag)?|takeSubcont|pushPrompt|push(Delim)?Subcont|pushSubcontBarrier)(?=(\\s|\\(|\\)))"
+			match: "(?<=(\\s|\\(|\\)))(%(\\w|['´`<>^|~=$!?+\\-*%@/\\\\&#])+|if|begin|vau|def(\\\\|Vau|Macro)?|set!|lambda|\\\\|(un)?wrap|apply\\*?\\*?|eval|list\\*?|cons|c(a|d)+r!?|(cons|atom|null)\\?|assert(#t)?|loop|atEnd|finally|rec\\\\?|let(\\*|1)?((rec)?\\\\?|Loop)?|catch(Tag)?(Wth)?|throw(Tag)?|takeSubcont|pushPrompt|push(Delim)?Subcont|pushSubcontBarrier|log|load|print|write|defSuite|defTest|signalsError\\?|eq\\?)(?=(\\s|\\(|\\)))"
 		},
 		string: {
 			name: "string",		
-			match: "\"(\\\\\"|[^\"])*\""
+			begin: "\"",
+			end: "(?<!\\\\)\"",
 		},
 		character: {
 			name: "character",		
