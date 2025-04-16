@@ -295,8 +295,8 @@ public class Vm {
 	class Ignore { public String toString() { return "#ignore"; }};
 	public Ignore ignore = new Ignore();
 	
-	class SheColon { public String toString() { return "#:"; }};
-	public SheColon sheColon = new SheColon();
+	class SharpColon { public String toString() { return "#:"; }};
+	public SharpColon sharpColon = new SharpColon();
 	
 	
 	// Tail Call Optimization
@@ -743,6 +743,12 @@ public class Vm {
 	<T> T matchError(String msg, Object datum, int operands) {
 		return error(msg, "type", symbol("match"), "datum", datum, "operands#", operands);
 	}
+	<T> T matchError(String msg, Object datum, int operands, List expr) {
+		return error(msg, "type", symbol("match"), "datum", datum, "operands#", operands, "expr", expr);
+	}
+	<T> T matchError(String msg, Object datum, int operands, Object subex, List expr) {
+		return error(msg, "type", symbol("match"), "datum", datum, "operands#", operands, "subex", subex, "expr", expr);
+	}
 	Object bind(Dbg dbg, Env e, Object lhs, Object rhs) {
 		return bind(dbg, true, bndRes, e, lhs, rhs);
 	}
@@ -786,7 +792,7 @@ public class Vm {
 					if (equals(lc.<Object>car(1), rhs)) yield null; // or rhs?
 					throw new TypeException("expected literal: {expected}, found: {datum}", rhs, lc.car(1));
 				}
-				else if (lc.car == sheColon) {
+				else if (lc.car == sharpColon) {
 					checkO(rhs, getTco(evalChk.combine(e, cons(lc.car(1)))));
 					yield bind(def, bndRes, e, lc.car(2), rhs);
 				}
@@ -811,7 +817,7 @@ public class Vm {
 					var array = rhs instanceof Object[] oa ? oa : null; var isArray = array != null;
 					for (; head instanceof Cons cons; i+=1, head=cons.cdr()) {
 						var car = cons.car;
-						if (car == sheColon) break;
+						if (car == sharpColon) break;
 						if (car instanceof List lst && lst.car instanceof List lst2 && lst2.car.equals(symbol("%at")) /*&& len(lst2) == 2*/) {
 							res = getTco(evaluate(e, lst2));
 							if (!(res instanceof At at)) throw new TypeException("expected an {expected}, found: {datum}", res, symbol("At"));
@@ -825,7 +831,7 @@ public class Vm {
 							res = bind(def, bndRes, e, symbol(ad.name), ad.apply(cons(rhs)));
 						}
 						else if (isObjEnv) {
-							res = bind(def, bndRes, e, car, objEnv.get(car instanceof Cons car2 && car2.car == sheColon ? car2.car(2) : car));
+							res = bind(def, bndRes, e, car, objEnv.get(car instanceof Cons car2 && car2.car == sharpColon ? car2.car(2) : car));
 						}
 						else if (isArray) {
 							//f (rhs.getClass().isArray()) { ... Array.get(rhs, i) ... Array.getLength(rhs) ...
@@ -864,9 +870,9 @@ public class Vm {
 		Env e; Object pt, ep; List x;
 		Opv(Env e, Object pt, Object ep, List x) {
 			this.e = e; this.pt = pt; this.ep = ep; //this.x = x
-			this.x = x == null || x.car != sheColon ? x
+			this.x = x == null || x.car != sharpColon ? x
 				: x.cdr() != null ? cons(cons(new Colon(this), x.cdr()))
-				: matchError("invalid return value check, expected {operands#,%+d} operands, found: {datum} in: " + x, null, 1) ;
+				: matchError("invalid return value check, expected {operands#,%+d} operands, found: {datum} in: {expr}", null, 1, x) ;
 		}
 		public Object combine(Env e, List o) {
 			var xe = env(this.e);
@@ -951,9 +957,9 @@ public class Vm {
 		}
 		public String toString() { return "%Vau"; }
 	};
-	class Def implements Combinable  {
+	class DefSet implements Combinable  {
 		boolean def;
-		Def(boolean def) { this.def = def; }
+		DefSet(boolean def) { this.def = def; }
 		//*
 		public Object combine(Env e, List o) {
 			var chk = checkR(this, o, 2, 3); // o = (dt val) | (dt (or #ignore #inert :rhs :prv :cnt) val)
@@ -1056,11 +1062,15 @@ public class Vm {
 			var car = o.car;
 			if (o.cdr() == null) return tco(()-> evaluate(e, car));
 			return tco(()-> pipe(dbg(e, this, o), ()-> getTco(evaluate(e, car)), test->
-				switch (istrue(test)) {
-					case Suspension s-> s;
-					case Boolean b-> b ? tco(()-> evaluate(e, o.car(1))) : tco(()-> combine(null, e, o.cdr(1)));
-					case Object obj-> resumeError(obj, symbol("Boolean"));
-				}
+			switch (istrue(test)) {
+				case Suspension s-> s;
+				case Boolean b-> b ? tco(()-> evaluate(e, o.car(1))) : tco(()-> combine(null, e, o.cdr(1)));
+				case Object obj-> resumeError(obj, symbol("Boolean"));
+			}
+			/* TODO in alternativa alla precedente
+			return tco(()-> pipe(dbg(e, this, o), ()-> getTco(evaluate(e, car)), test-> istrue(test),
+				(_, b)-> tco((Boolean) b ? ()-> evaluate(e, o.car(1)) : ()-> combine(null, e, o.cdr(1)))
+			*/
 			));
 		}
 		public String toString() { return "%If*"; }
@@ -1435,7 +1445,7 @@ public class Vm {
 		public String toString() { return "@" + name; }
 	}
 	Object at(String name) {
-		if (name == null) return typeError("method name is null, not a {expected}", name, symbol("String"));
+		if (name == null) return typeError("method name is {name}, not a {expected}", name, symbol("String"));
 		return new At(name);
 	}
 	
@@ -1516,9 +1526,10 @@ public class Vm {
 	
 	// Check Definitions/Parameters Tree
 	class PTree {
-		private Object expr, pt, ep; // ep == null per Def ovvero %def || %set!, ep == (or #ignore Symbol) per Vau
+		private List expr;
+		private Object pt, ep; // ep == null per Def ovvero %def || %set!, ep == (or #ignore Symbol) per Vau
 		private Set syms = new HashSet();
-		PTree(Object expr, Object pt, Object ep) { this.expr=expr; this.pt=pt; this.ep=ep; }
+		PTree(List expr, Object pt, Object ep) { this.expr=expr; this.pt=pt; this.ep=ep; }
 		Object check() {
 			if (!((pt instanceof Symbol || (pt == null || pt == ignore) && ep != null) && syms.add(pt))) {
 				if (!(pt instanceof Cons)) return typeError("invalid parameter tree, not {expected}: {datum} in: {expr}", pt, toChk(ep == null ? or(Symbol.class, Cons.class) : or(null, ignore, Symbol.class, Cons.class)), expr);
@@ -1536,11 +1547,11 @@ public class Vm {
 			if (member(c.car, quotes))
 				return len == 2
 					? null
-					: matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: " + c + " of: " + expr, 2 > len ? null : c.cdr(len-2), 2-len)
+					: matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: {subex} of: {expr}", 2 > len ? null : c.cdr(len-2), 2-len, c, expr)
 				;
-			if (c.car == sheColon)
+			if (c.car == sharpColon)
 				return len != 3
-					? matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: " + c + " of: " + expr, 3 > len ? null : c.cdr(len-2), 3-len)
+					? matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: {subex} of: {expr}", 3 > len ? null : c.cdr(len-2), 3-len, c, expr)
 					: !apply(v-> v instanceof Symbol || v == ignore, c.car(2))
 					? typeError("invalid parameter tree, not a {expected}: {datum} in: " + c + " of: {expr}", c.car(2), toChk(or(Symbol.class, ignore)), expr)
 					: check(c.car(2))
@@ -1549,8 +1560,8 @@ public class Vm {
 			return c.cdr() == null ? null : check(c.cdr());
 		}
 	}
-	Object checkDt(Object expr, Object dt) { return new PTree(expr, dt, null).check(); }
-	Object checkPt(Object expr, Object pt, Object ep) {
+	Object checkDt(List expr, Object dt) { return new PTree(expr, dt, null).check(); }
+	Object checkPt(List expr, Object pt, Object ep) {
 		return ep != null
 			? new PTree(expr, pt, ep).check()
 			: typeError("invalid environment parameter, not {expected}: {datum} in: {expr}", ep, toChk(or(ignore, Symbol.class)), expr)
@@ -1587,7 +1598,7 @@ public class Vm {
 		if (len >= min && len <= max && rst == 0) return len;
 		throw rst != 0
 			? new MatchException("expected {operands#,%+d} operands at end of: {datum}", o, rst)
-			: new MatchException("expected {operands#,%+d} operands in {datum}", o, len<min ? min-len : max-len)
+			: new MatchException("expected {operands#,%+d} operands in: {datum}", o, len<min ? min-len : max-len)
 		;
 	}
 	/*
@@ -1663,10 +1674,15 @@ public class Vm {
 				try {
 					switch (getTco(combine(env(), chkl.car, cons(o, chkl.cdr(1))))) {
 						case Boolean b when b: return 0;
-						case Object obj: throw new TypeException("not a {expected}: {datum}", o, toChk(chkl.cdr()));
+						case Object obj: throw new TypeException("not a {expected}: {datum}", o, toChk(chkl.cdr()) /*true*/);
+						/* TODO in alternativa del precedente
+						case Boolean _: throw new TypeException("not {expected}: {datum}", chkl.cdr(), toChk(true));
+						case Object _: throw new TypeException("not a {expected}: {datum}", cons(chkl.car(1), cons(o, chkl.cdr(1))), toChk(Boolean.class));
+						*/
 					}
 				}
 				catch (Throwable thw) {
+					if (thw instanceof TypeException) throw thw;
 					throw new TypeException("not a {expected}: {datum}", o, toChk(chkl));
 				}
 			}
@@ -1686,7 +1702,7 @@ public class Vm {
 		return chk instanceof Class cl ? symbol(cl.getSimpleName())
 			: chk instanceof Integer i && i == more ? symbol("oo")
 			: chk instanceof Object[] a ? cons(symbol("or"), list(stream(a).map(this::toChk).toArray()))
-			: chk instanceof List l ? map("toChk", o-> toChk(o), l.car instanceof Apv ? l.cdr() : l )
+			: chk instanceof List l ? map("toChk", this::toChk, l.car instanceof Apv ? l.cdr() : l )
 			: chk
 		;
 	}
@@ -1902,7 +1918,7 @@ public class Vm {
 	
 	Object bc2expr(Object o) {
 		return switch (o) {
-			case String s-> switch(s) { case "#inert"-> inert; case "#_", "#ignore"-> ignore; case "#:"-> sheColon; default-> intern(intStr ? s.intern() : s); };
+			case String s-> switch(s) { case "#inert"-> inert; case "#_", "#ignore"-> ignore; case "#:"-> sharpColon; default-> intern(intStr ? s.intern() : s); };
 			case Object[] objs-> objs.length == 2 && objs[0] == string ? intStr ? ((String) objs[1]).intern() : objs[1] : bc2list(objs);
 			case null, default-> o;
 		};
@@ -1963,8 +1979,8 @@ public class Vm {
 				// Basics
 				"%begin", begin,
 				"%vau", new Vau(),
-				"%def", new Def(true),
-				"%set!", new Def(false),
+				"%def", new DefSet(true),
+				"%set!", new DefSet(false),
 				"%eval", wrap(new Eval()),
 				"%wrap", wrap(new JFun("%Wrap", (Function) this::wrap)),
 				"%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap)),
