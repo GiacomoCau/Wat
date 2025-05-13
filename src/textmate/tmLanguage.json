@@ -30,7 +30,7 @@
 		},
 		java: {
 			name: "java",		
-			match: "(&|@|\\.)([A-Za-z0-9$_.]|\\[\\])+(?=(\\s|\\(|\\)|\\[|\\]))"
+			match: "(?<=(\\s|\\(|\\)))(&|@|\\.)([A-Za-z0-9$_.]|\\[\\])+(?=(\\s|\\(|\\)|\\[|\\]))"
 		},
 		number: {
 			name: "number",
@@ -91,9 +91,9 @@
 		        { include: "#expr" }
 			]
 		},
-		scomment: {
+		scomment: { // symbol comment
 			name: "comment",		
-			begin: "#;\\s*",
+			begin: "((?<=^)|(?<=(\\s|\\(|\\))))#;\\s*",
 			end: "(?=(\\s|\\(|\\)))",
 			patterns: [
 				{ name: "comment",		
@@ -101,23 +101,28 @@
 				}			
 			]
 		},
-		ecomment: {
+		ecomment: { // expression comment
 			name: "comment",		
-			begin: "#;\\s*\\(",
+			begin: "((?<=^)|(?<=(\\s|\\(|\\))))#;\\s*\\(",
 			end: "\\)",
 			patterns: [
 		        { name: "comment", include: "#expr" },
 			]
 		},
-		lcomment: {
+		lcomment: { // line comment
+			// può cominciare a inizio riga e termina a fine riga
+			// non deve essere preceduto da #
+			// o meglio da qualunque carattere diverso da \s ( )
+			// ovvero non va confuso con #; e non inizia dentro ad un simbolo!
 			name: "comment",		
-			begin: "(?<!#);",
+			//begin: "(?<=(^|\\s|\\(|\\)));", // ko! va in errore!
+			begin: "((?<=^)|(?<=(\\s|\\(|\\))));",
 			end: "$",
 			patterns: [
 		        {	match: "\"(\\\"|[^\"])+\"" }
 			]
 		},
-		comment: {
+		ncomment: { // nested comment
 			name: "comment",		
 			begin: "#\\|",
 			end: "\\|#",
@@ -127,12 +132,12 @@
 				},
 		        {	match: "\"(\\\"|[^\"])+\"" },
 		        {	include: "#lcomment" },
-		        {	include: "#comment" }
+		        {	include: "#ncomment" }
 			]
 		},
 		expr: {
 			patterns: [
-		        { include: "#comment" },
+		        { include: "#ncomment" },
 		        { include: "#lcomment" },
 		        { include: "#scomment" },
 		        { include: "#ecomment" },

@@ -16,8 +16,7 @@
    |#
   (takeSubcont p sk
     (pushPrompt p
-      (f (\ (c)
-           (pushDelimSubcont p sk (c)))))))
+      (f (\ (c) (pushDelimSubcont p sk (c)))) )))
 
 (def\ promptSet? (prompt)
   #|Return true if a prompt is set, false otherwise.

@@ -1373,15 +1373,6 @@
  |These operators follow the <b>api</b> put forth in the delimcc library at <b>url</b> `http://okmij.org/ftp/continuations/implementations.html'.
  |#
 
-(def takeSubcont
-  #|Abort outwards to the <b>prompt</b>.
-   |When the prompt is reached, evaluate <b>forms</b> as an implicit `begin' with <b>symbol</b> bound to the captured continuation (which does not include the prompt).
-   |
-   |($nm prompt symbol . forms)
-   |(type fexpr)
-   |#
-  %takeSubcont )
-
 (def pushPrompt
   #|Push the <b>prompt</b> and evaluate <b>forms</b> as an implicit `begin' inside the <b>prompt</b>.
    |This delimits the continuation.
@@ -1390,6 +1381,15 @@
    |(type fexpr)
    |#
   %pushPrompt )
+
+(def takeSubcont
+  #|Abort outwards to the <b>prompt</b>.
+   |When the prompt is reached, evaluate <b>forms</b> as an implicit `begin' with <b>symbol</b> bound to the captured continuation (which does not include the prompt).
+   |
+   |($nm prompt symbol . forms)
+   |(type fexpr)
+   |#
+  %takeSubcont )
 
 (def pushDelimSubcont
   #|Push the <b>prompt</b> and compose the previously captured <b>continuation</b> inside it
@@ -1409,6 +1409,8 @@
    |(derivation (pushDelimSubcont #ignore continuation . forms))
    |#
   (list* 'pushDelimSubcont #_ continuation forms) )
+
+(assert (pushPrompt 'p (* 2 (+ 1 (takeSubcont 'p k (pushSubcont k (pushSubcont k 3)))))) 18)
 
 (def pushSubcontBarrier
   #|Evaluate <b>forms</b> as an implicit `begin' after push a continuation barrier that prevent <b>forms</b> from capturing any continuations to the outside 
@@ -1473,7 +1475,7 @@
    |#
   %test )
 
-(def\ (printFrames k) (unless (null? k) (printFrames (.nxt k)) (log "v" k)))
+(def\ (printFrames k) (unless (null? k) (printFrames (.nxt k)) (log "v" k) #inert))
 
 (def\ (printStacktrace throwable)
   #|Throw the <b>throwable</b> after print the message of <b>throwable</b> and the stacktrace if `(prStk)'.

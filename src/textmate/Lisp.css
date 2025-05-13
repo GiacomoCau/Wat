@@ -1,11 +1,15 @@
-.comment { color: rgb(63, 127, 95); }
+
+.primitive { color: #7f0055; font-weight: bold; }
+
 .constant { color: #0000ff; }
 .keyword { color: #0000ff; }
 .string { color: #0000ff; }
 .character { color: #0000ff; }
 .quote { color: #0000ff; }
-.symbol { color: #000000; }
-.primitive { color: #7f0055; font-weight: bold; }
-.number { color: #0000ff; }
-.doc { color: rgb(130, 104, 0); font-weight: bold; }
 .java { color: #0000ff; }
+.number { color: #0000ff; }
+
+.comment { color: rgb(63, 127, 95); }
+.doc { color: rgb(130, 104, 0); font-weight: bold; }
+
+.symbol { color: #000000; }

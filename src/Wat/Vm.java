@@ -181,7 +181,8 @@ public class Vm {
 			this.f = f; this.nxt = next; this.dbg = dbg;
 		}
 		public String toString() { return "{Continuation %s}".formatted(dbg); }
-		Object apply(Supplier s) { return f.apply(new Resumption(nxt, s));}
+		Object apply(Supplier s) { return f.apply(new Resumption(nxt, s)); }
+		int length() { int i=0; for (Continuation c=this; c != null; i+=1, c=c.nxt); return i; }
 	}
 	class Resumption {
 		Continuation k; Supplier<Object> s;
@@ -1177,6 +1178,17 @@ public class Vm {
 	
 	
 	// Delimited Control
+	class PushPrompt implements Combinable  {
+		public Object combine(Env e, List o) {
+			var chk = checkM(this, o, 1); // o = (prp . forms)
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
+			var dbg = dbg(e, this, o);
+			return pipe(dbg, ()-> getTco(evaluate(e, o.car)), prp-> pushPrompt(null, e, dbg, prp, ()-> begin.combine(e, o.cdr())));
+		}
+		public String toString() { return "%PushPrompt"; }
+	}
+	PushPrompt pushPrompt = new PushPrompt();
 	class TakeSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
 			var chk = checkM(this, o, 2, Any.class, or(ignore, Symbol.class)); // o = (prp (or #ignore symbol) . forms)
@@ -1189,20 +1201,9 @@ public class Vm {
 		}
 		public String toString() { return "%TakeSubcont"; }
 	}
-	class PushPrompt implements Combinable  {
-		public Object combine(Env e, List o) {
-			var chk = checkM(this, o, 1); // o = (prp . forms)
-			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
-			var dbg = dbg(e, this, o);
-			return pipe(dbg, ()-> getTco(evaluate(e, o.car)), prp-> pushPrompt(null, e, dbg, prp, ()-> begin.combine(e, o.cdr())));
-		}
-		public String toString() { return "%PushPrompt"; }
-	}
-	PushPrompt pushPrompt = new PushPrompt();
 	class PushDelimSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
-			var chk = checkM(this, o, 2); // o = (prp k . forms)
+			var chk = checkM(this, o, 2, Any.class, or(Symbol.class, List.class)); // o = (prp k . forms)
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			var dbg = dbg(e, this, o);
@@ -1211,7 +1212,7 @@ public class Vm {
 				(_)-> getTco(evaluate(e, o.car(1))),
 				(prp, val)-> switch(val) {
 					case Continuation k-> pushPrompt(null, e, dbg, prp, ()-> k.apply(()-> begin.combine(e, o.cdr(1))));
-					case Object object-> typeError("cannot apply continuation, not a {expected}: {datum}", object, symbol("Continuation"));
+					case Object object-> typeError("cannot push delimited subcont, not a {expected}: {datum}", object, symbol("Continuation"));
 				}
 			);
 		}
