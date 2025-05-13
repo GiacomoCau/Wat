@@ -32,24 +32,6 @@
     </ul>
     <div>
       <h3>
-        takeSubcont
-      </h3>
-      <ul>
-        <li>
-          Abort outwards to the <b>prompt</b>.
-          <br/>
-            When the prompt is reached, evaluate <b>forms</b> as an implicit `begin' with <b>symbol</b> bound to the captured continuation (which does not include the prompt).
-          <br/>
-            &nbsp;
-          <br/>
-            (takeSubcont prompt symbol . forms)
-          <br/>
-            (type fexpr)
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
         pushPrompt
       </h3>
       <ul>
@@ -61,6 +43,24 @@
             &nbsp;
           <br/>
             (pushPrompt prompt . forms)
+          <br/>
+            (type fexpr)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        takeSubcont
+      </h3>
+      <ul>
+        <li>
+          Abort outwards to the <b>prompt</b>.
+          <br/>
+            When the prompt is reached, evaluate <b>forms</b> as an implicit `begin' with <b>symbol</b> bound to the captured continuation (which does not include the prompt).
+          <br/>
+            &nbsp;
+          <br/>
+            (takeSubcont prompt symbol . forms)
           <br/>
             (type fexpr)
         </li>
