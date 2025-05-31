@@ -152,6 +152,7 @@ public class Vm {
 	boolean thwErr = true; // error throw err (or val returned from userBreak)
 	boolean setErr = true; // error if set don't find the bind
 	
+	Boolean pstki = null; // push/take prompt #ignore: null:s.prp==prp, true:prp==#ignore; false:s.prp==#ignore
 	Object boxDft = null; // box/dinamic default: null, inert, ...
 	
 	int prTrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
@@ -178,7 +179,7 @@ public class Vm {
 	class Continuation {
 		Function<Resumption, Object> f; Continuation nxt; Dbg dbg;
 		Continuation(Dbg dbg, Function<Resumption, Object> f, Continuation next) {
-			this.f = f; this.nxt = next; this.dbg = dbg;
+			 this.dbg = dbg; this.f = f; this.nxt = next;
 		}
 		public String toString() { return "{Continuation %s}".formatted(dbg); }
 		Object apply(Supplier s) { return f.apply(new Resumption(nxt, s)); }
@@ -1196,7 +1197,7 @@ public class Vm {
 			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			var hdl = lambda(e, cons(o.car(1)), o.cdr(1));
 			return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, o.car)),
-				prp-> new Suspension(prp, hdl).suspend(dbg(e, this, prp, hdl), rr-> Vm.this.combine(e, rr.s, null)))
+				prp-> tco(()-> new Suspension(prp, hdl).suspend(dbg(e, this, prp, hdl), rr-> Vm.this.combine(e, rr.s, null))))
 			;
 		}
 		public String toString() { return "%TakeSubcont"; }
@@ -1210,7 +1211,7 @@ public class Vm {
 			return pipe(dbg,
 				()-> getTco(evaluate(e, o.car)),
 				(_)-> getTco(evaluate(e, o.car(1))),
-				(prp, val)-> switch(val) {
+				(prp, val)-> switch (val) {
 					case Continuation k-> pushPrompt(null, e, dbg, prp, ()-> k.apply(()-> begin.combine(e, o.cdr(1))));
 					case Object object-> typeError("cannot push delimited subcont, not a {expected}: {datum}", object, symbol("Continuation"));
 				}
@@ -1219,12 +1220,17 @@ public class Vm {
 		public String toString() { return "%PushDelimSubcont"; }
 	}
 	Object pushPrompt(Resumption r, Env e, Dbg dbg, Object prp, Supplier action) {
-		var res = r != null ? r.resume() : getTco(action.get());
-		if (!(res instanceof Suspension s)) return res;
-		return prp == ignore || !equals(s.prp, prp)
-			? s.suspend(dbg, rr-> pushPrompt(rr, e, dbg, prp, action))
-			: combine(e, s.hdl, cons(s.k))
-		;
+		return tco(()-> {
+				var res = r != null ? r.resume() : getTco(action.get());
+				if (!(res instanceof Suspension s)) return res;
+				//   prp == ignore: (pushPrompt #ignore (+ 1 (takeSubcont 'a k (pushSubcont k 1)))) -> 2, prompt #ignore catch any take
+				// s.prp == ignore: (pushPrompt 'a (+ 1 (takeSubcont #ignore k (pushSubcont k 1)))) -> 2, take #ignore get previus prompt
+				return pstki != null && ((pstki ? prp : s.prp) == ignore) || equals(s.prp, prp)
+					? combine(e, s.hdl, cons(s.k))
+					: s.suspend(dbg, rr-> pushPrompt(rr, e, dbg, prp, action))
+				;
+			}
+		);
 	}
 	//*
 	Combinable pushSubcontBarrier = new Combinable() {
@@ -1234,7 +1240,7 @@ public class Vm {
 		Object combine(Resumption r, Env e, List o) {
 			var res = r != null ? r.resume() : getTco(begin.combine(e, o));
 			if (!(res instanceof Suspension s)) return res;
-			return s.suspend(dbg(e, "pushSubcontBarrier", o), rr-> combine(rr, e, o)).k.apply(()-> unboundPromptError(s.prp));
+			return tco(()-> new Continuation(dbg(e, "pushSubcontBarrier", o), rr-> combine(rr, e, o), s.k).apply(()-> unboundPromptError(s.prp)));
 		}
 		public String toString() { return "%PushSubcontBarrier"; }
 	};
@@ -1675,7 +1681,7 @@ public class Vm {
 				try {
 					switch (getTco(combine(env(), chkl.car, cons(o, chkl.cdr(1))))) {
 						case Boolean b when b: return 0;
-						case Object obj: throw new TypeException("not a {expected}: {datum}", o, toChk(chkl.cdr()) /*true*/);
+						case Object _: throw new TypeException("not a {expected}: {datum}", o, toChk(chkl.cdr()) /*true*/);
 						/* TODO in alternativa del precedente
 						case Boolean _: throw new TypeException("not {expected}: {datum}", chkl.cdr(), toChk(true));
 						case Object _: throw new TypeException("not a {expected}: {datum}", cons(chkl.car(1), cons(o, chkl.cdr(1))), toChk(Boolean.class));
@@ -1846,7 +1852,7 @@ public class Vm {
 			var name = eIfnull(o.car, n-> "test "+ n + ": ");
 			var exp = o.car(1);
 			try {
-				var val = pushSubcontBarrier.combine(env, pushRootPrompt(cons(exp)));
+				var val = getTco(pushSubcontBarrier.combine(env, pushRootPrompt(cons(exp))));
 				switch (len) {
 					case 2:
 						print(name, exp, " should throw but is ", val);
@@ -1854,13 +1860,13 @@ public class Vm {
 					case 3: {
 						if (! (val instanceof Box)) {
 							var expt = o.<List>cdr(1);
-							if (Vm.this.equals(val, pushSubcontBarrier.combine(env, pushRootPrompt(expt)))) return true;
+							if (Vm.this.equals(val, getTco(pushSubcontBarrier.combine(env, pushRootPrompt(expt))))) return true;
 							print(name, exp, " should be ", o.car(2), " but is ", val);
 							break;
 						}
 					}
 					default: {
-						var expt = (List) map("evalExpt", x-> pushSubcontBarrier.combine(env, pushRootPrompt(cons(x))), o.cdr(1));
+						var expt = (List) map("evalExpt", x-> getTco(pushSubcontBarrier.combine(env, pushRootPrompt(cons(x)))), o.cdr(1));
 						if (expt.car instanceof Class && matchType(val, expt)) return true;
 						print(name, exp, " should be ", expt, " but is ", val);
 					}
@@ -1872,7 +1878,7 @@ public class Vm {
 					thw.printStackTrace(out);
 				else {
 					var val = thw instanceof Value v ? v.value : thw;
-					var expt = (List) map("evalExpt", x-> pushSubcontBarrier.combine(env, pushRootPrompt(cons(x))), o.cdr(1));
+					var expt = (List) map("evalExpt", x-> getTco(pushSubcontBarrier.combine(env, pushRootPrompt(cons(x)))), o.cdr(1));
 					if (expt.car instanceof Class && matchType(val, expt)) return true;
 					print(name, exp, " should be ", expt, " but is ", val);
 				}
@@ -2342,7 +2348,7 @@ public class Vm {
 	
 	// API
 	public Object exec(Env env, Object bytecode) {
-		return pushSubcontBarrier.combine(env, pushRootPrompt(cons(cons(new Begin(true), bc2exp(bytecode)))));
+		return getTco(pushSubcontBarrier.combine(env, pushRootPrompt(cons(cons(new Begin(true), bc2exp(bytecode))))));
 	}
 	public Object call(String funName, Object ... args) {
 		return exec(theEnv, $(funName, ".", $(args)));

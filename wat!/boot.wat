@@ -1401,14 +1401,14 @@
   %pushDelimSubcont )
 
 (defMacro (pushSubcont continuation . forms)
-  #|We don't have `pushSubcont' but we can emulate it with a `pushDelimSubcont' that pushes an #ignore prompt.
+  #|We don't have `pushSubcont' but we can emulate it with a `pushDelimSubcont' that pushes an (cons #inert) prompt.
    |
    |($nm continuation . forms)
    |(type macro)
    |
-   |(derivation (pushDelimSubcont #ignore continuation . forms))
+   |(derivation (pushDelimSubcont (cons #inert) continuation . forms))
    |#
-  (list* 'pushDelimSubcont #_ continuation forms) )
+  (list* 'pushDelimSubcont (cons #inert) continuation forms) )
 
 (assert (pushPrompt 'p (* 2 (+ 1 (takeSubcont 'p k (pushSubcont k (pushSubcont k 3)))))) 18)
 

@@ -90,7 +90,7 @@
       </h3>
       <ul>
         <li>
-          We don't have `pushSubcont' but we can emulate it with a `pushDelimSubcont' that pushes an #ignore prompt.
+          We don't have `pushSubcont' but we can emulate it with a `pushDelimSubcont' that pushes an (cons #inert) prompt.
           <br/>
             &nbsp;
           <br/>
@@ -100,7 +100,7 @@
           <br/>
             &nbsp;
           <br/>
-            (derivation (pushDelimSubcont #ignore continuation . forms))
+            (derivation (pushDelimSubcont (cons #inert) continuation . forms))
         </li>
       </ul>
     </div>

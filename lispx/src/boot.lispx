@@ -1379,14 +1379,14 @@
   %pushDelimSubcont )
 
 (defMacro (pushSubcont continuation . forms)
-  #|We don't have `pushSubcont' but we can emulate it with a `pushDelimSubcont' that pushes an #ignore prompt.
+  #|We don't have `pushSubcont' but we can emulate it with a `pushDelimSubcont' that pushes an (cons #inert) prompt.
    |
    |($nm continuation . forms)
    |(type macro)
    |
-   |(derivation (pushDelimSubcont #ignore continuation . forms))
+   |(derivation (pushDelimSubcont (cons #inert) continuation . forms))
    |#
-  (list* 'pushDelimSubcont #_ continuation forms) )
+  (list* 'pushDelimSubcont (cons #inert) continuation forms) )
 
 (def pushSubcontBarrier
   #|Evaluate <b>forms</b> as an implicit `begin' after push a continuation barrier that prevent <b>forms</b> from capturing any continuations to the outside 

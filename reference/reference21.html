@@ -133,7 +133,7 @@
       </h3>
       <ul>
         <li>
-          (def\ (printFrames k) (unless (null? k) (printFrames (.nxt k)) (log &quot;v&quot; k)))
+          (def\ (printFrames k) (unless (null? k) (printFrames (.nxt k)) (log &quot;v&quot; k) #inert))
         </li>
       </ul>
     </div>
