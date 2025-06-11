@@ -1,5 +1,6 @@
 
-.primitive { color: #7f0055; font-weight: bold; }
+.primitive { color: #40002c; font-weight: bold; } /* #6600d7 */
+.stdlib { color: #7f0055; font-weight: bold; }
 
 .constant { color: #0000ff; }
 .keyword { color: #0000ff; }

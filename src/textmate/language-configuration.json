@@ -12,4 +12,6 @@
 		{ "open": "(", "close": ")", "notIn": ["string"] },
 		{ "open": "\"", "close": "\"", "notIn": ["string", "comment"] }
 	]
+	//,"wordPattern": "[^() ]+"
+	//,"editor.wordSeparators": "() "
 }

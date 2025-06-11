@@ -1,6 +1,6 @@
-{	name: "Lisp",
-	scopeName : "source.lisp",
-	fileTypes: ["lsp","lispx","wat"],
+{	name: "Wat",
+	scopeName : "source.wat",
+	fileTypes: ["wat","lispx","lsp","ark","scm"],
 	patterns : [
 		{ include: "#expr" }
 	],
@@ -12,7 +12,11 @@
 		},
 		primitive: {
 			name: "primitive",
-			match: "(?<=(\\s|\\(|\\)))(%(\\w|['´`<>^|~=$!?+\\-*%@/\\\\&#])+|if|begin|vau|def(\\\\|Vau|Macro)?|set!|lambda|\\\\|(un)?wrap|apply\\*?\\*?|eval|list\\*?|cons|c(a|d)+r!?|(cons|atom|null)\\?|assert(#t)?|loop|atEnd|finally|rec\\\\?|let(\\*|1)?((rec)?\\\\?|Loop)?|catch(Tag)?(Wth)?|throw(Tag)?|takeSubcont|pushPrompt|push(Delim)?Subcont|pushSubcontBarrier|log|load|print|write|defSuite|defTest|signalsError\\?|eq\\?)(?=(\\s|\\(|\\)))"
+			match: "(?<=(\\s|\\(|\\)))%[^\\s()]+(?=(\\s|\\(|\\)))"
+		},
+		stdlib: {
+			name: "stdlib",
+			match: "(?<=(\\s|\\(|\\)))(if|begin|vau|def(\\\\|Vau|Macro|Class|Box|Obj|New|\\*|Generic|Method)?|set(!|Car|Cdr)|quote|lambda|\\\\|(un)?wrap|apply\\*?\\*?|eval|list\\*?|cons!?|c(a|d)+r!?|(cons|atom|null)\\?|map|assert(#t)?|new(Env|Box|Obj)?|loop|atEnd|finally|rec\\\\?|let(\\*|1)?((rec)?\\\\?|Loop)?|catch(Tag)?(Wth)?|throw(Tag)?|takeSubcont|pushPrompt|push(Delim)?Subcont|pushSubcontBarrier|log|load|print|write|def(Suite|Test)|error|signalsError\\?|eq\\?)(?=(\\s|\\(|\\)))"
 		},
 		string: {
 			name: "string",		
@@ -144,6 +148,7 @@
 		        { include: "#constant" },
 		        { include: "#java" },
 				{ include: "#primitive" },
+				{ include: "#stdlib" },
 				//*
 				{ include: "#quoteList" },
 				{ include: "#quoteSym" },
