@@ -27,11 +27,13 @@
     </h2>
     <ul>
       <li>
-        The last `cdr' of lists il alwais #null.
+        (type Class)
+        <br/>
+          (extends Cons)
         <br/>
           &nbsp;
         <br/>
-          (List type Class extends Cons)
+          The last `cdr' of lists il alwais #null.
       </li>
     </ul>
     <div>
@@ -40,7 +42,13 @@
       </h3>
       <ul>
         <li>
-          Return the append of the <b>list2</b> to the <b>list1</b>.
+          (<b>append</b> list1 list2)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            Return the append of the <b>list2</b> to the <b>list1</b>.
           <br/>
             The first one must be proper and is copied.
           <br/>
@@ -49,12 +57,6 @@
             It becomes the `cdr' of the final cons of the first list,
           <br/>
             or is returned directly if the first list is empty.
-          <br/>
-            &nbsp;
-          <br/>
-            (append list1 list2)
-          <br/>
-            (type function)
         </li>
       </ul>
     </div>
@@ -64,13 +66,13 @@
       </h3>
       <ul>
         <li>
-          Return the number of elements in the <b>list</b>.
+          (<b>len</b> list)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (len list)
-          <br/>
-            (type function)
+            Return the number of elements in the <b>list</b>.
         </li>
       </ul>
     </div>
@@ -80,17 +82,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if the <b>object</b> is a list, #false otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (list? object)
+          (<b>list?</b> object)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (type? object List))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if the <b>object</b> is a list, #false otherwise.
         </li>
       </ul>
     </div>
@@ -100,13 +102,13 @@
       </h3>
       <ul>
         <li>
-          Reverse the <b>list</b>.
+          (<b>reverse</b> list)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (reverse list)
-          <br/>
-            (type function)
+            Reverse the <b>list</b>.
         </li>
       </ul>
     </div>

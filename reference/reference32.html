@@ -31,6 +31,42 @@
         <br/>
           &nbsp;
         <br/>
+          (syntax definiendTree (or symbol decomposeTree))
+        <br/>
+          (syntax parametersTree (or #null ignore symbol decomposeTree))
+        <br/>
+          (syntax decomposeTree (parametersTree . decomposeTree))
+        <br/>
+          (syntax symbol (or Symbol (#: check Symbol)))
+        <br/>
+          (syntax ignore (or #ignore (#: check #ignore)))
+        <br/>
+          (syntax check Any)
+        <br/>
+          (syntax check Class)
+        <br/>
+          (syntax check checks)
+        <br/>
+          (syntax checks (check . checks))
+        <br/>
+          (syntax check (min . checks))
+        <br/>
+          (syntax check (min max . checks))
+        <br/>
+          (syntax check (min oo . checks))
+        <br/>
+          (syntax check (or . checks))
+        <br/>
+          (syntax check (and . checks))
+        <br/>
+          (syntax check (Apv . arguments))
+        <br/>
+          (syntax check value)
+        <br/>
+          (syntax arguments (value . arguments))
+        <br/>
+          &nbsp;
+        <br/>
           A `check' can be:
         <br/>
           - a `value',
@@ -82,42 +118,6 @@
           &nbsp;&nbsp;&nbsp;&nbsp;- `and': the parameter value must match all the `check' arguments of the `and'
         <br/>
           &nbsp;&nbsp;&nbsp;&nbsp;- `Apv': applying `Apv' to the cons of the parameter value and the remaining arguments must return #true
-        <br/>
-          &nbsp;
-        <br/>
-          (syntax definiendTree (or symbol decomposeTree))
-        <br/>
-          (syntax parametersTree (or #null ignore symbol decomposeTree))
-        <br/>
-          (syntax decomposeTree (parametersTree . decomposeTree))
-        <br/>
-          (syntax symbol (or Symbol (#: check Symbol)))
-        <br/>
-          (syntax ignore (or #ignore (#: check #ignore)))
-        <br/>
-          (syntax check Any)
-        <br/>
-          (syntax check Class)
-        <br/>
-          (syntax check checks)
-        <br/>
-          (syntax checks (check . checks))
-        <br/>
-          (syntax check (min . checks))
-        <br/>
-          (syntax check (min max . checks))
-        <br/>
-          (syntax check (min oo . checks))
-        <br/>
-          (syntax check (or . checks))
-        <br/>
-          (syntax check (and . checks))
-        <br/>
-          (syntax check (Apv . arguments))
-        <br/>
-          (syntax check value)
-        <br/>
-          (syntax arguments (value . arguments))
       </li>
     </ul>
     <div>
@@ -126,13 +126,13 @@
       </h3>
       <ul>
         <li>
-          Return #inert if <b>boolean</b> is #true, signals an error otherwise.
+          (<b>assert#t</b> boolean)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (assert#t boolean)
-          <br/>
-            (type function)
+            Return #inert if <b>boolean</b> is #true, signals an error otherwise.
         </li>
       </ul>
     </div>
@@ -142,17 +142,19 @@
       </h3>
       <ul>
         <li>
-          Returns the length of the <b>expr</b> value if it matches <b>check</b>, signals an error otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (check expr check)
+          (<b>check</b> expr check)
           <br/>
             (type fexpr)
+          <br/>
+            &nbsp;
           <br/>
             (derivation ((\ ((#: check value)) (len value)) expr))
           <br/>
             (derivation (let ( (value (eval exor env)) (chk (%evalChk check env)) ) (@check vm value chk))) 
+          <br/>
+            &nbsp;
+          <br/>
+            Returns the length of the <b>expr</b> value if it matches <b>check</b>, signals an error otherwise.
         </li>
       </ul>
     </div>
@@ -162,11 +164,7 @@
       </h3>
       <ul>
         <li>
-          Returns the length of <b>list</b> if the elements of <b>list</b> match the corresponding <b>check</b>, signals an error otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (check* list . checks)
+          (<b>check*</b> list . checks)
           <br/>
             (type macro)
           <br/>
@@ -175,6 +173,10 @@
             (derivation ((\ (#: checks list) (len list)) . list) 
           <br/>
             (derivation (check list checks)) 
+          <br/>
+            &nbsp;
+          <br/>
+            Returns the length of <b>list</b> if the elements of <b>list</b> match the corresponding <b>check</b>, signals an error otherwise.
         </li>
       </ul>
     </div>
@@ -184,11 +186,7 @@
       </h3>
       <ul>
         <li>
-          Return #true if <b>object</b> match <b>check</b>, #false otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (check? object check)
+          (<b>check?</b> object check)
           <br/>
             (type fexpr)
           <br/>
@@ -197,6 +195,10 @@
             (derivation wat (catchWth #f (apply check args env) #t)) 
           <br/>
             (derivation lispx (catch (handlerBind ( (Error (_ (throw #f))) ) (apply check args env) #t))) 
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if <b>object</b> match <b>check</b>, #false otherwise.
         </li>
       </ul>
     </div>
@@ -206,11 +208,7 @@
       </h3>
       <ul>
         <li>
-          Returns the value of the last form of (begin <b>form</b> . <b>forms</b>) if it matches <b>check</b>, signals an error otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (: check form . forms)
+          (<b>:</b> check form . forms)
           <br/>
             (type fexpr)
           <br/>
@@ -219,6 +217,10 @@
             (derivation ((\ ((#: check value)) value) (begin form . forms)))
           <br/>
             (derivation (let ( (value (eval (list* 'begin form . forms) env)) (chk (%evalChk check env)) ) (@check vm value chk) value)) 
+          <br/>
+            &nbsp;
+          <br/>
+            Returns the value of the last form of (begin <b>form</b> . <b>forms</b>) if it matches <b>check</b>, signals an error otherwise.
         </li>
       </ul>
     </div>
@@ -228,7 +230,7 @@
       </h3>
       <ul>
         <li>
-          alias for :.
+          (aliasOf :)
         </li>
       </ul>
     </div>

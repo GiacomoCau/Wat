@@ -232,13 +232,13 @@
       </h3>
       <ul>
         <li>
-          Return a constructor or a method with given name also without specify parameter classes.
+          (<b>getExecutable</b> Class name . classes)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (getExecutable Class name . classes)
-          <br/>
-            (type function)
+            Return a constructor or a method with given name also without specify parameter classes.
         </li>
       </ul>
     </div>
@@ -248,11 +248,11 @@
       </h3>
       <ul>
         <li>
-          Return a java Supplier.
+          (<b>supplier</b> () . forms)
           <br/>
             &nbsp;
           <br/>
-            (supplier () . forms)
+            Return a java Supplier.
         </li>
       </ul>
     </div>
@@ -262,11 +262,11 @@
       </h3>
       <ul>
         <li>
-          Return a java Consumer.
+          (<b>consumer</b> (symbol) . forms)
           <br/>
             &nbsp;
           <br/>
-            (consumer (symbol) . forms)
+            Return a java Consumer.
         </li>
       </ul>
     </div>
@@ -276,11 +276,11 @@
       </h3>
       <ul>
         <li>
-          Return a java Function.
+          (<b>function</b> (symbol) . forms)
           <br/>
             &nbsp;
           <br/>
-            (function (symbol) . forms)
+            Return a java Function.
         </li>
       </ul>
     </div>
@@ -290,11 +290,11 @@
       </h3>
       <ul>
         <li>
-          Return a java BiConsumer.
+          (<b>biConsumer</b> (symbol symbol) . forms)
           <br/>
             &nbsp;
           <br/>
-            (biConsumer (symbol symbol) . forms)
+            Return a java BiConsumer.
         </li>
       </ul>
     </div>
@@ -304,11 +304,11 @@
       </h3>
       <ul>
         <li>
-          Return a java BiFunction.
+          (<b>biFunction</b> (symbol symbol) . forms)
           <br/>
             &nbsp;
           <br/>
-            (biFunction (symbol symbol) . forms)
+            Return a java BiFunction.
         </li>
       </ul>
     </div>
@@ -318,17 +318,17 @@
       </h3>
       <ul>
         <li>
-          Single try/resource
-          <br/>
-            &nbsp;
-          <br/>
-            (close1 binding . forms)
+          (<b>close1</b> binding . forms)
           <br/>
             (type macro)
           <br/>
             &nbsp;
           <br/>
             (syntax binding (name . initForms))
+          <br/>
+            &nbsp;
+          <br/>
+            Single try/resource
         </li>
       </ul>
     </div>
@@ -338,17 +338,17 @@
       </h3>
       <ul>
         <li>
-          Multiple try/resource
-          <br/>
-            &nbsp;
-          <br/>
-            (close bindings . forms)
+          (<b>close</b> bindings . forms)
           <br/>
             (type macro)
           <br/>
             &nbsp;
           <br/>
             (syntax bindings ((name . initForms) . bindings))
+          <br/>
+            &nbsp;
+          <br/>
+            Multiple try/resource
         </li>
       </ul>
     </div>

@@ -31,17 +31,17 @@
       </h3>
       <ul>
         <li>
-          Defines <b>symbols</b> in the current environment with values generated evaluating <b>forms</b> as an implicit `begin'.
-          <br/>
-            &nbsp;
-          <br/>
-            (provide symbols . forms)
+          (<b>provide</b> symbols . forms)
           <br/>
             (type fexpr)
           <br/>
             &nbsp;
           <br/>
             (syntax symbols (symbol . symbols))
+          <br/>
+            &nbsp;
+          <br/>
+            Defines <b>symbols</b> in the current environment with values generated evaluating <b>forms</b> as an implicit `begin'.
         </li>
       </ul>
     </div>
@@ -51,17 +51,17 @@
       </h3>
       <ul>
         <li>
-          Return an environment where <b>symbols</b> are defined with values generated evaluating <b>forms</b> as an implicit `begin'.
-          <br/>
-            &nbsp;
-          <br/>
-            (module symbols . forms)
+          (<b>module</b> symbols . forms)
           <br/>
             (type fexpr)
           <br/>
             &nbsp;
           <br/>
             (syntax symbols (symbol . symbols))
+          <br/>
+            &nbsp;
+          <br/>
+            Return an environment where <b>symbols</b> are defined with values generated evaluating <b>forms</b> as an implicit `begin'.
         </li>
       </ul>
     </div>
@@ -71,17 +71,17 @@
       </h3>
       <ul>
         <li>
-          Define a `environment' with the given <b>name</b>, where <b>symbols</b> are defined with values generated evaluating <b>forms</b> as an implicit `begin'.
-          <br/>
-            &nbsp;
-          <br/>
-            (defModule name symbols . forms)
+          (<b>defModule</b> name symbols . forms)
           <br/>
             (type macro)
           <br/>
             &nbsp;
           <br/>
             (syntax symbols (symbol . symbols))
+          <br/>
+            &nbsp;
+          <br/>
+            Define a `environment' with the given <b>name</b>, where <b>symbols</b> are defined with values generated evaluating <b>forms</b> as an implicit `begin'.
         </li>
       </ul>
     </div>
@@ -91,17 +91,17 @@
       </h3>
       <ul>
         <li>
-          Define in the current environment the <b>symbols</b> defined in <b>module</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (import module symbols)
+          (<b>import</b> module symbols)
           <br/>
             (type fexpr)
           <br/>
             &nbsp;
           <br/>
             (syntax symbols (symbol . symbols))
+          <br/>
+            &nbsp;
+          <br/>
+            Define in the current environment the <b>symbols</b> defined in <b>module</b>.
         </li>
       </ul>
     </div>

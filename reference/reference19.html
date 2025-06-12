@@ -31,13 +31,13 @@
       </h3>
       <ul>
         <li>
-          Evaluate <b>forms</b> as an implicit `begin' in an infinite loop.
+          (<b>loop</b> . forms)
+          <br/>
+            (type fexpr)
           <br/>
             &nbsp;
           <br/>
-            (loop . forms)
-          <br/>
-            (type fexpr)
+            Evaluate <b>forms</b> as an implicit `begin' in an infinite loop.
         </li>
       </ul>
     </div>
@@ -47,17 +47,17 @@
       </h3>
       <ul>
         <li>
-          Evaluate the <b>protectedForms</b> as an implicit `begin'.
+          (<b>atEnd</b> cleanupForm . protectedForms)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            Evaluate the <b>protectedForms</b> as an implicit `begin'.
           <br/>
             Regardless of whether the protected form returns normally or via a nonlocal exit or panic,
           <br/>
             the <b>cleanupForm</b> are evaluated after the protected forms.
-          <br/>
-            &nbsp;
-          <br/>
-            (atEnd cleanupForm . protectedForms)
-          <br/>
-            (type fexpr)
         </li>
       </ul>
     </div>
@@ -67,21 +67,21 @@
       </h3>
       <ul>
         <li>
-          Evaluate the <b>protectedForm</b> and return its result.
-          <br/>
-            Regardless of whether the protected form returns normally or via a nonlocal exit or panic,
-          <br/>
-            the <b>cleanupForms</b> are evaluated as an implicit `begin' after the <b>protectedForm</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (finally protectedForm . cleanupForms)
+          (<b>finally</b> protectedForm . cleanupForms)
           <br/>
             (type macro)
           <br/>
             &nbsp;
           <br/>
             (derivation (atEnd (begin . cleanupForms) protectedForm))
+          <br/>
+            &nbsp;
+          <br/>
+            Evaluate the <b>protectedForm</b> and return its result.
+          <br/>
+            Regardless of whether the protected form returns normally or via a nonlocal exit or panic,
+          <br/>
+            the <b>cleanupForms</b> are evaluated as an implicit `begin' after the <b>protectedForm</b>.
         </li>
       </ul>
     </div>
@@ -91,13 +91,13 @@
       </h3>
       <ul>
         <li>
-          Abort to a nesting catch <b>tag</b> established by `catch', evaluate <b>forms</b> as an implicit `begin'.
+          (<b>throwTag</b> tag . forms)
+          <br/>
+            (type fexpr)
           <br/>
             &nbsp;
           <br/>
-            (throwTag tag . forms)
-          <br/>
-            (type fexpr)
+            Abort to a nesting catch <b>tag</b> established by `catch', evaluate <b>forms</b> as an implicit `begin'.
         </li>
       </ul>
     </div>
@@ -107,17 +107,17 @@
       </h3>
       <ul>
         <li>
-          Abort to a nesting generic catch, evaluate <b>forms</b> as an implicit `begin'.
-          <br/>
-            &nbsp;
-          <br/>
-            (throw . forms)
+          (<b>throw</b> . forms)
           <br/>
             (type fexpr)
           <br/>
             &nbsp;
           <br/>
             (derivation (throwTag #ignore forms))
+          <br/>
+            &nbsp;
+          <br/>
+            Abort to a nesting generic catch, evaluate <b>forms</b> as an implicit `begin'.
         </li>
       </ul>
     </div>
@@ -127,17 +127,17 @@
       </h3>
       <ul>
         <li>
-          Establishes a catch <b>tag</b> with an <b>handler</b> (one arg function or any value) and evaluate <b>forms</b> as an implicit `begin'.
+          (<b>catchTagWth</b> tag handler . forms)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            Establishes a catch <b>tag</b> with an <b>handler</b> (one arg function or any value) and evaluate <b>forms</b> as an implicit `begin'.
           <br/>
             The <b>forms</b> may use `throw' to nonlocally exit from the <b>tag</b>. if <b>forms</b> throw and <b>handler</b> is a value, value will be the result of `catchTagWth'
           <br/>
             otherwise the value of the `throw' is passed to the <b>handler</b> and the value returned by the <b>handler</b> will be the result of the `catchTagWth'
-          <br/>
-            &nbsp;
-          <br/>
-            (catchTagWth tag handler . forms)
-          <br/>
-            (type fexpr)
         </li>
       </ul>
     </div>
@@ -147,21 +147,21 @@
       </h3>
       <ul>
         <li>
-          Establishes an generic catch all with <b>handler</b> (one arg function or any value) and evaluate <b>forms</b> as an implicit `begin'.
-          <br/>
-            The <b>forms</b> may use `throw' to nonlocally exit. if <b>forms</b> throw and <b>handler</b> is a value, value will be the result of `catchWth'
-          <br/>
-            otherwise the value of the `throw' is passed to the <b>handler</b> and the value returned by the <b>handler</b> will be the result of the `catchWth'
-          <br/>
-            &nbsp;
-          <br/>
-            (catchWth handler . forms)
+          (<b>catchWth</b> handler . forms)
           <br/>
             (type macro)
           <br/>
             &nbsp;
           <br/>
             (derivation (catchTagWth #ignore handler . forms))
+          <br/>
+            &nbsp;
+          <br/>
+            Establishes an generic catch all with <b>handler</b> (one arg function or any value) and evaluate <b>forms</b> as an implicit `begin'.
+          <br/>
+            The <b>forms</b> may use `throw' to nonlocally exit. if <b>forms</b> throw and <b>handler</b> is a value, value will be the result of `catchWth'
+          <br/>
+            otherwise the value of the `throw' is passed to the <b>handler</b> and the value returned by the <b>handler</b> will be the result of the `catchWth'
         </li>
       </ul>
     </div>
@@ -171,19 +171,19 @@
       </h3>
       <ul>
         <li>
-          Establishes a catch <b>tag</b> without handler and evaluate <b>forms</b> as an implicit `begin'.
-          <br/>
-            The <b>forms</b> may use `throw' to nonlocally exit from the tag. if <b>forms</b> throw the value returned by the `throw' will be the result of the `catchTag'
-          <br/>
-            &nbsp;
-          <br/>
-            (catchTag tag . forms)
+          (<b>catchTag</b> tag . forms)
           <br/>
             (type macro)
           <br/>
             &nbsp;
           <br/>
             (derivation (catchTagWth tag #ignore . forms))
+          <br/>
+            &nbsp;
+          <br/>
+            Establishes a catch <b>tag</b> without handler and evaluate <b>forms</b> as an implicit `begin'.
+          <br/>
+            The <b>forms</b> may use `throw' to nonlocally exit from the tag. if <b>forms</b> throw the value returned by the `throw' will be the result of the `catchTag'
         </li>
       </ul>
     </div>
@@ -193,19 +193,19 @@
       </h3>
       <ul>
         <li>
-          Establishes an generic catch all without handler and evaluate <b>forms</b> as an implicit `begin'.
-          <br/>
-            The <b>forms</b> may use `throw' to nonlocally exit. if <b>forms</b> throw the value returned by the `throw' will be the result of the `catch'
-          <br/>
-            &nbsp;
-          <br/>
-            (catch . forms)
+          (<b>catch</b> . forms)
           <br/>
             (type macro)
           <br/>
             &nbsp;
           <br/>
             (derivation (catchTagWth #ignore #ignore . forms))
+          <br/>
+            &nbsp;
+          <br/>
+            Establishes an generic catch all without handler and evaluate <b>forms</b> as an implicit `begin'.
+          <br/>
+            The <b>forms</b> may use `throw' to nonlocally exit. if <b>forms</b> throw the value returned by the `throw' will be the result of the `catch'
         </li>
       </ul>
     </div>

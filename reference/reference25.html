@@ -31,7 +31,7 @@
       </h3>
       <ul>
         <li>
-          Alias of begin.
+          (aliasOf begin)
         </li>
       </ul>
     </div>
@@ -41,13 +41,13 @@
       </h3>
       <ul>
         <li>
-          Evaluate <b>form</b> and return the result after evaluate <b>forms</b> as an implicit `begin'.
+          (<b>prog1</b> form . forms)
+          <br/>
+            (type fexpr)
           <br/>
             &nbsp;
           <br/>
-            (prog1 form . forms)
-          <br/>
-            (type fexpr)
+            Evaluate <b>form</b> and return the result after evaluate <b>forms</b> as an implicit `begin'.
         </li>
       </ul>
     </div>
@@ -57,13 +57,13 @@
       </h3>
       <ul>
         <li>
-          If <b>test</b> yields #true evaluate <b>forms</b> as an implicit `begin', #inert otherwise.
+          (<b>when</b> test . forms)
+          <br/>
+            (type macro)
           <br/>
             &nbsp;
           <br/>
-            (when test . forms)
-          <br/>
-            (type macro)
+            If <b>test</b> yields #true evaluate <b>forms</b> as an implicit `begin', #inert otherwise.
         </li>
       </ul>
     </div>
@@ -73,13 +73,13 @@
       </h3>
       <ul>
         <li>
-          If <b>test</b> yields #false evaluate <b>forms</b> as an implicit `begin', #inert otherwise.
+          (<b>unless</b> test . forms)
+          <br/>
+            (type macro)
           <br/>
             &nbsp;
           <br/>
-            (unless test . forms)
-          <br/>
-            (type macro)
+            If <b>test</b> yields #false evaluate <b>forms</b> as an implicit `begin', #inert otherwise.
         </li>
       </ul>
     </div>
@@ -89,17 +89,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if all <b>operands</b> evaluate to #true, #false otherwise.
+          (<b>&&</b> . operands)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if all <b>operands</b> evaluate to #true, #false otherwise.
           <br/>
             If an operand evaluates to #false, later operands are not evaluated.
           <br/>
             If there are no operands, return #true.
-          <br/>
-            &nbsp;
-          <br/>
-            (&amp;&amp; . operands)
-          <br/>
-            (type fexpr)
         </li>
       </ul>
     </div>
@@ -109,7 +109,7 @@
       </h3>
       <ul>
         <li>
-          Alias of &amp;&amp;.
+          (aliasOf &amp;&amp;)
         </li>
       </ul>
     </div>
@@ -119,17 +119,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if one of the <b>operands</b> evaluates to #true, #false otherwise.
+          (<b>||</b> . operands)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if one of the <b>operands</b> evaluates to #true, #false otherwise.
           <br/>
             If an operand evaluates to #true, later operands are not evaluated.
           <br/>
             If there are no operands, return #false.
-          <br/>
-            &nbsp;
-          <br/>
-            (|| . operands)
-          <br/>
-            (type fexpr)
         </li>
       </ul>
     </div>
@@ -139,7 +139,7 @@
       </h3>
       <ul>
         <li>
-          Alias of ||.
+          (aliasOf ||)
         </li>
       </ul>
     </div>
@@ -149,13 +149,13 @@
       </h3>
       <ul>
         <li>
-          Return #true if <b>function</b> evaluate to #true when applied to <b>key</b> and all element of <b>list</b>, #false otherwise.
+          (<b>&&b</b> function key . list)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (&amp;&amp;b function key . list)
-          <br/>
-            (type function)
+            Return #true if <b>function</b> evaluate to #true when applied to <b>key</b> and all element of <b>list</b>, #false otherwise.
         </li>
       </ul>
     </div>
@@ -165,13 +165,13 @@
       </h3>
       <ul>
         <li>
-          Return #true if <b>function</b> evaluate to #true when applied to <b>key</b> and any element of <b>list</b>, #false otherwise.
+          (<b>||b</b> function key . list)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (||b function key . list)
-          <br/>
-            (type function)
+            Return #true if <b>function</b> evaluate to #true when applied to <b>key</b> and any element of <b>list</b>, #false otherwise.
         </li>
       </ul>
     </div>
@@ -181,19 +181,19 @@
       </h3>
       <ul>
         <li>
-          Return a function the return #true if all <b>functions</b> evaluate to #true when applied to the arguments, #false otherwise.
+          (<b>&&f</b> . functions)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            Return a function the return #true if all <b>functions</b> evaluate to #true when applied to the arguments, #false otherwise.
           <br/>
             If an function evaluates to #false, later <b>functions</b> are not evaluated.
           <br/>
             If there are no <b>functions</b>, when applied return #false.
           <br/>
             Idea stolen from Anarki https://github.com/arclanguage/anarki
-          <br/>
-            &nbsp;
-          <br/>
-            (&amp;&amp;f . functions)
-          <br/>
-            (type function)
         </li>
       </ul>
     </div>
@@ -203,19 +203,19 @@
       </h3>
       <ul>
         <li>
-          Return a function the return #true if one <b>functions</b> evaluate to #true when applied to the arguments, #false otherwise.
+          (<b>||f</b> . functions)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            Return a function the return #true if one <b>functions</b> evaluate to #true when applied to the arguments, #false otherwise.
           <br/>
             If an function evaluates to #true, later <b>functions</b> are not evaluated.
           <br/>
             If there are no <b>functions</b>, when applied return #true.
           <br/>
             Idea stolen from Anarki https://github.com/arclanguage/anarki
-          <br/>
-            &nbsp;
-          <br/>
-            (||f . functions)
-          <br/>
-            (type function)
         </li>
       </ul>
     </div>

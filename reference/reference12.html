@@ -27,9 +27,9 @@
     </h2>
     <ul>
       <li>
-        (Symbol type Class extends Intern)
+        (type Class)
         <br/>
-          (Keyword type Class extends Intern)
+          (extends Intern)
       </li>
     </ul>
     <div>
@@ -38,15 +38,15 @@
       </h3>
       <ul>
         <li>
-          Return the unique symbol or keyword with <b>string</b> as name.
+          (<b>intern</b> string)
           <br/>
-            Keyword if <b>string</b> start with ':', symbol otherwise
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (intern string)
+            Return the unique symbol or keyword with <b>string</b> as name.
           <br/>
-            (type function)
+            Keyword if <b>string</b> start with ':', symbol otherwise
         </li>
       </ul>
     </div>
@@ -56,13 +56,13 @@
       </h3>
       <ul>
         <li>
-          Return the name of the <b>intern</b> as a string.
+          (<b>name</b> intern)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (name intern)
-          <br/>
-            (type function)
+            Return the name of the <b>intern</b> as a string.
         </li>
       </ul>
     </div>
@@ -72,13 +72,13 @@
       </h3>
       <ul>
         <li>
-          Return the unique keyword with <b>string</b> as name.
+          (<b>keyword</b> string)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (keyword string)
-          <br/>
-            (type function)
+            Return the unique keyword with <b>string</b> as name.
         </li>
       </ul>
     </div>
@@ -88,17 +88,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if the <b>object</b> is a keyword, #false otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (keyword? object)
+          (<b>keyword?</b> object)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (type? object Keyword))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if the <b>object</b> is a keyword, #false otherwise.
         </li>
       </ul>
     </div>
@@ -108,13 +108,13 @@
       </h3>
       <ul>
         <li>
-          Return the name of the <b>keyword</b> as a string.
+          (<b>keywordName</b> keyword)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (keywordName keyword)
-          <br/>
-            (type function)
+            Return the name of the <b>keyword</b> as a string.
         </li>
       </ul>
     </div>
@@ -124,13 +124,13 @@
       </h3>
       <ul>
         <li>
-          Return the unique symbol with <b>string</b> as name.
+          (<b>symbol</b> string)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (symbol string)
-          <br/>
-            (type function)
+            Return the unique symbol with <b>string</b> as name.
         </li>
       </ul>
     </div>
@@ -140,17 +140,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if the <b>object</b> is a symbol, #false otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (symbol? object)
+          (<b>symbol?</b> object)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (type? object Symbol))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if the <b>object</b> is a symbol, #false otherwise.
         </li>
       </ul>
     </div>
@@ -160,13 +160,13 @@
       </h3>
       <ul>
         <li>
-          Return the name of the <b>symbol</b> as a string.
+          (<b>symbolName</b> symbol)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (symbolName symbol)
-          <br/>
-            (type function)
+            Return the name of the <b>symbol</b> as a string.
         </li>
       </ul>
     </div>

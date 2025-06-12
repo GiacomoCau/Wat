@@ -41,17 +41,11 @@
       </h3>
       <ul>
         <li>
-          Simple function to define and signal an error
+          (<b>error</b> string . attributes)
           <br/>
-            In LispX it will be replaced by a function adapted to the LispX Condition System 
+            (<b>error</b> throwable . attributes)
           <br/>
-            &nbsp;
-          <br/>
-            (error string . attributes)
-          <br/>
-            (error throwable . attributes)
-          <br/>
-            (error string throwable . attributes)
+            (<b>error</b> string throwable . attributes)
           <br/>
             (type function)
           <br/>
@@ -60,6 +54,12 @@
             (syntax attributes (or () (attribute value . attributes)))
           <br/>
             (syntax attribute (or Symbol Keyword String))
+          <br/>
+            &nbsp;
+          <br/>
+            Simple function to define and signal an error
+          <br/>
+            In LispX it will be replaced by a function adapted to the LispX Condition System 
         </li>
       </ul>
     </div>
@@ -69,13 +69,13 @@
       </h3>
       <ul>
         <li>
-          Return a new type error with <b>datum</b> and <b>expected</b>.
+          (<b>makeTypeError</b> datum expected)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (makeTypeError datum expected)
-          <br/>
-            (type function)
+            Return a new type error with <b>datum</b> and <b>expected</b>.
         </li>
       </ul>
     </div>
@@ -85,13 +85,13 @@
       </h3>
       <ul>
         <li>
-          Signal a type error with <b>datum</b> and <b>expected</b>.
+          (<b>typeError</b> datum expected)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (typeError datum expected)
-          <br/>
-            (type function)
+            Signal a type error with <b>datum</b> and <b>expected</b>.
         </li>
       </ul>
     </div>
@@ -101,21 +101,11 @@
       </h3>
       <ul>
         <li>
-          Signals an error if:
+          (<b>test</b> name expression value)
           <br/>
-            - <b>expression</b> does not equal <b>value</b>
+            (<b>test</b> name expression)
           <br/>
-            - <b>value</b> is not present and the <b>expression</b> does not throws
-          <br/>
-            - <b>expression</b> throws or returns an object and the object is not of the same <b>class</b> with the <b>attributes</b> of the given <b>value</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (test name expression value)
-          <br/>
-            (test name expression)
-          <br/>
-            (test name expression class attribute value . attributes)
+            (<b>test</b> name expression class attribute value . attributes)
           <br/>
             (type fexpr)
           <br/>
@@ -124,6 +114,16 @@
             (syntax attributes (or () (attribute value . attributes)))
           <br/>
             (syntax attribute (or Symbol Keyword String .Field @Method))
+          <br/>
+            &nbsp;
+          <br/>
+            Signals an error if:
+          <br/>
+            - <b>expression</b> does not equal <b>value</b>
+          <br/>
+            - <b>value</b> is not present and the <b>expression</b> does not throws
+          <br/>
+            - <b>expression</b> throws or returns an object and the object is not of the same <b>class</b> with the <b>attributes</b> of the given <b>value</b>.
         </li>
       </ul>
     </div>
@@ -143,13 +143,13 @@
       </h3>
       <ul>
         <li>
-          Throw the <b>throwable</b> after print the message of <b>throwable</b> and the stacktrace if `(prStk)'.
+          (<b>printStacktrace</b> throwable)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (printStacktrace throwable)
-          <br/>
-            (type function)
+            Throw the <b>throwable</b> after print the message of <b>throwable</b> and the stacktrace if `(prStk)'.
         </li>
       </ul>
     </div>

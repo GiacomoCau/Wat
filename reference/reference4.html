@@ -31,17 +31,17 @@
       </h3>
       <ul>
         <li>
-          Call the <b>function</b> with a dynamically-supplied list of <b>arguments</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (apply* function . arguments)
+          (<b>apply*</b> function . arguments)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (apply function arguments (newEnv)))
+          <br/>
+            &nbsp;
+          <br/>
+            Call the <b>function</b> with a dynamically-supplied list of <b>arguments</b>.
         </li>
       </ul>
     </div>
@@ -51,17 +51,17 @@
       </h3>
       <ul>
         <li>
-          Call the <b>function</b> with a dynamically-supplied list of <b>arguments</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (apply** function . arguments)
+          (<b>apply**</b> function . arguments)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (apply function (apply list* arguments) (newEnv)))
+          <br/>
+            &nbsp;
+          <br/>
+            Call the <b>function</b> with a dynamically-supplied list of <b>arguments</b>.
         </li>
       </ul>
     </div>
@@ -71,19 +71,19 @@
       </h3>
       <ul>
         <li>
-          Match the <b>definiendTree</b> against the <b>value</b> in the <b>environmentParameter</b>, creating or updating existing bindings.
+          (<b>set</b> environmentParameter definiendTree value)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            Match the <b>definiendTree</b> against the <b>value</b> in the <b>environmentParameter</b>, creating or updating existing bindings.
           <br/>
             Unlike Common Lisp `setq' (or Scheme `set!') that allows updating arbitrary bindings
           <br/>
             you always need to know the environment where a binding is in to change it.
           <br/>
             Therefore, we usually use boxes instead of mutating bindings directly.
-          <br/>
-            &nbsp;
-          <br/>
-            (set environmentParameter definiendTree value)
-          <br/>
-            (type fexpr)
         </li>
       </ul>
     </div>
@@ -93,21 +93,21 @@
       </h3>
       <ul>
         <li>
-          Return an anonymous function with the given <b>parameterTree</b>, <b>environmentParameter</b> and <b>forms</b> as body,
-          <br/>
-            which may use the execution environment in the <b>environmentParameter</b>, rather than the definition environment, for evaluate <b>forms</b> as an implicit `begin'.
-          <br/>
-            Used for defining the dynamic environment and variable lambda de\ and dv\.
-          <br/>
-            &nbsp;
-          <br/>
-            (wrau parameterTree environmentParameter . forms)
+          (<b>wrau</b> parameterTree environmentParameter . forms)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (wrap (vau parameterTree environmentParameter . forms))
+          <br/>
+            &nbsp;
+          <br/>
+            Return an anonymous function with the given <b>parameterTree</b>, <b>environmentParameter</b> and <b>forms</b> as body,
+          <br/>
+            which may use the execution environment in the <b>environmentParameter</b>, rather than the definition environment, for evaluate <b>forms</b> as an implicit `begin'.
+          <br/>
+            Used for defining the dynamic environment and variable lambda de\ and dv\.
         </li>
       </ul>
     </div>
@@ -117,21 +117,21 @@
       </h3>
       <ul>
         <li>
-          Return an anonymous function with the given <b>parameterTree</b> and <b>forms</b> as body,
-          <br/>
-            which use the execution environment for evaluate <b>forms</b> as an implicit `begin' and get the values of the free variables.
-          <br/>
-            The first type of lambda before Scheme.
-          <br/>
-            &nbsp;
-          <br/>
-            (de\ parameterTree . forms)
+          (<b>de\</b> parameterTree . forms)
           <br/>
             (type fexpr)
           <br/>
             &nbsp;
           <br/>
             (derivation (wrau args env (apply begin forms (bind (newEnv env) parameterTree args))))
+          <br/>
+            &nbsp;
+          <br/>
+            Return an anonymous function with the given <b>parameterTree</b> and <b>forms</b> as body,
+          <br/>
+            which use the execution environment for evaluate <b>forms</b> as an implicit `begin' and get the values of the free variables.
+          <br/>
+            The first type of lambda before Scheme.
         </li>
       </ul>
     </div>
@@ -141,15 +141,15 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment the named dynamic environment function <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
+          (<b>defde\</b> name parameterTree . forms)
+          <br/>
+            (<b>defde\</b> (name parameterTree) . forms)
+          <br/>
+            (type macro)
           <br/>
             &nbsp;
           <br/>
-            (defde\ name parameterTree . forms)
-          <br/>
-            (defde\ (name parameterTree) . forms)
-          <br/>
-            (type macro)
+            Defines into the current environment the named dynamic environment function <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
         </li>
       </ul>
     </div>

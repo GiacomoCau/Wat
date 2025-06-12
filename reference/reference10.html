@@ -31,11 +31,7 @@
       </h3>
       <ul>
         <li>
-          Return the `car' of the `car' of the <b>cons</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (caar cons)
+          (<b>caar</b> cons)
           <br/>
             (type function)
           <br/>
@@ -44,6 +40,10 @@
             (derivation ((\ (((caar . #_) . #_)) caar)) cons)
           <br/>
             (derivation (car (car cons)))
+          <br/>
+            &nbsp;
+          <br/>
+            Return the `car' of the `car' of the <b>cons</b>.
         </li>
       </ul>
     </div>
@@ -53,17 +53,17 @@
       </h3>
       <ul>
         <li>
-          Return the `car' of the `cdr' of the <b>cons</b> if 'cddr' is #null, signals an error otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (cadr! cons)
+          (<b>cadr!</b> cons)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation ((\ ((#_ cadr)) cadr)) cons)
+          <br/>
+            &nbsp;
+          <br/>
+            Return the `car' of the `cdr' of the <b>cons</b> if 'cddr' is #null, signals an error otherwise.
         </li>
       </ul>
     </div>
@@ -73,11 +73,7 @@
       </h3>
       <ul>
         <li>
-          Return the `cdr' of the `car' of the <b>cons</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (cdar cons)
+          (<b>cdar</b> cons)
           <br/>
             (type function)
           <br/>
@@ -86,6 +82,10 @@
             (derivation ((\ (((#_ . cdar) . #_)) cdar)) cons)
           <br/>
             (derivation (cdr (car cons)))
+          <br/>
+            &nbsp;
+          <br/>
+            Return the `cdr' of the `car' of the <b>cons</b>.
         </li>
       </ul>
     </div>
@@ -95,11 +95,7 @@
       </h3>
       <ul>
         <li>
-          Return the `cdr' of the `cdr' of the <b>cons</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (cddr cons)
+          (<b>cddr</b> cons)
           <br/>
             (type function)
           <br/>
@@ -110,6 +106,10 @@
             (derivation (cdr (cdr cons)))
           <br/>
             (derivation (@cdr cons 1))
+          <br/>
+            &nbsp;
+          <br/>
+            Return the `cdr' of the `cdr' of the <b>cons</b>.
         </li>
       </ul>
     </div>
@@ -119,17 +119,17 @@
       </h3>
       <ul>
         <li>
-          Return a cons with the given <b>car</b> and #null.
-          <br/>
-            &nbsp;
-          <br/>
-            (cons! car)
+          (<b>cons!</b> car)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivarion ((\ (car) (cons car)) car))
+          <br/>
+            &nbsp;
+          <br/>
+            Return a cons with the given <b>car</b> and #null.
         </li>
       </ul>
     </div>
@@ -139,13 +139,13 @@
       </h3>
       <ul>
         <li>
-          Return element number N of <b>list</b>, where the `car' is element zero.
+          (<b>nth</b> n list)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (nth n list)
-          <br/>
-            (type function)
+            Return element number N of <b>list</b>, where the `car' is element zero.
         </li>
       </ul>
     </div>
@@ -155,13 +155,13 @@
       </h3>
       <ul>
         <li>
-          Returns the tail of <b>list</b> that would be obtained by calling `cdr' N times in succession.
+          (<b>nthCdr</b> n list)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (nthCdr n list)
-          <br/>
-            (type function)
+            Returns the tail of <b>list</b> that would be obtained by calling `cdr' N times in succession.
         </li>
       </ul>
     </div>
@@ -171,7 +171,19 @@
       </h3>
       <ul>
         <li>
-          Set the `car' of the Cons.
+          (<b>setCar</b> value)
+          <br/>
+            (<b>setCar</b> bindResult value)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+          <br/>
+            &nbsp;
+          <br/>
+            Set the `car' of the Cons.
           <br/>
             &nbsp;
           <br/>
@@ -184,18 +196,6 @@
             with <b>bindResult</b> :prv return the previous value of the `car'
           <br/>
             with <b>bindResult</b> :cnt return the Cons or List
-          <br/>
-            &nbsp;
-          <br/>
-            (setCar value)
-          <br/>
-            (setCar bindResult value)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
         </li>
       </ul>
     </div>
@@ -205,7 +205,19 @@
       </h3>
       <ul>
         <li>
-          Set the `cdr' of the Cons.
+          (<b>setCdr</b> value)
+          <br/>
+            (<b>setCdr</b> bindResult value)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+          <br/>
+            &nbsp;
+          <br/>
+            Set the `cdr' of the Cons.
           <br/>
             &nbsp;
           <br/>
@@ -218,18 +230,6 @@
             with <b>bindResult</b> :prv return the previous value of the `cdr'
           <br/>
             with <b>bindResult</b> :cnt return the Cons
-          <br/>
-            &nbsp;
-          <br/>
-            (setCdr value)
-          <br/>
-            (setCdr bindResult value)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
         </li>
       </ul>
     </div>

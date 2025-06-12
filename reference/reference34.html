@@ -31,13 +31,13 @@
       </h3>
       <ul>
         <li>
-          Return #true if the apply of the <b>function</b> to every first elements of the <b>lists</b> return #true, #false otherwise.
+          (<b>any?</b> function . lists).
+          <br/>
+            (type function).
           <br/>
             &nbsp;
           <br/>
-            (any? function . lists).
-          <br/>
-            (type function).
+            Return #true if the apply of the <b>function</b> to every first elements of the <b>lists</b> return #true, #false otherwise.
         </li>
       </ul>
     </div>
@@ -47,13 +47,13 @@
       </h3>
       <ul>
         <li>
-          Return #true if the apply of the <b>function</b> to every element of <b>values</b> return #true, #false otherwise.
+          (<b>any?*</b> function . values).
+          <br/>
+            (type function).
           <br/>
             &nbsp;
           <br/>
-            (any?* function . values).
-          <br/>
-            (type function).
+            Return #true if the apply of the <b>function</b> to every element of <b>values</b> return #true, #false otherwise.
         </li>
       </ul>
     </div>
@@ -63,13 +63,13 @@
       </h3>
       <ul>
         <li>
-          Return #true if the apply of the <b>function</b> to one first elements of the <b>lists</b> return #true, #false otherwise.
+          (<b>all?</b> function . lists).
+          <br/>
+            (type function).
           <br/>
             &nbsp;
           <br/>
-            (all? function . lists).
-          <br/>
-            (type function).
+            Return #true if the apply of the <b>function</b> to one first elements of the <b>lists</b> return #true, #false otherwise.
         </li>
       </ul>
     </div>
@@ -79,13 +79,13 @@
       </h3>
       <ul>
         <li>
-          Return #true if the apply of the <b>function</b> to one element of <b>values</b> return #true, #false otherwise.
+          (<b>all?*</b> function . values).
+          <br/>
+            (type function).
           <br/>
             &nbsp;
           <br/>
-            (all?* function . values).
-          <br/>
-            (type function).
+            Return #true if the apply of the <b>function</b> to one element of <b>values</b> return #true, #false otherwise.
         </li>
       </ul>
     </div>
@@ -95,13 +95,13 @@
       </h3>
       <ul>
         <li>
-          Return #inert after applies the <b>function</b> to every first elements of the <b>lists</b>.
+          (<b>forEach#</b> function . lists).
+          <br/>
+            (type function).
           <br/>
             &nbsp;
           <br/>
-            (forEach# function . lists).
-          <br/>
-            (type function).
+            Return #inert after applies the <b>function</b> to every first elements of the <b>lists</b>.
         </li>
       </ul>
     </div>
@@ -111,13 +111,13 @@
       </h3>
       <ul>
         <li>
-          Return <b>lists</b> after applies the <b>function</b> to every first elements of the <b>lists</b>.
+          (<b>forEach</b> function . lists).
+          <br/>
+            (type function).
           <br/>
             &nbsp;
           <br/>
-            (forEach function . lists).
-          <br/>
-            (type function).
+            Return <b>lists</b> after applies the <b>function</b> to every first elements of the <b>lists</b>.
         </li>
       </ul>
     </div>
@@ -127,15 +127,15 @@
       </h3>
       <ul>
         <li>
-          Return the list of the results of apply the <b>function</b>, which must return a list, to every first elements of the <b>lists</b>.
+          (<b>maplist</b> function . lists).
           <br/>
-            (Note: this currently uses `append', but might be changed to use `nconc' in the future, like Common Lisp.)
+            (type function).
           <br/>
             &nbsp;
           <br/>
-            (maplist function . lists).
+            Return the list of the results of apply the <b>function</b>, which must return a list, to every first elements of the <b>lists</b>.
           <br/>
-            (type function).
+            (Note: this currently uses `append', but might be changed to use `nconc' in the future, like Common Lisp.)
         </li>
       </ul>
     </div>
@@ -145,15 +145,15 @@
       </h3>
       <ul>
         <li>
-          Returns the list of the first elements of the <b>lists</b> for which the application of the <b>function</b> returns #true.
+          (<b>filter</b> function . lists).
           <br/>
-            (Note: this currently uses `append', but might be changed to use `nconc' in the future, like Common Lisp.)
+            (type function).
           <br/>
             &nbsp;
           <br/>
-            (filter function . lists).
+            Returns the list of the first elements of the <b>lists</b> for which the application of the <b>function</b> returns #true.
           <br/>
-            (type function).
+            (Note: this currently uses `append', but might be changed to use `nconc' in the future, like Common Lisp.)
         </li>
       </ul>
     </div>
@@ -163,13 +163,13 @@
       </h3>
       <ul>
         <li>
-          Returns the list of the first elements of the <b>list</b> without those for which the application of the <b>function</b> returns #true.
+          (<b>remove</b> function . lists).
+          <br/>
+            (type function).
           <br/>
             &nbsp;
           <br/>
-            (remove function . lists).
-          <br/>
-            (type function).
+            Returns the list of the first elements of the <b>list</b> without those for which the application of the <b>function</b> returns #true.
         </li>
       </ul>
     </div>
@@ -179,15 +179,15 @@
       </h3>
       <ul>
         <li>
-          Use the <b>function</b> to combine the elements of the <b>list</b> from first element.
+          (<b>reduceL</b> function  init . lists).
           <br/>
-            The <b>initialValue</b> is logically placed before the first element of the <b>list</b>.
+            (type function).
           <br/>
             &nbsp;
           <br/>
-            (reduceL function  init . lists).
+            Use the <b>function</b> to combine the elements of the <b>list</b> from first element.
           <br/>
-            (type function).
+            The <b>initialValue</b> is logically placed before the first element of the <b>list</b>.
         </li>
       </ul>
     </div>
@@ -197,7 +197,7 @@
       </h3>
       <ul>
         <li>
-          Alias of reduceL.
+          (aliasOf reduceL)
         </li>
       </ul>
     </div>
@@ -207,15 +207,15 @@
       </h3>
       <ul>
         <li>
-          Use the <b>function</b> to combine the elements of the <b>list</b> from last element.
+          (<b>reduceR</b> function init . list).
           <br/>
-            The <b>initialValue</b> is logically placed before the last element of the <b>list</b>.
+            (type function).
           <br/>
             &nbsp;
           <br/>
-            (reduceR function init . list).
+            Use the <b>function</b> to combine the elements of the <b>list</b> from last element.
           <br/>
-            (type function).
+            The <b>initialValue</b> is logically placed before the last element of the <b>list</b>.
         </li>
       </ul>
     </div>
@@ -225,15 +225,15 @@
       </h3>
       <ul>
         <li>
-          Use the <b>function</b> to combine the elements of the <b>list</b> from first element.
+          (<b>foldL</b> function init . list).
           <br/>
-            The <b>initialValue</b> is logically placed after the last element of the <b>list</b>.
+            (type function).
           <br/>
             &nbsp;
           <br/>
-            (foldL function init . list).
+            Use the <b>function</b> to combine the elements of the <b>list</b> from first element.
           <br/>
-            (type function).
+            The <b>initialValue</b> is logically placed after the last element of the <b>list</b>.
         </li>
       </ul>
     </div>
@@ -243,15 +243,15 @@
       </h3>
       <ul>
         <li>
-          Use the <b>function</b> to combine the elements of the <b>list</b> from last element.
+          (<b>foldR</b> function  init . list).
           <br/>
-            The <b>initialValue</b> is logically placed after the last element of the <b>list</b>.
+            (type function).
           <br/>
             &nbsp;
           <br/>
-            (foldR function  init . list).
+            Use the <b>function</b> to combine the elements of the <b>list</b> from last element.
           <br/>
-            (type function).
+            The <b>initialValue</b> is logically placed after the last element of the <b>list</b>.
         </li>
       </ul>
     </div>

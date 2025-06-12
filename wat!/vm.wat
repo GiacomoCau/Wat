@@ -109,19 +109,20 @@
 (load "wat!/boot.wat")
 
 (def SimpleError
-  #|Class for simple errors with a MESSAGE.
-   |For minimal lispx test compatibility
+  #|(type Class)
+   |(extends Error)
    |
-   |(type Class)
+   |Class for simple errors with a MESSAGE.
+   |For minimal lispx test compatibility
    |#
   Error )
 
 (def\ simpleError (message)
-  #|Signal a simple error with a MESSAGE.
-   |For minimal lispx test compatibility
-   |
-   |($nm message)
+  #|($nm message)
    |(type function)
+   |
+   |Signal a simple error with a MESSAGE.
+   |For minimal lispx test compatibility
    |#
   (error message :type 'simple) )
 

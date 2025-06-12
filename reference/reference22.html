@@ -31,17 +31,17 @@
       </h3>
       <ul>
         <li>
-          Return the name symbol of the <b>class</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (className class)
+          (<b>className</b> class)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (symbol (@getSimpleName class))))
+          <br/>
+            &nbsp;
+          <br/>
+            Return the name symbol of the <b>class</b>.
         </li>
       </ul>
     </div>
@@ -51,17 +51,17 @@
       </h3>
       <ul>
         <li>
-          Return the class of the <b>object</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (classOf object)
+          (<b>classOf</b> object)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (if (null? object) #null (@getClass object)))
+          <br/>
+            &nbsp;
+          <br/>
+            Return the class of the <b>object</b>.
         </li>
       </ul>
     </div>
@@ -71,13 +71,13 @@
       </h3>
       <ul>
         <li>
-          Return #true if <b>object</b> is instaceof <b>class</b>.
+          (<b>instanceOf?</b> object class)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (instanceOf? object class)
-          <br/>
-            (type function)
+            Return #true if <b>object</b> is instaceof <b>class</b>.
         </li>
       </ul>
     </div>
@@ -87,19 +87,19 @@
       </h3>
       <ul>
         <li>
-          Return #true if the <b>class</b> is a subclass of the <b>superclass</b>, #false otherwise.
-          <br/>
-            A class is considered a subclass of itself.
-          <br/>
-            &nbsp;
-          <br/>
-            (subClass? class superclass)
+          (<b>subClass?</b> class superclass)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (@isAssignableFrom superClass class)))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if the <b>class</b> is a subclass of the <b>superclass</b>, #false otherwise.
+          <br/>
+            A class is considered a subclass of itself.
         </li>
       </ul>
     </div>
@@ -109,11 +109,7 @@
       </h3>
       <ul>
         <li>
-          Return #true if the <b>object</b> is an instance of the <b>class</b>, #false otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (type? object class)
+          (<b>type?</b> object class)
           <br/>
             (type function)
           <br/>
@@ -122,6 +118,10 @@
             (derivation (if (null? class) (null? object) (null? object) #f (subClass? (classOf object) class)))
           <br/>
             (derivation (if (null? class) (null? object) (instanceOf object class)))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if the <b>object</b> is an instance of the <b>class</b>, #false otherwise.
         </li>
       </ul>
     </div>

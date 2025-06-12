@@ -38,13 +38,13 @@
       </h3>
       <ul>
         <li>
-          Utility to create an n-ary relational operator from a <b>binaryOperator</b>.
+          (<b>relationalOp</b> binop)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (relationalOp binop)
-          <br/>
-            (type function)
+            Utility to create an n-ary relational operator from a <b>binaryOperator</b>.
         </li>
       </ul>
     </div>
@@ -54,17 +54,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if the <b>arguments</b> are in monotonically increasing order, #false otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (&lt; arguments)
+          (<b><</b> arguments)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (relationalOp &lt;))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if the <b>arguments</b> are in monotonically increasing order, #false otherwise.
         </li>
       </ul>
     </div>
@@ -74,17 +74,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if the <b>arguments</b> are in monotonically decreasing order, #false otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (&gt; arguments)
+          (<b>></b> arguments)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (relationalOp &gt;))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if the <b>arguments</b> are in monotonically decreasing order, #false otherwise.
         </li>
       </ul>
     </div>
@@ -94,17 +94,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if the <b>arguments</b> are in monotonically nondecreasing order, #false otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (&lt;= arguments)
+          (<b><=</b> arguments)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (relationalOp &lt;=))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if the <b>arguments</b> are in monotonically nondecreasing order, #false otherwise.
         </li>
       </ul>
     </div>
@@ -114,17 +114,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if the <b>arguments</b> are in monotonically nonincreasing order, #false otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (&gt;= arguments)
+          (<b>>=</b> arguments)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (relationalOp &gt;=))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if the <b>arguments</b> are in monotonically nonincreasing order, #false otherwise.
         </li>
       </ul>
     </div>
@@ -134,17 +134,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if all <b>arguments</b> are equal, #false otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (eq? arguments)
+          (<b>eq?</b> arguments)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (relationalOp eq?))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if all <b>arguments</b> are equal, #false otherwise.
         </li>
       </ul>
     </div>
@@ -154,17 +154,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if all <b>arguments</b> are ==, #false otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (== arguments)
+          (<b>==</b> arguments)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (relationalOp eq?))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if all <b>arguments</b> are ==, #false otherwise.
         </li>
       </ul>
     </div>
@@ -174,17 +174,17 @@
       </h3>
       <ul>
         <li>
-          Return #false if all <b>arguments</b> are ==, #true otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (!= arguments)
+          (<b>!=</b> arguments)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (relationalOp !=))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #false if all <b>arguments</b> are ==, #true otherwise.
         </li>
       </ul>
     </div>
@@ -194,13 +194,13 @@
       </h3>
       <ul>
         <li>
-          Return #true if all <b>arguments</b> are distinct, #false otherwise.
+          (<b>/=</b> argument . arguments)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (/= argument . arguments)
-          <br/>
-            (type function)
+            Return #true if all <b>arguments</b> are distinct, #false otherwise.
         </li>
       </ul>
     </div>

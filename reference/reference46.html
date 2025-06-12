@@ -51,19 +51,19 @@
       </h3>
       <ul>
         <li>
-          Pause the current coroutine.
+          (<b>yield</b> name . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            Pause the current coroutine.
           <br/>
             In the place where the enclosing `coroutine' (or `resume') was called,
           <br/>
             evaluate <b>forms</b> as an implicit `begin' with <b>name</b> bound to the paused coroutine.
           <br/>
             `resume' can later be used to restart execution inside the coroutine.
-          <br/>
-            &nbsp;
-          <br/>
-            (yield name . forms)
-          <br/>
-            (type macro)
         </li>
       </ul>
     </div>
@@ -73,13 +73,13 @@
       </h3>
       <ul>
         <li>
-          Resume the paused coroutine <b>continuation</b> and evaluate <b>forms</b> as an implicit `begin' in the place where `yield' was called in the coroutine, and return the result.
+          (<b>resume</b> continuation . forms)
+          <br/>
+            (type macro)
           <br/>
             &nbsp;
           <br/>
-            (resume continuation . forms)
-          <br/>
-            (type macro)
+            Resume the paused coroutine <b>continuation</b> and evaluate <b>forms</b> as an implicit `begin' in the place where `yield' was called in the coroutine, and return the result.
         </li>
       </ul>
     </div>

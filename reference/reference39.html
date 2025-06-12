@@ -31,13 +31,13 @@
       </h3>
       <ul>
         <li>
-          Look up a class based on its <b>name</b> symbol (evaluated) in the given <b>environment</b>.
+          (<b>findClass</b> name environment)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (findClass name environment)
-          <br/>
-            (type function)
+            Look up a class based on its <b>name</b> symbol (evaluated) in the given <b>environment</b>.
         </li>
       </ul>
     </div>
@@ -47,15 +47,7 @@
       </h3>
       <ul>
         <li>
-          Define a new `ObjClass' with the given <b>name</b>, optional <b>superclass</b>, and <b>attributes</b>.
-          <br/>
-            The <b>superclass</b> defaults to `Obj'.
-          <br/>
-            The <b>attributes</b> and <b>properties</b> are currently ignored.
-          <br/>
-            &nbsp;
-          <br/>
-            (defClass superclass attributes . properties)
+          (<b>defClass</b> superclass attributes . properties)
           <br/>
             (type fexpr)
           <br/>
@@ -64,6 +56,14 @@
             (syntax superclass (or () (symbol)))
           <br/>
             (syntax attributes (symbol . attributes))
+          <br/>
+            &nbsp;
+          <br/>
+            Define a new `ObjClass' with the given <b>name</b>, optional <b>superclass</b>, and <b>attributes</b>.
+          <br/>
+            The <b>superclass</b> defaults to `Obj'.
+          <br/>
+            The <b>attributes</b> and <b>properties</b> are currently ignored.
         </li>
       </ul>
     </div>

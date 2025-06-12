@@ -38,9 +38,11 @@
       </h3>
       <ul>
         <li>
-          Create a one-element list from the <b>value</b>.
+          (aliasOf cons!)
           <br/>
-            Alias of cons!.
+            &nbsp;
+          <br/>
+            Create a one-element list from the <b>value</b>.
         </li>
       </ul>
     </div>
@@ -50,17 +52,17 @@
       </h3>
       <ul>
         <li>
-          Single-value <b>option</b> destructuring.
+          (<b>ifOpt</b> (name option) then . else)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            Single-value <b>option</b> destructuring.
           <br/>
             Evaluate the <b>then</b> form with the <b>name</b> bound to the contents of the <b>option</b> if the evaluation of <b>option</b> is !#null,
           <br/>
             evaluate the <b>else</b> forms as an implicit `begin' otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (ifOpt (name option) then . else)
-          <br/>
-            (type fexpr)
         </li>
       </ul>
     </div>
@@ -70,15 +72,15 @@
       </h3>
       <ul>
         <li>
-          Multi-valued <b>option</b> destructuring.
+          (<b>ifOpt*</b> (definiendTree option) then . else)
+          <br/>
+            &nbsp;
+          <br/>
+            Multi-valued <b>option</b> destructuring.
           <br/>
             Evaluate <b>then</b> form with the <b>definiendTree</b> bound to <b>option</b> value if the evaluation of <b>option</b> is !#null,
           <br/>
             evaluate the <b>else</b> forms as an implicit `begin' otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (ifOpt* (definiendTree option) then . else)
         </li>
       </ul>
     </div>
@@ -88,17 +90,17 @@
       </h3>
       <ul>
         <li>
-          Destructure the <b>option</b>.
+          (<b>whenOpt</b> (name option) . forms)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            Destructure the <b>option</b>.
           <br/>
             Return #null if the evaluation of <b>option</b> it's #null,
           <br/>
             evaluate <b>forms</b> as an implicit `begin' with the <b>name</b> bound to the contents of the <b>option</b>, otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (whenOpt (name option) . forms)
-          <br/>
-            (type fexpr)
         </li>
       </ul>
     </div>
@@ -108,15 +110,15 @@
       </h3>
       <ul>
         <li>
-          Destructure the <b>option</b>.
+          (<b>unlessOpt</b> option . forms)
           <br/>
-            Return the evaluation of <b>forms</b> as an implicit `begin' if the evaluation of <b>option</b> is #null, #null otherwise.
+            (type fexpr)
           <br/>
             &nbsp;
           <br/>
-            (unlessOpt option . forms)
+            Destructure the <b>option</b>.
           <br/>
-            (type fexpr)
+            Return the evaluation of <b>forms</b> as an implicit `begin' if the evaluation of <b>option</b> is #null, #null otherwise.
         </li>
       </ul>
     </div>
@@ -126,7 +128,21 @@
       </h3>
       <ul>
         <li>
-          Multi-armed ifOpt.
+          (<b>caseOpt</b> option . clauses)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax clauses (clause . clauses))
+          <br/>
+            (syntax clause (else . forms))
+          <br/>
+            (syntax clause (definiendTree . forms))
+          <br/>
+            &nbsp;
+          <br/>
+            Multi-armed ifOpt.
           <br/>
             Evaluate <b>option</b> and go through the <b>clauses</b> in order.
           <br/>
@@ -139,20 +155,6 @@
             If the <b>option</b> match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
           <br/>
             Otherwise go to the next <b>clause</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (caseOpt option . clauses)
-          <br/>
-            (type fexpr)
-          <br/>
-            &nbsp;
-          <br/>
-            (syntax clauses (clause . clauses))
-          <br/>
-            (syntax clause (else . forms))
-          <br/>
-            (syntax clause (definiendTree . forms))
         </li>
       </ul>
     </div>
@@ -162,17 +164,17 @@
       </h3>
       <ul>
         <li>
-          Return the contents of the <b>option</b> if the option is !#null,
+          (<b>optDft</b> option . default)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            Return the contents of the <b>option</b> if the option is !#null,
           <br/>
             the evaluation if <b>default</b> if present, #inert otherwise.
           <br/>
             The <b>default</b> is evaluated lazily, only when the <b>option</b> is #null.
-          <br/>
-            &nbsp;
-          <br/>
-            (optDft option . default)
-          <br/>
-            (type fexpr)
         </li>
       </ul>
     </div>
@@ -182,21 +184,21 @@
       </h3>
       <ul>
         <li>
-          Similar to `optdft', but provides <b>default</b> for any elements of <b>list</b>.
-          <br/>
-            This is useful for implementing functions that take multiple optional arguments.
-          <br/>
-            Each <b>default</b> is evaluated lazily, only when needed.
-          <br/>
-            &nbsp;
-          <br/>
-            (optDft* list . defaults)
+          (<b>optDft*</b> list . defaults)
           <br/>
             (type fexpr)
           <br/>
             &nbsp;
           <br/>
             (syntax defaults (default . defaults))
+          <br/>
+            &nbsp;
+          <br/>
+            Similar to `optdft', but provides <b>default</b> for any elements of <b>list</b>.
+          <br/>
+            This is useful for implementing functions that take multiple optional arguments.
+          <br/>
+            Each <b>default</b> is evaluated lazily, only when needed.
         </li>
       </ul>
     </div>
@@ -206,13 +208,13 @@
       </h3>
       <ul>
         <li>
-          Returns the contents of the <b>option</b> or signals an error if it is #null.
+          (<b>optDft!</b> option)
+          <br/>
+            (type fexpr)
           <br/>
             &nbsp;
           <br/>
-            (optDft! option)
-          <br/>
-            (type fexpr)
+            Returns the contents of the <b>option</b> or signals an error if it is #null.
         </li>
       </ul>
     </div>

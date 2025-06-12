@@ -118,25 +118,26 @@
 (load "lispx/src/condSys.lispx") ; define _error_ (call invokeDebugger) and error!
 
 (defClass SimpleError (Error)
-  #|Class for simple errors with a MESSAGE.
+  #|(type Class)
+   |(extends Error)
    |
-   |(type Class extends Error)
+   |Class for simple errors with a MESSAGE.
    |#
   (message) )
 
 (def\ makeSimpleError (message)
-  #|Create a new simple error with a MESSAGE.
-   |
-   |($nm message)
+  #|($nm message)
    |(type function)
+   |
+   |Create a new simple error with a MESSAGE.
    |#
   (new SimpleError message :type 'simple) )
 
 (def\ simpleError (message)
-  #|Signal a simple error with a MESSAGE.
-   |
-   |($nm message)
+  #|($nm message)
    |(type function)
+   |
+   |Signal a simple error with a MESSAGE.
    |#
   (error (makeSimpleError message)) )
 

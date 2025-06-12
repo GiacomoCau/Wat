@@ -72,17 +72,17 @@
       </h3>
       <ul>
         <li>
-          Return a new box with the optional <b>value</b>.
+          (<b>newBox</b> . value)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            Return a new box with the optional <b>value</b>.
           <br/>
             The Box are functions that encapsulates a mutable value.
           <br/>
             Without <b>value</b> use as <b>value</b> `(boxDft)'.
-          <br/>
-            &nbsp;
-          <br/>
-            (newBox . value)
-          <br/>
-            (type function)
         </li>
       </ul>
     </div>
@@ -92,15 +92,15 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment the named box <b>name</b> with the optional <b>value</b>.
+          (<b>defBox</b> name . value)
           <br/>
-            Without <b>value</b> use as <b>value</b> `(boxDft)'.
+            (type macro)
           <br/>
             &nbsp;
           <br/>
-            (defBox name . value)
+            Defines into the current environment the named box <b>name</b> with the optional <b>value</b>.
           <br/>
-            (type macro)
+            Without <b>value</b> use as <b>value</b> `(boxDft)'.
         </li>
       </ul>
     </div>

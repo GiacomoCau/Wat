@@ -31,13 +31,13 @@
       </h3>
       <ul>
         <li>
-          Return #true if the string are interned, #false otherwise.
+          (<b>intStr</b>)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (intStr)
-          <br/>
-            (type function)
+            Return #true if the string are interned, #false otherwise.
         </li>
       </ul>
     </div>
@@ -47,13 +47,13 @@
       </h3>
       <ul>
         <li>
-          Return or update the use of the tail call optimization.
+          (<b>doTco</b> . boolean)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (doTco . boolean)
-          <br/>
-            (type function)
+            Return or update the use of the tail call optimization.
         </li>
       </ul>
     </div>
@@ -63,13 +63,13 @@
       </h3>
       <ul>
         <li>
-          Return or update the execution of the assert.
+          (<b>doAsrt</b> . boolean)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (doAsrt . boolean)
-          <br/>
-            (type function)
+            Return or update the execution of the assert.
         </li>
       </ul>
     </div>
@@ -79,13 +79,13 @@
       </h3>
       <ul>
         <li>
-          Return or update the print of the stack for uncatched errors.
+          (<b>prStk</b> . boolean)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (prStk . boolean)
-          <br/>
-            (type function)
+            Return or update the print of the stack for uncatched errors.
         </li>
       </ul>
     </div>
@@ -95,13 +95,13 @@
       </h3>
       <ul>
         <li>
-          Return or update the print of the attributes for the uncatched errors.
+          (<b>prAttr</b> . boolean)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (prAttr . boolean)
-          <br/>
-            (type function)
+            Return or update the print of the attributes for the uncatched errors.
         </li>
       </ul>
     </div>
@@ -111,13 +111,13 @@
       </h3>
       <ul>
         <li>
-          Return or update the print of warnings.
+          (<b>prWrn</b> . boolean)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (prWrn . boolean)
-          <br/>
-            (type function)
+            Return or update the print of warnings.
         </li>
       </ul>
     </div>
@@ -127,13 +127,13 @@
       </h3>
       <ul>
         <li>
-          Return or update the auto quote property for the list without combinable car. 
+          (<b>aQuote</b> . boolean)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (aQuote . boolean)
-          <br/>
-            (type function)
+            Return or update the auto quote property for the list without combinable car. 
         </li>
       </ul>
     </div>
@@ -143,13 +143,13 @@
       </h3>
       <ul>
         <li>
-          Return or update the use of an arbitraty value for the catch handler.
+          (<b>hdlAny</b> . boolean)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (hdlAny . boolean)
-          <br/>
-            (type function)
+            Return or update the use of an arbitraty value for the catch handler.
         </li>
       </ul>
     </div>
@@ -159,13 +159,13 @@
       </h3>
       <ul>
         <li>
-          Return or update the print of #inert value in the repl
+          (<b>prInert</b> . boolean)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (prInert . boolean)
-          <br/>
-            (type function)
+            Return or update the print of #inert value in the repl
         </li>
       </ul>
     </div>
@@ -175,7 +175,13 @@
       </h3>
       <ul>
         <li>
-          Return or update the type of #true.
+          (<b>typeT</b> . integer)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            Return or update the type of #true.
           <br/>
             &nbsp;
           <br/>
@@ -188,12 +194,6 @@
             - 3: !(or #false #null #inert)
           <br/>
             - 4: !(or #false #null #inert 0)
-          <br/>
-            &nbsp;
-          <br/>
-            (typeT . integer)
-          <br/>
-            (type function)
         </li>
       </ul>
     </div>
@@ -203,7 +203,13 @@
       </h3>
       <ul>
         <li>
-          Return or update the type of the bind result.
+          (<b>bndRes</b> . integer)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            Return or update the type of the bind result.
           <br/>
             &nbsp;
           <br/>
@@ -214,12 +220,6 @@
             - 2: the previous value of the last binding
           <br/>
             - 3: the container obj or environment
-          <br/>
-            &nbsp;
-          <br/>
-            (bndRes . integer)
-          <br/>
-            (type function)
         </li>
       </ul>
     </div>
@@ -229,7 +229,13 @@
       </h3>
       <ul>
         <li>
-          Return or update the type of the trace.
+          (<b>prTrc</b> . integer)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            Return or update the type of the trace.
           <br/>
             &nbsp;
           <br/>
@@ -246,12 +252,6 @@
             - 5: applications executed
           <br/>
             - 6: bind/lookup symbols
-          <br/>
-            &nbsp;
-          <br/>
-            (prTrc . integer)
-          <br/>
-            (type function)
         </li>
       </ul>
     </div>
@@ -261,13 +261,13 @@
       </h3>
       <ul>
         <li>
-          Return or update the max number of attributes for printable environments.
+          (<b>prEnv</b> . integer)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (prEnv . integer)
-          <br/>
-            (type function)
+            Return or update the max number of attributes for printable environments.
         </li>
       </ul>
     </div>
@@ -277,13 +277,13 @@
       </h3>
       <ul>
         <li>
-          Return or update the <b>value</b> to use as default value for the Box.
+          (<b>boxDft</b> . value)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (boxDft . value)
-          <br/>
-            (type function)
+            Return or update the <b>value</b> to use as default value for the Box.
         </li>
       </ul>
     </div>

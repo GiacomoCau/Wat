@@ -327,7 +327,7 @@ public class Prova {
 			case null /*, default*/-> out.println(0); // darebbe 0
 			case A a when a.val == 1-> out.println(1); 
 			case B b when b.val == 2-> out.println(2);
-			case A a-> out.println(3);
+			case A _-> out.println(3);
 			default-> out.println(4); // con default qui da 3 ma mai 2
 		};
 	}

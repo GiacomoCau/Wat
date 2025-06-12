@@ -27,17 +27,21 @@
     </h2>
     <ul>
       <li>
-        (DVar type Class extends Box)
+        (type Class)
+        <br/>
+          (extends Box)
         <br/>
           &nbsp;
         <br/>
-          The form ddef ddef* dlet progv and dlet* are defined as macro using the primitive operator %dv\ that return a function.   
+          The form ddef ddef* dlet progv and dlet* are defined as macro using the primitive operator <b>%dv\</b> that return a function.   
         <br/>
           &nbsp;
         <br/>
-          (%dv\ symbols . forms)
+          (<b>%dv\</b> symbols . forms)
         <br/>
           (type fexpr)
+        <br/>
+          &nbsp;
         <br/>
           (syntax symbols (symbol . symbols))
         <br/>
@@ -82,13 +86,13 @@
       </h3>
       <ul>
         <li>
-          Define a new dynamic variable with optional <b>value</b>.
+          (<b>newDVar</b> . value)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (newDVar . value)
-          <br/>
-            (type function)
+            Define a new dynamic variable with optional <b>value</b>.
         </li>
       </ul>
     </div>
@@ -98,13 +102,13 @@
       </h3>
       <ul>
         <li>
-          Return the current value of the <b>dynamicVariable</b>.
+          (<b>dval</b> dynamicVariable)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (dval dynamicVariable)
-          <br/>
-            (type function)
+            Return the current value of the <b>dynamicVariable</b>.
         </li>
       </ul>
     </div>
@@ -114,13 +118,13 @@
       </h3>
       <ul>
         <li>
-          Define a new or update an existing dynamic variable with the given <b>name</b> and optional <b>value</b>.
+          (<b>ddef</b> name . value)
+          <br/>
+            (type macro)
           <br/>
             &nbsp;
           <br/>
-            (ddef name . value)
-          <br/>
-            (type macro)
+            Define a new or update an existing dynamic variable with the given <b>name</b> and optional <b>value</b>.
         </li>
       </ul>
     </div>
@@ -130,15 +134,15 @@
       </h3>
       <ul>
         <li>
-          Define a new or update an existing dynamic variable with the given <b>names</b> and optional <b>values</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (ddef* names . values)
+          (<b>ddef*</b> names . values)
           <br/>
             (type macro)
           <br/>
             (syntax names (name . names))
+          <br/>
+            &nbsp;
+          <br/>
+            Define a new or update an existing dynamic variable with the given <b>names</b> and optional <b>values</b>.
         </li>
       </ul>
     </div>
@@ -148,13 +152,13 @@
       </h3>
       <ul>
         <li>
-          Return the current value of the <b>dynamicVariable</b>.
+          (<b>dget</b> dynamicVariable)
+          <br/>
+            (type macro)
           <br/>
             &nbsp;
           <br/>
-            (dget dynamicVariable)
-          <br/>
-            (type macro)
+            Return the current value of the <b>dynamicVariable</b>.
         </li>
       </ul>
     </div>
@@ -164,13 +168,13 @@
       </h3>
       <ul>
         <li>
-          Set the current value of the <b>dynamicVariable</b>.
+          (<b>dset</b> dynamicVariable value)
+          <br/>
+            (type macro)
           <br/>
             &nbsp;
           <br/>
-            (dset dynamicVariable value)
-          <br/>
-            (type macro)
+            Set the current value of the <b>dynamicVariable</b>.
         </li>
       </ul>
     </div>
@@ -180,19 +184,19 @@
       </h3>
       <ul>
         <li>
-          With the dynamic variables specified by <b>names</b> temporarily bound to new <b>values</b>, evaluate <b>forms</b> as an implicit `begin'.
-          <br/>
-            Bindings are established parallely as per `let'.
-          <br/>
-            &nbsp;
-          <br/>
-            (dlet bindings . forms)
+          (<b>dlet</b> bindings . forms)
           <br/>
             (type macro)
           <br/>
             &nbsp;
           <br/>
             (syntax bindings ((name value) . bindings))
+          <br/>
+            &nbsp;
+          <br/>
+            With the dynamic variables specified by <b>names</b> temporarily bound to new <b>values</b>, evaluate <b>forms</b> as an implicit `begin'.
+          <br/>
+            Bindings are established parallely as per `let'.
         </li>
       </ul>
     </div>
@@ -202,19 +206,19 @@
       </h3>
       <ul>
         <li>
-          With the dynamic variables specified by <b>name</b> temporarily bound to new <b>value</b>, evaluate <b>forms</b> as an implicit `begin'.
-          <br/>
-            Bindings are established parallely as per `let'.
-          <br/>
-            &nbsp;
-          <br/>
-            (dlet1 binding . forms)
+          (<b>dlet1</b> binding . forms)
           <br/>
             (type macro)
           <br/>
             &nbsp;
           <br/>
             (syntax binding (name value))
+          <br/>
+            &nbsp;
+          <br/>
+            With the dynamic variables specified by <b>name</b> temporarily bound to new <b>value</b>, evaluate <b>forms</b> as an implicit `begin'.
+          <br/>
+            Bindings are established parallely as per `let'.
         </li>
       </ul>
     </div>
@@ -224,13 +228,7 @@
       </h3>
       <ul>
         <li>
-          With the dynamic variables specified by <b>names</b> temporarily bound to new <b>values</b>, evaluate <b>forms</b> as an implicit `begin'.
-          <br/>
-            The <b>names</b> and <b>values</b> lists must have the same length.
-          <br/>
-            &nbsp;
-          <br/>
-            (progv names values . forms)
+          (<b>progv</b> names values . forms)
           <br/>
             (type fexpr)
           <br/>
@@ -241,6 +239,12 @@
             (syntax values (value . values))
           <br/>
             (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            With the dynamic variables specified by <b>names</b> temporarily bound to new <b>values</b>, evaluate <b>forms</b> as an implicit `begin'.
+          <br/>
+            The <b>names</b> and <b>values</b> lists must have the same length.
         </li>
       </ul>
     </div>
@@ -250,19 +254,19 @@
       </h3>
       <ul>
         <li>
-          With the dynamic variables specified by <b>names</b> temporarily bound to new <b>values</b>, evaluate <b>forms</b> as an implicit `begin'.
-          <br/>
-            Bindings are established serially as per `let*'.
-          <br/>
-            &nbsp;
-          <br/>
-            (dlet* bindings . forms)
+          (<b>dlet*</b> bindings . forms)
           <br/>
             (type macro)
           <br/>
             &nbsp;
           <br/>
             (syntax bindings ((name value) . bindings))
+          <br/>
+            &nbsp;
+          <br/>
+            With the dynamic variables specified by <b>names</b> temporarily bound to new <b>values</b>, evaluate <b>forms</b> as an implicit `begin'.
+          <br/>
+            Bindings are established serially as per `let*'.
         </li>
       </ul>
     </div>

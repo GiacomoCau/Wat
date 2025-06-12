@@ -31,15 +31,15 @@
       </h3>
       <ul>
         <li>
-          Search for the <b>keyword</b> in the property <b>list</b> (a list of alternating keywords and values)
+          (<b>optValue</b> keyword list)
           <br/>
-            and return the next value as an option if found it, #null otherwise.
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (optValue keyword list)
+            Search for the <b>keyword</b> in the property <b>list</b> (a list of alternating keywords and values)
           <br/>
-            (type function)
+            and return the next value as an option if found it, #null otherwise.
         </li>
       </ul>
     </div>
@@ -49,15 +49,7 @@
       </h3>
       <ul>
         <li>
-          Search for <b>item</b> in the <b>list</b> according to the <b>cmp</b> predicate (defaults to `==').
-          <br/>
-            Return, if found it, the tail of the list starting with <b>item</b> after apply the <b>get</b> function (defaults to 'idf'), #null otherwise.
-          <br/>
-            The <b>key</b> function is applied to each list element before comparison (defaults to `idf').
-          <br/>
-            &nbsp;
-          <br/>
-            (member item list . keywords))
+          (<b>member</b> item list . keywords))
           <br/>
             (type function)
           <br/>
@@ -68,6 +60,14 @@
             (syntax keywords (:key function . keywords))
           <br/>
             (syntax keywords (:get function . keywords))
+          <br/>
+            &nbsp;
+          <br/>
+            Search for <b>item</b> in the <b>list</b> according to the <b>cmp</b> predicate (defaults to `==').
+          <br/>
+            Return, if found it, the tail of the list starting with <b>item</b> after apply the <b>get</b> function (defaults to 'idf'), #null otherwise.
+          <br/>
+            The <b>key</b> function is applied to each list element before comparison (defaults to `idf').
         </li>
       </ul>
     </div>
@@ -77,11 +77,7 @@
       </h3>
       <ul>
         <li>
-          Return #true if the <b>item</b> is in the <b>list</b>, #false otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (member? item list . keywords)
+          (<b>member?</b> item list . keywords)
           <br/>
             (type function)
           <br/>
@@ -92,6 +88,10 @@
             (syntax keywords (:key function . keywords))
           <br/>
             (syntax keywords (:get function . keywords))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if the <b>item</b> is in the <b>list</b>, #false otherwise.
         </li>
       </ul>
     </div>
@@ -101,11 +101,7 @@
       </h3>
       <ul>
         <li>
-          Return #false if the <b>item</b> is in the <b>list</b>, #true otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (!member? item list . keywords)
+          (<b>!member?</b> item list . keywords)
           <br/>
             (type function)
           <br/>
@@ -116,6 +112,10 @@
             (syntax keywords (:key function . keywords))
           <br/>
             (syntax keywords (:get function . keywords))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #false if the <b>item</b> is in the <b>list</b>, #true otherwise.
         </li>
       </ul>
     </div>
@@ -125,15 +125,15 @@
       </h3>
       <ul>
         <li>
-          Return <b>item</b> if the <b>item</b> is in the <b>list</b>, #null otherwise.
+          (<b>optKey</b> item list)
           <br/>
-            <b>item</b> can be an sigle element or a list of element
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (optKey item list)
+            Return <b>item</b> if the <b>item</b> is in the <b>list</b>, #null otherwise.
           <br/>
-            (type function)
+            <b>item</b> can be an sigle element or a list of element
         </li>
       </ul>
     </div>
@@ -143,13 +143,13 @@
       </h3>
       <ul>
         <li>
-          Return the `car' of a assoc <b>list</b> (a list of lists of keywords and values) is <b>item</b> is the `caar' if == to <b>item</b>, #null otherwise.
+          (<b>assoc</b> item list)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (assoc item list)
-          <br/>
-            (type function)
+            Return the `car' of a assoc <b>list</b> (a list of lists of keywords and values) is <b>item</b> is the `caar' if == to <b>item</b>, #null otherwise.
         </li>
       </ul>
     </div>
@@ -159,13 +159,13 @@
       </h3>
       <ul>
         <li>
-          Return #true if the <b>item</b> is in the <b>list</b>, #false otherwise.
+          (<b>member?*</b> item . list)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (member?* item . list)
-          <br/>
-            (type function)
+            Return #true if the <b>item</b> is in the <b>list</b>, #false otherwise.
         </li>
       </ul>
     </div>

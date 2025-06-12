@@ -31,13 +31,13 @@
       </h3>
       <ul>
         <li>
-          Identity function.
+          (<b>idf</b> object)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (idf object)
-          <br/>
-            (type function)
+            Identity function.
         </li>
       </ul>
     </div>
@@ -47,15 +47,15 @@
       </h3>
       <ul>
         <li>
-          &quot;Implicit&quot; Argument Lambda.
-          <br/>
-            &nbsp;
-          <br/>
-            (_ . forms)
+          (<b>_</b> . forms)
           <br/>
             (type macro)
           <br/>
             (derivation (\ (_) . forms))
+          <br/>
+            &nbsp;
+          <br/>
+            &quot;Implicit&quot; Argument Lambda.
         </li>
       </ul>
     </div>
@@ -65,17 +65,17 @@
       </h3>
       <ul>
         <li>
-          Single arg partial evaluation.
-          <br/>
-            &nbsp;
-          <br/>
-            (peval f v)
+          (<b>peval</b> f v)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (\ args (apply f (cons v args))))
+          <br/>
+            &nbsp;
+          <br/>
+            Single arg partial evaluation.
         </li>
       </ul>
     </div>
@@ -85,17 +85,17 @@
       </h3>
       <ul>
         <li>
-          Multiple args partial evaluation.
-          <br/>
-            &nbsp;
-          <br/>
-            (peval* f v*)
+          (<b>peval*</b> f v*)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (\ args (apply f (append v* args))))
+          <br/>
+            &nbsp;
+          <br/>
+            Multiple args partial evaluation.
         </li>
       </ul>
     </div>
@@ -105,17 +105,17 @@
       </h3>
       <ul>
         <li>
-          Return a function equivalent to the composition of the two functions.
-          <br/>
-            &nbsp;
-          <br/>
-            (compose f g)
+          (<b>compose</b> f g)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (\ args (f (apply g args))))
+          <br/>
+            &nbsp;
+          <br/>
+            Return a function equivalent to the composition of the two functions.
         </li>
       </ul>
     </div>
@@ -125,17 +125,17 @@
       </h3>
       <ul>
         <li>
-          Return a function equivalent to the composition of the functions.
-          <br/>
-            &nbsp;
-          <br/>
-            (compose* . f*)
+          (<b>compose*</b> . f*)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (\ args ((rec\ (loop (f . f*)) (if (null? f*) (apply f args) (f (loop f*)))) f*)))
+          <br/>
+            &nbsp;
+          <br/>
+            Return a function equivalent to the composition of the functions.
         </li>
       </ul>
     </div>
@@ -145,15 +145,15 @@
       </h3>
       <ul>
         <li>
-          Return <b>value</b>, after lexically bind <b>name</b> with #inert,
+          (<b>rec</b> name value)
           <br/>
-            and update <b>name</b> with <b>value</b> so that it can reference itself.
+            (type macro)
           <br/>
             &nbsp;
           <br/>
-            (rec name value)
+            Return <b>value</b>, after lexically bind <b>name</b> with #inert,
           <br/>
-            (type macro)
+            and update <b>name</b> with <b>value</b> so that it can reference itself.
         </li>
       </ul>
     </div>
@@ -163,7 +163,7 @@
       </h3>
       <ul>
         <li>
-          Alias of rec.
+          (aliasOf rec)
         </li>
       </ul>
     </div>
@@ -173,17 +173,17 @@
       </h3>
       <ul>
         <li>
-          Return the function with given <b>parameterTree</b> and <b>forms</b> as body, after lexically bind <b>name</b> with #inert,
+          (<b>rec\</b> name parameterTree . forms)
           <br/>
-            and updated <b>name</b> with the function so that it can reference to itself.
+            (<b>rec\</b> (name . parameterTree) . forms)
+          <br/>
+            (type macro)
           <br/>
             &nbsp;
           <br/>
-            (rec\ name parameterTree . forms)
+            Return the function with given <b>parameterTree</b> and <b>forms</b> as body, after lexically bind <b>name</b> with #inert,
           <br/>
-            (rec\ (name . parameterTree) . forms)
-          <br/>
-            (type macro)
+            and updated <b>name</b> with the function so that it can reference to itself.
         </li>
       </ul>
     </div>
@@ -193,7 +193,7 @@
       </h3>
       <ul>
         <li>
-          Alias of rec\.
+          (aliasOf rec\)
         </li>
       </ul>
     </div>
@@ -203,15 +203,15 @@
       </h3>
       <ul>
         <li>
-          Return a new list by applying the <b>function</b> to each element of the <b>list</b> or the <b>lists</b> which must be of the same length
+          (<b>map</b> function list)
+          <br/>
+            (<b>map</b> function list1 list2 ... listN)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (map function list)
-          <br/>
-            (map function list1 list2 ... listN)
-          <br/>
-            (type function)
+            Return a new list by applying the <b>function</b> to each element of the <b>list</b> or the <b>lists</b> which must be of the same length
         </li>
       </ul>
     </div>
@@ -235,15 +235,11 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment the named functions <b>names</b> with given <b>parameterTrees</b> and <b>forms</b> as body. 
+          (<b>def*\</b> definiendTrees . bodies)
           <br/>
-            &nbsp;
+            (<b>def*\</b> ((name parameterTree) . definiendTrees) . (forms . bodies))
           <br/>
-            (def*\ definiendTrees . bodies)
-          <br/>
-            (def*\ ((name parameterTree) . definiendTrees) . (forms . bodies))
-          <br/>
-            (def*\ (name . definiendTrees) . ((parameterTree . forms) . bodies))
+            (<b>def*\</b> (name . definiendTrees) . ((parameterTree . forms) . bodies))
           <br/>
             (type macro)
           <br/>
@@ -260,6 +256,10 @@
             &nbsp;
           <br/>
             (example (def*\ ((f a) g) ((1+ a)) ((a) (1+ a))) )
+          <br/>
+            &nbsp;
+          <br/>
+            Defines into the current environment the named functions <b>names</b> with given <b>parameterTrees</b> and <b>forms</b> as body. 
         </li>
       </ul>
     </div>

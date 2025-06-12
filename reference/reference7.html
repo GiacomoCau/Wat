@@ -31,11 +31,7 @@
       </h3>
       <ul>
         <li>
-          Return #true if the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, #false otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (bound? attribute object)
+          (<b>bound?</b> attribute object)
           <br/>
             (type function)
           <br/>
@@ -46,6 +42,10 @@
             (syntax object (or Env Obj))
           <br/>
             (derivation (@isBound object attribute))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, #false otherwise.
         </li>
       </ul>
     </div>
@@ -55,11 +55,7 @@
       </h3>
       <ul>
         <li>
-          Return the value of the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, #null otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (value attribute object)
+          (<b>value</b> attribute object)
           <br/>
             (type function)
           <br/>
@@ -70,6 +66,10 @@
             (syntax object (or Env Obj))
           <br/>
             (derivation (@value object attribute))
+          <br/>
+            &nbsp;
+          <br/>
+            Return the value of the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, #null otherwise.
         </li>
       </ul>
     </div>
@@ -79,11 +79,7 @@
       </h3>
       <ul>
         <li>
-          Return the value of the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, signals an error otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (get attribute object)
+          (<b>get</b> attribute object)
           <br/>
             (type function)
           <br/>
@@ -94,6 +90,10 @@
             (syntax object (or Env Obj))
           <br/>
             (derivation (@get object attribute))
+          <br/>
+            &nbsp;
+          <br/>
+            Return the value of the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, signals an error otherwise.
         </li>
       </ul>
     </div>
@@ -103,11 +103,7 @@
       </h3>
       <ul>
         <li>
-          Return #true if the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, #false otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (slotBound? object attribute)
+          (<b>slotBound?</b> object attribute)
           <br/>
             (type function)
           <br/>
@@ -118,6 +114,10 @@
             (syntax attribute (or Symbol Keyword String))
           <br/>
             (derivation (@isBound object attribute))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, #false otherwise.
         </li>
       </ul>
     </div>
@@ -127,11 +127,7 @@
       </h3>
       <ul>
         <li>
-          Return the value of <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, signals an error otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (getSlot object attribute)
+          (<b>getSlot</b> object attribute)
           <br/>
             (type function)
           <br/>
@@ -142,6 +138,10 @@
             (syntax attribute (or Symbol Keyword String))
           <br/>
             (derivation (object attribute))
+          <br/>
+            &nbsp;
+          <br/>
+            Return the value of <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, signals an error otherwise.
         </li>
       </ul>
     </div>
@@ -151,11 +151,7 @@
       </h3>
       <ul>
         <li>
-          Update or define with <b>value</b> the <b>attribute</b> in the <b>environment</b> or <b>obj</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (setSlot object attribute value)
+          (<b>setSlot</b> object attribute value)
           <br/>
             (type function)
           <br/>
@@ -166,6 +162,10 @@
             (syntax attribute (or Symbol Keyword String))
           <br/>
             (derivation (object attribute value))
+          <br/>
+            &nbsp;
+          <br/>
+            Update or define with <b>value</b> the <b>attribute</b> in the <b>environment</b> or <b>obj</b>.
         </li>
       </ul>
     </div>

@@ -31,17 +31,17 @@
       </h3>
       <ul>
         <li>
-          Return the <b>environment</b> if <b>value</b> match the <b>definiendTree</b> updated with new bindings, signals an error otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (bind environment definiendTree value)
+          (<b>bind</b> environment definiendTree value)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (eval (list 'def :cnt definiendTree value) environment))
+          <br/>
+            &nbsp;
+          <br/>
+            Return the <b>environment</b> if <b>value</b> match the <b>definiendTree</b> updated with new bindings, signals an error otherwise.
         </li>
       </ul>
     </div>
@@ -51,17 +51,17 @@
       </h3>
       <ul>
         <li>
-          Return #true if <b>value</b> match the <b>definiendTree</b> and update the <b>environment</b> with the new bindings, #false otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (bind? environment definiendTree value)
+          (<b>bind?</b> environment definiendTree value)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
             (derivation (catch #f (bind environment definiendTree value) #t))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if <b>value</b> match the <b>definiendTree</b> and update the <b>environment</b> with the new bindings, #false otherwise.
         </li>
       </ul>
     </div>
@@ -71,15 +71,15 @@
       </h3>
       <ul>
         <li>
-          Return the evaluation of <b>then</b> into resulting <b>environment</b> if <b>value</b> match the <b>definiendTree</b>,
+          (<b>ifBind?</b> (definiendTree value) then . else)
           <br/>
-            the evaluation of <b>else</b> if present, #inert otherwise.
+            (type fexpr)
           <br/>
             &nbsp;
           <br/>
-            (ifBind? (definiendTree value) then . else)
+            Return the evaluation of <b>then</b> into resulting <b>environment</b> if <b>value</b> match the <b>definiendTree</b>,
           <br/>
-            (type fexpr)
+            the evaluation of <b>else</b> if present, #inert otherwise.
         </li>
       </ul>
     </div>
@@ -89,7 +89,23 @@
       </h3>
       <ul>
         <li>
-          Return a multi-armed vau operator, when applied go through the <b>clauses</b> in order.
+          (<b>caseVau</b> . clauses)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax clauses (clause . clauses))
+          <br/>
+            (syntax clause (else . forms))
+          <br/>
+            (syntax clause (else =&gt; apv1))
+          <br/>
+            (syntax clause (definiendTree . forms))
+          <br/>
+            &nbsp;
+          <br/>
+            Return a multi-armed vau operator, when applied go through the <b>clauses</b> in order.
           <br/>
             If <b>clauses</b> is #null return #inert.
           <br/>
@@ -102,22 +118,6 @@
             If the operands match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
           <br/>
             Otherwise go to the next <b>clause</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (caseVau . clauses)
-          <br/>
-            (type fexpr)
-          <br/>
-            &nbsp;
-          <br/>
-            (syntax clauses (clause . clauses))
-          <br/>
-            (syntax clause (else . forms))
-          <br/>
-            (syntax clause (else =&gt; apv1))
-          <br/>
-            (syntax clause (definiendTree . forms))
         </li>
       </ul>
     </div>
@@ -127,17 +127,17 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment the named caseVau <b>name</b> with the given <b>clauses</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (defCaseVau name . clauses)
+          (<b>defCaseVau</b> name . clauses)
           <br/>
             (type fexpr)
           <br/>
             &nbsp;
           <br/>
             (derivation (def name (caseVau . clauses)))
+          <br/>
+            &nbsp;
+          <br/>
+            Defines into the current environment the named caseVau <b>name</b> with the given <b>clauses</b>.
         </li>
       </ul>
     </div>
@@ -147,23 +147,7 @@
       </h3>
       <ul>
         <li>
-          Return a multi-armed \ function, when applied go through the <b>clauses</b> in order.
-          <br/>
-            If <b>clauses</b> is #null return #inert.
-          <br/>
-            If `car' of <b>clause</b> is else
-          <br/>
-            &nbsp;&nbsp;if the `cadr' of <b>clauses</b> is =&gt;, evaluate `caddr' of <b>clause</b> and apply it to the arguments,
-          <br/>
-            &nbsp;&nbsp;otherwise evaluate <b>forms</b> as an implicit `begin'.
-          <br/>
-            If the arguments match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
-          <br/>
-            Otherwise go to the next <b>clause</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (case\ . clauses)
+          (<b>case\</b> . clauses)
           <br/>
             (type function)
           <br/>
@@ -178,36 +162,10 @@
             (syntax clause (definiendTree . forms))
           <br/>
             (derivation (wrap (caseVau . clauses)))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        defCase\
-      </h3>
-      <ul>
-        <li>
-          Defines into the current environment the named case\ <b>name</b> with the given <b>clauses</b>.
           <br/>
             &nbsp;
           <br/>
-            (defCase\ name . clauses)
-          <br/>
-            (type fexpr)
-          <br/>
-            &nbsp;
-          <br/>
-            (derivation (def name (case\ . clauses)))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        match
-      </h3>
-      <ul>
-        <li>
-          Evaluates <b>value</b> and go through the <b>clauses</b> in order.
+            Return a multi-armed \ function, when applied go through the <b>clauses</b> in order.
           <br/>
             If <b>clauses</b> is #null return #inert.
           <br/>
@@ -217,13 +175,39 @@
           <br/>
             &nbsp;&nbsp;otherwise evaluate <b>forms</b> as an implicit `begin'.
           <br/>
-            If <b>value</b> match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
+            If the arguments match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
           <br/>
             Otherwise go to the next <b>clause</b>.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        defCase\
+      </h3>
+      <ul>
+        <li>
+          (<b>defCase\</b> name . clauses)
+          <br/>
+            (type fexpr)
           <br/>
             &nbsp;
           <br/>
-            (match value . clauses)
+            (derivation (def name (case\ . clauses)))
+          <br/>
+            &nbsp;
+          <br/>
+            Defines into the current environment the named case\ <b>name</b> with the given <b>clauses</b>.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        match
+      </h3>
+      <ul>
+        <li>
+          (<b>match</b> value . clauses)
           <br/>
             (type fexpr)
           <br/>
@@ -238,6 +222,22 @@
             (syntax clause (definiendTree . forms))
           <br/>
             (derivation (wrap (caseVau . clauses)))
+          <br/>
+            &nbsp;
+          <br/>
+            Evaluates <b>value</b> and go through the <b>clauses</b> in order.
+          <br/>
+            If <b>clauses</b> is #null return #inert.
+          <br/>
+            If `car' of <b>clause</b> is else
+          <br/>
+            &nbsp;&nbsp;if the `cadr' of <b>clauses</b> is =&gt;, evaluate `caddr' of <b>clause</b> and apply it to the arguments,
+          <br/>
+            &nbsp;&nbsp;otherwise evaluate <b>forms</b> as an implicit `begin'.
+          <br/>
+            If <b>value</b> match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
+          <br/>
+            Otherwise go to the next <b>clause</b>.
         </li>
       </ul>
     </div>
@@ -247,7 +247,25 @@
       </h3>
       <ul>
         <li>
-          Multi-armed conditional.
+          (<b>cond</b> . clauses)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax clauses (clause . clauses))
+          <br/>
+            (syntax clause (else . forms))
+          <br/>
+            (syntax clause (test-&gt;bool . forms))
+          <br/>
+            (syntax clause (test))
+          <br/>
+            (syntax clause (test =&gt; apv1))
+          <br/>
+            (syntax clause (test guard =&gt; apv1))
+          <br/>
+            &nbsp;
+          <br/>
+            Multi-armed conditional.
           <br/>
             Go through the <b>clauses</b> in order.
           <br/>
@@ -274,24 +292,6 @@
             &nbsp;&nbsp;otherwise go to the next <b>clause</b>.
           <br/>
             Otherwise go to the next <b>clause</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (cond . clauses)
-          <br/>
-            &nbsp;
-          <br/>
-            (syntax clauses (clause . clauses))
-          <br/>
-            (syntax clause (else . forms))
-          <br/>
-            (syntax clause (test-&gt;bool . forms))
-          <br/>
-            (syntax clause (test))
-          <br/>
-            (syntax clause (test =&gt; apv1))
-          <br/>
-            (syntax clause (test guard =&gt; apv1))
         </li>
       </ul>
     </div>

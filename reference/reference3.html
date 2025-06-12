@@ -46,15 +46,15 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment the named macro <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
+          (<b>defMacro</b> name parameterTree . forms)
+          <br/>
+            (<b>defMacro</b> (name parameterTree) . forms)
+          <br/>
+            (type macro)
           <br/>
             &nbsp;
           <br/>
-            (defMacro name parameterTree . forms)
-          <br/>
-            (defMacro (name parameterTree) . forms)
-          <br/>
-            (type macro)
+            Defines into the current environment the named macro <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
         </li>
       </ul>
     </div>
@@ -64,15 +64,15 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment the named fexpr <b>name</b> with the given <b>parameterTree</b>, <b>environmentParameter</b> and <b>forms</b> as body.
+          (<b>defVau</b> name parameterTree . forms)
+          <br/>
+            (<b>defVau</b> (name parameterTree) . forms)
+          <br/>
+            (type macro)
           <br/>
             &nbsp;
           <br/>
-            (defVau name parameterTree . forms)
-          <br/>
-            (defVau (name parameterTree) . forms)
-          <br/>
-            (type macro)
+            Defines into the current environment the named fexpr <b>name</b> with the given <b>parameterTree</b>, <b>environmentParameter</b> and <b>forms</b> as body.
         </li>
       </ul>
     </div>
@@ -82,11 +82,13 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment the named constant <b>name</b> with the given <b>value</b>.
+          (aliasOf def)
+          <br/>
+            &nbsp;
+          <br/>
+            Defines into the current environment the named constant <b>name</b> with the given <b>value</b>.
           <br/>
             This is mostly for documentation purposes, as constants are still mutable.
-          <br/>
-            Alias for def.
         </li>
       </ul>
     </div>
@@ -96,19 +98,19 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment the resulting bindings from the match of the <b>definiendTree</b> against <b>values</b>, signals an error otherwise.
+          (<b>def*</b> definiendTree . values)
           <br/>
-            &nbsp;
-          <br/>
-            (def* definiendTree . values)
-          <br/>
-            (def* definiendTree bindResult . values)
+            (<b>def*</b> definiendTree bindResult . values)
           <br/>
             (type macro)
           <br/>
             &nbsp;
           <br/>
             (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+          <br/>
+            &nbsp;
+          <br/>
+            Defines into the current environment the resulting bindings from the match of the <b>definiendTree</b> against <b>values</b>, signals an error otherwise.
         </li>
       </ul>
     </div>
@@ -118,15 +120,15 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment the named function <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
+          (<b>def\</b> name parameterTree . forms)
+          <br/>
+            (<b>def\</b> (name parameterTree) . forms)
+          <br/>
+            (type macro)
           <br/>
             &nbsp;
           <br/>
-            (def\ name parameterTree . forms)
-          <br/>
-            (def\ (name parameterTree) . forms)
-          <br/>
-            (type macro)
+            Defines into the current environment the named function <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
         </li>
       </ul>
     </div>

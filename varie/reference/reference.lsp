@@ -25,6 +25,7 @@
 
 (def base "https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference")
 ;(def base "/reference/reference")
+;(def base "reference")
 
 (def files '("lispx/src/boot.lispx" "lispx/src/condSys.lispx"))
 
@@ -116,10 +117,10 @@
                     (h3 (pr (encode (def name :rhs (nm l0)))))
                     (ul
                       (li
-                        (pr (encode (subSeq l 4)))
+                        (pr ((\ (s) (if (startsWith s "\x28;$nm") (@replace s "$nm" ($ "<b>" name "</b>")) s)) (encode (subSeq l 4))) )
                         (loop 
                           (until? (startsWith (set! l :rhs (readLine r)) "   |#"))
-                          (br (pr (encode ((\ (s) (if (startsWith s "\x28;$nm") (@replace s "$nm" name) s)) (subSeq l 4)) ))) ))))
+                          (br (pr ((\ (s) (if (startsWith s "\x28;$nm") (@replace s "$nm" ($ "<b>" name "</b>")) s)) (encode (subSeq l 4))) )) ))))
                   (div
                     (h3 (pr (encode (nm l0))))
                     (ul (li (pr (encode l0)))) )))) )))) ))

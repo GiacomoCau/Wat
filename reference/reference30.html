@@ -31,23 +31,7 @@
       </h3>
       <ul>
         <li>
-          Multi-armed value test.
-          <br/>
-            Evaluate <b>key</b> and go through the <b>clauses</b>.
-          <br/>
-            If <b>clauses</b> is #null return #inert.
-          <br/>
-            If `car' of <b>clause</b> is else or `eq?' <b>key</b> <b>value</b> or `member? :cmp eq?' <b>key</b> <b>values</b>
-          <br/>
-            &nbsp;&nbsp;if `car' <b>forms</b> is =&gt; apply evaluate `cadr' <b>forms</b> to <b>value</b>
-          <br/>
-            &nbsp;&nbsp;otherwise evaluate <b>forms</b> as an implicit `begin'.
-          <br/>
-            Otherwise go to the next <b>clause</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (case key . clauses)
+          (<b>case</b> key . clauses)
           <br/>
             (type fexpr)
           <br/>
@@ -68,6 +52,22 @@
             (syntax clause (values =&gt; apv1))
           <br/>
             (syntax values (value . values))
+          <br/>
+            &nbsp;
+          <br/>
+            Multi-armed value test.
+          <br/>
+            Evaluate <b>key</b> and go through the <b>clauses</b>.
+          <br/>
+            If <b>clauses</b> is #null return #inert.
+          <br/>
+            If `car' of <b>clause</b> is else or `eq?' <b>key</b> <b>value</b> or `member? :cmp eq?' <b>key</b> <b>values</b>
+          <br/>
+            &nbsp;&nbsp;if `car' <b>forms</b> is =&gt; apply evaluate `cadr' <b>forms</b> to <b>value</b>
+          <br/>
+            &nbsp;&nbsp;otherwise evaluate <b>forms</b> as an implicit `begin'.
+          <br/>
+            Otherwise go to the next <b>clause</b>.
         </li>
       </ul>
     </div>
@@ -77,11 +77,7 @@
       </h3>
       <ul>
         <li>
-          Return #true if <b>object</b> is an instance of <b>class</b> and all the optional specified <b>attribute</b> matches the corresponding <b>check</b>, #false otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (matchType? object class . attributes)
+          (<b>matchType?</b> object class . attributes)
           <br/>
             (type function)
           <br/>
@@ -90,6 +86,10 @@
             (syntax attributes (attribute check . attributes))
           <br/>
             (syntax attribute (or Symbol Keyword String .Field @Method))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if <b>object</b> is an instance of <b>class</b> and all the optional specified <b>attribute</b> matches the corresponding <b>check</b>, #false otherwise.
         </li>
       </ul>
     </div>
@@ -99,11 +99,7 @@
       </h3>
       <ul>
         <li>
-          Return #true if <b>object</b> is an instance of <b>class</b> and all the optional specified <b>attribute</b> matches the corresponding <b>check</b>, #false otherwise.
-          <br/>
-            &nbsp;
-          <br/>
-            (matchType?* object class . attributes)
+          (<b>matchType?*</b> object class . attributes)
           <br/>
             (type function)
           <br/>
@@ -112,6 +108,10 @@
             (syntax attributes (attribute check . attributes))
           <br/>
             (syntax attribute (or Symbol Keyword String .Field @Method))
+          <br/>
+            &nbsp;
+          <br/>
+            Return #true if <b>object</b> is an instance of <b>class</b> and all the optional specified <b>attribute</b> matches the corresponding <b>check</b>, #false otherwise.
         </li>
       </ul>
     </div>
@@ -121,19 +121,7 @@
       </h3>
       <ul>
         <li>
-          Multi-armed type test.
-          <br/>
-            Evaluate the <b>object</b> and go through the <b>clauses</b>.
-          <br/>
-            If <b>clauses</b> is #null return #inert.
-          <br/>
-            If <b>object</b> is an instance of <b>class</b> and the optional specified <b>attribute</b> matchs the corresponding <b>check</b>, evaluate <b>forms</b> as an implicit `begin'.
-          <br/>
-            Otherwise go to the next <b>clause</b>.
-          <br/>
-            &nbsp;
-          <br/>
-            (caseType object . clauses)
+          (<b>caseType</b> object . clauses)
           <br/>
             (type fexpr)
           <br/>
@@ -148,6 +136,18 @@
             (syntax attributes (attribute check . attributes))
           <br/>
             (syntax attribute (or Symbol Keyword String .Field @Method))
+          <br/>
+            &nbsp;
+          <br/>
+            Multi-armed type test.
+          <br/>
+            Evaluate the <b>object</b> and go through the <b>clauses</b>.
+          <br/>
+            If <b>clauses</b> is #null return #inert.
+          <br/>
+            If <b>object</b> is an instance of <b>class</b> and the optional specified <b>attribute</b> matchs the corresponding <b>check</b>, evaluate <b>forms</b> as an implicit `begin'.
+          <br/>
+            Otherwise go to the next <b>clause</b>.
         </li>
       </ul>
     </div>
@@ -157,17 +157,19 @@
       </h3>
       <ul>
         <li>
-          Return a sigle argument function for multi-armed type test, useful as a catch handler.
-          <br/>
-            &nbsp;
-          <br/>
-            (caseType\ (symbol) . clauses))
+          (<b>caseType\</b> (symbol) . clauses))
           <br/>
             (type macro)
+          <br/>
+            &nbsp;
           <br/>
             (derivation (\ (symbol) (caseType symbol . clauses)))
           <br/>
             (use (catchWth (caseType\ (e) ...) ...)
+          <br/>
+            &nbsp;
+          <br/>
+            Return a sigle argument function for multi-armed type test, useful as a catch handler.
         </li>
       </ul>
     </div>

@@ -94,19 +94,11 @@
       </h3>
       <ul>
         <li>
-          Return a new environment with an optional <b>parent</b> environment in which bindings are looked up if they are not found.
+          (<b>newEnv</b>)
           <br/>
-            The <b>bindings</b> must be of even length, and alternately contain bindings names (symbols, keywords or string) and values.
+            (<b>newEnv</b> parent . bindings)
           <br/>
-            When called with an obj the obj bindings also become env bindings.
-          <br/>
-            &nbsp;
-          <br/>
-            (newEnv)
-          <br/>
-            (newEnv parent . bindings)
-          <br/>
-            (newEnv parent obj)
+            (<b>newEnv</b> parent obj)
           <br/>
             (type function)
           <br/>
@@ -117,6 +109,14 @@
             (syntax bindings (attribute value . bindings))
           <br/>
             (syntax attribute (or Symbol Keyword String))
+          <br/>
+            &nbsp;
+          <br/>
+            Return a new environment with an optional <b>parent</b> environment in which bindings are looked up if they are not found.
+          <br/>
+            The <b>bindings</b> must be of even length, and alternately contain bindings names (symbols, keywords or string) and values.
+          <br/>
+            When called with an obj the obj bindings also become env bindings.
         </li>
       </ul>
     </div>

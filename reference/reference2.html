@@ -43,19 +43,19 @@
       </h3>
       <ul>
         <li>
-          Return a macro from an <b>expander</b> operator.
+          (<b>makeMacro</b> expander)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            Return a macro from an <b>expander</b> operator.
           <br/>
             A macro is an operator that receives an operand and produces a form
           <br/>
             (by calling the expander with the operand as argument)
           <br/>
             that is then evaluated in place of the operand.
-          <br/>
-            &nbsp;
-          <br/>
-            (makeMacro expander)
-          <br/>
-            (type function)
         </li>
       </ul>
     </div>
@@ -65,13 +65,13 @@
       </h3>
       <ul>
         <li>
-          Return an anonymous macro with the given <b>parameterTree</b> and <b>forms</b> as body.
+          (<b>macro</b> parameterTree . forms)
+          <br/>
+            (type macro)
           <br/>
             &nbsp;
           <br/>
-            (macro parameterTree . forms)
-          <br/>
-            (type macro)
+            Return an anonymous macro with the given <b>parameterTree</b> and <b>forms</b> as body.
         </li>
       </ul>
     </div>
@@ -81,13 +81,13 @@
       </h3>
       <ul>
         <li>
-          Expands a macro call rather than evaluates it.
+          (<b>expand</b> form)
+          <br/>
+            (type macro)
           <br/>
             &nbsp;
           <br/>
-            (expand form)
-          <br/>
-            (type macro)
+            Expands a macro call rather than evaluates it.
         </li>
       </ul>
     </div>

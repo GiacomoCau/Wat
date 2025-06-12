@@ -50,13 +50,15 @@
       </h3>
       <ul>
         <li>
-          Instances of this class are yielded.
+          (type Class)
+          <br/>
+            (extends Obj)
+          <br/>
+            (attributes value continuation)
           <br/>
             &nbsp;
           <br/>
-            (type class extends Obj)
-          <br/>
-            (attributes (value continuation))
+            Instances of this class are yielded.
         </li>
       </ul>
     </div>
@@ -66,13 +68,13 @@
       </h3>
       <ul>
         <li>
-          Create a new yield record with the given yielded <b>value</b> and resume <b>continuation</b>.
+          (<b>makeYieldRecord</b> value continuation)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (makeYieldRecord value continuation)
-          <br/>
-            (type function)
+            Create a new yield record with the given yielded <b>value</b> and resume <b>continuation</b>.
         </li>
       </ul>
     </div>
@@ -82,13 +84,13 @@
       </h3>
       <ul>
         <li>
-          Yield a optional <b>value</b> (which defaults to #inert).
+          (<b>fiberYield</b> . value)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (fiberYield . value)
-          <br/>
-            (type function)
+            Yield a optional <b>value</b> (which defaults to #inert).
         </li>
       </ul>
     </div>
@@ -98,13 +100,13 @@
       </h3>
       <ul>
         <li>
-          Resume a suspended fiber <b>yieldRecord</b> with an optional <b>value</b> (which defaults to #inert).
+          (<b>fiberResume</b> yieldRecord . value)
+          <br/>
+            (type function)
           <br/>
             &nbsp;
           <br/>
-            (fiberResume yieldRecord . value)
-          <br/>
-            (type function)
+            Resume a suspended fiber <b>yieldRecord</b> with an optional <b>value</b> (which defaults to #inert).
         </li>
       </ul>
     </div>
@@ -114,13 +116,13 @@
       </h3>
       <ul>
         <li>
-          Evaluate the forms expressions as a fiber.
+          (<b>fiber</b> . forms)
+          <br/>
+            (type macro)
           <br/>
             &nbsp;
           <br/>
-            (fiber . forms)
-          <br/>
-            (type macro)
+            Evaluate the forms expressions as a fiber.
         </li>
       </ul>
     </div>
@@ -130,15 +132,15 @@
       </h3>
       <ul>
         <li>
-          Get all values yielded by a fiber, and its final result, and collect them in a list.
+          (<b>runFiber</b> thunk . forms)
           <br/>
-            Uses the optional list of values to sent to the fiber with `fiberResume'.
+            (type macro)
           <br/>
             &nbsp;
           <br/>
-            (runFiber thunk . forms)
+            Get all values yielded by a fiber, and its final result, and collect them in a list.
           <br/>
-            (type macro)
+            Uses the optional list of values to sent to the fiber with `fiberResume'.
         </li>
       </ul>
     </div>

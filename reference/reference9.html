@@ -31,23 +31,25 @@
       </h3>
       <ul>
         <li>
-          Return a new instance of <b>class</b> with the given <b>value</b> or <b>bindings</b>.
+          (<b>new</b> boxClass)
           <br/>
-            &nbsp;
+            (<b>new</b> boxClass value)
           <br/>
-            (new boxClass)
+            (<b>new</b> objClass . bindings)
           <br/>
-            (new boxClass value)
+            (<b>new</b> objClass string . bindings)
           <br/>
-            (new objClass . bindings)
+            (<b>new</b> objClass throwableObject . bindings)
           <br/>
-            (new objClass string . bindings)
-          <br/>
-            (new objClass string throwableObject . bindings)
+            (<b>new</b> objClass string throwableObject . bindings)
           <br/>
             (syntax bindings (attribute value . bindings))
           <br/>
             (syntax attribute (or Symbol Keyword String))
+          <br/>
+            &nbsp;
+          <br/>
+            Return a new instance of <b>class</b> with the given <b>value</b> or <b>bindings</b>.
         </li>
       </ul>
     </div>
@@ -57,19 +59,17 @@
       </h3>
       <ul>
         <li>
-          Defines into the current environment a named instance <b>name</b> of the given <b>class</b> and <b>value</b> or <b>bindings</b>.
+          (<b>defNew</b> name boxClass)
           <br/>
-            &nbsp;
+            (<b>defNew</b> name boxClass value)
           <br/>
-            (defNew name boxClass)
+            (<b>defNew</b> name objClass . bindings)
           <br/>
-            (defNew name boxClass value)
+            (<b>defNew</b> name objClass string . bindings)
           <br/>
-            (defNew name objClass . bindings)
+            (<b>defNew</b> name objClass throwableObject . bindings)
           <br/>
-            (defNew name objClass string . bindings)
-          <br/>
-            (defNew name objClass string throwableObject . bindings)
+            (<b>defNew</b> name objClass string throwableObject . bindings)
           <br/>
             (type macro)
           <br/>
@@ -78,6 +78,10 @@
             (syntax bindings (attribute value . bindings))
           <br/>
             (syntax attribute (or Symbol Keyword String))
+          <br/>
+            &nbsp;
+          <br/>
+            Defines into the current environment a named instance <b>name</b> of the given <b>class</b> and <b>value</b> or <b>bindings</b>.
         </li>
       </ul>
     </div>
