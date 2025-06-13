@@ -125,7 +125,7 @@ These are the differences compared to the original Wat/LispX
 	* if it is combined with `()` it will use the value obtainable from `(boxDft)` as the value to be assigned
 * The __catchTagWth__ handler, can be not only a function of an argument (`Apv1`), but also any value that will be returned if an `Error` is caught
 * The __finally__ operator is derived, as a macro, from the __atEnd__ operator `(atEnd (#: Apv0 cleaner) form . forms)`
-* __takeSubcont__, __pushPrompt__, __pushDelimSubcont__ and __pushSubcontDelim__ are operators and do not require completion
+* __pushPrompt__, __takeSubcont__, __pushSubcont__, __pushDelimSubcont__ and __pushSubcontDelim__ are operators and do not require completion
 * `Supplier` `Consumer` `Function` `BiConsumer` `BiFunction` `Executable` and `Field`, generically `java functions`, are implicitly considered `Apv` functions
 * __wrap__ does not wrap the `Apv` and the `java functions`, but wraps the remaining `Combinator`
 * __unwrap__ unwraps the `Apv`, wraps the `java functions` in a `JFun` and does not unwrap the remaining `Combinator`

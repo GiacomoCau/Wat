@@ -1395,6 +1395,16 @@
    |#
   %takeSubcont )
 
+(def pushSubcont
+  #|($nm continuation . forms)
+   |(type fexpr)
+   |
+   |Evaluated <b>forms</b> as an implicit `begin' inside the <b>continuation</b>.
+   |#
+  %pushSubcont )
+
+(assert (pushPrompt 'p (* 2 (+ 1 (takeSubcont 'p k (pushSubcont k (pushSubcont k 3)))))) 18)
+
 (def pushDelimSubcont
   #|($nm prompt continuation . forms)
    |(type fexpr)
@@ -1403,18 +1413,6 @@
    |before evaluated <b>forms</b> as an implicit `begin' inside the new continuation.
    |#
   %pushDelimSubcont )
-
-(defMacro (pushSubcont continuation . forms)
-  #|($nm continuation . forms)
-   |(type macro)
-   |
-   |(derivation (pushDelimSubcont (cons #inert) continuation . forms))
-   |
-   |We don't have `pushSubcont' but we can emulate it with a `pushDelimSubcont' that pushes an (cons #inert) prompt.
-   |#
-  (list* 'pushDelimSubcont (cons #inert) continuation forms) )
-
-(assert (pushPrompt 'p (* 2 (+ 1 (takeSubcont 'p k (pushSubcont k (pushSubcont k 3)))))) 18)
 
 (def pushSubcontBarrier
   #|($nm . forms)

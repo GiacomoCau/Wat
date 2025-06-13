@@ -1202,6 +1202,22 @@ public class Vm {
 		}
 		public String toString() { return "%TakeSubcont"; }
 	}
+	class PushSubcont implements Combinable  {
+		public Object combine(Env e, List o) {
+			var chk = checkM(this, o, 1, or(Symbol.class, List.class)); // o = (k . forms)
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
+			var dbg = dbg(e, this, o);
+			return pipe(dbg,
+				()-> getTco(evaluate(e, o.car)),
+				(val)-> switch (val) {
+					case Continuation k-> k.apply(()-> begin.combine(e, o.cdr()));
+					case Object object-> typeError("cannot push subcont, not a {expected}: {datum}", object, symbol("Continuation"));
+				}
+			);
+		}
+		public String toString() { return "%PushSubcont"; }
+	}
 	class PushDelimSubcont implements Combinable  {
 		public Object combine(Env e, List o) {
 			var chk = checkM(this, o, 2, Any.class, or(Symbol.class, List.class)); // o = (prp k . forms)
@@ -2135,8 +2151,9 @@ public class Vm {
 				"%throwTag", new ThrowTag(),
 				"%catchTagWth", new CatchTagWth(),
 				// Delimited Control
-				"%takeSubcont", new TakeSubcont(),
 				"%pushPrompt", pushPrompt,
+				"%takeSubcont", new TakeSubcont(),
+				"%pushSubcont", new PushSubcont(),
 				"%pushDelimSubcont", new PushDelimSubcont(),
 				"%pushSubcontBarrier", pushSubcontBarrier,
 				// Box

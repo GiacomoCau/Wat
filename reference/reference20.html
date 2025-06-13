@@ -68,6 +68,22 @@
     </div>
     <div>
       <h3>
+        pushSubcont
+      </h3>
+      <ul>
+        <li>
+          (<b>pushSubcont</b> continuation . forms)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            Evaluated <b>forms</b> as an implicit `begin' inside the <b>continuation</b>.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         pushDelimSubcont
       </h3>
       <ul>
@@ -81,26 +97,6 @@
             Push the <b>prompt</b> and compose the previously captured <b>continuation</b> inside it
           <br/>
             before evaluated <b>forms</b> as an implicit `begin' inside the new continuation.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        pushSubcont
-      </h3>
-      <ul>
-        <li>
-          (<b>pushSubcont</b> continuation . forms)
-          <br/>
-            (type macro)
-          <br/>
-            &nbsp;
-          <br/>
-            (derivation (pushDelimSubcont (cons #inert) continuation . forms))
-          <br/>
-            &nbsp;
-          <br/>
-            We don't have `pushSubcont' but we can emulate it with a `pushDelimSubcont' that pushes an (cons #inert) prompt.
         </li>
       </ul>
     </div>
