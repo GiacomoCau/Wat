@@ -16,7 +16,7 @@
 (def indexOfFrom (getMethod String "indexOf" &int &int))
 (def charAt (getMethod String "charAt" &int))
 
-(def\ (nm d)
+(def\ (getName d)
   (let* ( (b1 (indexOf d #\ ))
           (b2 (let1 (l (indexOfFrom d #\  (1+ b1))) (if (-1? l) (length d) l))) )
     (subSeq d
@@ -69,6 +69,9 @@
   (a (@ 'href ($ base (1+ chapter#) ".html"))
     (input (@ 'type "button" 'value ">" 'disabled (== chapter# chapters))) ) )
     
+(def\ (replace$nm s name)
+	(if (startsWith s "\x28;$nm") (@replace s "$nm" ($ "<b>" name "</b>")) s) )
+
 (doList (file files)
   (close1 (r (@new BufferedReader (@new FileReader file)))
     (log file)
@@ -110,19 +113,19 @@
                   (set! l0 l)
                   (while? (startsWith (set! l :rhs (readLine r)) "\x28;def"))
                   (div
-                    (h3 (pr (encode (nm l0))))
+                    (h3 (pr (encode (getName l0))))
                     (ul (li (pr (encode l0)))) ))
                 (if (startsWith l "  #|")
                   (div
-                    (h3 (pr (encode (def name :rhs (nm l0)))))
+                    (h3 (pr (encode (def name :rhs (getName l0)))))
                     (ul
                       (li
-                        (pr ((\ (s) (if (startsWith s "\x28;$nm") (@replace s "$nm" ($ "<b>" name "</b>")) s)) (encode (subSeq l 4))) )
+                        (pr (encode (replace$nm (subSeq l 4) name)))
                         (loop 
                           (until? (startsWith (set! l :rhs (readLine r)) "   |#"))
-                          (br (pr ((\ (s) (if (startsWith s "\x28;$nm") (@replace s "$nm" ($ "<b>" name "</b>")) s)) (encode (subSeq l 4))) )) ))))
+                          (br (pr (encode (replace$nm (subSeq l 4) name)))) ))))
                   (div
-                    (h3 (pr (encode (nm l0))))
+                    (h3 (pr (encode (getName l0))))
                     (ul (li (pr (encode l0)))) )))) )))) ))
 
 (log chapter# 'chapters def# 'definitions)

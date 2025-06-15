@@ -1437,7 +1437,7 @@ public class Vm {
 			// (@<name> object . objects)        -> object.getClass().getMethod(name, getClasses(objects)).invocke(object, objects) -> method.invoke(object, objects)
 			// (@getConstructor class . classes) -> class.getConstructor(classes) -> constructor
 			// (@getMethod class name . classes) -> class.getMethod(name, classes) -> method
-			// (@getField class name)            -> class.getField(name, classes) -> field
+			// (@getField class name)            -> class.getField(name) -> field
 			if (name.equals("new") && o0 instanceof Class c && c.getDeclaringClass() == Vm.class && (args.length == 0 || args[0].getClass() != Vm.class)) {
 				// (@new Error "assert error!") -> (@new Error vm "assert error!")
 				args = headAdd(args, Vm.this);

@@ -111,9 +111,9 @@
           <br/>
             If `car' of <b>clause</b> is else
           <br/>
-            &nbsp;&nbsp;if the `cadr' of <b>clauses</b> is =&gt;, evaluate `caddr' of <b>clause</b> and apply it to the operands,
+            &nbsp;&nbsp;&nbsp;&nbsp;if the `cadr' of <b>clauses</b> is =&gt;, evaluate `caddr' of <b>clause</b> and apply it to the operands,
           <br/>
-            &nbsp;&nbsp;otherwise evaluate <b>forms</b> as an implicit `begin'.
+            &nbsp;&nbsp;&nbsp;&nbsp;otherwise evaluate <b>forms</b> as an implicit `begin'.
           <br/>
             If the operands match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
           <br/>
@@ -161,6 +161,8 @@
           <br/>
             (syntax clause (definiendTree . forms))
           <br/>
+            &nbsp;
+          <br/>
             (derivation (wrap (caseVau . clauses)))
           <br/>
             &nbsp;
@@ -171,9 +173,9 @@
           <br/>
             If `car' of <b>clause</b> is else
           <br/>
-            &nbsp;&nbsp;if the `cadr' of <b>clauses</b> is =&gt;, evaluate `caddr' of <b>clause</b> and apply it to the arguments,
+            &nbsp;&nbsp;&nbsp;&nbsp;if the `cadr' of <b>clauses</b> is =&gt;, evaluate `caddr' of <b>clause</b> and apply it to the arguments,
           <br/>
-            &nbsp;&nbsp;otherwise evaluate <b>forms</b> as an implicit `begin'.
+            &nbsp;&nbsp;&nbsp;&nbsp;otherwise evaluate <b>forms</b> as an implicit `begin'.
           <br/>
             If the arguments match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
           <br/>
@@ -221,6 +223,8 @@
           <br/>
             (syntax clause (definiendTree . forms))
           <br/>
+            &nbsp;
+          <br/>
             (derivation (wrap (caseVau . clauses)))
           <br/>
             &nbsp;
@@ -231,9 +235,9 @@
           <br/>
             If `car' of <b>clause</b> is else
           <br/>
-            &nbsp;&nbsp;if the `cadr' of <b>clauses</b> is =&gt;, evaluate `caddr' of <b>clause</b> and apply it to the arguments,
+            &nbsp;&nbsp;&nbsp;&nbsp;if the `cadr' of <b>clauses</b> is =&gt;, evaluate `caddr' of <b>clause</b> and apply it to the arguments,
           <br/>
-            &nbsp;&nbsp;otherwise evaluate <b>forms</b> as an implicit `begin'.
+            &nbsp;&nbsp;&nbsp;&nbsp;otherwise evaluate <b>forms</b> as an implicit `begin'.
           <br/>
             If <b>value</b> match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
           <br/>
@@ -277,9 +281,9 @@
           <br/>
             If <b>test</b> is a boolean
           <br/>
-            &nbsp;&nbsp;if is #true, evaluate <b>forms</b> as an implicit `begin',
+            &nbsp;&nbsp;&nbsp;&nbsp;if is #true, evaluate <b>forms</b> as an implicit `begin',
           <br/>
-            &nbsp;&nbsp;otherwise go to the next <b>clause</b>.
+            &nbsp;&nbsp;&nbsp;&nbsp;otherwise go to the next <b>clause</b>.
           <br/>
             If <b>forms</b> is #null return <b>test</b>.
           <br/>
@@ -287,9 +291,9 @@
           <br/>
             If `cadr' di <b>forms</b> is =&gt; evaluate `car' of <b>forms</b>
           <br/>
-            &nbsp;&nbsp;if is #true evaluate the `caddr' of <b>forms</b> and apply it to <b>test</b>
+            &nbsp;&nbsp;&nbsp;&nbsp;if is #true evaluate the `caddr' of <b>forms</b> and apply it to <b>test</b>
           <br/>
-            &nbsp;&nbsp;otherwise go to the next <b>clause</b>.
+            &nbsp;&nbsp;&nbsp;&nbsp;otherwise go to the next <b>clause</b>.
           <br/>
             Otherwise go to the next <b>clause</b>.
         </li>

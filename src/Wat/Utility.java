@@ -196,12 +196,12 @@ public class Utility {
 		char c;
 		StringBuffer sb = new StringBuffer(2*a.length());
 		int i = 0, end = a.length();
-		for (; i < end && (c = a.charAt(i)) == ' '; i++) sb.append("&nbsp;");
+		for (; i < end && (c = a.charAt(i)) == ' '; i++) sb.append("&nbsp;&nbsp;");
 		var matcher = Pattern.compile("</?b>").matcher(a);
 		for (; i < end; i++) {
 			switch (c = a.charAt(i)) {
 				case '<': {
-					if (!matcher.find(i))
+					if (!matcher.find(i) || matcher.start() != i)
 						sb.append("&lt;");
 					else {
 						var g = matcher.group();
