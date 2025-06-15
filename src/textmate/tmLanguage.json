@@ -132,7 +132,7 @@
 			end: "\\|#",
 			patterns: [
 		        {	name: "doc",
-					match: "(?<=(\\s|\\())(syntax|type|derivation|aliasOf|extends|attributes|\\$nm|example|use)(?=(\\s|\\)))"
+					match: "(?<=(\\s|\\())(syntax|type|derivation|aliasof|extends|attributes|\\$nm|example|use)(?=(\\s|\\)))"
 				},
 		        {	match: "\"(\\\"|[^\"])+\"" },
 		        {	include: "#lcomment" },

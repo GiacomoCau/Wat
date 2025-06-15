@@ -27,7 +27,21 @@
     </h2>
     <ul>
       <li>
-        The Box are functions that encapsulates a mutable value.
+        (box)
+        <br/>
+          (box value)
+        <br/>
+          (box bindResult value)
+        <br/>
+          (type function)
+        <br/>
+          &nbsp;
+        <br/>
+          (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+        <br/>
+          &nbsp;
+        <br/>
+          The Box are functions that encapsulates a mutable value.
         <br/>
           &nbsp;
         <br/>
@@ -45,25 +59,11 @@
         <br/>
           - with <b>bindResult</b> #inert return #inert
         <br/>
-          - with <b>bindResult</b> :rhs return the right side of the last binding
+          - with <b>bindResult</b> :rhs return the update value
         <br/>
-          - with <b>bindResult</b> :prv return the previous value of the last binding
+          - with <b>bindResult</b> :prv return the value previous the update
         <br/>
           - with <b>bindResult</b> :cnt return the box
-        <br/>
-          &nbsp;
-        <br/>
-          (box)
-        <br/>
-          (box value)
-        <br/>
-          (box bindResult value)
-        <br/>
-          (type function)
-        <br/>
-          &nbsp;
-        <br/>
-          (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
       </li>
     </ul>
     <div>
