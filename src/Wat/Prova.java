@@ -60,7 +60,7 @@ public class Prova {
 		//out.println(1 * 1.2);
 		//out.println(1.2 * 1);
 		//System.out.println(".. __aaa__ dddssd".replaceAll("__([^_]*)__", "<b>$1<b/>"));
-		//System.out.println(Utility.encode(".. <b>aaa</b>dddssd<b>"));
+		System.out.println(Utility.encode("(< a b).. <b>aaa</b>dddssd<b>"));
 		//System.out.println(Double.valueOf(0)==Double.valueOf(0));
 		//var a  = 0b1;
 		/*
@@ -77,6 +77,7 @@ public class Prova {
 		System.out.println((double)3/2);
 		var $$__a = 1;
 		*/
+		/*
 		record Firma(String name, Class classe, Class... arguments) {
 			@Override public boolean equals(Object obj) {
 				if (this == obj) return true;
@@ -86,7 +87,8 @@ public class Prova {
 				&& Arrays.equals(arguments, other.arguments);
 			}
 		}
-		out.println(new Firma("a", Integer.class/*, String.class*/).equals(new Firma("a", Integer.class/*, String.class*/)));
+		out.println(new Firma("a", Integer.class/*, String.class* /).equals(new Firma("a", Integer.class/*, String.class* /)));
+		*/
 	}
 	
 	public static void functions() {

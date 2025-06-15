@@ -49,25 +49,25 @@
         <br/>
           * Both condition and restart handlers are arranged in
         <br/>
-          &nbsp;&nbsp;dynamically-bound handler chains, consisting of individual
+          &nbsp;&nbsp;&nbsp;&nbsp;dynamically-bound handler chains, consisting of individual
         <br/>
-          &nbsp;&nbsp;handler frames.  Each frame binds a number of handlers.  We use
+          &nbsp;&nbsp;&nbsp;&nbsp;handler frames.  Each frame binds a number of handlers.  We use
         <br/>
-          &nbsp;&nbsp;two dynamic variables, `*conditionHandlerFrame*' and
+          &nbsp;&nbsp;&nbsp;&nbsp;two dynamic variables, `*conditionHandlerFrame*' and
         <br/>
-          &nbsp;&nbsp;`*restartHandlerFrame*', to point at the innermost frame of
+          &nbsp;&nbsp;&nbsp;&nbsp;`*restartHandlerFrame*', to point at the innermost frame of
         <br/>
-          &nbsp;&nbsp;each chain.  Note that the variables hold options, as indicated
+          &nbsp;&nbsp;&nbsp;&nbsp;each chain.  Note that the variables hold options, as indicated
         <br/>
-          &nbsp;&nbsp;by the question mark.
+          &nbsp;&nbsp;&nbsp;&nbsp;by the question mark.
         <br/>
           &nbsp;
         <br/>
           * Signalling a condition and invoking a restart are very similar
         <br/>
-          &nbsp;&nbsp;operations, in that a handler is looked up in the chain, and
+          &nbsp;&nbsp;&nbsp;&nbsp;operations, in that a handler is looked up in the chain, and
         <br/>
-          &nbsp;&nbsp;then its handler function is invoked.
+          &nbsp;&nbsp;&nbsp;&nbsp;then its handler function is invoked.
         <br/>
           &nbsp;
         <br/>
@@ -77,47 +77,47 @@
         <br/>
           * Conditions are classes organized in a type hierarchy
         <br/>
-          &nbsp;&nbsp;(e.g. `type-error' as subtype of `error'), whereas restarts are
+          &nbsp;&nbsp;&nbsp;&nbsp;(e.g. `type-error' as subtype of `error'), whereas restarts are
         <br/>
-          &nbsp;&nbsp;plain names (e.g. `abort' and `continue').
+          &nbsp;&nbsp;&nbsp;&nbsp;plain names (e.g. `abort' and `continue').
         <br/>
           &nbsp;
         <br/>
           * A condition handler function always receives only a single
         <br/>
-          &nbsp;&nbsp;argument, the condition, whereas a restart handler function
+          &nbsp;&nbsp;&nbsp;&nbsp;argument, the condition, whereas a restart handler function
         <br/>
-          &nbsp;&nbsp;receives any number of arguments passed to `invokeRestart'.
+          &nbsp;&nbsp;&nbsp;&nbsp;receives any number of arguments passed to `invokeRestart'.
         <br/>
           &nbsp;
         <br/>
           * A condition handler function may decline handling a condition by
         <br/>
-          &nbsp;&nbsp;returning normally instead of performing a nonlocal exit; this
+          &nbsp;&nbsp;&nbsp;&nbsp;returning normally instead of performing a nonlocal exit; this
         <br/>
-          &nbsp;&nbsp;causes the search for a handler to continue.  In contrast, if a
+          &nbsp;&nbsp;&nbsp;&nbsp;causes the search for a handler to continue.  In contrast, if a
         <br/>
-          &nbsp;&nbsp;restart handler function returns normally, the restart is
+          &nbsp;&nbsp;&nbsp;&nbsp;restart handler function returns normally, the restart is
         <br/>
-          &nbsp;&nbsp;considered handled, and its result value is returned from
+          &nbsp;&nbsp;&nbsp;&nbsp;considered handled, and its result value is returned from
         <br/>
-          &nbsp;&nbsp;`invokeRestart'.
+          &nbsp;&nbsp;&nbsp;&nbsp;`invokeRestart'.
         <br/>
           &nbsp;
         <br/>
           * A restart handler may optionally have an interactive function
         <br/>
-          &nbsp;&nbsp;that prompts the user for arguments when the restart is invoked
+          &nbsp;&nbsp;&nbsp;&nbsp;that prompts the user for arguments when the restart is invoked
         <br/>
-          &nbsp;&nbsp;by `invokeRestartInteractively'.
+          &nbsp;&nbsp;&nbsp;&nbsp;by `invokeRestartInteractively'.
         <br/>
           &nbsp;
         <br/>
           * A restart handler may optionally be associated with a list of
         <br/>
-          &nbsp;&nbsp;conditions, to tell apart restarts belonging to different,
+          &nbsp;&nbsp;&nbsp;&nbsp;conditions, to tell apart restarts belonging to different,
         <br/>
-          &nbsp;&nbsp;concurrently signalled conditions.
+          &nbsp;&nbsp;&nbsp;&nbsp;concurrently signalled conditions.
         <br/>
           &nbsp;
         <br/>
@@ -129,63 +129,63 @@
         <br/>
           1) For simplicity, the syntaxes of `handlerCase' and
         <br/>
-          &nbsp;&nbsp;&nbsp;`restartCase' are equal to the syntaxes of the lower-level
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`restartCase' are equal to the syntaxes of the lower-level
         <br/>
-          &nbsp;&nbsp;&nbsp;`handlerBind' and `restartBind' functions.  There is no extra
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`handlerBind' and `restartBind' functions.  There is no extra
         <br/>
-          &nbsp;&nbsp;&nbsp;&quot;user interface&quot; processing for the higher-level functions.
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;user interface&quot; processing for the higher-level functions.
         <br/>
           &nbsp;
         <br/>
-          &nbsp;&nbsp;&nbsp;Likewise, `signal' and `error' do not support creating simple
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Likewise, `signal' and `error' do not support creating simple
         <br/>
-          &nbsp;&nbsp;&nbsp;conditions from formatting strings and arguments, you must
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;conditions from formatting strings and arguments, you must
         <br/>
-          &nbsp;&nbsp;&nbsp;always pass in a fully formed condition yourself.
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;always pass in a fully formed condition yourself.
         <br/>
           &nbsp;
         <br/>
           2) There is no `with-condition-restarts'.  Instead there is an
         <br/>
-          &nbsp;&nbsp;&nbsp;additional keyword, `:associatedConditions', in the
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;additional keyword, `:associatedConditions', in the
         <br/>
-          &nbsp;&nbsp;&nbsp;handlerSpecs of `restartBind' and `restartCase' that
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;handlerSpecs of `restartBind' and `restartCase' that
         <br/>
-          &nbsp;&nbsp;&nbsp;establishes the associations.
-        <br/>
-          &nbsp;
-        <br/>
-          &nbsp;&nbsp;&nbsp;Alternatively, `signal' and `error' also support the
-        <br/>
-          &nbsp;&nbsp;&nbsp;establishment of restart handlers associated with the signalled
-        <br/>
-          &nbsp;&nbsp;&nbsp;condition.
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;establishes the associations.
         <br/>
           &nbsp;
         <br/>
-          &nbsp;&nbsp;&nbsp;A call to `signal' (or `error') with restart handler specs like:
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Alternatively, `signal' and `error' also support the
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;establishment of restart handlers associated with the signalled
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;condition.
         <br/>
           &nbsp;
         <br/>
-          &nbsp;&nbsp;&nbsp;(signal some-condition
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(continue (\ () ...)) )
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A call to `signal' (or `error') with restart handler specs like:
         <br/>
           &nbsp;
         <br/>
-          &nbsp;&nbsp;&nbsp;is equivalent to:
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(signal some-condition
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(continue (\ () ...)) )
         <br/>
           &nbsp;
         <br/>
-          &nbsp;&nbsp;&nbsp;(restartCase ( (continue (\ () ...) :associatedConditions (list some-condition)) )
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;is equivalent to:
         <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(signal some-condition) )
+          &nbsp;
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(restartCase ( (continue (\ () ...) :associatedConditions (list some-condition)) )
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(signal some-condition) )
         <br/>
           &nbsp;
         <br/>
           3) Every restart must have a !null name; anonymous restarts
         <br/>
-          &nbsp;&nbsp;&nbsp;are not supported.
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;are not supported.
       </li>
     </ul>
     <div>

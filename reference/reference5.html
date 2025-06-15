@@ -27,7 +27,33 @@
     </h2>
     <ul>
       <li>
-        The Env are functions that encapsulates mutable values.
+        (env)
+        <br/>
+          (env attribute)
+        <br/>
+          (env attribute value . attributes)
+        <br/>
+          (env bindType attribute value . attributes)
+        <br/>
+          (env bindResult attribute value . attributes)
+        <br/>
+          (env bindType bindResult attribute value . attributes)
+        <br/>
+          (type function)
+        <br/>
+          &nbsp;
+        <br/>
+          (syntax attributes (attribute value . attributes))
+        <br/>
+          (syntax attribute (or Symbol Keyword String))
+        <br/>
+          (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+        <br/>
+          (syntax bindType (or :def :set!))
+        <br/>
+          &nbsp;
+        <br/>
+          The Env are functions that encapsulates mutable values.
         <br/>
           &nbsp;
         <br/>
@@ -60,32 +86,6 @@
           - with <b>bindType</b> :def define or update the bindings in the env
         <br/>
           - with <b>bindType</b> :set! update the bindings in env, signals an error if the binding is not defined.
-        <br/>
-          &nbsp;
-        <br/>
-          (env)
-        <br/>
-          (env attribute)
-        <br/>
-          (env attribute value . attributes)
-        <br/>
-          (env bindType attribute value . attributes)
-        <br/>
-          (env bindResult attribute value . attributes)
-        <br/>
-          (env bindType bindResult attribute value . attributes)
-        <br/>
-          (type function)
-        <br/>
-          &nbsp;
-        <br/>
-          (syntax attributes (attribute value . attributes))
-        <br/>
-          (syntax attribute (or Symbol Keyword String))
-        <br/>
-          (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
-        <br/>
-          (syntax bindType (or :def :set!))
       </li>
     </ul>
     <div>

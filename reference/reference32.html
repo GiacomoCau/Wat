@@ -97,27 +97,27 @@
         <br/>
           - a `List': the parameter value must be a `List' where, in the `check' `List',
         <br/>
-          &nbsp;&nbsp;- the first `Integer' indicates the minimum number of elements, default is `0'
+          &nbsp;&nbsp;&nbsp;&nbsp;- the first `Integer' indicates the minimum number of elements, default is `0'
         <br/>
-          &nbsp;&nbsp;- the second `Integer' indicates the maximum number of elements
+          &nbsp;&nbsp;&nbsp;&nbsp;- the second `Integer' indicates the maximum number of elements
         <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;default is the value of the first `Integer' if present, otherwise `oo' for `Integer.maxValue'
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;default is the value of the first `Integer' if present, otherwise `oo' for `Integer.maxValue'
         <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;for the second `Integer' can be also specified the symbol `oo' for `Integer.maxValue'
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for the second `Integer' can be also specified the symbol `oo' for `Integer.maxValue'
         <br/>
-          &nbsp;&nbsp;- if the number of `check' arguments in the list is
+          &nbsp;&nbsp;&nbsp;&nbsp;- if the number of `check' arguments in the list is
         <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;- less than the minimum: parameters values that exceed the minimum can have any value
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- less than the minimum: parameters values that exceed the minimum can have any value
         <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;- greater than the minimum: the parameters values exceeding the minimum will be checked cyclically using `check' arguments exceeding the minimum
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- greater than the minimum: the parameters values exceeding the minimum will be checked cyclically using `check' arguments exceeding the minimum
         <br/>
-          &nbsp;&nbsp;- if the first element of the list is:
+          &nbsp;&nbsp;&nbsp;&nbsp;- if the first element of the list is:
         <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;- `or': the parameter value must match one of the `check' arguments of the `or'
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- `or': the parameter value must match one of the `check' arguments of the `or'
         <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;- `and': the parameter value must match all the `check' arguments of the `and'
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- `and': the parameter value must match all the `check' arguments of the `and'
         <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;- `Apv': applying `Apv' to the cons of the parameter value and the remaining arguments must return #true
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- `Apv': applying `Apv' to the cons of the parameter value and the remaining arguments must return #true
       </li>
     </ul>
     <div>
@@ -154,7 +154,7 @@
           <br/>
             &nbsp;
           <br/>
-            Returns the length of the <b>expr</b> value if it matches <b>check</b>, signals an error otherwise.
+            Returns the length of <b>expr</b> if it matches <b>check</b>, signals an error otherwise.
         </li>
       </ul>
     </div>
@@ -230,7 +230,7 @@
       </h3>
       <ul>
         <li>
-          (aliasOf :)
+          (aliasof :)
         </li>
       </ul>
     </div>

@@ -353,7 +353,7 @@
       </h3>
       <ul>
         <li>
-          (aliasOf \. :-)
+          (aliasof \. :-)
         </li>
       </ul>
     </div>
@@ -384,6 +384,8 @@
           (<b>apply</b> fun args . environment)
           <br/>
             (type function)
+          <br/>
+            &nbsp;
           <br/>
             (derivation (eval (cons (unwrap fun) args) (if (null? environment) (newEnv) (car! environment)) ))
           <br/>

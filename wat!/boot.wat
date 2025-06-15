@@ -172,7 +172,7 @@
   %\ )
 
 (def lambda
-  #|(aliasOf \. :-)
+  #|(aliasof \. :-)
    |#
   \ )
 
@@ -188,6 +188,7 @@
 (def apply
   #|($nm fun args . environment)
    |(type function)
+   |
    |(derivation (eval (cons (unwrap fun) args) (if (null? environment) (newEnv) (car! environment)) ))
    |
    |Call the <b>function</b> with a dynamically-supplied list of <b>arguments</b> in the optional <b>environment</b>.
@@ -429,7 +430,7 @@
 (assert (expand (defVau succ (n) env (eval (list '+ n 1) env))) '(def succ (vau (n) env (eval (list (%' +) n 1) env))))
 
 (def defConstant
-  #|(aliasOf def)
+  #|(aliasof def)
    |
    |Defines into the current environment the named constant <b>name</b> with the given <b>value</b>.
    |This is mostly for documentation purposes, as constants are still mutable.
@@ -542,6 +543,19 @@
 
 
 #|! Env
+ |(env)
+ |(env attribute)
+ |(env attribute value . attributes)
+ |(env bindType attribute value . attributes)
+ |(env bindResult attribute value . attributes)
+ |(env bindType bindResult attribute value . attributes)
+ |(type function)
+ |
+ |(syntax attributes (attribute value . attributes))
+ |(syntax attribute (or Symbol Keyword String))
+ |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+ |(syntax bindType (or :def :set!))
+ |
  |The Env are functions that encapsulates mutable values.
  |
  |Calling the env:
@@ -559,19 +573,6 @@
  |- without <b>bindType</b> use the bindType :def
  |- with <b>bindType</b> :def define or update the bindings in the env
  |- with <b>bindType</b> :set! update the bindings in env, signals an error if the binding is not defined.
- |
- |(env)
- |(env attribute)
- |(env attribute value . attributes)
- |(env bindType attribute value . attributes)
- |(env bindResult attribute value . attributes)
- |(env bindType bindResult attribute value . attributes)
- |(type function)
- |
- |(syntax attributes (attribute value . attributes))
- |(syntax attribute (or Symbol Keyword String))
- |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
- |(syntax bindType (or :def :set!))
  |#
 
 (def newEnv
@@ -592,20 +593,6 @@
 
 
 #|! Obj
- |The Obj are functions that encapsulates mutable values.
- |
- |Calling the obj:
- |
- |- without arguments returns the env.
- |- with an attribute return the value of the attribute in the obj.
- |- with couples of attribute and value defines or update the attribute with the value in the obj.
- |
- |- without <b>bindResult</b> or with <b>bindResult</b> #ignore use as bindResult `(bndRes)'
- |- with <b>bindResult</b> #inert return #inert
- |- with <b>bindResult</b> :rhs return the right side of the last binding
- |- with <b>bindResult</b> :prv return the previous value of the last binding
- |- with <b>bindResult</b> :cnt return the obj
- |
  |(obj)
  |(obj attribute)
  |(obj attribute value . attributes)
@@ -615,6 +602,20 @@
  |(syntax attributes (attribute value . attributes))
  |(syntax attribute (or Symbol Keyword String))
  |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+ |
+ |The Obj are functions that encapsulates mutable values.
+ |
+ |Calling the obj:
+ |
+ |- without arguments returns the obj.
+ |- with an attribute return the value of the attribute in the obj.
+ |- with couples of attribute and value defines or update the attribute with the value in the obj.
+ |
+ |- without <b>bindResult</b> or with <b>bindResult</b> #ignore use as bindResult `(bndRes)'
+ |- with <b>bindResult</b> #inert return #inert
+ |- with <b>bindResult</b> :rhs return the right side of the last binding
+ |- with <b>bindResult</b> :prv return the previous value of the last binding
+ |- with <b>bindResult</b> :cnt return the obj
  |#
 
 (def\ (newObj . bindings)
@@ -649,6 +650,7 @@
    |
    |(syntax attribute (or Symbol Keyword String))
    |(syntax object (or Env Obj))
+   |
    |(derivation (@isBound object attribute))
    |
    |Return #true if the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, #false otherwise.
@@ -661,6 +663,7 @@
    |
    |(syntax attribute (or Symbol Keyword String))
    |(syntax object (or Env Obj))
+   |
    |(derivation (@value object attribute))
    |
    |Return the value of the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, #null otherwise.
@@ -673,6 +676,7 @@
    |
    |(syntax attribute (or Symbol Keyword String))
    |(syntax object (or Env Obj))
+   |
    |(derivation (@get object attribute))
    |
    |Return the value of the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, signals an error otherwise.
@@ -685,6 +689,7 @@
    |
    |(syntax object (or Env Obj))
    |(syntax attribute (or Symbol Keyword String))
+   |
    |(derivation (@isBound object attribute))
    |
    |Return #true if the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, #false otherwise.
@@ -697,6 +702,7 @@
    |
    |(syntax object (or Env Obj))
    |(syntax attribute (or Symbol Keyword String))
+   |
    |(derivation (object attribute))
    |
    |Return the value of <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, signals an error otherwise.
@@ -709,6 +715,7 @@
    |
    |(syntax object (or Env Obj))
    |(syntax attribute (or Symbol Keyword String))
+   |
    |(derivation (object attribute value))
    |
    |Update or define with <b>value</b> the <b>attribute</b> in the <b>environment</b> or <b>obj</b>.
@@ -717,6 +724,13 @@
 
 
 #|! Box
+ |(box)
+ |(box value)
+ |(box bindResult value)
+ |(type function)
+ |
+ |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+ |
  |The Box are functions that encapsulates a mutable value.
  |
  |Calling the box:
@@ -726,16 +740,9 @@
  |
  |- without <b>bindResult</b> or with <b>bindResult</b> #ignore use as bindResult `(bndRes)'
  |- with <b>bindResult</b> #inert return #inert
- |- with <b>bindResult</b> :rhs return the right side of the last binding
- |- with <b>bindResult</b> :prv return the previous value of the last binding
+ |- with <b>bindResult</b> :rhs return the update value
+ |- with <b>bindResult</b> :prv return the value previous the update
  |- with <b>bindResult</b> :cnt return the box
- |
- |(box)
- |(box value)
- |(box bindResult value)
- |(type function)
- |
- |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
  |#
 
 (def\ (newBox . value)
@@ -1067,7 +1074,7 @@
   %! )
 
 (def not
-  #|(aliasOf !)
+  #|(aliasof !)
    |#
   ! )
 
@@ -1422,14 +1429,14 @@
    |#
   %pushSubcontBarrier )
 
-
-#|! Errors
- |#
-
 (def rootPrompt
   #|The prompt used for delimiting all.
    |#
   %rootPrompt )
+
+
+#|! Errors
+ |#
 
 (def error
   #|($nm string . attributes)
@@ -1561,6 +1568,7 @@
 (defMacro _ forms
   #|($nm . forms)
    |(type macro)
+   |
    |(derivation (\ (_) . forms))
    |
    |"Implicit" Argument Lambda.
@@ -1620,7 +1628,7 @@
   (list (list '\ (list name) (list 'def name :rhs value)) #inert) )
 
 (def label
-  #|(aliasOf rec)
+  #|(aliasof rec)
    |#
   rec )
 
@@ -1640,7 +1648,7 @@
     (list 'rec lhs (cons '\ rhs)) ))
 
 (def label\
-  #|(aliasOf rec\)
+  #|(aliasof rec\)
    |#
   rec\ )
 
@@ -1952,7 +1960,7 @@
     forms ))
 
 (def labels
-  #|(aliasOf letrec\)
+  #|(aliasof letrec\)
    |#
   letrec\ )
 
@@ -1962,7 +1970,7 @@
  |#
 
 (def* (then else)
-  #|(aliasOf begin)
+  #|(aliasof begin)
    |#
   begin begin )
 
@@ -2006,7 +2014,7 @@
     #f ))
 
 (def and
-  #|(aliasOf &&)
+  #|(aliasof &&)
    |#
   && )
 
@@ -2024,7 +2032,7 @@
     (apply || (cdr ops) env) ))
 
 (def or
-  #|(aliasOf ||)
+  #|(aliasof ||)
    |#
   || )
 
@@ -2163,6 +2171,7 @@
    |(syntax clause (else . forms))
    |(syntax clause (else => apv1))
    |(syntax clause (definiendTree . forms))
+   |
    |(derivation (wrap (caseVau . clauses)))
    |
    |Return a multi-armed \ function, when applied go through the <b>clauses</b> in order.
@@ -2197,6 +2206,7 @@
    |(syntax clause (else . forms))
    |(syntax clause (else => apv1))
    |(syntax clause (definiendTree . forms))
+   |
    |(derivation (wrap (caseVau . clauses)))
    |
    |Evaluates <b>value</b> and go through the <b>clauses</b> in order.
@@ -2297,7 +2307,7 @@
  |#
 
 (def some
-  #|(aliasOf cons!)
+  #|(aliasof cons!)
    |
    |Create a one-element list from the <b>value</b>.
    |#
@@ -2747,7 +2757,7 @@
    |(derivation ((\ ((#: check value)) (len value)) expr))
    |(derivation (let ( (value (eval exor env)) (chk (%evalChk check env)) ) (@check vm value chk))) 
    |
-   |Returns the length of the <b>expr</b> value if it matches <b>check</b>, signals an error otherwise.
+   |Returns the length of <b>expr</b> if it matches <b>check</b>, signals an error otherwise.
    |#
   %check )
 
@@ -2795,7 +2805,7 @@
   %: )
 
 (def the
-  #|(aliasOf :)
+  #|(aliasof :)
    |#
   : )
 
@@ -2931,7 +2941,7 @@
                     (apply begin forms env) ))) ))))) ))
 
 (def loop
-  #|(aliasOf %loop)
+  #|(aliasof %loop)
    |#
   %loop)
 
@@ -3238,7 +3248,7 @@
 (assert (reduceL cons () '(1 2 3 4)) '((((() . 1) . 2) . 3) . 4))
 
 (def reduce
-  #|(aliasOf reduceL)
+  #|(aliasof reduceL)
    |#
   reduceL)
 
@@ -3566,6 +3576,7 @@
  |(type fexpr)
  |
  |(syntax symbols (symbol . symbols))
+ |
  |(derivation
  |  (vau (var* . forms) #ignore
  |    (wrau val* env

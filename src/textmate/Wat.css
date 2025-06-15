@@ -7,7 +7,7 @@
 .string { color: #0000ff; }
 .character { color: #0000ff; }
 .quote { color: #0000ff; }
-.java { color: #0000ff; }
+.java { color: rgb(170, 85, 0); }
 .number { color: #0000ff; }
 
 .comment { color: rgb(63, 127, 95); }
