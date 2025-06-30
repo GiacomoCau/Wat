@@ -47,6 +47,16 @@
     </div>
     <div>
       <h3>
+        typeName
+      </h3>
+      <ul>
+        <li>
+          (aliasof className)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         classOf
       </h3>
       <ul>
@@ -62,6 +72,16 @@
             &nbsp;
           <br/>
             Return the class of the <b>object</b>.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        typeOf
+      </h3>
+      <ul>
+        <li>
+          (aliasof classOf)
         </li>
       </ul>
     </div>
@@ -109,7 +129,7 @@
       </h3>
       <ul>
         <li>
-          (<b>type?</b> object class)
+          (<b>type?</b> object class . classes)
           <br/>
             (type function)
           <br/>
@@ -121,7 +141,7 @@
           <br/>
             &nbsp;
           <br/>
-            Return #true if the <b>object</b> is an instance of the <b>class</b>, #false otherwise.
+            Return #true if the <b>object</b> is an instance of one the <b>(cons class classes)</b>, #false otherwise.
         </li>
       </ul>
     </div>

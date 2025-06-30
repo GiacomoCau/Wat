@@ -1513,6 +1513,11 @@
    |#
   %className )
 
+(def typeName
+  #|(aliasof className)
+   |#
+  className)
+
 (def classOf
   #|($nm object)
    |(type function)
@@ -1522,6 +1527,11 @@
    |Return the class of the <b>object</b>.
    |#
   %classOf )
+
+(def typeOf
+  #|(aliasof classOf)
+   |#
+  classOf)
 
 (def instanceOf?
   #|($nm object class)
@@ -1542,6 +1552,7 @@
    |#
   %subClass? )
 
+#|
 (def type?
   #|($nm object class)
    |(type function)
@@ -1552,6 +1563,17 @@
    |Return #true if the <b>object</b> is an instance of the <b>class</b>, #false otherwise.
    |#
   %type? )
+|#
+(def\ (type? object class . classes)
+  #|($nm object class . classes)
+   |(type function)
+   |
+   |(derivation (if (null? class) (null? object) (null? object) #f (subClass? (classOf object) class)))
+   |(derivation (if (null? class) (null? object) (instanceOf object class)))
+   |
+   |Return #true if the <b>object</b> is an instance of one the <b>(cons class classes)</b>, #false otherwise.
+   |#
+  ((rec\ (loop classes) (if (null? classes) #f (%type? object (car classes)) #t (loop (cdr classes)))) (cons class classes)) )
 
 
 #|! Basic Functions and Macros
@@ -2140,7 +2162,7 @@
    |If the operands match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
    |Otherwise go to the next <b>clause</b>.
    |#
-  (vau values #ignore
+  (vau values #ignore :caseVau
     (let1 loop (clauses clauses)
       (unless (null? clauses)
         (let1 (((dt . forms) . clauses) clauses)
@@ -2152,6 +2174,48 @@
               (if (bind? env+ dt values)
                 (apply begin forms env+)
                 (loop clauses) ))))))))
+
+(def arity
+  #|($nm obj)
+   |(type function)
+   |
+   |(derivation
+   |  (def\ (arity obj)
+   |    (if (type? obj Apv) (def obj (.cmb obj)))
+   |    (if (type? obj JFUN) (def obj (.jfun obj)))
+   |    (if (type? obj Opv)
+   |          (let1 (xs (.xs obj))
+   |            (if (|| (null? xs) (!= (car xs) :caseVau))
+   |              (%arity (.pt obj))
+   |              (map (_ (%arity (car _))) ((.e obj) :clauses)) ))
+   |      (&& (type? obj JFun) (!(null? (.arity obj)))) (.arity obj)
+   |      (type? obj Supplier) 0
+   |      (type? obj Consumer Function) 1
+   |      (type? obj BiConsumer BiFunction) 2
+   |      (type? obj Field) (1 2)    
+   |      (type? obj Executable)
+   |        (let1 (pc (@getParameterCount obj))
+   |          (if (.isVarArgs obj) ('>= pc) pc) )
+   |      (type? obj Combinable) 
+   |        (.arity obj) ))
+   |
+   |Return the number of parameter if <b>obj</b> is an operator, #inert otherwise.
+   |  - an integer for fixed parameters operator
+   |  - a list (>= interger) for variables parameters operator
+   |  - a list of integer and (>= integer) for caseVau e case\ operator
+   |#
+  %arity )
+  
+(assert (arity 1) #inert)
+(assert (arity (_)) 1)
+(assert (arity (\ (a b))) 2)
+(assert (arity (\ (a b . c))) '(>= 2))
+(assert (arity (caseVau ((a)) ((a b)) (a))) (1 2 (>= 0)))
+(assert (arity (caseVau ((a)) ((a b)) ((a b . c)))) (1 2 (>= 2)))
+(assert (arity %wrap) 1)
+(assert (arity %+) 2)
+(assert (arity %==) 2)
+(assert (arity begin '(>= 0)))
 
 (defMacro (defCaseVau name . clauses)
   #|($nm name . clauses)

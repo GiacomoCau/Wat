@@ -123,6 +123,68 @@
     </div>
     <div>
       <h3>
+        arity
+      </h3>
+      <ul>
+        <li>
+          (<b>arity</b> obj)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;(def\ (arity obj)
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(if (type? obj Apv) (def obj (.cmb obj)))
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(if (type? obj JFUN) (def obj (.jfun obj)))
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(if (type? obj Opv)
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(let1 (xs (.xs obj))
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(if (|| (null? xs) (!= (car xs) :caseVau))
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(%arity (.pt obj))
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(map (_ (%arity (car _))) ((.e obj) :clauses)) ))
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(&amp;&amp; (type? obj JFun) (!(null? (.arity obj)))) (.arity obj)
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(type? obj Supplier) 0
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(type? obj Consumer Function) 1
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(type? obj BiConsumer BiFunction) 2    
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(type? obj Field) (1 2)    
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(type? obj Executable)
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(let1 (pc (@getParameterCount obj))
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(if (.isVarArgs obj) ('&gt;= pc) pc) )
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(type? obj Combinable) 
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(.arity obj) ))
+          <br/>
+            &nbsp;
+          <br/>
+            Return the number of parameter if <b>obj</b> is an operator, #inert otherwise.
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;- an integer for fixed parameters operator
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;- a list (&gt;= interger) for variables parameters operator
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;- a list of integer and (&gt;= integer) for caseVau e case\ operator
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         defCaseVau
       </h3>
       <ul>
