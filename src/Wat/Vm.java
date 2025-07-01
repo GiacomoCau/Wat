@@ -1958,7 +1958,7 @@ public class Vm {
 					}
 					default: {
 						var expt = (List) map("evalExpt", x-> getTco(pushSubcontBarrier.combine(env, pushRootPrompt(cons(x)))), o.cdr(1));
-						if (expt.car instanceof Class && matchType(val, expt)) return true;
+						if (expt.car instanceof Class && singleMatchType(val, expt)) return true;
 						print(name, exp, " should be ", expt, " but is ", val);
 					}
 				}
@@ -1970,7 +1970,7 @@ public class Vm {
 				else {
 					var val = thw instanceof Value v ? v.value : thw;
 					var expt = (List) map("evalExpt", x-> getTco(pushSubcontBarrier.combine(env, pushRootPrompt(cons(x)))), o.cdr(1));
-					if (expt.car instanceof Class && matchType(val, expt)) return true;
+					if (expt.car instanceof Class && singleMatchType(val, expt)) return true;
 					print(name, exp, " should be ", expt, " but is ", val);
 				}
 			}
@@ -1982,6 +1982,12 @@ public class Vm {
 		return classe == null ? object == null : object != null && classe.isAssignableFrom(object.getClass());
 	}
 	private boolean matchType(Object object, List chk) {
+		for (var l=chk; l != null; l = l.cdr()) {
+			if (singleMatchType(object, l.car())) return true;
+		}
+		return false;
+	}
+	private boolean singleMatchType(Object object, List chk) {
 		//if (!(expt.car() instanceof Class cls && isType(object, cls))) return false;
 		if (!isType(object, chk.car())) return false;
 		// TODO manca l'errore se la lista per Box ha più di un argomento ma comunque ritorna false!
@@ -2055,7 +2061,7 @@ public class Vm {
 	public String toKey(Object key) {
 		return switch (key) {
 			case Intern i-> i.name;
-			case Object o-> Utility.apply(s-> s.startsWith(":") ? s.substring(1) : s, o instanceof String s ? s : toString(o));
+			case Object o-> Utility.apply(s-> s.charAt(0) != ':' || s.length() == 1 ? s : s.substring(1), o instanceof String s ? s : toString(o));
 		};
 	}
 	
@@ -2363,12 +2369,12 @@ public class Vm {
 				"%getMethod", wrap(new JFun("%GetMethod", 2, (n,o)-> checkN(n, o, 2, or(null, Class.class), Symbol.class), (_,o)-> getMethod(o.car(), o.car(1)) )),
 				// Check
 				"%matchType?", wrap(new JFun("%MatchType?",
-					(n,o)-> checkN(n, o, 2,	Any.class,
+					(n,o)-> checkM(n, o, 2,	Any.class,
 						or( list(1, 2, Box.class, Any.class),
 							list(1, more, Any.class,
 								list(1, more, Class.class,
 									or(At.class, Dot.class, Symbol.class, Keyword.class, String.class), Any.class)))),
-					(_,o)-> matchType(o.car, o.car(1)) )),
+					(_,o)-> matchType(o.car, o.cdr()) )),
 				"%:", new Colon(":"),
 				"%check", new Colon("check"),
 				"%evalChk", opv(vmEnv,"""

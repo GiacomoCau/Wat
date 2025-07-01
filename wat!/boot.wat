@@ -850,7 +850,7 @@
   #|($nm car)
    |(type function)
    |
-   |(derivarion ((\ (car) (cons car)) car))
+   |(derivation ((\ (car) (cons car)) car))
    |
    |Return a cons with the given <b>car</b> and #null.
    |#
@@ -2659,13 +2659,16 @@
 (assert (case 3 ((2 4 6 8) 'pair) ((1 3 5 7 9) 'odd)) 'odd)
 
 (def matchType?
-  #|($nm object class . attributes)
+  #|($nm object typeCheck . typeChecks)
    |(type function)
    |
+   |(syntax typeCheck (class . attributes))
+   |(syntax typeChecks (typeCheck . typeChecks))
    |(syntax attributes (attribute check . attributes))
    |(syntax attribute (or Symbol Keyword String .Field @Method))
    |
-   |Return #true if <b>object</b> is an instance of <b>class</b> and all the optional specified <b>attribute</b> matches the corresponding <b>check</b>, #false otherwise.
+   |Return #true if <b>object</b> matches one the <b>typeCheck</b>, #false otherwise.
+   |Matchs one <b>typeCheck</b> if <b>object</b> is an instance of <b>class</b> and all the optional specified <b>attribute</b> matches the corresponding <b>check</b>.
    |#
   %matchType?)
 

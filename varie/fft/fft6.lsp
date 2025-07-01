@@ -48,6 +48,12 @@
         (aux (map (\ (j) (c* j (cexp (c/ (c* (cx 0 -2) (cx (* pi (++ k)))) (cx (len x)))))) odd)) )
       (append (map c+ even aux) (map c- even aux)) )))
 
+(def\ (fft x)
+  (if (== (len x) 1) x 
+    (let ( (even (fft (evens x))) (odd (fft (odds x))) (k -1) )
+      (def aux (map (\ (j) (c* j (cexp (c/ (c* (cx 0 -2) (cx (* pi (++ k)))) (cx (len x)))))) odd))
+      (append (map c+ even aux) (map c- even aux)) )))
+
 (def\ (fftR . rs) (fft (map cx rs)))
 
 (assert (fftR 1 1 1 1 0 0 0 0)

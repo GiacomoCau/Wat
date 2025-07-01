@@ -16,7 +16,7 @@
 		},
 		stdlib: {
 			name: "stdlib",
-			match: "(?<=(\\s|\\(|\\)))(if|begin|vau|def(\\\\|Vau|Macro|Class|Box|Obj|New|\\*|Generic|Method)?|set(!|Car|Cdr)|quote|lambda|\\\\|(un)?wrap|apply\\*?\\*?|eval|list\\*?|cons!?|c(a|d)+r!?|(cons|atom|null)\\?|map|assert(#t)?|new(Env|Box|Obj)?|block|when|unless|loop|(continue|break)\\??-?|(while|until)\\??|for1?|doList|close1?|atEnd|finally|rec\\\\?|let(\\*|1)?((rec)?\\\\?|Loop)?|catch(Tag)?(Wth)?|throw(Tag)?|takeSubcont|pushPrompt|push(Delim)?Subcont|pushSubcontBarrier|log|load|print|write|def(Suite|Test)|error|signalsError\\?|eq\\?)(?=(\\s|\\(|\\)))"
+			match: "(?<=(\\s|\\(|\\)))(if|begin|then|else|vau|def(\\\\|Vau|Macro|Class|Box|Obj|New|\\*|Generic|Method)?|set(!|Car|Cdr)|quote|lambda|\\\\|(un)?wrap|apply\\*?\\*?|eval|list\\*?|cons!?|c(a|d)+r!?|(cons|atom|null)\\?|map|assert(#t)?|new(Env|Box|Obj)?|block|when|unless|loop|(continue|break)\\??-?|(while|until)\\??|for1?|doList|close1?|atEnd|finally|rec\\\\?|let(\\*|1)?((rec)?\\\\?|Loop)?|catch(Tag)?(Wth)?|throw(Tag)?|takeSubcont|pushPrompt|push(Delim)?Subcont|pushSubcontBarrier|log|load|print|write|def(Suite|Test)|error|signalsError\\?|eq\\?)(?=(\\s|\\(|\\)))"
 		},
 		string: {
 			name: "string",		
@@ -132,7 +132,7 @@
 			end: "\\|#",
 			patterns: [
 		        {	name: "doc",
-					match: "(?<=(\\s|\\())(syntax|type|derivation|aliasof|extends|attributes|\\$nm|example|use)(?=(\\s|\\)))"
+					match: "(?<=(\\())(syntax|type|derivation|aliasof|extends|attributes|\\$nm|example|use)(?=(\\s))"
 				},
 		        {	match: "\"(\\\"|[^\"])+\"" },
 		        {	include: "#lcomment" },
