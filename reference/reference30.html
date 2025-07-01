@@ -77,11 +77,15 @@
       </h3>
       <ul>
         <li>
-          (<b>matchType?</b> object class . attributes)
+          (<b>matchType?</b> object typeCheck . typeChecks)
           <br/>
             (type function)
           <br/>
             &nbsp;
+          <br/>
+            (syntax typeCheck (class . attributes))
+          <br/>
+            (syntax typeChecks (typeCheck . typeChecks))
           <br/>
             (syntax attributes (attribute check . attributes))
           <br/>
@@ -89,7 +93,9 @@
           <br/>
             &nbsp;
           <br/>
-            Return #true if <b>object</b> is an instance of <b>class</b> and all the optional specified <b>attribute</b> matches the corresponding <b>check</b>, #false otherwise.
+            Return #true if <b>object</b> matches one the <b>typeCheck</b>, #false otherwise.
+          <br/>
+            Matchs one <b>typeCheck</b> if <b>object</b> is an instance of <b>class</b> and all the optional specified <b>attribute</b> matches the corresponding <b>check</b>.
         </li>
       </ul>
     </div>
