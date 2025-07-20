@@ -7,9 +7,19 @@
 		["(", ")"],
 		["[", "]"]
 	],
-	"noautoClosingPairs": [
-		{ "open": "[", "close": "]", "notIn": ["string"] },
-		{ "open": "(", "close": ")", "notIn": ["string"] },
+	"surroundingPairs": [
+		// indispensabile per evidenziazione parentesi corrispondente
+		["(", ")"],
+		["[", "]"]
+	],
+	"autoClosingPairs": [
+		// non utile a causa del non inserimeneto di una parentesi davanti ad una parentesi
+		//["(",")"],
+		//["[","]"],
+		//{ "open": "(", "close": ")" },
+		//{ "open": "[", "close": "]" },
+		//{ "open": "(", "close": ")", "notIn": ["string", "comment"] },
+		//{ "open": "[", "close": "]", "notIn": ["string", "comment"] },
 		{ "open": "\"", "close": "\"", "notIn": ["string", "comment"] }
 	]
 	//,"wordPattern": "[^() ]+"

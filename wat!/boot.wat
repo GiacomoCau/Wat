@@ -872,7 +872,7 @@
    |#
   %nthCdr)
 
-(def setCar
+(def setCar!
   #|($nm value)
    |($nm bindResult value)
    |(type function)
@@ -887,9 +887,9 @@
    |with <b>bindResult</b> :prv return the previous value of the `car'
    |with <b>bindResult</b> :cnt return the Cons or List
    |#
-  %setCar)
+  %setCar!)
 
-(def setCdr
+(def setCdr!
   #|($nm value)
    |($nm bindResult value)
    |(type function)
@@ -904,7 +904,7 @@
    |with <b>bindResult</b> :prv return the previous value of the `cdr'
    |with <b>bindResult</b> :cnt return the Cons
    |#
-  %setCdr)
+  %setCdr!)
 
 
 #|! List
@@ -2190,12 +2190,16 @@
    |              (map (_ (%arity (car _))) ((.e obj) :clauses)) ))
    |      (&& (type? obj JFun) (!(null? (.arity obj)))) (.arity obj)
    |      (type? obj Supplier) 0
+   |      (type? obj ArgsList) '(>= 0)
    |      (type? obj Consumer Function) 1
    |      (type? obj BiConsumer BiFunction) 2
    |      (type? obj Field) (1 2)    
-   |      (type? obj Executable)
+   |      (type? obj Method)
    |        (let1 (pc (@getParameterCount obj))
-   |          (if (.isVarArgs obj) ('>= pc) pc) )
+   |          (if (.isVarArgs obj) '(>= pc) (1+ pc)) )
+   |      (type? obj Constructor)
+   |        (let1 (pc (@getParameterCount obj))
+   |          (if (.isVarArgs obj) '(>= (-1+ pc)) pc) )
    |      (type? obj Combinable) 
    |        (.arity obj) ))
    |
@@ -2621,7 +2625,7 @@
   (member? key lst) )
 
 
-#|! Case MatchType? MatchType? CaseType CaseType\
+#|! Case MatchType? MatchType?* CaseType CaseType\
  |#
 
 (defVau (case exp . clauses) env
@@ -2658,10 +2662,11 @@
 
 (assert (case 3 ((2 4 6 8) 'pair) ((1 3 5 7 9) 'odd)) 'odd)
 
-(def matchType?
+(defVau (matchType? object typeCheck . typeChecks) env
   #|($nm object typeCheck . typeChecks)
    |(type function)
    |
+   |(syntax typeCheck class)
    |(syntax typeCheck (class . attributes))
    |(syntax typeChecks (typeCheck . typeChecks))
    |(syntax attributes (attribute check . attributes))
@@ -2670,9 +2675,25 @@
    |Return #true if <b>object</b> matches one the <b>typeCheck</b>, #false otherwise.
    |Matchs one <b>typeCheck</b> if <b>object</b> is an instance of <b>class</b> and all the optional specified <b>attribute</b> matches the corresponding <b>check</b>.
    |#
-  %matchType?)
+  (apply %matchType? (cons (eval object env) (map (\ (x) (eval (if (atom? x) x (cons 'list x)) env)) (cons typeCheck typeChecks))) env) )
 
-(def\ (matchType?* obj class . attributes)
+(assert (matchType? 1 Integer) #t)
+(assert (matchType? 1 String Integer) #t)
+(assert (matchType? 1 String (Integer)) #t)
+(assert (matchType? 1 (String) (Integer)) #t)
+(assert (matchType? 1 (Integer)) #t)
+(assert (matchType? 1 (Integer @intValue 1)) #t)
+(assert (matchType? 1 (Integer @intValue 2)) #f)
+(assert (matchType? (newBox 1) Box) #t)
+(assert (matchType? (newBox 1) String Box) #t)
+(assert (matchType? (newBox 1) String (Box)) #t)
+(assert (matchType? (newBox 1) (String) (Box)) #t)
+(assert (matchType? (newBox 1) (Box)) #t)
+(assert (matchType? (newBox 1) (Box 1)) #t)
+(assert (matchType? (newBox 1) (Box 2)) #f)
+(assert (matchType? (newObj :type 'a) (Obj :type 'a)) #t)
+
+(defMacro (matchType?* obj class . attributes)
   #|($nm object class . attributes)
    |(type function)
    |
@@ -2681,7 +2702,7 @@
    |
    |Return #true if <b>object</b> is an instance of <b>class</b> and all the optional specified <b>attribute</b> matches the corresponding <b>check</b>, #false otherwise.
    |#
-  (matchType? obj (cons class attributes)) )
+  (list 'matchType? obj (cons class attributes)) )
 
 
 ; vedi signalsError? in vm.lispx (o testUtil.lispx) per codice simile
@@ -2706,9 +2727,7 @@
       (if (null? clauses) #inert
         (let1 (((test . forms) . clauses) clauses)
           (if (|| (== test 'else)
-                  (let* ( (symbol? (symbol? test))
-                          (class (eval (if symbol? test (car test)) env)) )
-                    (if symbol? (type? key class) (matchType? key (eval (cons 'list test) env))) ))
+                  (apply matchType? (list (list 'quote key) test) env) )
             (if (== (car forms) '=>)
               ((eval (cadr! forms) env) key)
               (apply begin forms env) )
@@ -2718,6 +2737,8 @@
 (assert (caseType (+ 2 2) (else => (\ (v) v))) 4)
 (assert (caseType 2.0 (String "string") (Double "double")) "double")
 (assert (caseType (newObj :a 1) (Double "double") ((Obj :a 1) "Obj :a 1")) "Obj :a 1")
+(assert (caseType 1 ((Integer @intValue 1) 'ok) (else 'ko)) 'ok)
+(assert (caseType 1 (Integer 'ok) (else 'ko)) 'ok)
 
 (defMacro (caseType\ (#: (1 Symbol) key) . clauses)
   #|($nm (symbol) . clauses))
@@ -3012,8 +3033,8 @@
    |#
   %loop)
 
-(defMacro (for1 binding cond . forms)
-  #|($nm binding whileForm . forms)
+(defMacro (for1 binding whileCond . forms)
+  #|($nm binding whileCond . forms)
    |(type macro)
    |
    |(syntax binding (symbol initForm . incrFrom))
@@ -3021,11 +3042,11 @@
    |Single variabile for loop.
    |#
   (list* 'loop 'for1 binding
-    (if (%ignore? cond) forms
-      (cons (list 'while? cond) forms) )))
+    (if (%ignore? whileCond) forms
+      (cons (list 'while? whileCond) forms) )))
 
-(defMacro (for bindings cond . forms)
-  #|($nm bindings whileForm . forms)
+(defMacro (for bindings whileCond . forms)
+  #|($nm bindings whileCond . forms)
    |(type macro)
    |
    |(syntax bindings (binding . bindings))
@@ -3034,8 +3055,8 @@
    |Multile variabiles for loop.
    |#
   (list* 'loop 'for bindings
-    (if (%ignore? cond) forms
-      (cons (list 'while? cond) forms) )))
+    (if (%ignore? whileCond) forms
+      (cons (list 'while? whileCond) forms) )))
 
 (let ()
   (assert (loop (break 3)) 3)
@@ -3052,21 +3073,21 @@
   (assert (let1 (a 0) (for ((x 0 (1+ x)) (y 10 (-1+ y)) ) (< x 10) (+= a (+ x y))) a) 100)
 )
 
-(defMacro (while cond . forms)
-  #|($nm whileForm . forms)
+(defMacro (while whileCond . forms)
+  #|($nm whileCond . forms)
    |(type macro)
    |
-   |Evaluate <b>forms</b> as an implicit `begin' while <b>whileForm</b> evaluates to #true.
+   |Evaluate <b>forms</b> as an implicit `begin' while <b>whileCond</b> evaluates to #true.
    |#
-  (list* 'loop (list 'while? cond) forms) )
+  (list* 'loop (list 'while? whileCond) forms) )
 
-(defMacro until (cond . forms)
-  #|($nm whileForm . forms)
+(defMacro until (untilCond . forms)
+  #|($nm untilCond . forms)
    |(type macro)
    |
-   |Evaluate <b>forms</b> as an implicit `begin' until <b>untilForm</b> evaluates to #false.
+   |Evaluate <b>forms</b> as an implicit `begin' until <b>untilCond</b> evaluates to #false.
    |#
-  (list* 'loop (list 'until? cond) forms) )
+  (list* 'loop (list 'until? untilCond) forms) )
 
 (let ()
   (defMacro (++ n) (list 'set! n :rhs (list '1+ n)) )
@@ -4184,12 +4205,14 @@
    |Return the number of elements in a <b>sequence</b>.
    |#
 )
-(defMethod length ((seq List))
-  (%len seq))
 (defMethod length ((seq Null))
   0)
+(defMethod length ((seq List))
+  (%len seq))
 (defMethod length ((seq String))
   (@length seq))
+(defMethod length ((seq Object[]))
+  (.length seq))
 
 
 (defGeneric elt (sequence index)
@@ -4203,6 +4226,8 @@
   (nth index seq))
 (defMethod elt ((seq String) index)
   (%subString seq index (+ index 1)))
+(defMethod elt ((seq Object[]) index)
+  (@get Array seq index))
 
 
 (defGeneric subSeq (sequence start . end)
@@ -4215,10 +4240,10 @@
 )
 (defMethod subSeq ((seq List) start . end)
   (apply** %subList seq start end))
-(defMethod subSeq ((seq Null) start . end)
-  (apply** %subList seq start end))
 (defMethod subSeq ((seq String) start . end)
   (apply** %subString seq start end))
+(defMethod subSeq ((seq Object[]) start . end)
+  (apply** %subArray seq start end))
 
 
 #|! Coroutines

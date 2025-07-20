@@ -23,6 +23,7 @@
 (%def Any &Wat.Vm$Any)
 (%def Apv &Wat.Vm$Apv)
 (%def Array &java.lang.reflect.Array)
+(%def Arrays &java.util.Arrays)
 (%def At &Wat.Vm$At)
 (%def AtDot &Wat.Vm$AtDot)
 (%def BiConsumer &java.util.function.BiConsumer)
@@ -99,7 +100,7 @@
       (%take (%- (car end) start) tail) )))    
 (%def %subString
   (%\ ([#: String str] [#: (and Integer (>= 0)) start] . [#: (or () (1 (and Integer (>= 0)))) end])
-    (handlerBind 
+    (handlerBind
       ( ((Error :type 'java)
          (%\ (thw)
            (error
@@ -107,6 +108,16 @@
                (%new Error "cannot subString" thw :type 'outOfBounds)
                thw )))) )
       (%apply** @substring str start end) )))
+(%def %subArray
+  (%\ ([#: Object[] obj] [#: (and Integer (>= 0)) start] . [#: (or () (1 (and Integer (>= 0)))) end])
+    (handlerBind
+      ( ((Error :type 'outBounds) (%\ (thw) (error thw)))
+        (Error (%\ (thw) (error (%new Error "cannot copy range" thw)))))
+      (%if (%if (== end #null) #t (<= (%car end) (.length obj)) #t #f)
+        (%apply* @copyOfRange Arrays obj start (%if (%null? end) (.length obj) (%car end)))
+        (%error (%new Error "cannot copy range, out of bound!" :type 'outBounds))
+        ;(%error (@new &java.lang.RuntimeException "out of bound!"))
+        ))))
 
 
 ;(%def %pushPrompt ((%\ (%pushPrompt) (%wrap %pushPrompt)) %pushPrompt))
@@ -187,7 +198,7 @@
 (defVau signalsError? (form class . slots) env
   (block exit
     (handlerCase
-      ( (Object (\ (object) (exit (matchType? object (eval (list* 'list class slots) env))) )) )
+      ( (Object (\ (object) (exit (eval (list 'matchType? object (cons class slots)) env)) )) )
       (eval form env) )
     #f ))
 

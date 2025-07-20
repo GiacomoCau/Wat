@@ -89,6 +89,8 @@ public class Prova {
 		}
 		out.println(new Firma("a", Integer.class/*, String.class* /).equals(new Firma("a", Integer.class/*, String.class* /)));
 		*/
+		System.out.println("1" + 1);
+		System.out.println(1 + "1");
 	}
 	
 	public static void functions() {

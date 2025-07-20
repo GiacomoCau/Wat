@@ -2,6 +2,8 @@ package Wat;
 
 import static List.Parser.str2bc;
 import static List.Parser.string;
+import static List.Parser.at;
+import static List.Parser.dot;
 import static Wat.Utility.$;
 import static Wat.Utility.apply;
 import static Wat.Utility.binOp;
@@ -413,8 +415,6 @@ public class Vm {
 	}
 	//public int len(List o) { int i=0; for (; o != null; i+=1, o=o.cdr()); return i; }
 	public int len(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return i /*o == null ? i : i + .5*/; }
-	public Object arity(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return o == null ? i : list(symbol(">="), i); }
-	//public Object arity(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return list(symbol(o == null ? "==" : ">="), i); }
 	<T extends Cons> T cons(Object car) { return (T) new List(car, null); }
 	<T extends Cons> T cons(Object car, Object cdr) {
 		return (T)(cdr == null || cdr instanceof List ? new List(car, (List) cdr) : new Cons(car, cdr));
@@ -454,10 +454,10 @@ public class Vm {
 		};
 		public <T> T value(Object obj) {  return (T) lookup(obj).value; }
 		public boolean isBound(Object obj) { return lookup(obj).isBound; }
-		public Object get(Object obj) {
+		public <T> T get(Object obj) {
 			var lookup = lookup(obj);
 			if (!lookup.isBound) return unboundSymbolError(obj, this);
-			if (prTrc >= 6) print("  lookup: ", lookup.value); return lookup.value;
+			if (prTrc >= 6) print("  lookup: ", lookup.value); return (T) lookup.value;
 		}
 		Object def(Object obj, Object value) {
 			var key = toKey(obj);
@@ -864,9 +864,24 @@ public class Vm {
 	
 	// Operative & Applicative Combiners
 	abstract class Combinable {
-		abstract <T> T combine(Env e, List o);
 		Object arity;
+		abstract <T> T combine(Env e, List o);
 	}
+	public Object arity(Object obj) {
+		return switch (obj) {
+			case Combinable cmb-> cmb.arity;
+			case Supplier _-> 0;
+			case ArgsList _-> ge(0);
+			case Consumer _, Function _-> 1;
+			case BiConsumer _, BiFunction _-> 2;
+			case Field _-> list(1, 2);
+			case Method m-> apply(pc-> m.isVarArgs() ? ge(pc) : pc+1 , m.getParameterCount());
+			case Constructor c-> apply(pc-> c.isVarArgs() ? ge(pc-1) : pc , c.getParameterCount());
+			default-> inert;
+		};
+	}
+	public Object arityPt(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return o == null ? i : ge(i); }
+	//public Object arityPt(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return list(symbol(o == null ? "==" : ">="), i); }
 	Object ge(int n) { return list(symbol(">="), n); }
 	
 	Object combine(Env e, Object op, List o) {
@@ -881,6 +896,13 @@ public class Vm {
 		Env e; Object pt, ep; List xs;
 		Opv(Env e, Object pt, Object ep, List xs) {
 			this.e = e; this.pt = pt; this.ep = ep; //this.x = x
+			if (xs == null || xs.car != keyword("caseVau")) {
+				arity = arityPt(pt);
+			}
+			else {
+				arity = map("arityCaseVau", c-> arityPt(((List) c).car), e.get("clauses"));
+				xs = xs.cdr();
+			}
 			this.xs = xs == null || xs.car != sharpColon ? xs
 				: xs.cdr() != null ? cons(cons(new Colon(this), xs.cdr()))
 				: matchError("invalid return value check, expected {operands#,%+d} operands, found: {datum} in: {expr}", null, 1, xs) ;
@@ -927,14 +949,14 @@ public class Vm {
 	};
 	class Apv extends Combinable {
 		Combinable cmb;
-		Apv(Combinable cmb) { this.cmb = cmb; }
+		Apv(Combinable cmb) { this.cmb = cmb; arity = cmb.arity; }
 		public Object combine(Env e, List o) {
 			return tco(()-> pipe(dbg(e, this, o), ()-> map("evalArgs", car-> getTco(evaluate(e, car)), o), args-> tco(()-> cmb.combine(e, (List) args))));
 		}
 		public String toString() {
 			return "{%Apv " + Vm.this.toString(cmb) + "}";
 		}
-		Combinable unwrap() { return cmb;}
+		Combinable unwrap() { return cmb; }
 	}
 	Object wrap(Object arg) {
 		return arg instanceof Apv || isjFun(arg) ? arg
@@ -1364,14 +1386,7 @@ public class Vm {
 		JFun(String name, ChkList check, LenList jfun) { this(name, jfun); this.check = check; };
 		JFun(String name, Object jfun) { this(jfun); this.op = symbol(name); };
 		JFun(Object jfun) {
-			if (arity == null) arity = switch (jfun) {
-				case Supplier _ -> 0;
-				case BiConsumer _, BiFunction _ -> 2;
-				case Consumer _, Function _ -> 1;
-				case Field _ -> list(1, 2);
-				case Executable ex-> apply(pc-> ex.isVarArgs() ? list(keyword(">="), pc) : pc , ex.getParameterCount());
-				default -> null;
-			};
+			if (arity == null) arity = arity(jfun);
 			this.jfun = switch (jfun) {
 				case ArgsList al-> al;
 				case LenList ll-> o-> pipe(dbg(null, "%" + op, o), ()-> check.apply(op, o),
@@ -1979,19 +1994,29 @@ public class Vm {
 		public String toString() { return "%Test"; }
 	};
 	boolean isType(Object object, Class classe) {
-		return classe == null ? object == null : object != null && classe.isAssignableFrom(object.getClass());
+		return classe == null ? object == null : object != null && classe.isInstance(object);
 	}
 	private boolean matchType(Object object, List chk) {
 		for (var l=chk; l != null; l = l.cdr()) {
-			if (singleMatchType(object, l.car())) return true;
+			if (! (l.car() instanceof List)) { // null || Class
+				if (isType(object, l.car())) return true;
+			}
+			else {
+				if (singleMatchType(object, l.car())) return true;
+			}
 		}
 		return false;
 	}
 	private boolean singleMatchType(Object object, List chk) {
-		//if (!(expt.car() instanceof Class cls && isType(object, cls))) return false;
 		if (!isType(object, chk.car())) return false;
-		// TODO manca l'errore se la lista per Box ha più di un argomento ma comunque ritorna false!
-		if (object instanceof Box box) return chk.cdr() == null || chk.cdr(1) == null && equals(box.value, chk.car(1));
+		if (object instanceof Box box) {
+			if (chk.cdr() == null) return true;
+			var val = box.value;
+			for (var l=chk.cdr(); l != null; l = l.cdr()) {
+				if (equals(val, l.car)) return true;
+			}
+			return false;
+		}
 		for (var l=chk.cdr(); l != null; l = l.cdr(1)) {
 			var key = l.car;
 			var expt = l.car(1);
@@ -2016,7 +2041,13 @@ public class Vm {
 	Object bc2exp(Object o) {
 		return switch (o) {
 			case String s-> switch(s) { case "#inert"-> inert; case "#_", "#ignore"-> ignore; case "#:"-> sharpColon; default-> intern(intStr ? s.intern() : s); };
-			case Object[] objs-> objs.length == 2 && objs[0] == string ? intStr ? ((String) objs[1]).intern() : objs[1] : bc2lst(objs);
+			case Object[] objs->{
+				if (objs.length != 2) yield bc2lst(objs);
+				if (objs[0] == string) yield intStr ? ((String) objs[1]).intern() : objs[1];
+				if (objs[0] == at) yield at((String) objs[1]);
+				if (objs[0] == dot) yield dot((String) objs[1]);
+				yield bc2lst(objs);
+			}
 			case null, default-> o;
 		};
 	}
@@ -2098,8 +2129,10 @@ public class Vm {
 				"%bind", wrap(new JFun("%Bind", 3, (n,o)-> checkN(n, o, 3, Env.class), (_,o)-> bind(true, 3, o.<Env>car(), o.car(1), o.car(2)) )),
 				"%bind?", wrap(new JFun("%Bind?", 3, (n,o)-> checkN(n, o, 3, Env.class), (_,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (InnerException ie) { return false; }} )),
 				"%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } )),
+				/* TODO eliminare
 				"%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnv = env(theEnv))),
 				"%popEnv", wrap(new JFun("%PopEnv", (Supplier) ()-> theEnv = theEnv.parent)),
+				*/
 				// Obj
 				//"%obj?", wrap(new JFun("%Obj?", (Function<Object, Boolean>) obj-> obj instanceof Obj )),
 				"%new", wrap(new JFun("%New", ge(1),
@@ -2135,7 +2168,7 @@ public class Vm {
 				"%cadr", wrap(new JFun("%Cadr", 1, (n,o)-> checkN(n, o, 1, Cons.class), (_,o)-> o.<Cons>car().car(1) )),
 				"%cddr", wrap(new JFun("%Cddr", 1, (n,o)-> checkN(n, o, 1, Cons.class), (_,o)-> o.<Cons>car().cdr(1) )),
 				"%cons", wrap(new JFun("%Cons", list(1, 2), (n,o)-> checkR(n, o, 1, 2), (l,o)-> cons(o.car, l == 1 ? null : o.car(1)) )),
-				"%setCar", wrap(new JFun("%SetCar",
+				"%setCar!", wrap(new JFun("%SetCar!",
 					list(2, 3),
 					(n,o)-> checkR(n, o, 2, 3, Cons.class),
 					(l,o)->	switch (bndRes(l == 2 ? ignore : o.car(1))) {
@@ -2150,7 +2183,7 @@ public class Vm {
 						case Object obj-> resumeError(obj, symbol("Integer"));
 					}
 				)),
-				"%setCdr", wrap(new JFun("%SetCdr",
+				"%setCdr!", wrap(new JFun("%SetCdr!",
 					list(2, 3),
 					(n,o)-> checkR(n, o, 2, 3, Cons.class),
 					(l,o)->	switch (bndRes(l == 2 ? ignore : o.car(1))) {
@@ -2174,29 +2207,9 @@ public class Vm {
 				"%list", wrap(new JFun("%List", (ArgsList) o-> o)),
 				"%list*", wrap(new JFun("%List*", (ArgsList) this::listStar)),
 				"%list-", wrap(new JFun("%List-", (ArgsList) this::listMinus)),
-				"%append", wrap(new JFun("%Append", (n,o)-> checkN(n, o, 2, or(null, List.class)), (_,o)-> append(o.car(),o.car(1)) )),
+				"%append", wrap(new JFun("%Append", 2, (n,o)-> checkN(n, o, 2, or(null, List.class)), (_,o)-> append(o.car(),o.car(1)) )),
 				"%len", wrap(new JFun("%Len", 1, (n,o)-> checkN(n, o, 1 /*, or(null, List.class)*/), (_,o)-> len(o.car()) )),
-				//"%arity", wrap(new JFun("%Arity", 1, (n,o)-> checkN(n, o, 1), (_,o)-> arity(o.car()) )),
-				"%arity", wrap(new JFun("%Arity", 1, (n,o)-> checkN(n, o, 1), (_,o)->{
-					var obj = o.car;
-					if (obj instanceof Apv apv) obj = apv.cmb;
-					if (obj instanceof JFun jFun) {
-						if (jFun.arity != null) return jFun.arity; 
-						obj = jFun.jfun;
-					}
-					return switch (obj) {
-						case Opv opv-> opv.xs != null && opv.xs.car == keyword("caseVau")
-							? map(null, c-> arity(((List) c).car), (List) opv.e.get("clauses"))
-							: arity(opv.pt);
-						case Supplier _-> 0;
-						case BiConsumer _, BiFunction _ -> 2;
-						case Consumer _, Function _ -> 1;
-						case Field _ -> list(1, 2);
-						case Executable ex-> apply(pc-> ex.isVarArgs() ? list(keyword(">="), pc) : pc , ex.getParameterCount());
-						case Combinable cmb-> cmb.arity;
-						default -> inert;
-					};
-				})),
+				"%arity", wrap(new JFun("%Arity", (Function) Vm.this::arity )),
 				"%reverse", wrap(new JFun("%Reverse", 1, (n,o)-> checkN(n, o, 1, or(null, List.class)), (_,o)-> reverse(o.car()) )),
 				// Symbol Keyword
 				"%symbol", wrap(new JFun("%Symbol", 1, (n,o)-> checkN(n, o, 1, String.class), (_,o)-> symbol(o.car()) )),
@@ -2357,23 +2370,29 @@ public class Vm {
 					}
 					@Override public String toString() { return "%BiFunction"; }
 				},
-				"%instanceOf?", wrap(new JFun("%InstanceOf?", (n,o)-> checkN(n, o, 2, Any.class, Class.class), (_,o)-> o.<Class>car(1).isInstance(o.car) )),
+				"%instanceOf?", wrap(new JFun("%InstanceOf?", 2, (n,o)-> checkN(n, o, 2, Any.class, Class.class), (_,o)-> o.<Class>car(1).isInstance(o.car) )),
 				// Class
 				//"%class?", wrap(new JFun("%Class?", (Function<Object, Boolean>) obj-> obj instanceof Class )),
 				"%newClass", wrap(new JFun("%NewClass", list(1, 2), (n,o)-> checkR(n, o, 1, 2, Symbol.class, or(Box.class, Obj.class)), (_,o)-> newClass(o.car(), apply(cdr-> cdr == null ? null : cdr.car(), o.cdr())) )),
 				"%subClass?", wrap(new JFun("%SubClass?", 2, (n,o)-> checkN(n, o, 2, Class.class, Class.class), (_,o)-> o.<Class>car(1).isAssignableFrom(o.car()) )),
-				"%type?",  wrap(new JFun("%Type?", 2, (n,o)-> checkN(n, o, 2, Any.class, or(null, Class.class)), (_,o)-> isType(o.car, o.car(1)) )),
+				"%type?",  wrap(new JFun("%Type?", ge(2), (n,o)-> checkM(n, o, 2, Any.class, or(null, Class.class), or(null, Class.class)), (_,o)-> isType(o.car, o.car(1)) )),
 				"%classOf", wrap(new JFun("%ClassOf", 2, (n,o)-> checkN(n, o, 1), (_,o)-> apply(o1-> o1 == null ? null : o1.getClass(), o.car) )),
 				// Method
 				"%addMethod", wrap(new JFun("%AddMethod", 3, (n,o)-> checkN(n, o, 3, or(null, Class.class), Symbol.class, Apv.class), (_,o)-> addMethod(o.car(), o.car(1), o.car(2)) )),
 				"%getMethod", wrap(new JFun("%GetMethod", 2, (n,o)-> checkN(n, o, 2, or(null, Class.class), Symbol.class), (_,o)-> getMethod(o.car(), o.car(1)) )),
 				// Check
-				"%matchType?", wrap(new JFun("%MatchType?",
-					(n,o)-> checkM(n, o, 2,	Any.class,
-						or( list(1, 2, Box.class, Any.class),
-							list(1, more, Any.class,
-								list(1, more, Class.class,
-									or(At.class, Dot.class, Symbol.class, Keyword.class, String.class), Any.class)))),
+				"%matchType?", wrap(new JFun("%MatchType?", ge(2),
+					(n,o)-> checkM(n, o, 2,	or(null, Any.class),
+						or( null, 
+							Class.class,
+							list(1, 2, Box.class, Any.class),
+							list(1, more, Class.class,
+								or(At.class, Dot.class, Symbol.class, Keyword.class, String.class), Any.class)),
+						or( null, 
+							Class.class,
+							list(1, 2, Box.class, Any.class),
+							list(1, more, Class.class,
+								or(At.class, Dot.class, Symbol.class, Keyword.class, String.class), Any.class))),
 					(_,o)-> matchType(o.car, o.cdr()) )),
 				"%:", new Colon(":"),
 				"%check", new Colon("check"),
@@ -2432,11 +2451,11 @@ public class Vm {
 					}
 					@Override public String toString() { return "%Load"; }
 				}),
-				"read", wrap(new JFun("Read", (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> uncked(()-> str2lst(read(l == 0 ? 0 : o.<Integer>car())).car) )),
+				"read", wrap(new JFun("Read", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> uncked(()-> str2lst(read(l == 0 ? 0 : o.<Integer>car())).car) )),
 				//"eof", new JFun("eof", (n,o)-> checkN(n, o, 0), (l,o)-> List.Parser.eof),
 				//"eof?", wrap(new JFun("eof?", (n,o)-> checkN(n, o, 1), (l,o)-> List.Parser.eof.equals(o.car))),
 				"readString", wrap(new JFun("ReadString", 1, (n,o)-> checkN(n, o, 1), (_,o)-> uncked(()-> str2lst(o.toString())) )),
-				"system", wrap(new JFun("System", (n,o)-> checkR(n, o, 1, 2, String.class, Boolean.class), (l,o)-> uncked(()-> system(l==1 ? false : o.<Boolean>car(1),  "cmd.exe", "/e:on", "/c", o.<String>car())) )),
+				"system", wrap(new JFun("System", list(1, 2), (n,o)-> checkR(n, o, 1, 2, String.class, Boolean.class), (l,o)-> uncked(()-> system(l==1 ? false : o.<Boolean>car(1),  "cmd.exe", "/e:on", "/c", o.<String>car())) )),
 				// Config
 				"doTco", wrap(new JFun("DoTco", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doTco : inert(doTco=o.car()) )),
 				"doAsrt", wrap(new JFun("DoAsrt", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doAsrt : inert(doAsrt=o.car()) )),

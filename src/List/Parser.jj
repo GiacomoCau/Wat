@@ -40,6 +40,12 @@ public class Parser {
 	public static Object skip = new Object() {
 		@Override public String toString() { return "#skip"; }
 	};
+	public static Object at = new Object() {
+		@Override public String toString() { return "#at"; }
+	};
+	public static Object dot = new Object() {
+		@Override public String toString() { return "#dot"; }
+	};
 	
 	/* static=true
 	public static <T> T parse(String line) throws Exception {
@@ -253,8 +259,8 @@ Object Elt(): {
 	|	t=<DSym>     { return t.image.substring(2,t.image.length()-1).replaceAll("\\\\\\|", "|").replaceAll("\\\\\\\\", "\\\\"); }
 	|	t=<Prim>     { return classForName(t.image.substring(1)); }	
 	|	t=<Cls>      { return classForName(t.image.substring(1)); }	
-	|	t=<Dot>      { return $("%dot", $(string, t.image.substring(1))); }
-	|	t=<At>       { return $("%at", $(string, t.image.substring(1))); } 
+	|	t=<Dot>      { return $(dot, t.image.substring(1)); }
+	|	t=<At>       { return $(at, t.image.substring(1)); } 
 	|	t=<Mac> o=Elt() { return $("%"+t, o); }
 	|	t=<Kwd>      { return t.image; }
 	|	t=<Sym>      { return t.image; }  	

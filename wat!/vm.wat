@@ -16,6 +16,7 @@
 (%def Any &Wat.Vm$Any)
 (%def Apv &Wat.Vm$Apv)
 (%def Array &java.lang.reflect.Array)
+(%def Arrays &java.util.Arrays)
 (%def At &Wat.Vm$At)
 (%def AtDot &Wat.Vm$AtDot)
 (%def BiConsumer &java.util.function.BiConsumer)
@@ -99,6 +100,18 @@
             (%new Error "cannot subString" thw :type 'outOfBounds)
             thw )))
       (%apply** @substring str start end) )))
+(%def %subArray
+  (%\ ([#: Object[] obj] [#: (and Integer (>= 0)) start] . [#: (or () (1 (and Integer (>= 0)))) end])
+    (%catchTagWth #ignore 
+      (%\ (thw)
+        (%error
+          (if (%matchType? thw (Error :type outBounds)) thw 
+            (%new Error "cannot copy range" thw :type 'outOfBounds) )))
+      (%if (%if (== end #null) #t (<= (%car end) (.length obj)) #t #f)
+        (%apply* @copyOfRange Arrays obj start (%if (%null? end) (.length obj) (%car end)))
+        (%error (%new Error "cannot copy range, out of bound!" :type 'outBounds))
+        ;(%error (@new &java.lang.RuntimeException "out of bound!"))
+        ))))
 
 
 ;(%def %pushPrompt ((%\ (%pushPrompt) (%wrap %pushPrompt)) %pushPrompt))
