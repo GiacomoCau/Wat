@@ -200,65 +200,64 @@ public class Vm {
 		Suspension suspend(Dbg dbg, Function<Resumption, Object> f) { k = new Continuation(dbg, f, k); return this; }
 	}
 	
-	/*TODO non più necessario eliminare
-	Object pipe(Dbg dbg, Supplier before, Function ... after) {
-		return pipe(null, dbg, before, after);
+	Object pipe(Dbg dbg, Supplier supplier, Function<Object[], Object> ... functions) {
+		return pipe(null, dbg, new Object[functions.length+1], supplier, functions);
 	}
-	Object pipe(Resumption r, Dbg dbg, Supplier before, Function ... after) {
-		var res = r != null ? r.resume() : before.get();
-		return res instanceof Suspension s ? s.suspend(dbg, rr-> pipe(rr, dbg, before, after)) : pipe(null, dbg, res, 0, after);
+	Object pipe(Resumption r, Dbg dbg, Object[] resn, Supplier supplier, Function<Object[], Object>[] functions) {
+		var res = resn[0] = r != null ? r.resume() : supplier.get();
+		return res instanceof Suspension s ? s.suspend(dbg, rr-> pipe(rr, dbg, resn, supplier, functions))
+			: functions.length == 0 ? res
+			: pipe(null, dbg, resn, 0, functions)
+		;
 	}
-	Object pipe(Resumption r, Dbg dbg, Object res, int i, Function ... after) {
-		for (var first=true; i<after.length; i+=1) { // only one resume for suspension
-			res = first && r != null && !(first = false) ? r.resume() : after[i].apply(res);
+	/*
+	Object pipe(Resumption r, Dbg dbg, Object[] resn, int i, Function<Object[], Object>[] functions) {
+		Object res = resn[i];
+		for (var first=true; i<functions.length; i+=1) { // only one resume for suspension
+			resn[i+1] = res = first && r != null && !(first = false) ? r.resume() : functions[i].apply(resn);
 			if (!(res instanceof Suspension s)) continue;
-			int ii=i; var rres=res;
-			return s.suspend(dbg, rr-> pipe(rr, dbg, rres, ii, after));
+			int ii=i; return s.suspend(dbg, rr-> pipe(rr, dbg, resn, ii, functions));
 		}
 		return res;
 	}
-	*/
-	
-	Object pipe(Dbg dbg, Supplier ... supplier) {
-		return pipe(null, dbg, 0, supplier);
-	}
-	Object pipe(Resumption r, Dbg dbg, int i, Supplier ... supplier) {
-		Object res = null;
-		for (var first=true; i<supplier.length; i+=1) { // only one resume for suspension
-			res = first && r != null && !(first = false) ? r.resume() : supplier[i].get();
-			if (!(res instanceof Suspension s)) continue;
-			int ii=i; return s.suspend(dbg, rr-> pipe(rr, dbg, ii, supplier));
+	/* / // forse un pizzico più veloce
+	Object pipe(Resumption r, Dbg dbg, Object[] resn, int i, Function<Object[], Object>[] functions) {
+		for (var first=true; i<functions.length; ) { // only one resume for suspension
+			resn[++i] = first && r != null && !(first = false) ? r.resume() : functions[i-1].apply(resn);
+			if (!(resn[i] instanceof Suspension s)) continue;
+			int ii=i-1; return s.suspend(dbg, rr-> pipe(rr, dbg, resn, ii, functions));
 		}
-		return res;
+		return resn[i];
 	}
-	
-	Object pipe(Dbg dbg, Supplier before, Function after) {
-		return pipe(null, dbg, before, after);
+	/* / // appena un pizzico più veloce
+	Object pipe(Resumption r, Dbg dbg, Object[] resn, int i, Function<Object[], Object>[] functions) {
+		for (var first=true; i<functions.length; ) { // only one resume for suspension
+			var res = resn[++i] = first && r != null && !(first = false) ? r.resume() : functions[i-1].apply(resn);
+			if (!(res instanceof Suspension s)) continue;
+			int ii=i-1; return s.suspend(dbg, rr-> pipe(rr, dbg, resn, ii, functions));
+		}
+		return resn[i];
 	}
-	Object pipe(Resumption r, Dbg dbg, Supplier before, Function after) {
-		var res = r != null ? r.resume() : before.get();
-		return res instanceof Suspension s ? s.suspend(dbg, rr-> pipe(rr, dbg, before, after)) : pipe(null, dbg, res, after);
+	/* / // appena un pizzico più veloce
+	Object pipe(Resumption r, Dbg dbg, Object[] resn, int i, Function<Object[], Object>[] functions) {
+		for (var first=true; i<functions.length; ) { // only one resume for suspension
+			var res = first && r != null && !(first = false) ? r.resume() : functions[i].apply(resn);
+			resn[++i] = res; 
+			if (!(res instanceof Suspension s)) continue;
+			int ii=i-1; return s.suspend(dbg, rr-> pipe(rr, dbg, resn, ii, functions));
+		}
+		return resn[i];
 	}
-	Object pipe(Resumption r, Dbg dbg, Object res0, Function after) {
-		var res1 = r != null ? r.resume() : after.apply(res0);
-		return res1 instanceof Suspension s ? s.suspend(dbg, rr-> pipe(rr, dbg, res0, after)) : res1;
+	/*/ // il più veloce
+	Object pipe(Resumption r, Dbg dbg, Object[] resn, int i, Function<Object[], Object>[] functions) {
+		for (var first=true; i<functions.length; ) { // only one resume for suspension
+			var res = first && r != null && !(first = false) ? r.resume() : functions[i].apply(resn);
+			if (!(res instanceof Suspension s)) { resn[++i] = res; continue; }
+			int ii=i; return s.suspend(dbg, rr-> pipe(rr, dbg, resn, ii, functions));
+		}
+		return resn[i];
 	}
-	
-	Object pipe(Dbg dbg, Supplier before, Function after, BiFunction atend) {
-		return pipe(null, dbg, before, after, atend);
-	}
-	Object pipe(Resumption r, Dbg dbg, Supplier before, Function after, BiFunction atend) {
-		var res0 = r != null ? r.resume() : before.get();
-		return res0 instanceof Suspension s ? s.suspend(dbg, rr-> pipe(rr, dbg, before, after, atend)) : pipe(null, dbg, res0, after, atend);
-	}
-	Object pipe(Resumption r, Dbg dbg, Object res0, Function after, BiFunction atend) {
-		var res1 = r != null ? r.resume() : after.apply(res0);
-		return res1 instanceof Suspension s ? s.suspend(dbg, rr-> pipe(rr, dbg, res0, after, atend)) : pipe(null, dbg, res0, res1, atend);
-	}
-	Object pipe(Resumption r, Dbg dbg, Object res0, Object res1, BiFunction atend) {
-		var res2 = r != null ? r.resume() : atend.apply(res0, res1);
-		return res2 instanceof Suspension s ? s.suspend(dbg, rr-> pipe(rr, dbg, res0, res1, atend)) : res2;
-	}
+	//*/
 	
 	Object map(Object op, Function f, List todo) {
 		return map(op, f, -1, todo);
@@ -314,7 +313,7 @@ public class Vm {
 			level += 1;
 			val = switch (o) {
 				case Symbol s-> tco(()-> e.get(s));
-				case List l-> tco(()-> pipe(dbg(e, o), ()-> getTco(evaluate(e, l.car)), op-> tco(()-> combine(e, op, l.cdr()))));
+				case List l-> tco(()-> pipe(dbg(e, o), ()-> getTco(evaluate(e, l.car)), res-> tco(()-> combine(e, res[0], l.cdr()))));
 				case null, default-> o;
 			};
 		}
@@ -910,7 +909,7 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			var xe = env(this.e);
 			var dbg = dbg(e, this, o);
-			return tco(()-> pipe(dbg, ()-> bind(dbg, xe, pt, o), ()-> bind(dbg, xe, ep, e), ()-> tco(()-> begin.combine(xe, xs))));
+			return tco(()-> pipe(dbg, ()-> bind(dbg, xe, pt, o), (_)-> bind(dbg, xe, ep, e), (_)-> tco(()-> begin.combine(xe, xs))));
 		}
 		public String toString() {
 			return "{%Opv " + ifnull(pt, "()", Vm.this::toString) + " " + Vm.this.toString(ep) + eIfnull(xs, ()-> " " + stream(array(xs)).map(Vm.this::toString).collect(joining(" "))) + /*" " + e +*/ "}";
@@ -927,7 +926,7 @@ public class Vm {
 			return pipe(dbg(e, this, o),
 				()-> getTco(isCheck ? evaluate(e, o.car) : begin.combine(e, o.cdr())),
 				(_)-> getTco(evalChk.combine(e, cons(o.car(isCheck ? 1 : 0)))),
-				(val, eck)-> apply(len2-> len2 instanceof Suspension s ? s : isCheck ? len2 : val, check(op, val, eck))
+				(res)-> apply(len2-> len2 instanceof Suspension s ? s : isCheck ? len2 : res[0], check(op, res[0], res[1]))
 			);
 		}
 		/*/
@@ -951,7 +950,7 @@ public class Vm {
 		Combinable cmb;
 		Apv(Combinable cmb) { this.cmb = cmb; arity = cmb.arity; }
 		public Object combine(Env e, List o) {
-			return tco(()-> pipe(dbg(e, this, o), ()-> map("evalArgs", car-> getTco(evaluate(e, car)), o), args-> tco(()-> cmb.combine(e, (List) args))));
+			return tco(()-> pipe(dbg(e, this, o), ()-> map("evalArgs", car-> getTco(evaluate(e, car)), o), res-> tco(()-> cmb.combine(e, (List) res[0]))));
 		}
 		public String toString() {
 			return "{%Apv " + Vm.this.toString(cmb) + "}";
@@ -1006,7 +1005,7 @@ public class Vm {
 			return switch (bndRes(len != 3 ? ignore : o.car(1))) {
 				case Suspension s-> s;
 				case Integer i-> i >= 0 && i <= 3
-					? pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> bind(dbg, def, i, e, dt, res))
+					? pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> bind(dbg, def, i, e, dt, res[0]))
 					: typeError("cannot " + (def ? "def" : "set!") + ", invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
 				case Object obj-> resumeError(obj, symbol("Integer"));
 			};
@@ -1099,8 +1098,8 @@ public class Vm {
 			if (o == null) return inert;
 			var car = o.car;
 			if (o.cdr() == null) return tco(()-> evaluate(e, car));
-			return tco(()-> pipe(dbg(e, this, o), ()-> getTco(evaluate(e, car)), test->
-			switch (istrue(test)) {
+			return tco(()-> pipe(dbg(e, this, o), ()-> getTco(evaluate(e, car)), res->
+			switch (istrue(res[0])) {
 				case Suspension s-> s;
 				case Boolean b-> b ? tco(()-> evaluate(e, o.car(1))) : tco(()-> combine(null, e, o.cdr(1)));
 				case Object obj-> resumeError(obj, symbol("Boolean"));
@@ -1149,7 +1148,7 @@ public class Vm {
 			var chk = checkM(this, o, 2);
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
-			return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, o.car)), tag-> combine(null, e, tag, o.car(1), o.cdr(1)) );
+			return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, o.car)), res-> combine(null, e, res[0], o.car(1), o.cdr(1)) );
 		}
 		private Object combine(Resumption r, Env e, Object tag, Object hdl, List xs) {
 			try {
@@ -1181,7 +1180,7 @@ public class Vm {
 				case Integer len when len >= 1-> pipe(dbg(e, this, o),
 						()-> getTco(evaluate(e, o.car)),
 						(_)-> getTco(begin.combine(e, o.cdr())),
-						(tag, val)->{ throw new Value(tag, val); }
+						(res)->{ throw new Value(res[0], res[1]); }
 					);
 				case Object obj-> resumeError(obj, and("Integer (>= 1)"));
 			};
@@ -1205,7 +1204,7 @@ public class Vm {
 			}
 		}
 		Object cleanup(Object cln, Env e, boolean success, Object res) {
-			return tco(()-> pipe(dbg(e, this, cln, success, res), ()-> getTco(evaluate(e, cln)), ()-> {
+			return tco(()-> pipe(dbg(e, this, cln, success, res), ()-> getTco(evaluate(e, cln)), (_)-> {
 					if (success) return res;
 					throw res instanceof Value val ? val
 						: res instanceof Condition cnd ? cnd
@@ -1226,7 +1225,7 @@ public class Vm {
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			var dbg = dbg(e, this, o);
-			return pipe(dbg, ()-> getTco(evaluate(e, o.car)), prp-> pushPrompt(null, e, dbg, prp, ()-> begin.combine(e, o.cdr())));
+			return pipe(dbg, ()-> getTco(evaluate(e, o.car)), res-> pushPrompt(null, e, dbg, res[0], ()-> begin.combine(e, o.cdr())));
 		}
 		public String toString() { return "%PushPrompt"; }
 	}
@@ -1239,7 +1238,7 @@ public class Vm {
 			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			var hdl = lambda(e, cons(o.car(1)), o.cdr(1));
 			return pipe(dbg(e, this, o), ()-> getTco(evaluate(e, o.car)),
-				prp-> tco(()-> new Suspension(prp, hdl).suspend(dbg(e, this, prp, hdl), rr-> Vm.this.combine(e, rr.s, null))))
+				res-> tco(()-> new Suspension(res[0], hdl).suspend(dbg(e, this, res[0], hdl), rr-> Vm.this.combine(e, rr.s, null))))
 			;
 		}
 		public String toString() { return "%TakeSubcont"; }
@@ -1253,7 +1252,7 @@ public class Vm {
 			var dbg = dbg(e, this, o);
 			return pipe(dbg,
 				()-> getTco(evaluate(e, o.car)),
-				(val)-> switch (val) {
+				(res)-> switch (res[0]) {
 					case Continuation k-> k.apply(()-> begin.combine(e, o.cdr()));
 					case Object object-> typeError("cannot push subcont, not a {expected}: {datum}", object, symbol("Continuation"));
 				}
@@ -1271,8 +1270,8 @@ public class Vm {
 			return pipe(dbg,
 				()-> getTco(evaluate(e, o.car)),
 				(_)-> getTco(evaluate(e, o.car(1))),
-				(prp, val)-> switch (val) {
-					case Continuation k-> pushPrompt(null, e, dbg, prp, ()-> k.apply(()-> begin.combine(e, o.cdr(1))));
+				(res)-> switch (res[1]) {
+					case Continuation k-> pushPrompt(null, e, dbg, res[0], ()-> k.apply(()-> begin.combine(e, o.cdr(1))));
 					case Object object-> typeError("cannot push delimited subcont, not a {expected}: {datum}", object, symbol("Continuation"));
 				}
 			);
@@ -1390,29 +1389,29 @@ public class Vm {
 			this.jfun = switch (jfun) {
 				case ArgsList al-> al;
 				case LenList ll-> o-> pipe(dbg(null, "%" + op, o), ()-> check.apply(op, o),
-					obj-> obj instanceof Integer len ? ll.apply(len, o)	: resumeError(obj, symbol("Integer")));
+					res-> res[0] instanceof Integer len ? ll.apply(len, o)	: resumeError(res[0], symbol("Integer")));
 				case Supplier s-> o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 0),
-					obj-> obj instanceof Integer /*len*/ ? s.get() : resumeError(obj, symbol("Integer")));
+					res-> res[0] instanceof Integer /*len*/ ? s.get() : resumeError(res[0], symbol("Integer")));
 				case Consumer c-> o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 1),
-					obj->{
-						if (! (obj instanceof Integer /*len*/)) return resumeError(obj, symbol("Integer"));
+					res->{
+						if (! (res[0] instanceof Integer /*len*/)) return resumeError(res[0], symbol("Integer"));
 						c.accept(o.car);
 						return inert;
 					}
 				);
 				case Function f-> o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 1),
-					obj-> obj instanceof Integer /*len*/ ? f.apply(o.car) : resumeError(obj, symbol("Integer")));
+					res-> res[0] instanceof Integer /*len*/ ? f.apply(o.car) : resumeError(res[0], symbol("Integer")));
 				case BiConsumer bc-> o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 2),
-					obj->{
-						if (! (obj instanceof Integer /*len*/)) return resumeError(obj, symbol("Integer"));
+					res->{
+						if (! (res[0] instanceof Integer /*len*/)) return resumeError(res[0], symbol("Integer"));
 						bc.accept(o.car, o.car(1));
 						return inert;
 					}
 				);
 				case BiFunction bf-> o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 2),
-					obj-> obj instanceof Integer /*len*/ ? bf.apply(o.car, o.car(1)) : resumeError(obj, symbol("Integer")));
-				case Field f-> o-> pipe(null, ()-> checkR(op, o, 1, 2), obj->{
-						if (!(obj instanceof Integer len)) return resumeError(obj, symbol("Integer"));
+					res-> res[0] instanceof Integer /*len*/ ? bf.apply(o.car, o.car(1)) : resumeError(res[0], symbol("Integer")));
+				case Field f-> o-> pipe(null, ()-> checkR(op, o, 1, 2), res->{
+						if (!(res[0] instanceof Integer len)) return resumeError(res[0], symbol("Integer"));
 						if (len == 1) return uncked(()-> f.get(o.car));
 						return uncked(()->{ f.set(o.car, o.car(1)); return inert; });
 					}
@@ -1421,18 +1420,18 @@ public class Vm {
 					var pc = m.getParameterCount();
 					return pipe(dbg(null, "%" + op, o),
 						()-> m.isVarArgs() ? checkM(op, o, pc) : checkN(op, o, pc+1),
-						obj-> obj instanceof Integer /*len*/
+						res-> res[0] instanceof Integer /*len*/
 							? uncked(()-> m.invoke(o.car, reorg(m, array(o.cdr()))))
-							: resumeError(obj, symbol("Integer"))
+							: resumeError(res[0], symbol("Integer"))
 					);
 				};
 				case Constructor c-> o->{
 					var pc = c.getParameterCount();
 					return pipe(dbg(null, "%" + op, o),
 						()-> c.isVarArgs() ? checkM(op, o, pc-1) : checkN(op, o, pc),
-						obj-> obj instanceof Integer /*len*/
+						res-> res[0] instanceof Integer /*len*/
 							? uncked(()-> c.newInstance(reorg(c, array(o))))
-							: resumeError(obj, symbol("Integer"))
+							: resumeError(res[0], symbol("Integer"))
 					);
 				};
 				default -> typeError("cannot build jfun, not a {expected}: {datum}", this, toChk(or(ArgsList.class, LenList.class, Supplier.class, Function.class, BiFunction.class, Field.class, Executable.class)));
@@ -1592,6 +1591,96 @@ public class Vm {
 		return new Dot(name);
 	}
 	
+	Combinable supplier = new Combinable() {
+		{ arity = 0; }
+		@Override public final <T> T combine(Env e, List o) {
+			var chk = checkM(this, o, 1, (Object) null); // o = (() . forms)
+			if (chk instanceof Suspension s) return (T) s;
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
+			var opv = opv(e, o.car, ignore, o.cdr());
+			return (T) new Supplier() {
+				@Override public Object get() {
+					return getTco(opv.combine(e, null));
+				};
+				@Override public String toString() {
+					return "{Supplier " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
+				}
+			};
+		}
+		@Override public String toString() { return "%Supplier"; }
+	};
+	Combinable consumer = new Combinable() {
+		{ arity = 1; }
+		@Override public final <T> T combine(Env e, List o) {
+			var chk = checkM(this, o, 1, list(1, Symbol.class)); // o = ((symbol) . forms)
+			if (chk instanceof Suspension s) return (T) s;
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
+			var opv = opv(e, o.car, ignore, o.cdr());
+			return (T) new Consumer() {
+				@Override public void accept(Object t) {
+					getTco(opv.combine(e, cons(t)));
+				};
+				@Override public String toString() {
+					return "{Consumer " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
+				}
+			};
+		}
+		@Override public String toString() { return "%Consumer"; }
+	};
+	Combinable function = new Combinable() {
+		{ arity = 1; }
+		@Override public final <T> T combine(Env e, List o) {
+			var chk = checkM(this, o, 1, list(1, Symbol.class)); // o = ((symbol) . forms)
+			if (chk instanceof Suspension s) return (T) s;
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
+			var opv = opv(e, o.car, ignore, o.cdr());
+			return (T) new Function() {
+				@Override public Object apply(Object t) {
+					return getTco(opv.combine(e, cons(t)));
+				};
+				@Override public String toString() {
+					return "{Function " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
+				};
+			};
+		}
+		@Override public String toString() { return "%Function"; }
+	};
+	Combinable biConsumer = new Combinable() {
+		{ arity = 2; }
+		@Override public final <T> T combine(Env e, List o) {
+			var chk = checkM(this, o, 1, list(2, Symbol.class)); // o = ((symbol symbol) . forms)
+			if (chk instanceof Suspension s) return (T) s;
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
+			var opv = opv(e, o.car, ignore, o.cdr());
+			return (T) new BiConsumer() {
+				@Override public void accept(Object t, Object u) {
+					getTco(opv.combine(e, list(t, u)));
+				};
+				@Override public String toString() {
+					return "{BiConsumer " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
+				}
+			};
+		}
+		@Override public String toString() { return "%BiConsumer"; }
+	};
+	Combinable biFunction = new Combinable() {
+		{ arity = 2; }
+		@Override public final <T> T combine(Env e, List o) {
+			var chk = checkM(this, o, 1, list(2, Symbol.class)); // o = ((symbol) . forms)
+			if (chk instanceof Suspension s) return (T) s;
+			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
+			var opv = opv(e, o.car, ignore, o.cdr());
+			return (T) new BiFunction() {
+				@Override public Object apply(Object t, Object u) {
+					return getTco(opv.combine(e, list(t, u)));
+				};
+				@Override public String toString() {
+					return "{Function " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
+				};
+			};
+		}
+		@Override public String toString() { return "%BiFunction"; }
+	};
 	
 	// Error Handling
 	Object rootPrompt = new Object() { public String toString() { return "%RootPrompt"; }};
@@ -2280,96 +2369,11 @@ public class Vm {
 				"%jFun?", wrap(new JFun("%JFun?", (Function<Object,Boolean>) this::isjFun)),
 				"%at", wrap(new JFun("%At", (Function<String,Object>) this::at)),
 				"%dot", wrap(new JFun("%Dot", (Function<String,Object>) this::dot)),
-				"%supplier", new Combinable() {
-					{ arity = 0; }
-					@Override public final <T> T combine(Env e, List o) {
-						var chk = checkM(this, o, 1, (Object) null); // o = (() . forms)
-						if (chk instanceof Suspension s) return (T) s;
-						if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
-						var opv = opv(e, o.car, ignore, o.cdr());
-						return (T) new Supplier() {
-							@Override public Object get() {
-								return getTco(opv.combine(e, null));
-							};
-							@Override public String toString() {
-								return "{Supplier " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
-							}
-						};
-					}
-					@Override public String toString() { return "%Supplier"; }
-				},
-				"%consumer", new Combinable() {
-					{ arity = 1; }
-					@Override public final <T> T combine(Env e, List o) {
-						var chk = checkM(this, o, 1, list(1, Symbol.class)); // o = ((symbol) . forms)
-						if (chk instanceof Suspension s) return (T) s;
-						if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
-						var opv = opv(e, o.car, ignore, o.cdr());
-						return (T) new Consumer() {
-							@Override public void accept(Object t) {
-								getTco(opv.combine(e, cons(t)));
-							};
-							@Override public String toString() {
-								return "{Consumer " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
-							}
-						};
-					}
-					@Override public String toString() { return "%Consumer"; }
-				},
-				"%function", new Combinable() {
-					{ arity = 1; }
-					@Override public final <T> T combine(Env e, List o) {
-						var chk = checkM(this, o, 1, list(1, Symbol.class)); // o = ((symbol) . forms)
-						if (chk instanceof Suspension s) return (T) s;
-						if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
-						var opv = opv(e, o.car, ignore, o.cdr());
-						return (T) new Function() {
-							@Override public Object apply(Object t) {
-								return getTco(opv.combine(e, cons(t)));
-							};
-							@Override public String toString() {
-								return "{Function " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
-							};
-						};
-					}
-					@Override public String toString() { return "%Function"; }
-				},
-				"%biConsumer", new Combinable() {
-					{ arity = 2; }
-					@Override public final <T> T combine(Env e, List o) {
-						var chk = checkM(this, o, 1, list(2, Symbol.class)); // o = ((symbol symbol) . forms)
-						if (chk instanceof Suspension s) return (T) s;
-						if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
-						var opv = opv(e, o.car, ignore, o.cdr());
-						return (T) new BiConsumer() {
-							@Override public void accept(Object t, Object u) {
-								getTco(opv.combine(e, list(t, u)));
-							};
-							@Override public String toString() {
-								return "{BiConsumer " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
-							}
-						};
-					}
-					@Override public String toString() { return "%BiConsumer"; }
-				},
-				"%biFunction", new Combinable() {
-					{ arity = 2; }
-					@Override public final <T> T combine(Env e, List o) {
-						var chk = checkM(this, o, 1, list(2, Symbol.class)); // o = ((symbol) . forms)
-						if (chk instanceof Suspension s) return (T) s;
-						if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
-						var opv = opv(e, o.car, ignore, o.cdr());
-						return (T) new BiFunction() {
-							@Override public Object apply(Object t, Object u) {
-								return getTco(opv.combine(e, list(t, u)));
-							};
-							@Override public String toString() {
-								return "{Function " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
-							};
-						};
-					}
-					@Override public String toString() { return "%BiFunction"; }
-				},
+				"%supplier", supplier,
+				"%consumer", consumer,
+				"%function", function,
+				"%biConsumer", biConsumer,
+				"%biFunction", biFunction,
 				"%instanceOf?", wrap(new JFun("%InstanceOf?", 2, (n,o)-> checkN(n, o, 2, Any.class, Class.class), (_,o)-> o.<Class>car(1).isInstance(o.car) )),
 				// Class
 				//"%class?", wrap(new JFun("%Class?", (Function<Object, Boolean>) obj-> obj instanceof Class )),

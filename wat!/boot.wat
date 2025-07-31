@@ -332,7 +332,7 @@
 #|! Macro
  |#
 
-(def evalMacro
+(def evalMacro?
   #|A boolean to discriminate when to evaluate or simply expand a macro.
    |Used from expand and makeMacro. 
    |#
@@ -351,9 +351,9 @@
   (wrap
     (vau (expander) #ignore
       (vau operands env
-        (def evalMacro (set! evalMacro :prv #t))
+        (def evalMacro? (set! evalMacro? :prv #t))
         (def exp (apply expander operands))
-        (if evalMacro (eval exp env) exp) ))))
+        (if evalMacro? (eval exp env) exp) ))))
 |#
 ;TODO da valutare in sostituzione della precedente 
 (def makeMacro
@@ -367,9 +367,9 @@
    |#
   (\ (expander)
     (vau operands env
-      (def evalMacro (set! evalMacro :prv #t))
+      (def evalMacro? (set! evalMacro? :prv #t))
       (def exp (apply expander operands))
-      (if evalMacro (eval exp env) exp) )))
+      (if evalMacro? (eval exp env) exp) )))
 
 (def macro
   #|($nm parameterTree . forms)
@@ -388,7 +388,7 @@
    |Expands a macro call rather than evaluates it.
    |#
   (macro (form)
-    (list 'begin (list 'set! 'evalMacro #f) form) ))
+    (list 'begin (list 'set! 'evalMacro? #f) form) ))
 
 
 #|! Definition Forms
@@ -4361,6 +4361,7 @@
 
 (assert (runFiberWithValues (\ () (fiberYield 1) (fiberYield 2)) '(#inert 3)) (1 2 3))
 (assert (runFiberWithValues (\ () (fiberYield 1) (fiberYield 2)) (#inert 3)) (1 2 3))
+
 
 #|! Auto Increment/Decrement and Assignement Operators
  |#
