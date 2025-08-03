@@ -91,6 +91,8 @@
         <li>
           (<b>caseVau</b> . clauses)
           <br/>
+            (<b>caseVau</b> #: check . clauses)
+          <br/>
             (type fexpr)
           <br/>
             &nbsp;
@@ -199,7 +201,9 @@
         <li>
           (<b>defCaseVau</b> name . clauses)
           <br/>
-            (type fexpr)
+            (<b>defCaseVau</b> #: check . clauses)
+          <br/>
+            (type macro)
           <br/>
             &nbsp;
           <br/>
@@ -219,7 +223,9 @@
         <li>
           (<b>case\</b> . clauses)
           <br/>
-            (type function)
+            (<b>case\</b> #: check . clauses)
+          <br/>
+            (type macro)
           <br/>
             &nbsp;
           <br/>
@@ -261,7 +267,9 @@
         <li>
           (<b>defCase\</b> name . clauses)
           <br/>
-            (type fexpr)
+            (<b>defCase\</b> #: check . clauses)
+          <br/>
+            (type macro)
           <br/>
             &nbsp;
           <br/>
@@ -281,7 +289,7 @@
         <li>
           (<b>match</b> value . clauses)
           <br/>
-            (type fexpr)
+            (type macro)
           <br/>
             &nbsp;
           <br/>
