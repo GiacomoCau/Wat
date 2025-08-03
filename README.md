@@ -75,16 +75,16 @@ These are the differences compared to the original Wat/LispX
 	for checking the type and value of the
 	* bindings: instead of the single `symbol` in the definiend tree, must be specified the expression `(#: check symbol)`
 
-* The __vau__ operator (i.e. __\\__ or __lambda__) allows control over the type and value of parameters and value returned.
+* The __vau__ operator (i.e. __\\__ or __lambda__ or __caseVau__ or __case\\__) allows control over the type and value of parameters and value returned.
 
 	for checking the type and value of the
-	* return value: the body of the vau must start with a `#:` followed by the `check` followed by the `forms` of the body `(vau pt ep #: check . forms)`
+	* return value: the body of the vau must start with a `#:` followed by the `check` followed by the `forms` of the body `(vau pt ep #: check . forms)` or `(caseVau #: check . clauses)`
 	* parameters: instead of the single `symbol` in the parameter tree, must be specified the expression `(#: check symbol)`,
 	
 * The `check` can be:
 	* a `value`,
 	* the `Any` class,
-	* a `Class`,
+	* a `class`,
 	* a `List` with zero, one or two `Integers` followed by zero or more `checks`,
 	* a `List` with an `Integer` and the symbol `oo` followed by zero or more `checks`,
 	* a `List` with car equals `or` followed by two or more `check`,
@@ -94,7 +94,7 @@ These are the differences compared to the original Wat/LispX
 	When the `check` is:
 	* a `value`: the parameter value or value returned must be equal to that `value`
 	* the `Any` class: the parameter value or value returned can be any value
-	* a `Class`: the parameter value or value returned can be an instance of that `Class` or a class that extends that `Class`
+	* a `class`: the parameter value or value returned can be an instance of that `class` or a class that extends that `class`
 	* a `List`: the parameter value or value returned must be a `List` where, in the `List` `check`
 		* the first `Integer` indicates the minimum number of elements, the default is `0`
 		* the second `Integer` indicates the maximum number of elements,

@@ -23,7 +23,7 @@
    |(syntax symbol (or Symbol (#: check Symbol)))
    |(syntax ignore (or #ignore (#: check #ignore)))
    |(syntax check Any)
-   |(syntax check Class)
+   |(syntax check class)
    |(syntax check checks)
    |(syntax checks (check . checks))
    |(syntax check (min . checks))
@@ -58,7 +58,7 @@
    |(syntax symbol (or Symbol (#: check Symbol)))
    |(syntax ignore (or #ignore (#: check #ignore)))
    |(syntax check Any)
-   |(syntax check Class)
+   |(syntax check class)
    |(syntax check checks)
    |(syntax checks (check . checks))
    |(syntax check (min . checks))
@@ -82,6 +82,7 @@
 
 (def vau
   #|($nm parametersTree environmentParameter . body)
+   |($nm parametersTree environmentParameter #: check . body)
    |(type fexpr)
    |
    |(syntax parametersTree (or #null ignore symbol decomposeTree))
@@ -92,7 +93,7 @@
    |(syntax symbol (or Symbol (#: check Symbol)))
    |(syntax ignore (or #ignore (#: check #ignore)))
    |(syntax check Any)
-   |(syntax check Class)
+   |(syntax check class)
    |(syntax check checks)
    |(syntax checks (check . checks))
    |(syntax check (min . checks))
@@ -117,15 +118,15 @@
   %begin )
 
 (def if
-  #|($nm test then . forms)
+  #|($nm test thenForm . forms)
    |(type fexpr)
    |
-   |(syntax forms (or () (else) (test then . forms)))
+   |(syntax forms (or () (elseForm) (test thenForm . forms)))
    |
-   |(derivation (vau (test then . forms) env (if (eval test env) (eval then env) (null? forms) #inert (null? (cdr forms)) (eval (car forms) env) (apply if forms env))))
+   |(derivation (vau (test thenForm . forms) env (if (eval test env) (eval thenForm env) (null? forms) #inert (null? (cdr forms)) (eval (car forms) env) (apply if forms env))))
    |
    |Evaluate the <b>test</b> which must yield a boolean.
-   |Then evaluate either the <b>then</b> or <b>else</b> expression depending on whether the <b>test</b> yielded #true or #false.
+   |Then evaluate either the <b>thenForm</b> or <b>elseForm</b> expression depending on whether the <b>test</b> yielded #true or #false.
    |Idea stolen from Anarki https://github.com/arclanguage/anarki
    |#
   %if )
@@ -161,6 +162,7 @@
 
 (def \
   #|($nm parameterTree . forms)
+   |($nm parameterTree #: check . forms)
    |(type function)
    |
    |(derivation (vau (parameterTree . forms) env (wrap (eval (list* 'vau parameterTree #ignore forms) env))))
@@ -2006,6 +2008,27 @@
     (apply begin forms env)
     result ))
 
+(defMacro (if! test thenForm . forms)
+  #|($nm test thenForm . forms)
+   |(type fexpr)
+   |
+   |(syntax forms (or () (elseForm)))
+   |
+   |(derivation (list 'if (list '! test) thenForm (if (null? forms) #inert (car! forms))))
+   |
+   |Evaluate the <b>test</b> which must yield a boolean.
+   |Then evaluate either the <b>thenForm</b> or <b>elseForm</b> expression depending on whether the <b>test</b> yielded #false or #true.
+   |#
+  ; tre alternative
+  ;(list* 'if (list '! test) thenForm forms) ;; more test then forms
+  ;(list 'if (list '! test) thenForm (list* 'begin forms)) ;; more else form 
+  (list 'if (list '! test) thenForm (if (null? forms) #inert (car! forms))) ) ;; one else form
+
+(assert (if! #t 1) #inert)
+(assert (if! #t 1 2) 2)
+(assert (if! #t 1 2 3))
+(assert (if! #f 1 2) 1)
+
 (defMacro (when test . forms)
   #|($nm test . forms)
    |(type macro)
@@ -2078,7 +2101,7 @@
   #|($nm . functions)
    |(type function)
    |
-   |Return a function the return #true if all <b>functions</b> evaluate to #true when applied to the arguments, #false otherwise.
+   |Returns a function that returns #true if all <b>functions</b> return #true when applied to the arguments, #false otherwise.
    |If an function evaluates to #false, later <b>functions</b> are not evaluated.
    |If there are no <b>functions</b>, when applied return #false.
    |Idea stolen from Anarki https://github.com/arclanguage/anarki
@@ -2095,7 +2118,7 @@
   #|($nm . functions)
    |(type function)
    |
-   |Return a function the return #true if one <b>functions</b> evaluate to #true when applied to the arguments, #false otherwise.
+   |Return a function that return #true if one <b>functions</b> return #true when applied to the arguments, #false otherwise.
    |If an function evaluates to #true, later <b>functions</b> are not evaluated.
    |If there are no <b>functions</b>, when applied return #true.
    |Idea stolen from Anarki https://github.com/arclanguage/anarki
@@ -2147,6 +2170,7 @@
 
 (defVau (caseVau . clauses) env
   #|($nm . clauses)
+   |($nm #: check . clauses)
    |(type fexpr)
    |
    |(syntax clauses (clause . clauses))
@@ -2223,7 +2247,8 @@
 
 (defMacro (defCaseVau name . clauses)
   #|($nm name . clauses)
-   |(type fexpr)
+   |($nm #: check . clauses)
+   |(type macro)
    |
    |(derivation (def name (caseVau . clauses)))
    |
@@ -2233,7 +2258,8 @@
 
 (defMacro (case\ . clauses)
   #|($nm . clauses)
-   |(type function)
+   |($nm #: check . clauses)
+   |(type macro)
    |
    |(syntax clauses (clause . clauses))
    |(syntax clause (else . forms))
@@ -2254,7 +2280,8 @@
 
 (defMacro (defCase\ name . clauses)
   #|($nm name . clauses)
-   |(type fexpr)
+   |($nm #: check . clauses)
+   |(type macro)
    |
    |(derivation (def name (case\ . clauses)))
    |
@@ -2265,10 +2292,13 @@
 (assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1) 2)
 (assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2) 3)
 (assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2 3) '(2 3 4))
+(assert ((case\ #: Integer ((a) (+ a 1)) (else 0)) 1) 2)
+(assert ((case\ #: String ((a) (+ a 1)) (else 0)) 1))
+(assert ((case\ #: String ((a) (+ a 1)) (else 0)) 1) Error :type 'type :datum 2 :expected 'String)
 
 (defMacro (match exp . clauses)
   #|($nm value . clauses)
-   |(type fexpr)
+   |(type macro)
    |
    |(syntax clauses (clause . clauses))
    |(syntax clause (else . forms))
@@ -2790,7 +2820,7 @@
  |(syntax symbol (or Symbol (#: check Symbol)))
  |(syntax ignore (or #ignore (#: check #ignore)))
  |(syntax check Any)
- |(syntax check Class)
+ |(syntax check class)
  |(syntax check checks)
  |(syntax checks (check . checks))
  |(syntax check (min . checks))
@@ -2805,7 +2835,7 @@
  |A `check' can be:
  |- a `value',
  |- the `Any' class,
- |- a `Class',
+ |- a `class',
  |- a `List' with zero, one or two `Integers' followed by zero or more `checks',
  |- a `List' with an `Integer' and the symbol `oo' followed by zero or more `checks',
  |- a `List' with `car' equals `or' followed by two or more `check',
@@ -2815,7 +2845,7 @@
  |When the `check' is:
  |- a `value': the parameter value must be equal to that `value'
  |- the `Any' class : the parameter can be any value
- |- a `Class': the parameter value can be an instance of that `Class' or a class that extends that `Class'
+ |- a `class': the parameter value can be an instance of that `class' or a class that extends that `class'
  |- a `List': the parameter value must be a `List' where, in the `check' `List',
  |  - the first `Integer' indicates the minimum number of elements, default is `0'
  |  - the second `Integer' indicates the maximum number of elements

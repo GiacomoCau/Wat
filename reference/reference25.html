@@ -53,6 +53,32 @@
     </div>
     <div>
       <h3>
+        if!
+      </h3>
+      <ul>
+        <li>
+          (<b>if!</b> test thenForm . forms)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax forms (or () (elseForm)))
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (list 'if (list '! test) thenForm (if (null? forms) #inert (car! forms))))
+          <br/>
+            &nbsp;
+          <br/>
+            Evaluate the <b>test</b> which must yield a boolean.
+          <br/>
+            Then evaluate either the <b>thenForm</b> or <b>elseForm</b> expression depending on whether the <b>test</b> yielded #false or #true.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         when
       </h3>
       <ul>
@@ -187,7 +213,7 @@
           <br/>
             &nbsp;
           <br/>
-            Return a function the return #true if all <b>functions</b> evaluate to #true when applied to the arguments, #false otherwise.
+            Returns a function that returns #true if all <b>functions</b> return #true when applied to the arguments, #false otherwise.
           <br/>
             If an function evaluates to #false, later <b>functions</b> are not evaluated.
           <br/>
@@ -209,7 +235,7 @@
           <br/>
             &nbsp;
           <br/>
-            Return a function the return #true if one <b>functions</b> evaluate to #true when applied to the arguments, #false otherwise.
+            Return a function that return #true if one <b>functions</b> return #true when applied to the arguments, #false otherwise.
           <br/>
             If an function evaluates to #true, later <b>functions</b> are not evaluated.
           <br/>

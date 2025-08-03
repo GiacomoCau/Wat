@@ -55,7 +55,7 @@
           <br/>
             (syntax check Any)
           <br/>
-            (syntax check Class)
+            (syntax check class)
           <br/>
             (syntax check checks)
           <br/>
@@ -125,7 +125,7 @@
           <br/>
             (syntax check Any)
           <br/>
-            (syntax check Class)
+            (syntax check class)
           <br/>
             (syntax check checks)
           <br/>
@@ -173,6 +173,8 @@
         <li>
           (<b>vau</b> parametersTree environmentParameter . body)
           <br/>
+            (<b>vau</b> parametersTree environmentParameter #: check . body)
+          <br/>
             (type fexpr)
           <br/>
             &nbsp;
@@ -193,7 +195,7 @@
           <br/>
             (syntax check Any)
           <br/>
-            (syntax check Class)
+            (syntax check class)
           <br/>
             (syntax check checks)
           <br/>
@@ -243,23 +245,23 @@
       </h3>
       <ul>
         <li>
-          (<b>if</b> test then . forms)
+          (<b>if</b> test thenForm . forms)
           <br/>
             (type fexpr)
           <br/>
             &nbsp;
           <br/>
-            (syntax forms (or () (else) (test then . forms)))
+            (syntax forms (or () (elseForm) (test thenForm . forms)))
           <br/>
             &nbsp;
           <br/>
-            (derivation (vau (test then . forms) env (if (eval test env) (eval then env) (null? forms) #inert (null? (cdr forms)) (eval (car forms) env) (apply if forms env))))
+            (derivation (vau (test thenForm . forms) env (if (eval test env) (eval thenForm env) (null? forms) #inert (null? (cdr forms)) (eval (car forms) env) (apply if forms env))))
           <br/>
             &nbsp;
           <br/>
             Evaluate the <b>test</b> which must yield a boolean.
           <br/>
-            Then evaluate either the <b>then</b> or <b>else</b> expression depending on whether the <b>test</b> yielded #true or #false.
+            Then evaluate either the <b>thenForm</b> or <b>elseForm</b> expression depending on whether the <b>test</b> yielded #true or #false.
           <br/>
             Idea stolen from Anarki https://github.com/arclanguage/anarki
         </li>
@@ -330,6 +332,8 @@
       <ul>
         <li>
           (<b>\</b> parameterTree . forms)
+          <br/>
+            (<b>\</b> parameterTree #: check . forms)
           <br/>
             (type function)
           <br/>
