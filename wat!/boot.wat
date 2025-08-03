@@ -82,6 +82,7 @@
 
 (def vau
   #|($nm parametersTree environmentParameter . body)
+   |($nm parametersTree environmentParameter #: check . body)
    |(type fexpr)
    |
    |(syntax parametersTree (or #null ignore symbol decomposeTree))
@@ -117,15 +118,15 @@
   %begin )
 
 (def if
-  #|($nm test then . forms)
+  #|($nm test thenForm . forms)
    |(type fexpr)
    |
-   |(syntax forms (or () (else) (test then . forms)))
+   |(syntax forms (or () (elseForm) (test thenForm . forms)))
    |
-   |(derivation (vau (test then . forms) env (if (eval test env) (eval then env) (null? forms) #inert (null? (cdr forms)) (eval (car forms) env) (apply if forms env))))
+   |(derivation (vau (test thenForm . forms) env (if (eval test env) (eval thenForm env) (null? forms) #inert (null? (cdr forms)) (eval (car forms) env) (apply if forms env))))
    |
    |Evaluate the <b>test</b> which must yield a boolean.
-   |Then evaluate either the <b>then</b> or <b>else</b> expression depending on whether the <b>test</b> yielded #true or #false.
+   |Then evaluate either the <b>thenForm</b> or <b>elseForm</b> expression depending on whether the <b>test</b> yielded #true or #false.
    |Idea stolen from Anarki https://github.com/arclanguage/anarki
    |#
   %if )
@@ -161,6 +162,7 @@
 
 (def \
   #|($nm parameterTree . forms)
+   |($nm parameterTree #: check . forms)
    |(type function)
    |
    |(derivation (vau (parameterTree . forms) env (wrap (eval (list* 'vau parameterTree #ignore forms) env))))
@@ -2006,6 +2008,27 @@
     (apply begin forms env)
     result ))
 
+(defMacro (if! test thenForm . forms)
+  #|($nm test thenForm . forms)
+   |(type fexpr)
+   |
+   |(syntax forms (or () (elseForm)))
+   |
+   |(derivation (list 'if (list '! test) thenForm (if (null? forms) #inert (car! forms))))
+   |
+   |Evaluate the <b>test</b> which must yield a boolean.
+   |Then evaluate either the <b>thenForm</b> or <b>elseForm</b> expression depending on whether the <b>test</b> yielded #false or #true.
+   |#
+  ; tre alternative
+  ;(list* 'if (list '! test) thenForm forms) 
+  ;(list 'if (list '! test) thenForm (list* 'begin forms)) 
+  (list 'if (list '! test) thenForm (if (null? forms) #inert (car! forms))) )
+
+(assert (if! #t 1) #inert)
+(assert (if! #t 1 2) 2)
+(assert (if! #t 1 2 3))
+(assert (if! #f 1 2) 1)
+
 (defMacro (when test . forms)
   #|($nm test . forms)
    |(type macro)
@@ -2147,6 +2170,7 @@
 
 (defVau (caseVau . clauses) env
   #|($nm . clauses)
+   |($nm #: check . clauses)
    |(type fexpr)
    |
    |(syntax clauses (clause . clauses))
@@ -2233,6 +2257,7 @@
 
 (defMacro (case\ . clauses)
   #|($nm . clauses)
+   |($nm #: check . clauses)
    |(type function)
    |
    |(syntax clauses (clause . clauses))
@@ -2265,6 +2290,9 @@
 (assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1) 2)
 (assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2) 3)
 (assert ((case\ ((a) (+ a 1)) ((a b) (+ b 1)) (a (map (\ (a) (+ a 1)) a))) 1 2 3) '(2 3 4))
+(assert ((case\ #: Integer ((a) (+ a 1)) (else 0)) 1) 2)
+(assert ((case\ #: String ((a) (+ a 1)) (else 0)) 1))
+(assert ((case\ #: String ((a) (+ a 1)) (else 0)) 1) Error :type 'type :datum 2 :expected 'String)
 
 (defMacro (match exp . clauses)
   #|($nm value . clauses)

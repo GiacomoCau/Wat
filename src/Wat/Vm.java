@@ -141,6 +141,8 @@ public class Vm {
 		//new File("bin/Ext").delete();
 	}
 	
+	
+	// Configuration
 	boolean doTco = true; // do tco
 	boolean doAsrt = true; // do assert
 	boolean intStr = false; // intern string
@@ -200,6 +202,8 @@ public class Vm {
 		Suspension suspend(Dbg dbg, Function<Resumption, Object> f) { k = new Continuation(dbg, f, k); return this; }
 	}
 	
+	
+	// Pipe Map Dbg
 	Object pipe(Dbg dbg, Supplier supplier, Function<Object[], Object> ... functions) {
 		return pipe(null, dbg, new Object[functions.length+1], supplier, functions);
 	}
@@ -210,7 +214,7 @@ public class Vm {
 			: pipe(null, dbg, resn, 0, functions)
 		;
 	}
-	/*
+	/* TODO sostituito dal seguente, eliminare
 	Object pipe(Resumption r, Dbg dbg, Object[] resn, int i, Function<Object[], Object>[] functions) {
 		Object res = resn[i];
 		for (var first=true; i<functions.length; i+=1) { // only one resume for suspension
@@ -336,6 +340,8 @@ public class Vm {
 	class SharpColon { public String toString() { return "#:"; }};
 	public SharpColon sharpColon = new SharpColon();
 	
+	
+	// Intern Symbol Keyword
 	class Intern implements Comparable<Intern> {
 		String name;
 		Intern(String name) { this.name = name; }
@@ -360,6 +366,8 @@ public class Vm {
 	Object[] quotes = $(symbol("%'"), symbol("quote"));
 	Object[] atdots = $(symbol("%at"), symbol("%dot"));
 	
+	
+	// Cons List
 	class Cons {
 		Object car; private Object cdr;
 		Cons(Object car, Object cdr) { this.car = car; this.cdr = cdr; }
@@ -737,14 +745,18 @@ public class Vm {
 		private static final long serialVersionUID = 1L;
 		Object[] objs;
 		public InnerException(String message, Object ... objs) { super(message); this.objs = objs; }
+		Object getValue(Object key) {
+			for (int i=0; i<objs.length; i+=2) if (key==objs[i]) return objs[i+1];
+			return null; //TODO meglio throw ...
+		}
 	}
 	public class MatchException extends InnerException {
 		private static final long serialVersionUID = 1L;
-		public MatchException(String message, Object datum, int operands) { super(message, "datum", datum, "operands#", operands); }
+		public MatchException(String message, Object datum, int operands) { super(message, "type", symbol("match"), "datum", datum, "operands#", operands); }
 	}
 	public class TypeException extends InnerException {
 		private static final long serialVersionUID = 1L;
-		public TypeException(String message, Object datum, Object expected) { super(message, "datum", datum, "expected", expected); }
+		public TypeException(String message, Object datum, Object expected) { super(message, "type", symbol("type"), "datum", datum, "expected", expected); }
 	}
 	<T> T matchError(String msg, Object datum, int operands) {
 		return error(msg, "type", symbol("match"), "datum", datum, "operands#", operands);
@@ -866,6 +878,7 @@ public class Vm {
 		Object arity;
 		abstract <T> T combine(Env e, List o);
 	}
+	
 	public Object arity(Object obj) {
 		return switch (obj) {
 			case Combinable cmb-> cmb.arity;
@@ -882,6 +895,19 @@ public class Vm {
 	public Object arityPt(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return o == null ? i : ge(i); }
 	//public Object arityPt(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return list(symbol(o == null ? "==" : ">="), i); }
 	Object ge(int n) { return list(symbol(">="), n); }
+	/* TODO sostituito dal seguente, eliminare
+	int args(Apv apv) {
+		return switch(apv.cmb) {
+			case Opv opv-> opv.pt == null ? 0 : opv.pt instanceof Cons c && c.cdr() == null && (c.car == ignore || c.car instanceof Symbol) ? 1 : more;
+			case JFun jFun-> jFun.jfun instanceof Supplier ? 0 : jFun.jfun instanceof Function ? 1 : more;
+			default-> more;
+		};
+	}
+	/*/
+	int args(Apv apv) {
+		return switch (arity(apv)) { case Integer i-> i; case Object _-> more; };
+	}
+	//*/
 	
 	Object combine(Env e, Object op, List o) {
 		if (prTrc >= 5) print(" combine: ", indent(), op, " ", o /*, "   ", e*/);
@@ -890,21 +916,27 @@ public class Vm {
 		if (isjFun(op)) return new Apv(new JFun(op)).combine(e, o);
 		return aQuote ? cons(op, o) : typeError("cannot combine, not a {expected}: {datum} in: {expr}", op, symbol("Combinable"), cons(op, o));
 	}
-	
+
 	class Opv extends Combinable {
 		Env e; Object pt, ep; List xs;
 		Opv(Env e, Object pt, Object ep, List xs) {
 			this.e = e; this.pt = pt; this.ep = ep; //this.x = x
-			if (xs == null || xs.car != keyword("caseVau")) {
-				arity = arityPt(pt);
-			}
+			if (xs == null || xs.car != keyword("caseVau")) arity = arityPt(pt);
 			else {
-				arity = map("arityCaseVau", c-> arityPt(((List) c).car), e.get("clauses"));
-				xs = xs.cdr();
+				Object check = null;
+				var clauses = e.<List>get("clauses");
+				if (clauses != null && clauses.car == sharpColon) {
+					check = clauses.car(1);
+					e.set("clauses", clauses = clauses.cdr(1));
+				}
+				arity = map("arityCaseVau", c-> arityPt(((List) c).car), clauses);
+				xs = xs.cdr(); // via :caseVau
+				if (check != null) xs = listStar(sharpColon, check, xs);
 			}
 			this.xs = xs == null || xs.car != sharpColon ? xs
 				: xs.cdr() != null ? cons(cons(new Colon(this), xs.cdr()))
-				: matchError("invalid return value check, expected {operands#,%+d} operands, found: {datum} in: {expr}", null, 1, xs) ;
+				: matchError("invalid return value check, expected {operands#,%+d} operands, found: {datum} in: {expr}", null, 1, xs)
+			;
 		}
 		public Object combine(Env e, List o) {
 			var xe = env(this.e);
@@ -985,7 +1017,7 @@ public class Vm {
 			if (!(chk instanceof Integer /*len*/)) return resumeError(chk, symbol("Integer"));
 			var pt = o.car;
 			var ep = o.car(1);
-			var err = checkPt(cons(this, o), pt, ep); if (err != null) return err;
+			var err = checkPtEp(cons(this, o), pt, ep); if (err != null) return err;
 			return new Opv(e, pt, ep, o.cdr(1));
 		}
 		public String toString() { return "%Vau"; }
@@ -1682,6 +1714,7 @@ public class Vm {
 		@Override public String toString() { return "%BiFunction"; }
 	};
 	
+	
 	// Error Handling
 	Object rootPrompt = new Object() { public String toString() { return "%RootPrompt"; }};
 	List pushRootPrompt(List lst) { return cons(listStar(pushPrompt, rootPrompt, lst)); }
@@ -1725,12 +1758,12 @@ public class Vm {
 	}
 	
 	
-	// Check Definitions/Parameters Tree
-	class PTree {
+	// Check Definiend/Parameters Tree and Environment Parameter
+	class CheckDPtEp {
 		private List expr;
-		private Object pt, ep; // ep == null per Def ovvero %def || %set!, ep == (or #ignore Symbol) per Vau
+		private Object pt, ep; // ep == null per DefSet, ep == (or #ignore Symbol) per Vau
 		private Set syms = new HashSet();
-		PTree(List expr, Object pt, Object ep) { this.expr=expr; this.pt=pt; this.ep=ep; }
+		CheckDPtEp(List expr, Object pt, Object ep) { this.expr=expr; this.pt=pt; this.ep=ep; }
 		Object check() {
 			if (!((pt instanceof Symbol || (pt == null || pt == ignore) && ep != null) && syms.add(pt))) {
 				if (!(pt instanceof Cons)) return typeError("invalid parameter tree, not {expected}: {datum} in: {expr}", pt, toChk(ep == null ? or(Symbol.class, Cons.class) : or(null, ignore, Symbol.class, Cons.class)), expr);
@@ -1761,19 +1794,12 @@ public class Vm {
 			return c.cdr() == null ? null : check(c.cdr());
 		}
 	}
-	Object checkDt(List expr, Object dt) { return new PTree(expr, dt, null).check(); }
-	Object checkPt(List expr, Object pt, Object ep) {
+	Object checkDt(List expr, Object dt) { return new CheckDPtEp(expr, dt, null).check(); }
+	Object checkPtEp(List expr, Object pt, Object ep) {
 		return ep != null
-			? new PTree(expr, pt, ep).check()
+			? new CheckDPtEp(expr, pt, ep).check()
 			: typeError("invalid environment parameter, not {expected}: {datum} in: {expr}", ep, toChk(or(ignore, Symbol.class)), expr)
 		;
-	}
-	int args(Apv apv) {
-		return switch(apv.cmb) {
-			case Opv opv-> opv.pt == null ? 0 : opv.pt instanceof Cons c && c.cdr() == null && (c.car == ignore || c.car instanceof Symbol) ? 1 : more;
-			case JFun jFun-> jFun.jfun instanceof Supplier ? 0 : jFun.jfun instanceof Function ? 1 : more;
-			default-> more;
-		};
 	}
 	
 	
@@ -1919,7 +1945,7 @@ public class Vm {
 			|| cl == Apv1.class && obj instanceof Apv apv && args(apv) == 1
 			// TODO valutare
 			//|| cl == DTree.class && checkDt(obj, obj) == null
-			//|| cl == PTree.class && checkPt(obj, obj, obj) == null
+			//|| cl == PTree.class && checkDPtEp(obj, obj, obj) == null
 		;
 	}
 	public Object check(Object op, Object o, Object chk) {
@@ -1935,10 +1961,10 @@ public class Vm {
 			? error("returning from {opv}", ie, "opv", op)
 			: !member(op, ":", "check")
 			? error("combining {operator} with {operands}", ie, "operator", op, "operands", o)
-			// con : e check quando va in errore un check in profondità, es. (: (Integer) (#t))
-			// ovvero quando il valore in errore (ie.objs[1]) è diverso dall'intero valore da controllare (o)
-			// ovvero quando il check in errore (ie.objs[3]) è diverso dall'intero check da effettuare (chk)
-			: ie.objs[1] != o // || !ie.objs[3].equals(toChk(chk))
+			// quando : e check vanno in errore per un check in profondità, es. (: (Integer) (#t))
+			// ovvero quando il valore in errore ("datum") è diverso dall'intero valore da controllare (o)
+			// ovvero quando il check in errore ("expected") è diverso dall'intero check da effettuare (chk)
+			: !ie.getValue("datum").equals(o) // || !ie.getValue("expected").equals(toChk(chk))
 			? error("checking {operands} with {check}", ie, "operands", o, "check", toChk(chk))
 			: error(ie)
 		;
