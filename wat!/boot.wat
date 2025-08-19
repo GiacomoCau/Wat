@@ -247,6 +247,7 @@
    |(type function)
    |
    |(derivation (@new vm Cons car cdr))
+   |(derivation (@new Cons car cdr))
    |
    |Return a cons with the given <b>car</b> and <b>cdr</b>.
    |#
@@ -530,7 +531,7 @@
   (vau (pt . forms) #_
     (wrau args env (apply begin forms (bind (newEnv env) pt args)))))
 
-;(assert (let* ((f (de\ () a)) (a 1) (a 2)) (f)) 2) 
+;(assert (let* ((a 1) (f (de\ () a)) (a 2)) (f)) 2) 
 
 (defMacro (defde\ lhs . rhs)
   #|($nm name parameterTree . forms)
@@ -638,7 +639,7 @@
    |(syntax bindings (attribute value . bindings))
    |(syntax attribute (or Symbol Keyword String))
    |
-   |Defines into the current environment the named box <b>name</b> with the given <b>bindings</b>.
+   |Defines into the current environment the named obj <b>name</b> with the given <b>bindings</b>.
    |#
   (list 'def name (cons 'newObj bindings)) )
 
@@ -777,6 +778,8 @@
    |($nm objClass string . bindings)
    |($nm objClass throwableObject . bindings)
    |($nm objClass string throwableObject . bindings)
+   |(type function)
+   |
    |(syntax bindings (attribute value . bindings))
    |(syntax attribute (or Symbol Keyword String))
    |
@@ -913,7 +916,7 @@
  |(type Class)
  |(extends Cons)
  |
- |The last `cdr' of lists il alwais #null.
+ |The last `cdr' of lists is alwais #null.
  |#
 
 (def append
@@ -969,13 +972,13 @@
    |#
   %intern)
 
-(def name
+(def internName
   #|($nm intern)
    |(type function)
    |
    |Return the name of the <b>intern</b> as a string.
    |#
-  %name)
+  %internName)
 
 (def keyword
   #|($nm string)
@@ -1001,7 +1004,7 @@
    |
    |Return the name of the <b>keyword</b> as a string.
    |#
-  (name keyword) )
+  (internName keyword) )
 
 (def symbol
   #|($nm string)
@@ -1027,7 +1030,7 @@
    |
    |Return the name of the <b>symbol</b> as a string.
    |#
-  (name symbol) )
+  (internName symbol) )
 
 
 #|! Equals
@@ -1989,6 +1992,7 @@
   letrec\ )
 
 (assert (labels ( ((even? n) (if (0? n) #t (odd? (- n 1)))) (odd? (n) (if (0? n) #f (even? (- n 1)))) ) (even? 88) ) #t)
+
 
 #|! Simple Controls
  |#
@@ -3154,7 +3158,7 @@
 (defVau (repeat times . forms) env
   #|($nm times . forms)
    |($nm (symbol times . endForms) . forms)
-   |(type macro)
+   |(type fexpr)
    |
    |Evaluate <b>forms</b> as an implicit `begin' <b>times</b> times.
    |#
@@ -3191,7 +3195,7 @@
 (defVau (repeat times . forms) env
   #|($nm times . forms)
    |($nm (symbol times . endForms) . forms)
-   |(type macro)
+   |(type fexpr)
    |
    |Evaluate <b>forms</b> as an implicit `begin' <b>times</b> times.
    |#
@@ -3237,8 +3241,8 @@
  |#
 
 (def\ (any? f lst . lst*)
-  #|($nm function . lists).
-   |(type function).
+  #|($nm function . lists)
+   |(type function)
    |
    |Return #true if the apply of the <b>function</b> to every first elements of the <b>lists</b> return #true, #false otherwise.
    |#
@@ -3252,16 +3256,16 @@
 (assert (any? < '(1 2) '(3 4)) #t)
 
 (defMacro (any?* f . lst)
-  #|($nm function . values).
-   |(type function).
+  #|($nm function . values)
+   |(type function)
    |
    |Return #true if the apply of the <b>function</b> to every element of <b>values</b> return #true, #false otherwise.
    |#
   (list 'any? f lst))
 
 (def\ (all? f lst . lst*)
-  #|($nm function . lists).
-   |(type function).
+  #|($nm function . lists)
+   |(type function)
    |
    |Return #true if the apply of the <b>function</b> to one first elements of the <b>lists</b> return #true, #false otherwise.
    |#
@@ -3275,16 +3279,16 @@
 (assert (all? < '(1 2) '(3 4)) #t)
 
 (defMacro (all?* f . lst)
-  #|($nm function . values).
-   |(type function).
+  #|($nm function . values)
+   |(type function)
    |
    |Return #true if the apply of the <b>function</b> to one element of <b>values</b> return #true, #false otherwise.
    |#
   (list 'all? f lst))
 
 (def\ (forEach# f lst . lst*)
-  #|($nm function . lists).
-   |(type function).
+  #|($nm function . lists)
+   |(type function)
    |
    |Return #inert after applies the <b>function</b> to every first elements of the <b>lists</b>.
    |#
@@ -3298,8 +3302,8 @@
 (assert (let1 (n 1) (forEach# (\ (a b) (set! n (+ n (+ a b)))) '(1 2) '(3 4)) n) 11)
 
 (def\ (forEach f lst . lst*)
-  #|($nm function . lists).
-   |(type function).
+  #|($nm function . lists)
+   |(type function)
    |
    |Return <b>lists</b> after applies the <b>function</b> to every first elements of the <b>lists</b>.
    |#
@@ -3313,8 +3317,8 @@
 (assert (let1 (n 1) (forEach (\ (a b) (set! n (+ n (+ a b)))) '(1 2) '(3 4)) n) 11)
 
 (def\ maplist (f lst . lst*)
-  #|($nm function . lists).
-   |(type function).
+  #|($nm function . lists)
+   |(type function)
    |
    |Return the list of the results of apply the <b>function</b>, which must return a list, to every first elements of the <b>lists</b>.
    |(Note: this currently uses `append', but might be changed to use `nconc' in the future, like Common Lisp.)
@@ -3326,8 +3330,8 @@
 (assert (maplist (\ (x) (list x)) '(1 2 3 4)) '(1 2 3 4))
 
 (def\ (filter f lst . lst*)
-  #|($nm function . lists).
-   |(type function).
+  #|($nm function . lists)
+   |(type function)
    |
    |Returns the list of the first elements of the <b>lists</b> for which the application of the <b>function</b> returns #true.
    |(Note: this currently uses `append', but might be changed to use `nconc' in the future, like Common Lisp.)
@@ -3340,8 +3344,8 @@
 (assert (filter != '(1 2 3) '(3 2 1)) '((1 3) (3 1)))
 
 (defMacro (remove f lst . lst*)
-  #|($nm function . lists).
-   |(type function).
+  #|($nm function . lists)
+   |(type function)
    |
    |Returns the list of the first elements of the <b>list</b> without those for which the application of the <b>function</b> returns #true.
    |#
@@ -3351,8 +3355,8 @@
 (assert (remove == '(1 2 3) '(3 2 1)) '((1 3) (3 1)))
 
 (def\ (reduceL f init lst . lst*)
-  #|($nm function  init . lists).
-   |(type function).
+  #|($nm function  init . lists)
+   |(type function)
    |
    |Use the <b>function</b> to combine the elements of the <b>list</b> from first element.
    |The <b>initialValue</b> is logically placed before the first element of the <b>list</b>.
@@ -3371,8 +3375,8 @@
   reduceL)
 
 (def\ (reduceR f init lst . lst*)
-  #|($nm function init . list).
-   |(type function).
+  #|($nm function init . list)
+   |(type function)
    |
    |Use the <b>function</b> to combine the elements of the <b>list</b> from last element.
    |The <b>initialValue</b> is logically placed before the last element of the <b>list</b>.
@@ -3384,8 +3388,8 @@
 (assert (reduceR cons () '(1 2 3 4)) '((((() . 4) . 3) . 2) . 1))
 
 (def\ (foldL f init lst . lst*)
-  #|($nm function init . list).
-   |(type function).
+  #|($nm function init . list)
+   |(type function)
    |
    |Use the <b>function</b> to combine the elements of the <b>list</b> from first element.
    |The <b>initialValue</b> is logically placed after the last element of the <b>list</b>.
@@ -3397,8 +3401,8 @@
 (assert (foldL cons () '(1 2 3 4)) '(1 . (2 . (3 . (4 . ())))))
 
 (def\ (foldR f init lst . lst*)
-  #|($nm function  init . list).
-   |(type function).
+  #|($nm function  init . list)
+   |(type function)
    |
    |Use the <b>function</b> to combine the elements of the <b>list</b> from last element.
    |The <b>initialValue</b> is logically placed after the last element of the <b>list</b>.
@@ -3649,7 +3653,7 @@
           (%error ("invalid syntax " f)) ))))
   (def\ (expd0 x)
      (map [_ (if (>= (@indexOf ";!,'…_" (%subString _ 0 1)) 0) (symbol _) (car (@str2lst vm _)))]
-       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (name x) ";|!|,|'|…|_[1-9a-z*]?" -1)) )) )
+       (filter [_ (!= _ "")] (array->list (@splitWithDelimiters (internName x) ";|!|,|'|…|_[1-9a-z*]?" -1)) )) )
   (if (symbol? x)
     (expd1 () (expd0 x))
     (mkc x)) )
@@ -4268,6 +4272,8 @@
    |If <b>end</b> is not supplied, the subsequence stretches until the end of the sequence.
    |#
 )
+(defMethod subSeq ((seq Null) start . end)
+  (apply** %subList seq start end))
 (defMethod subSeq ((seq List) start . end)
   (apply** %subList seq start end))
 (defMethod subSeq ((seq String) start . end)
@@ -4282,7 +4288,7 @@
 (defConstant coroutinePrompt
   #|This prompt is used for general coroutine-like use of continuations.
    |#
-  'coroutine-prompt)
+  'coroutinePrompt)
 
 (defMacro coroutine forms
   #|Evaluate <b>forms</b> as an implicit `begin' in a context in which `yield' can be used to pause execution.
@@ -4318,7 +4324,7 @@
 (defConstant fiberPrompt
   #|The prompt used for delimiting fibers.
    |#
-  'fiber-prompt)
+  'fiberPrompt)
 
 (defClass YieldRecord ()
   #|(type Class)
@@ -4352,7 +4358,7 @@
    |
    |Resume a suspended fiber <b>yieldRecord</b> with an optional <b>value</b> (which defaults to #inert).
    |#
-  (pushDelimSubcont fiberPrompt (yieldRecord 'continuation)
+  (pushDelimSubcont fiberPrompt (yieldRecord :continuation)
     (optDft v #inert)))
 
 (defMacro fiber forms
@@ -4365,14 +4371,14 @@
 
 (def\ runFiber (thunk . values)
   #|($nm thunk . forms)
-   |(type macro)
+   |(type function)
    |
    |Get all values yielded by a fiber, and its final result, and collect them in a list.
    |Uses the optional list of values to sent to the fiber with `fiberResume'.
    |#
   (let run ((result (fiber (thunk))) (values values))
     (if (type? result YieldRecord)
-      (cons (result 'value)
+      (cons (result :value)
         (if (null? values)
           (run (fiberResume result) #null)
           (run (fiberResume result (car values)) (cdr values)) ))

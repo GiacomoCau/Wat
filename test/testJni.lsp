@@ -137,7 +137,7 @@ cls
 (%assert ((%function (a) (%+ 2 a)) (%+ 1 2)) 5)
 (%assert ((%\ (a) ((%biConsumer (b c) (%set! a (%+ b c))) 2 3) a) #inert) 5)
 (%assert ((%biFunction (a b) (%+ a b)) (%+ 2 2) (%+ 2 3)) 9)
-(%assert (@toArray (@map (@stream &java.util.Arrays (%list->array (1 2 3)) (%function (a) (%* 2 a)))) (%list->array 2 4 6)))
+(%assert (@toArray (@map (@stream &java.util.Arrays (%list->array (1 2 3))) (%function (a) (%* 2 a)))) (%list->array (2 4 6)))
 (%assert ((%\ (a) (@forEach (@of &java.util.Map "a" 1 "b" 2) (%biConsumer (_ b) (%set! a (%+ a b)))) a) 0) 3)
 
 

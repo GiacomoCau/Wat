@@ -909,7 +909,7 @@ public class Vm {
 	}
 	/*/
 	int args(Apv apv) {
-		return switch (arity(apv)) { case Integer i-> i; case Object _-> more; };
+		return switch (arity(apv)) { case Integer i-> i; default-> more; };
 	}
 	//*/
 	
@@ -934,7 +934,7 @@ public class Vm {
 					e.set("clauses", clauses = clauses.cdr(1));
 				}
 				arity = map("arityCaseVau", c-> arityPt(((List) c).car), clauses);
-				xs = xs.cdr(); // via :caseVau
+				xs = xs.cdr(); // via keyword :caseVau
 				if (check != null) xs = listStar(sharpColon, check, xs);
 			}
 			this.xs = xs == null || xs.car != sharpColon ? xs
@@ -1880,19 +1880,14 @@ public class Vm {
 		if (chk instanceof Object[] chks) {
 			for (int i=0; i<chks.length; i+=1) {
 				try {
-					//*// TODO probabilmente è sufficiente!
 					return checkO(o, chks[i]);
-					/*/
-					if (chks[i] instanceof List) return checkO(o, chks[i]);
-					checkO(o, chks[i]);
-					return 0;
-					//*/
 				}
 				catch (Throwable thw) {
 				}
 			}
 		}
 		else if (chk instanceof List chkl) {
+			// TODO la seguente if non sembra sia necessaria, verficare
 			if (chkl.car instanceof Object[] chks && chkl.cdr() == null) return checkO(o, chks);
 			if (chkl.car == symbol("and")) {
 				for (var chka = chkl.cdr(); chka != null; chka = chka.cdr()) {
@@ -1905,6 +1900,8 @@ public class Vm {
 				}
 				return 0;
 			}
+			// TODO inserire il caso if (chkl.car == symbol("or")) { ... ?
+			// probabilmente non serve vista la conversione in Object[] di evalChk
 			if (chkl.car instanceof Apv) {
 				try {
 					switch (getTco(combine(env(), chkl.car, cons(o, chkl.cdr(1))))) {
@@ -2252,10 +2249,6 @@ public class Vm {
 				"%bind", wrap(new JFun("%Bind", 3, (n,o)-> checkN(n, o, 3, Env.class), (_,o)-> bind(true, 3, o.<Env>car(), o.car(1), o.car(2)) )),
 				"%bind?", wrap(new JFun("%Bind?", 3, (n,o)-> checkN(n, o, 3, Env.class), (_,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (InnerException ie) { return false; }} )),
 				"%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } )),
-				/* TODO eliminare
-				"%pushEnv", wrap(new JFun("%PushEnv", (Supplier) ()-> theEnv = env(theEnv))),
-				"%popEnv", wrap(new JFun("%PopEnv", (Supplier) ()-> theEnv = theEnv.parent)),
-				*/
 				// Obj
 				//"%obj?", wrap(new JFun("%Obj?", (Function<Object, Boolean>) obj-> obj instanceof Obj )),
 				"%new", wrap(new JFun("%New", ge(1),
@@ -2341,7 +2334,7 @@ public class Vm {
 				"%keyword?", wrap(new JFun("%Keyword?", (Function<Object, Boolean>) obj-> obj instanceof Keyword )),
 				"%intern", wrap(new JFun("%Intern", 1, (n,o)-> checkN(n, o, 1, String.class), (_,o)-> intern(o.car()) )),
 				"%intern?", wrap(new JFun("%Intern?", (Function<Object, Boolean>) obj-> obj instanceof Intern )),
-				"%name", wrap(new JFun("%Name", 1, (n,o)-> checkN(n, o, 1, Intern.class), (_,o)-> o.<Intern>car().name )),
+				"%internName", wrap(new JFun("%InternName", 1, (n,o)-> checkN(n, o, 1, Intern.class), (_,o)-> o.<Intern>car().name )),
 				// Equals
 				"%==", wrap(new JFun("%==", (BiFunction<Object,Object,Boolean>) (a,b)-> a instanceof Number ? a.equals(b) : a == b )),
 				"%!=", wrap(new JFun("%!=", (BiFunction<Object,Object,Boolean>) (a,b)-> a instanceof Number ? !a.equals(b) : a != b )),
@@ -2513,7 +2506,6 @@ public class Vm {
 				"prWrn", wrap(new JFun("PrWrn", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prWrn : inert(prWrn=o.car()) )),
 				"prAttr", wrap(new JFun("PrAttr", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prAttr : inert(prAttr=o.car()) )),
 				"prInert", wrap(new JFun("PrInert", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prInert : inert(prInert=o.car()) )),
-				//"bndSmt", wrap(new JFun("BndSmt", 0, (n,o)-> checkN(n, o, 0), (l,o)-> bndSmt )),
 				"bndSmt", wrap(new JFun("BndSmt", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? bndSmt : inert(bndSmt=o.car()) )),
 				"thwErr", wrap(new JFun("ThwErr", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? thwErr : inert(thwErr=o.car()) )),
 				"hdlAny", wrap(new JFun("HdlAny", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? hdlAny : inert(hdlAny=o.car()) ))
