@@ -1725,7 +1725,9 @@ public class Vm {
 	
 	// Error Handling
 	Object rootPrompt = new Object() { public String toString() { return "%RootPrompt"; }};
-	List pushRootPrompt(List lst) { return cons(listStar(pushPrompt, rootPrompt, lst)); }
+	public <T> T pushRootSubcontBarrier(Env env, List lst) {
+		return getTco(pushSubcontBarrier.combine(env, cons(listStar(pushPrompt, rootPrompt, lst))));
+	}
 	<T> T error(Error err) {
 		var userBreak = theEnv.lookup(symbol("userBreak")).value;
 		if (userBreak == null) throw err;
@@ -2078,7 +2080,7 @@ public class Vm {
 			var name = eIfnull(o.car, n-> "test " + n + ": ");
 			var exp = o.car(1);
 			try {
-				var val = getTco(pushSubcontBarrier.combine(env, pushRootPrompt(cons(exp))));
+				var val = pushRootSubcontBarrier(env, cons(exp));
 				switch (len) {
 					case 2:
 						print(name, exp, " should throw but is ", val);
@@ -2086,13 +2088,13 @@ public class Vm {
 					case 3: {
 						if (! (val instanceof Box)) {
 							var expt = o.<List>cdr(1);
-							if (Vm.this.equals(val, getTco(pushSubcontBarrier.combine(env, pushRootPrompt(expt))))) return true;
+							if (Vm.this.equals(val, pushRootSubcontBarrier(env, expt))) return true;
 							print(name, exp, " should be ", o.car(2), " but is ", val);
 							break;
 						}
 					}
 					default: {
-						var expt = (List) map("evalExpt", x-> getTco(pushSubcontBarrier.combine(env, pushRootPrompt(cons(x)))), o.cdr(1));
+						List expt = pushRootSubcontBarrier(env, cons(cons(symbol("%list"), o.cdr(1))));
 						if (expt.car instanceof Class && singleMatchType(val, expt)) return true;
 						print(name, exp, " should be ", expt, " but is ", val);
 					}
@@ -2104,7 +2106,7 @@ public class Vm {
 					thw.printStackTrace(out);
 				else {
 					var val = thw instanceof Value v ? v.value : thw;
-					var expt = (List) map("evalExpt", x-> getTco(pushSubcontBarrier.combine(env, pushRootPrompt(cons(x)))), o.cdr(1));
+					List expt = pushRootSubcontBarrier(env, cons(cons(symbol("%list"), o.cdr(1))));
 					if (expt.car instanceof Class && singleMatchType(val, expt)) return true;
 					print(name, exp, " should be ", expt, " but is ", val);
 				}
@@ -2160,12 +2162,17 @@ public class Vm {
 	// Bytecode Parser
 	Object bc2exp(Object o) {
 		return switch (o) {
-			case String s-> switch(s) { case "#inert"-> inert; case "#_", "#ignore"-> ignore; case "#:"-> sharpColon; default-> intern(intStr ? s.intern() : s); };
+			case String s-> switch(s) {
+				case "#inert"-> inert;
+				case "#ignore", "#_"-> ignore;
+				case "#:"-> sharpColon;
+				default-> intern(intStr ? s.intern() : s);
+			};
 			case Object[] objs->{
 				if (objs.length != 2) yield bc2lst(objs);
-				if (objs[0] == string) yield intStr ? ((String) objs[1]).intern() : objs[1];
 				if (objs[0] == at) yield at((String) objs[1]);
 				if (objs[0] == dot) yield dot((String) objs[1]);
+				if (objs[0] == string) yield intStr ? ((String) objs[1]).intern() : objs[1];
 				yield bc2lst(objs);
 			}
 			case null, default-> o;
@@ -2515,21 +2522,25 @@ public class Vm {
 	
 	
 	// API
-	public Object exec(Env env, Object bytecode) {
-		return getTco(pushSubcontBarrier.combine(env, pushRootPrompt(cons(cons(new Begin(true), bc2exp(bytecode))))));
+	public Object exec(Env env, Object bc) {
+		return pushRootSubcontBarrier(env, cons(cons(new Begin(true), bc2exp(bc))));
 	}
-	public Object call(String funName, Object ... args) {
-		return exec(theEnv, $(funName, ".", $(args)));
+	public Object exec(Object bc) throws Exception {
+		return exec(theEnv, bc);
 	}
-	public Object get(String varName) {
-		return exec(theEnv, symbol(varName));
+	public Object call(String funName, Object ... args) throws Exception {
+		return exec($((Object) $(funName, ".", $(args))));
 	}
-	public Object eval(Env env, String exp) throws Exception {
-		return exec(env, str2bc(exp));
+	public Object get(String varName) throws Exception {
+		return exec($(varName));
+	}
+	public Object eval(String exp) throws Exception {
+		return exec(str2bc(exp));
 	}
 	public String readText(String fileName) throws IOException {
 		return Files.readString(Paths.get(fileName), Charset.forName("UTF-8"));
 	}
+	// TODO valutare l'utilità, eliminare altrimenti
 	public List readList(String fileName) throws Exception {
 		return str2lst(readText(fileName));
 	}
@@ -2544,24 +2555,30 @@ public class Vm {
 		}
 	}
 	public Object loadText(Env env, String fileName) throws Exception {
-		if (prTrc >= 1) print("\n--------: " + fileName);
-		var v = eval(env, readText(fileName));
-		if (prTrc > 1) print("--------: " + fileName + " end");
-		return v;
+		try {
+			if (prTrc >= 1) print("\n--------: " + fileName);
+			return exec(env, str2bc(readText(fileName)));
+		}
+		finally {
+			if (prTrc > 1) print("--------: " + fileName + " end");
+		}
 	}
-	public Object loadBytecode(String fileName) throws Exception {
-		if (prTrc >= 1) print("\n--------: " + fileName);
-		var v = exec(theEnv, readBytecode(fileName));
-		if (prTrc > 1) print("--------: " + fileName + " end");
-		return v;
+	public Object loadBytecode(Env env, String fileName) throws Exception {
+		try {
+			if (prTrc >= 1) print("\n--------: " + fileName);
+			return exec(env, readBytecode(fileName));
+		}
+		finally {
+			if (prTrc > 1) print("--------: " + fileName + " end");
+		}
 	}
 	public void repl() throws Exception {
 		loop: for (;;) {
 			switch (read()) {
 				case "":
 					break loop;
-				case String exp: try {
-					var val = eval(theEnv, exp);
+				case String str: try {
+					var val = eval(str);
 					if (!prInert && val == inert) break;
 					print(val);
 				}
@@ -2603,7 +2620,7 @@ public class Vm {
 			var milli = currentTimeMillis();
 			var res = loadText(theEnv, file);
 			print("start time: " + (currentTimeMillis() - milli));
-			if (res != ignore) print(res);
+			if (prInert || res != inert) print(res);
 		}
 		repl();
 	}
