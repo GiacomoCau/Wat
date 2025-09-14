@@ -12,17 +12,18 @@ PARSER_BEGIN(Parser)
 
 package List;
 
-import static java.lang.Integer.parseInt;
-import static java.lang.System.getProperty;
-import static java.lang.System.in;
-import static java.lang.System.out;
+import static List.Parser.datum.at;
+import static List.Parser.datum.dot;
+import static List.Parser.datum.eof;
+import static List.Parser.datum.skip;
+import static List.Parser.datum.string;
 import static Wat.Utility.$;
 import static Wat.Utility.classForName;
+import static java.lang.Integer.parseInt;
+import static java.lang.System.in;
+import static java.lang.System.out;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.io.StringReader;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,21 +32,9 @@ import Wat.Utility;
 @SuppressWarnings("all")
 public class Parser {
 	
-	public static Object string = new Object() {
-		@Override public String toString() { return "#string"; }
-	};
-	public static Object eof = new Object() {
-		@Override public String toString() { return "#eof"; }
-	};
-	public static Object skip = new Object() {
-		@Override public String toString() { return "#skip"; }
-	};
-	public static Object at = new Object() {
-		@Override public String toString() { return "#at"; }
-	};
-	public static Object dot = new Object() {
-		@Override public String toString() { return "#dot"; }
-	};
+	public enum datum { skip, eof, at, dot, string;
+		@Override public String toString() { return "#" + super.toString(); }		
+	}
 	
 	/* static=true
 	public static <T> T parse(String line) throws Exception {
@@ -255,23 +244,23 @@ Object Elt(): {
 	|	t=<Long>     { return java.lang.Long.parseLong(t.image.substring(0,t.image.length()-1).replaceAll("_","")); }
 	|	t=<Integer>  { return java.lang.Integer.parseInt(t.image.replaceAll("_","")); }
 	|	t=<Binary>   { return java.lang.Integer.parseInt(t.image.substring(0,t.image.length()-1).replaceAll("_",""), 2); }
-	|	t=<String>   { return $(string, toStringTokenImage(t.image)); }
+	|	t=<String>   { return $(datum.string, toStringTokenImage(t.image)); }
 	|	t=<DSym>     { return t.image.substring(2,t.image.length()-1).replaceAll("\\\\\\|", "|").replaceAll("\\\\\\\\", "\\\\"); }
 	|	t=<Prim>     { return classForName(t.image.substring(1)); }	
-	|	t=<Cls>      { return classForName(t.image.substring(1)); }	
-	|	t=<Dot>      { return $(dot, t.image.substring(1)); }
-	|	t=<At>       { return $(at, t.image.substring(1)); } 
+	|	t=<Cls>      { return classForName(t.image.substring(1)); }
+	|	t=<Dot>      { return $(datum.dot, t.image.substring(1)); }
+	|	t=<At>       { return $(datum.at, t.image.substring(1)); }
 	|	t=<Mac> o=Elt() { return $("%"+t, o); }
 	|	t=<Kwd>      { return t.image; }
 	|	t=<Sym>      { return t.image; }  	
 	//|	t=<Sym> ["::" t2=<Sym>] { return t2 == null ? t.image : $("%eval", $("%'", t2.image), t.image); }  	
-	|	"(" ( o=Elt(){ if (o != skip) l.add(o); } )+ ")" { return l.toArray(); }
-	|	"[" ( o=Elt(){ if (o != skip) l.add(o); } )+ "]" { return l.toArray(); }
+	|	"(" ( o=Elt(){ if (o != datum.skip) l.add(o); } )+ ")" { return l.toArray(); }
+	|	"[" ( o=Elt(){ if (o != datum.skip) l.add(o); } )+ "]" { return l.toArray(); }
 }
 
 Object[] parse() throws Exception: {
 	Object o = null;
 	List l = new ArrayList(); 
 }
-{	( o=Elt(){ if (o != skip) l.add(o); } )* <EOF> { return l.toArray(); }
+{	( o=Elt(){ if (o != datum.skip) l.add(o); } )* <EOF> { return l.toArray(); }
 }

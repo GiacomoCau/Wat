@@ -1,9 +1,7 @@
 package Wat;
 
 import static List.Parser.str2bc;
-import static List.Parser.string;
-import static List.Parser.at;
-import static List.Parser.dot;
+import static List.Parser.datum;
 import static Wat.Utility.$;
 import static Wat.Utility.apply;
 import static Wat.Utility.binOp;
@@ -54,6 +52,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.NotSerializableException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Array;
@@ -155,6 +154,7 @@ public class Vm {
 	boolean bndSmt = false; // bind simil match type
 	boolean thwErr = true; // error throw err (or val returned from userBreak)
 	boolean setErr = true; // error if set don't find the bind
+	boolean rwBC = false; // write & read bytecode (slower)
 	
 	Boolean pstki = null; // push/take prompt #ignore: null:s.prp==prp, true:prp==#ignore; false:s.prp==#ignore
 	Object boxDft = null; // box/dinamic default: null, inert, ...
@@ -2170,9 +2170,9 @@ public class Vm {
 			};
 			case Object[] objs->{
 				if (objs.length != 2) yield bc2lst(objs);
-				if (objs[0] == at) yield at((String) objs[1]);
-				if (objs[0] == dot) yield dot((String) objs[1]);
-				if (objs[0] == string) yield intStr ? ((String) objs[1]).intern() : objs[1];
+				if (objs[0] == datum.at) yield at((String) objs[1]);
+				if (objs[0] == datum.dot) yield dot((String) objs[1]);
+				if (objs[0] == datum.string) yield intStr ? ((String) objs[1]).intern() : objs[1];
 				yield bc2lst(objs);
 			}
 			case null, default-> o;
@@ -2544,20 +2544,39 @@ public class Vm {
 	public List readList(String fileName) throws Exception {
 		return str2lst(readText(fileName));
 	}
-	public void writeByteCode(String fileName) throws Exception {
-		try (var oos = new ObjectOutputStream(new FileOutputStream("build/" + fileName))) {
-			oos.writeObject(str2bc(readText(fileName)));
+	private String bcRoot = "bin/";
+	public Object writeBytecode(String fileName) throws Exception {
+		try {
+			var bc = str2bc(readText(fileName));
+			Files.createDirectories(Paths.get(bcRoot + eIfnull(new File(fileName).getParent())));
+			try (var oos = new ObjectOutputStream(new FileOutputStream(bcRoot + fileName))) {
+				oos.writeObject(bc);
+			}
+			return bc;
+		}
+		catch(NotSerializableException nse) {
+			new File(bcRoot + fileName).delete();
+			throw nse;
 		}
 	}
 	public Object readBytecode(String fileName) throws Exception {
-		try (var ois = new ObjectInputStream(new FileInputStream("build/" + fileName))) {
+		try (var ois = new ObjectInputStream(new FileInputStream(bcRoot + fileName))) {
 			return ois.readObject();
 		}
 	}
 	public Object loadText(Env env, String fileName) throws Exception {
 		try {
 			if (prTrc >= 1) print("\n--------: " + fileName);
-			return exec(env, str2bc(readText(fileName)));
+			if (!rwBC)
+				return exec(env, str2bc(readText(fileName)));
+			else {
+				File bcFile = new File(bcRoot + fileName);
+				return exec(env,
+					!bcFile.exists() || bcFile.lastModified() < new File(fileName).lastModified()
+					? writeBytecode(fileName)
+					: readBytecode(fileName)
+				);
+			}
 		}
 		finally {
 			if (prTrc > 1) print("--------: " + fileName + " end");
