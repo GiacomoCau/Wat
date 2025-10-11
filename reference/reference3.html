@@ -116,6 +116,28 @@
     </div>
     <div>
       <h3>
+        set!*
+      </h3>
+      <ul>
+        <li>
+          (<b>set!*</b> definiendTree . values)
+          <br/>
+            (<b>set!*</b> definiendTree bindResult . values)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+          <br/>
+            &nbsp;
+          <br/>
+            Update into the environment the resulting bindings from the match of the <b>definiendTree</b> against <b>values</b>, signals an error if a binding is not defined.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         def\
       </h3>
       <ul>

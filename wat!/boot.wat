@@ -305,6 +305,16 @@
    |#
   %null? )
 
+(def !null?
+  #|($nm object)
+   |(type function)
+   |
+   |(derivation (type? object Null))
+   |
+   |Return #false if the <b>object</b> is #null, #true otherwise.
+   |#
+  (\ (object) (if (null? object) #f #t)) )
+
 (def quote
   #|($nm operand)
    |(type fexpr)
@@ -450,6 +460,17 @@
    |Defines into the current environment the resulting bindings from the match of the <b>definiendTree</b> against <b>values</b>, signals an error otherwise.
    |#
   (list 'def lhs (cons 'list rhs)) )
+
+(defMacro (set!* lhs . rhs)
+  #|($nm definiendTree . values)
+   |($nm definiendTree bindResult . values)
+   |(type macro)
+   |
+   |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+   |
+   |Update into the environment the resulting bindings from the match of the <b>definiendTree</b> against <b>values</b>, signals an error if a binding is not defined.
+   |#
+  (list 'set! lhs (cons 'list rhs)) )
 
 (defMacro (def\ lhs . rhs)
   #|($nm name parameterTree . forms)
@@ -1856,8 +1877,8 @@
    |#
   (def name (car binding))
   (list* 'let1 (list name #inert)
-    (list 'def (car name (->begin binding))
-      forms )))
+    (list 'def name (->begin binding))
+    forms ))
 
 (defMacro (let1rec\ binding . forms)
   #|($nm functionBinding . forms)
@@ -1964,7 +1985,7 @@
    |The bindings are initializated to #inert before evaluating the <b>initForms</b> as an implicit `begin'.
    |#
   (def names (map car bindings))
-  (list* 'let (map (\ (name) (list name #inert)) names)
+  (list* 'let (map (_ (list _ #inert)) names)
     (list* 'def* names (map ->begin bindings))
     forms ))
 
@@ -4413,7 +4434,7 @@
   (def val (eval plc env))
   (caseType val
     (Box    (let1 (() args) (val :rhs (1+ (val)))))
-    (Obj    (let1 ((fld) args) (val :rhs fld (1+ (val fld)))))
+    (ObjEnv (let1 ((fld) args) (val :rhs fld (1+ (val fld)))))
     (Number (let1 (() args) (env :set! :rhs plc (1+ val))))
     (else   (error ($ "not valid type: " val))) ))
 
@@ -4428,7 +4449,7 @@
   (def val (eval plc env))
   (caseType val
     (Box    (let1 (() args) (val :rhs (-1+ (val)))))
-    (Obj    (let1 ((fld) args) (val :rhs fld (-1+ (val fld)))))
+    (ObjEnv (let1 ((fld) args) (val :rhs fld (-1+ (val fld)))))
     (Number (let1 (() args) (env :set! :rhs plc (-1+ val))))
     (else   (error ($ "not valid type: " val))) ))
 
@@ -4448,8 +4469,8 @@
       (Box (match args
         ((rval) (lval (op (lval) (eval rval env))))
         ((key rval) (lval key (op (lval) (eval rval env)))) ))
-      (Obj (match args
-        ((fld rval) (lval fld (op (lval fld) (eval rval env))))
+      (ObjEnv (match args
+        ((fld rval) (lval :rhs fld (op (lval fld) (eval rval env))))
         ((key fld rval) (lval key fld (op (lval fld) (eval rval env)))) ))
       (Object (match args
         ((rval) (env :set! plc (op lval (eval rval env))))

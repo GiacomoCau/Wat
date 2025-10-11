@@ -232,7 +232,7 @@ Object Elt(): {
 }	{	<Null>       { return null; }
 	|	<True>       { return true; }    
 	|	<False>      { return false; }    
-	|	<Cmt> Elt()  { return skip; }
+	|	<Cmt> Elt()  { return datum.skip; }
 	|	t=<Inert>    { return t.image; }    
 	|	t=<Ignore>   { return t.image; }    
 	|	t=<SheColon> { return t.image; }    
@@ -244,15 +244,15 @@ Object Elt(): {
 	|	t=<Long>     { return java.lang.Long.parseLong(t.image.substring(0,t.image.length()-1).replaceAll("_","")); }
 	|	t=<Integer>  { return java.lang.Integer.parseInt(t.image.replaceAll("_","")); }
 	|	t=<Binary>   { return java.lang.Integer.parseInt(t.image.substring(0,t.image.length()-1).replaceAll("_",""), 2); }
-	|	t=<String>   { return $(datum.string, toStringTokenImage(t.image)); }
+	|	t=<String>   { return $(datum.string, toStringTokenImage(t.image.replaceAll("\\\\\\\\", "\\\\"))); }
 	|	t=<DSym>     { return t.image.substring(2,t.image.length()-1).replaceAll("\\\\\\|", "|").replaceAll("\\\\\\\\", "\\\\"); }
 	|	t=<Prim>     { return classForName(t.image.substring(1)); }	
 	|	t=<Cls>      { return classForName(t.image.substring(1)); }
 	|	t=<Dot>      { return $(datum.dot, t.image.substring(1)); }
 	|	t=<At>       { return $(datum.at, t.image.substring(1)); }
 	|	t=<Mac> o=Elt() { return $("%"+t, o); }
-	|	t=<Kwd>      { return t.image; }
-	|	t=<Sym>      { return t.image; }  	
+	|	t=<Kwd>      { return t.image.replaceAll("\\\\\\\\", "\\\\"); }
+	|	t=<Sym>      { return t.image.replaceAll("\\\\\\\\", "\\\\");; }  	
 	//|	t=<Sym> ["::" t2=<Sym>] { return t2 == null ? t.image : $("%eval", $("%'", t2.image), t.image); }  	
 	|	"(" ( o=Elt(){ if (o != datum.skip) l.add(o); } )+ ")" { return l.toArray(); }
 	|	"[" ( o=Elt(){ if (o != datum.skip) l.add(o); } )+ "]" { return l.toArray(); }

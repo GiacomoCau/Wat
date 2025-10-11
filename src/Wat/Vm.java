@@ -214,45 +214,6 @@ public class Vm {
 			: pipe(null, dbg, resn, 0, functions)
 		;
 	}
-	/* TODO sostituito dal seguente, eliminare
-	Object pipe(Resumption r, Dbg dbg, Object[] resn, int i, Function<Object[], Object>[] functions) {
-		Object res = resn[i];
-		for (var first=true; i<functions.length; i+=1) { // only one resume for suspension
-			resn[i+1] = res = first && r != null && !(first = false) ? r.resume() : functions[i].apply(resn);
-			if (!(res instanceof Suspension s)) continue;
-			int ii=i; return s.suspend(dbg, rr-> pipe(rr, dbg, resn, ii, functions));
-		}
-		return res;
-	}
-	/* / // forse un pizzico più veloce
-	Object pipe(Resumption r, Dbg dbg, Object[] resn, int i, Function<Object[], Object>[] functions) {
-		for (var first=true; i<functions.length; ) { // only one resume for suspension
-			resn[++i] = first && r != null && !(first = false) ? r.resume() : functions[i-1].apply(resn);
-			if (!(resn[i] instanceof Suspension s)) continue;
-			int ii=i-1; return s.suspend(dbg, rr-> pipe(rr, dbg, resn, ii, functions));
-		}
-		return resn[i];
-	}
-	/* / // appena un pizzico più veloce
-	Object pipe(Resumption r, Dbg dbg, Object[] resn, int i, Function<Object[], Object>[] functions) {
-		for (var first=true; i<functions.length; ) { // only one resume for suspension
-			var res = resn[++i] = first && r != null && !(first = false) ? r.resume() : functions[i-1].apply(resn);
-			if (!(res instanceof Suspension s)) continue;
-			int ii=i-1; return s.suspend(dbg, rr-> pipe(rr, dbg, resn, ii, functions));
-		}
-		return resn[i];
-	}
-	/* / // appena un pizzico più veloce
-	Object pipe(Resumption r, Dbg dbg, Object[] resn, int i, Function<Object[], Object>[] functions) {
-		for (var first=true; i<functions.length; ) { // only one resume for suspension
-			var res = first && r != null && !(first = false) ? r.resume() : functions[i].apply(resn);
-			resn[++i] = res; 
-			if (!(res instanceof Suspension s)) continue;
-			int ii=i-1; return s.suspend(dbg, rr-> pipe(rr, dbg, resn, ii, functions));
-		}
-		return resn[i];
-	}
-	/*/ // il più veloce
 	Object pipe(Resumption r, Dbg dbg, Object[] resn, int i, Function<Object[], Object>[] functions) {
 		for (var first=true; i<functions.length; ) { // only one resume for suspension
 			var res = first && r != null && !(first = false) ? r.resume() : functions[i].apply(resn);
@@ -261,7 +222,6 @@ public class Vm {
 		}
 		return resn[i];
 	}
-	//*/
 	
 	Object map(Object op, Function f, List todo) {
 		return map(op, f, -1, todo);
@@ -1763,7 +1723,7 @@ public class Vm {
 		private static final long serialVersionUID = 1L;
 		Object tag, value;
 		Value(Object tag, Object value) {
-			super(Vm.this.toString(tag) + " " + Vm.this.toString(value), value instanceof Throwable thw ? thw : null); this.tag = tag; this.value = value;
+			super((tag == ignore ? "" : Vm.this.toString(tag) + " ") + Vm.this.toString(value), value instanceof Throwable thw ? thw : null); this.tag = tag; this.value = value;
 		}
 	}
 	
@@ -2469,7 +2429,7 @@ public class Vm {
 				"%'", opv(vmEnv, "(arg) #ignore arg"),
 				"%`", opv(vmEnv, "(arg) #ignore arg"),
 				"%´", opv(vmEnv, "(arg) #ignore arg"),
-				"%\\", opv(vmEnv, "(formals . forms) env (%wrap (%eval (%list* %vau formals #ignore forms) env))"),
+				"%\\", opv(vmEnv, "(pt . forms) env (%wrap (%eval (%list* %vau pt #ignore forms) env))"),
 				// Extra
 				"vm", this,
 				"%test", test,
@@ -2605,8 +2565,12 @@ public class Vm {
 					if (prStk)
 						thw.printStackTrace(out);
 					else if (thw instanceof Value v) {
-						if (v.tag != ignore) print("uncatched throw tag: " + v.tag);
-						print(ifnull(v.getCause(), thw));
+						if (v.tag == ignore && v.getCause() == null && thw.getMessage() != null)
+							out.println(thw.getMessage());
+						else {
+							if (v.tag != ignore) print("uncatched throw tag: " + v.tag);
+							print(ifnull(v.getCause(), thw));
+						}
 					}
 					else {
 						print(thw);

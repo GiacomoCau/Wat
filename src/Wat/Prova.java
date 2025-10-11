@@ -56,11 +56,43 @@ import Wat.Vm.Symbol;
 
 public class Prova {
 	
+	static int r; int z, k;
+	class X {
+		static int y=1; int z=2;
+		void f() {
+			System.out.println(/*Prova.X.*/y + " " + /*Prova.X./*this.*/z + " " + k + " " + Prova.this.z + " " + Prova.r);
+		}
+	}
+	
+	class Y {
+		int a; int b=1;
+		Y(int a) { this.a=a; }
+		void m() {}
+		static void k() {};
+		static void r() {};
+	}
+	class Z extends Y {
+		int a=b; static int c;
+		Z(int a) { super(1); this.a+=a+b; }
+		void m() {
+			System.out.println(a + " " + super.a);
+			Y.k();
+			Z.k();
+			r();
+		}
+		static {
+			r();
+		}
+		static void k() {};
+	}
+	
 	public static void main(String[] args) throws Exception {
+		//new Prova().new X().f();
+		new Prova().new Z(2).m();
 		//out.println(1 * 1.2);
 		//out.println(1.2 * 1);
 		//System.out.println(".. __aaa__ dddssd".replaceAll("__([^_]*)__", "<b>$1<b/>"));
-		System.out.println(Utility.encode("(< a b).. <b>aaa</b>dddssd<b>"));
+		//System.out.println(Utility.encode("(< a b).. <b>aaa</b>dddssd<b>"));
 		//System.out.println(Double.valueOf(0)==Double.valueOf(0));
 		//var a  = 0b1;
 		/*
@@ -89,8 +121,8 @@ public class Prova {
 		}
 		out.println(new Firma("a", Integer.class/*, String.class* /).equals(new Firma("a", Integer.class/*, String.class* /)));
 		*/
-		System.out.println("1" + 1);
-		System.out.println(1 + "1");
+		//System.out.println("1" + 1);
+		//System.out.println(1 + "1");
 	}
 	
 	public static void functions() {
