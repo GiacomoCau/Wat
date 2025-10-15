@@ -27,11 +27,11 @@
     </h2>
     <div>
       <h3>
-        evalMacro?
+        expandMacro
       </h3>
       <ul>
         <li>
-          A boolean to discriminate when to evaluate or simply expand a macro.
+          A integer to discriminate when to evaluate (== 0) or expand (&gt; 0) for n level a macro.
           <br/>
             Used from expand and makeMacro. 
         </li>
@@ -83,11 +83,13 @@
         <li>
           (<b>expand</b> form)
           <br/>
+            (<b>expand</b> nLevel form)
+          <br/>
             (type macro)
           <br/>
             &nbsp;
           <br/>
-            Expands a macro call rather than evaluates it.
+            Expands a macro call for 1 or n level rather than evaluates it.
         </li>
       </ul>
     </div>

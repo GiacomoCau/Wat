@@ -345,11 +345,11 @@
 #|! Macro
  |#
 
-(def evalMacro?
-  #|A boolean to discriminate when to evaluate or simply expand a macro.
+(def expandMacro
+  #|A integer to discriminate when to evaluate (== 0) or expand (> 0) for n level a macro.
    |Used from expand and makeMacro. 
    |#
-  #t )
+  0 )
 
 #|
 (def makeMacro
@@ -364,9 +364,7 @@
   (wrap
     (vau (expander) #ignore
       (vau operands env
-        (def evalMacro? (set! evalMacro? :prv #t))
-        (def exp (apply expander operands))
-        (if evalMacro? (eval exp env) exp) ))))
+        (eval (apply expander operands) env) ))))
 |#
 ;TODO da valutare in sostituzione della precedente 
 (def makeMacro
@@ -378,11 +376,18 @@
    |(by calling the expander with the operand as argument)
    |that is then evaluated in place of the operand.
    |#
-  (\ (expander)
-    (vau operands env
-      (def evalMacro? (set! evalMacro? :prv #t))
-      (def exp (apply expander operands))
-      (if evalMacro? (eval exp env) exp) )))
+  (wrap
+    (vau (expander) #ignore
+      (def && (vau ops env (if (null? ops) #t (eval (car ops) env) (apply && (cdr ops) env) #f )))
+      (def || (vau ops env (if (null? ops) #f (eval (car ops) env) #t (apply || (cdr ops) env) )))
+      (def macro? (\ (op) (&& (type? op Opv) (%== (car (.xs op)) :macro))))
+      (vau operands env :macro
+        (def em (set! expandMacro :prv 0))
+        (def exp (apply expander operands))
+        (if (%== em 0) (eval exp env)
+            (%== em 1) exp
+            (%0? (set! expandMacro :rhs (if (&& (cons? exp) (|| (symbol? (car exp)) (macro? (car exp)) (&& (cons? (car exp)) (macro? (eval (caar exp) env))))) (%- em 1) 0))) exp
+            (eval exp env) )))))
 
 (def macro
   #|($nm parameterTree . forms)
@@ -396,12 +401,29 @@
 
 (def expand
   #|($nm form)
+   |($nm nLevel form)
    |(type macro)
    |
-   |Expands a macro call rather than evaluates it.
+   |Expands a macro call for 1 or n level rather than evaluates it.
    |#
-  (macro (form)
-    (list 'begin (list 'set! 'evalMacro? #f) form) ))
+  (macro (lhs . rhs)
+    (def ((#: (or Integer (%> 0)) n) form) (if (null? rhs) (list 1 lhs) (list* lhs rhs)))
+    (list 'begin (list 'set! 'expandMacro n) form) ))
+
+#;(let ()
+  (assert (expand 1 (letrec ((a 1) (b 2)) (+ a b))) '(let ((a #inert) (b #inert)) (def* (a b) (begin 1) (begin 2)) (+ a b)))
+  (assert (expand 2 (letrec ((a 1) (b 2)) (+ a b))) '((\ (a b) (def* (a b) (begin 1) (begin 2)) (+ a b)) (begin #inert) (begin #inert)))
+  (assert (expand 3 (letrec ((a 1) (b 2)) (+ a b))) '((\ (a b) (def* (a b) (begin 1) (begin 2)) (+ a b)) (begin #inert) (begin #inert)))
+  
+  (assert (expand 1 (let ((a #inert) (b #inert)) (def* (a b) (begin 1) (begin 2)) (+ a b))) '((\ (a b) (def* (a b) (begin 1) (begin 2)) (+ a b)) (begin #inert) (begin #inert)))
+  (assert (expand 2 (let ((a #inert) (b #inert)) (def* (a b) (begin 1) (begin 2)) (+ a b))) '((\ (a b) (def* (a b) (begin 1) (begin 2)) (+ a b)) (begin #inert) (begin #inert)))
+  
+  (assert (expand 1 (let aa ((a 1) (b 2)) (+ a b))) '(letLoop aa ((a 1) (b 2)) (+ a b)))
+  (assert (expand 2 (let aa ((a 1) (b 2)) (+ a b))) '((rec\ aa (a b) (+ a b)) (begin 1) (begin 2)))
+  (assert (expand 3 (let aa ((a 1) (b 2)) (+ a b))) '((rec aa (\ (a b) (+ a b))) (begin 1) (begin 2)))
+  (assert (expand 4 (let aa ((a 1) (b 2)) (+ a b))) '(((\ (aa) (def aa :rhs (\ (a b) (+ a b)))) #inert) (begin 1) (begin 2)))
+  (assert (expand 5 (let aa ((a 1) (b 2)) (+ a b))) '(((\ (aa) (def aa :rhs (\ (a b) (+ a b)))) #inert) (begin 1) (begin 2)))
+)
 
 
 #|! Definition Forms
@@ -496,7 +518,7 @@
    |
    |(derivation (apply function arguments (newEnv)))
    |
-   |Call the <b>function</b> with a dynamically-supplied list of <b>arguments</b>.
+   |Call the <b>function</b> with a dynamically-supplied list of <b>arguments</b> in an empty environment.
    |#
   %apply* )
 
@@ -506,7 +528,7 @@
    |
    |(derivation (apply function (apply list* arguments) (newEnv)))
    |
-   |Call the <b>function</b> with a dynamically-supplied list of <b>arguments</b>.
+   |Call the <b>function</b> with a dynamically-supplied list of <b>arguments</b> in an empty environment.
    |#
   %apply** )
 
@@ -1996,8 +2018,8 @@
    |(type macro)
    |
    |(syntax functionBindings (functionBinding . functionBindings))
-   |(syntax functionBinding ((name parameterTree . bodyForms) . functionBindings))
-   |(syntax functionBinding (((name . parameterTree) . bodyForms) . functionBindings))
+   |(syntax functionBinding (name parameterTree . bodyForms))
+   |(syntax functionBinding ((name . parameterTree) . bodyForms))
    |
    |Establishes the <b>functionBindings</b> recursively, so that the functions can refer to itself and the other ones,
    |after evaluate <b>forms</b> as an implicit `begin'.
@@ -3705,8 +3727,9 @@
 (assert (expand ´aa,bb…2,3;dd) '(compose (peval* aa (bb 2) 3) dd))
 (assert (expand ´aa,bb…2…'b…!x,3;dd) '(compose (peval* aa (bb 2 (quote b) (! x)) 3) dd))
 
-(assert (expand ´dd,_c,1,_b,"a",_a,_a,'c,_,:ff,_*) '(\ (_ _a _b _c . _*) (dd _c 1 _b "a" _a _a (quote c) _ :ff _*)) )
-(assert (expand ´(dd _c 1 _b "a" _a _a 'c _ :ff _*) '(\ (_ _a _b _c . _*) (dd _c 1 _b "a" _a _a 'c _ :ff _*)) ))
+(assert (expand ´a,_,'b,c) '(\ (_) (a _ (quote b) c)))
+(assert (expand  ´dd,_c,1,_b,"a",_a,_a,'c,_,:ff,_*)  '(\ (_ _a _b _c . _*) (dd _c 1 _b "a" _a _a (quote c) _ :ff _*)) )
+(assert (expand ´(dd _c 1 _b "a" _a _a 'c _ :ff _*)) '(\ (_ _a _b _c . _*) (dd _c 1 _b "a" _a _a 'c _ :ff _*)) )
 
 
 #|! Dynamic Variables
