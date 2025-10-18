@@ -6,14 +6,17 @@
 (def\ (instance cls . args) (apply (cls :init) args))
 
 (defVau (class extend . bindings) env
-  (def\ (->\||begin lhs rhs) (if (cons? lhs) (list* '\ (cdr lhs) rhs) (->begin (cons lhs rhs))) )
   (def\ (object bindings super)
     (def this (newEnv super))
-    (forEach (\ (b) (this (if (cons? b) (->name (car b)) b) #inert)) bindings)
-    (forEach (\ (b) (when (cons? b) (let1 ((lhs . rhs) b) (this (->name lhs) (eval (apply* ->\||begin lhs rhs) this))))) bindings)
+    (forEach (\ ((name . #ignore)) (this name #inert)) bindings)
+    (forEach (\ ((name . forms))
+      (if (cons? name)
+        (this (car name) (eval (list* '\ (cdr name) forms) this)) ;; method definition
+        (this name (eval (cons 'begin forms) this)) )) ;; attribute definition
+      bindings )
     this )
-  (def static (if (|| (atom? (car bindings)) (!= (caar bindings) 'static)) () (prog1 (cdar bindings) (def bindings (cdr bindings)))))
-  (def hasnew? ((rec\ (loop b) (if (null? b) #f (atom? (car b)) (loop (cdr b)) (let1 (((n . #_) . b) b) (if (&& (cons? n) (== (car n) 'new)) #t (loop b))))) bindings))
+  (def static (if (!= (caar bindings) 'static) () (prog1 (cdar bindings) (def bindings (cdr bindings)))))
+  (def hasnew? ((rec\ (loop b) (if (null? b) #f (let1 (((n . #_) . b) b) (if (&& (cons? n) (== (car n) 'new)) #t (loop b))))) bindings))
   (def extend (if (null? extend) () (eval extend env)))
   (if (&& (!null? extend) (extend :hasnew?) (! hasnew?)) (error "new not defined!"))
   (def class (object static (if (null? extend) env extend)))
@@ -30,7 +33,7 @@
         (if (null? extend)
           (apply new args (obj :cnt :this obj :super env))
           (let1\ (!this #_ (error "this not yet defined!"))
-            ;; new invocation (new must invoke (super ...) if (&& (!null? extend) (extend :hasnew?))
+            ;; new invocation (new must invoke (super ...) if (!null? extend))
             (apply new args  
               (obj :cnt :this !this :super
                 (\ args
@@ -121,8 +124,4 @@
   (def A (class () ((new))))
   (def B (class A ((new) ) (b 1)))
   (assert (instance B)) ;; super not invoked!
-)
-(let ()
-  (def A (class () a (b 1) ((f) (list a b))))
-  (assert (((instance A) :f)) (#inert 1))
 )

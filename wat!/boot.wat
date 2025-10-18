@@ -1777,9 +1777,14 @@
 #|! Lexical Bindings
  |#
 
-(def\ (->begin binding) (cons 'begin (cdr binding)))
-(def\ (->name+#inert (lhs . #_)) (list (if (cons? lhs) (car lhs) lhs) #inert))
-(def\ (->name+lambda (lhs . rhs)) (if (cons? lhs) (list (car lhs) (list* '\ (cdr lhs) rhs)) (list lhs (cons '\ rhs)) ))
+(def\ (->name lhs) (if (cons? lhs) (car lhs) lhs))
+(def\ (->lambda lhs rhs) (if (cons? lhs) (list* '\ (cdr lhs) rhs) (cons '\ rhs)))
+
+;(def\ (->begin (#_ . rhs)) (cons 'begin rhs))
+(def\ (->begin (#_ . rhs)) (if (null? rhs) () (null? (cdr rhs)) (car rhs) (cons 'begin rhs)))
+(def\ (->name+#inert (lhs . #_)) (list (->name lhs) #inert))
+;(def\ (->name+lambda (lhs . rhs)) (if (cons? lhs) (list (car lhs) (list* '\ (cdr lhs) rhs)) (list lhs (cons '\ rhs)) ))
+(def\ (->name+lambda (lhs . rhs)) (list (->name lhs) (->lambda lhs rhs)))
 
 
 (defMacro (wth1 dt value . forms)

@@ -105,7 +105,7 @@ import List.ParseException;
 	arg: argument
 	args: arguments
 	e: environment
-	de: environment
+	de: dynamic environment
 	eo: environment operand
 	ep: environment parameter
 	xe: extended environment
@@ -880,7 +880,7 @@ public class Vm {
 		if (isjFun(op)) return new Apv(new JFun(op)).combine(e, o);
 		return aQuote ? cons(op, o) : typeError("cannot combine, not a {expected}: {datum} in: {expr}", op, symbol("Combinable"), cons(op, o));
 	}
-
+	
 	class Opv extends Combinable {
 		Env e; Object pt, ep; List xs;
 		Opv(Env e, Object pt, Object ep, List xs) {

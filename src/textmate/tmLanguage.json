@@ -99,6 +99,7 @@
 			name: "comment",		
 			begin: "((?<=^)|(?<=(\\s|\\(|\\))))#;\\s*",
 			end: "(?=(\\s|\\(|\\)))",
+			//contentName: "comment", 
 			patterns: [
 				{ name: "comment",		
 				  match: "\\w+"
@@ -109,8 +110,9 @@
 			name: "comment",		
 			begin: "((?<=^)|(?<=(\\s|\\(|\\))))#;\\s*\\(",
 			end: "\\)",
+			//contentName: "comment", 
 			patterns: [
-		        { name: "comment", include: "#expr" },
+		        { name: "comment", include: "#expr"},
 			]
 		},
 		lcomment: { // line comment
