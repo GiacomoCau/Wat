@@ -448,7 +448,10 @@ public class Vm {
 		};
 		int deep() { int i=0; for (var env=this; env != null; env=env.parent) i+=1; return i; }
 		public String toString() {
-			return "{" + (this==theEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" + (map.size() > prEnv ? "[" + map.size() + "] ..." : toStringSet(map.reversed().entrySet())) + eIfnull(parent, ()-> " " + parent) + "}";
+			return toString(false);
+		}
+		public String toString(boolean t) {
+			return "{" + (this==theEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" + (t || map.size() > prEnv ? "[" + map.size() + "] ..." : toStringSet(map.reversed().entrySet())) + eIfnull(parent, ()-> " " + parent.toString(t)) + "}";
 		}
 		public boolean remove(Object obj) {
 			var key = toKey(obj);
@@ -2160,6 +2163,7 @@ public class Vm {
 			case Character c-> !t ? c.toString() : "#\\" + (isISOControl(c) ? "x"+ toHexString(c) : c);
 			case Class cl-> toSource(cl);
 			case String s-> !t ? s : '"' + toSource(s) + '"';
+			case Env e-> e.toString(t);
 			case Object[] a-> {
 				var s = new StringBuilder();
 				for (var e: a) s.append(eIf(s.isEmpty(), ", ") + toString(true, e));

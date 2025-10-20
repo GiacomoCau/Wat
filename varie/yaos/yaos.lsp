@@ -39,8 +39,6 @@
             (when (== (obj :this) !this) (error "super not invoked!")) )))
      obj )))
 
-(prEnv 0)
-
 (let ()
   (def A (class () (a 1) (B (class () ((new b) (this :b b)) (b 0) ((f c) (+ a b c))))))
   (def objA (instance A))

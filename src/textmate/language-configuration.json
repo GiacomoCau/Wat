@@ -5,12 +5,14 @@
 	},
 	"brackets": [
 		["(", ")"],
-		["[", "]"]
+		["[", "]"],
+	    ["{", "}"]
 	],
 	"surroundingPairs": [
 		// indispensabile per evidenziazione parentesi corrispondente
 		["(", ")"],
-		["[", "]"]
+		["[", "]"],
+	    ["{", "}"]
 	],
 	"autoClosingPairs": [
 		// non utile a causa del non inserimeneto di una parentesi davanti ad una parentesi
