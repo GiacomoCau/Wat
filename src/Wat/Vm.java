@@ -324,7 +324,6 @@ public class Vm {
 	class Symbol extends Intern { Symbol(String name) { super(name); }}
 	Symbol symbol(String name) { return intern(name.startsWith(":") && name.length() > 1 ? name.substring(1) : name); }
 	Object[] quotes = $(symbol("%'"), symbol("quote"));
-	Object[] atdots = $(symbol("%at"), symbol("%dot"));
 	
 	
 	// Cons List
@@ -803,17 +802,13 @@ public class Vm {
 					for (; head instanceof Cons cons; i+=1, head=cons.cdr()) {
 						var car = cons.car;
 						if (car == sharpColon) break;
-						if (car instanceof List lst && lst.car instanceof List lst2 && lst2.car.equals(symbol("%at")) /*&& len(lst2) == 2*/) {
-							res = getTco(evaluate(e, lst2));
-							if (!(res instanceof At at)) throw new TypeException("expected an {expected}, found: {datum}", res, symbol("At"));
-							res = map("evalArgs", arg-> getTco(evaluate(e, arg)), lst.cdr());
-							if (!(res instanceof List list)) throw new TypeException("expected a {expected}, found: {datum}", res, symbol("List"));
-							res = bind(def, bndRes, e, symbol(at.name), at.apply(cons(rhs, list)));
+						if (car instanceof List lst && lst.car instanceof At at) {
+								res = map("evalArgs", arg-> getTco(evaluate(e, arg)), lst.cdr());
+								if (!(res instanceof List list)) throw new TypeException("expected a {expected}, found: {datum}", res, symbol("List"));
+								res = bind(def, bndRes, e, symbol(at.name), at.apply(cons(rhs, list)));
 						}
-						else if (car instanceof List lst && member(lst.car, atdots) /*&& len(lst) == 2*/) {
-							res = getTco(evaluate(e, lst));
-							if (!(res instanceof AtDot ad)) throw new TypeException("expected an {expected}, found: {datum}", res, symbol("AtDot"));
-							res = bind(def, bndRes, e, symbol(ad.name), ad.apply(cons(rhs)));
+						else if (car instanceof AtDot atDot) {
+							res = bind(def, bndRes, e, symbol(atDot.name), atDot.apply(cons(rhs)));
 						}
 						else if (isObjEnv) {
 							res = bind(def, bndRes, e, car, objEnv.get(car instanceof Cons car2 && car2.car == sharpColon ? car2.car(2) : car));
@@ -1748,7 +1743,8 @@ public class Vm {
 		}
 		private Object check(Object p) {
 			if (p == null || p == ignore) { if (ep != null) syms.add(p); return null; }
-			if (p instanceof Symbol) { return syms.add(p) || member(p, atdots) ? null : notUniqueError("invalid parameter tree, not a unique symbol: {datum} in: " + pt + " of: {expr}", p, expr); }
+			if (p instanceof Symbol) { return syms.add(p) ? null : notUniqueError("invalid parameter tree, not a unique symbol: {datum} in: " + pt + " of: {expr}", p, expr); }
+			if (p instanceof AtDot atDot) { return syms.add(atDot.name) ? null : notUniqueError("invalid parameter tree, not a unique symbol: {datum} in: " + pt + " of: {expr}", atDot.name, expr); }
 			if (!(p instanceof Cons c)) return null;
 			var len = len(c);
 			if (member(c.car, quotes))
@@ -2365,8 +2361,6 @@ public class Vm {
 				"%error", wrap(new JFun("%Error", (ArgsList) o-> ((ArgsList) at("error")).apply(cons(this, o)))),
 				// Java Interface
 				"%jFun?", wrap(new JFun("%JFun?", (Function<Object,Boolean>) this::isjFun)),
-				"%at", wrap(new JFun("%At", (Function<String,Object>) this::at)),
-				"%dot", wrap(new JFun("%Dot", (Function<String,Object>) this::dot)),
 				"%supplier", supplier,
 				"%consumer", consumer,
 				"%function", function,
