@@ -2602,7 +2602,7 @@
    |
    |Returns the contents of the <b>option</b> or signals an error if it is #null.
    |#
-  (optDft opt (simpleError "Option is #null")))
+  (optDft opt (error "Option is #null")) )
 
 
 #|! OptValue Member Member? !Member? OptKey Assoc Member?*

@@ -24,8 +24,8 @@
             (d2 (apply* derive `(,g ,x) `,x)) )
        `(/ (+ (* ,d1 (,g ,x))
               (* (,f ,x) ,d2 (pow (,g ,x) 2)) ))))
-    (else => (\ (x) (simpleError ($ "underivable expr: " x)))) )
+    (else => (\ (x) (error ($ "underivable expr: " x)))) )
 
-(assert (derive (* "3" (sin a)) a) SimpleError :type 'simple @getMessage "underivable expr: ((* \"3\" (sin a)) a)")
+(assert (derive (* "3" (sin a)) a) Error @getMessage "underivable expr: ((* \"3\" (sin a)) a)")
 (assert (derive (/ (tan a) (sqr a)) a) '(/ (+ (* (/ 1 (pow (cos a) 2)) (sqr a)) (* (tan a) (/ 1 (* 2 (sqr a))) (pow (sqr a) 2)))))
 

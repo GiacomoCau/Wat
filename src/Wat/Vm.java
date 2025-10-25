@@ -729,19 +729,13 @@ public class Vm {
 	<T> T matchError(String msg, Object datum, int operands, Object subex, List expr) {
 		return error(msg, "type", symbol("match"), "datum", datum, "operands#", operands, "subex", subex, "expr", expr);
 	}
-	Object bind(Dbg dbg, Env e, Object lhs, Object rhs) {
-		return bind(dbg, true, bndRes, e, lhs, rhs);
-	}
 	Object bind(Dbg dbg, boolean def, int bndRes, Env e, Object lhs, Object rhs) {
-		return bind(null, dbg, def, bndRes, e, lhs, rhs);
-	}
-	Object bind(Resumption r, Dbg dbg, boolean def, int bndRes, Env e, Object lhs, Object rhs) {
 		try {
 			return bind(def, bndRes, e, lhs, rhs);
 		}
 		catch (InnerException ie) {
 			return error(
-				(def ? "bind" : "sett") + "ing: " + toString(lhs)
+				(def ? "bind" : "sett") + "ing: " + (lhs == null ? "()" : toString(lhs))
 				//+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, dbg.os[0])))
 				+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, switch(dbg.os.length) { case 0-> null; case 1-> dbg.os[0] instanceof Cons c ? c : cons(dbg.os[0]); default-> list(dbg.os); })))
 				//+ eIfnull(dbg, ()-> " of: " + (dbg.op instanceof Opv opv ? opv : cons(dbg.op, switch(dbg.os.length) { case 0-> null; case 1-> switch(dbg.os[0]) { case Cons c-> c; case Object obj-> cons(obj); }; default-> list(dbg.os); })))
@@ -774,11 +768,11 @@ public class Vm {
 				}
 				else if (lc.car == sharpColon) {
 					checkO(rhs, getTco(evalChk.combine(e, cons(lc.car(1)))));
-					yield bind(def, bndRes, e, lc.car(2), rhs);
+					yield bind0(def, bndRes, e, lc.car(2), rhs);
 				}
 				else if (rhs instanceof Cons rc) {
-					var res = bind(def, bndRes, e, lc.car, rc.car);
-					yield lc.cdr() == null && rc.cdr() == null ? res : bind(def, bndRes, e, lc.cdr(), rc.cdr());
+					var res = bind0(def, bndRes, e, lc.car, rc.car);
+					yield lc.cdr() == null && rc.cdr() == null ? res : bind0(def, bndRes, e, lc.cdr(), rc.cdr());
 				}
 				else if (rhs != null) {
 				//se if (rhs instanceof Object) {
@@ -805,23 +799,23 @@ public class Vm {
 						if (car instanceof List lst && lst.car instanceof At at) {
 								res = map("evalArgs", arg-> getTco(evaluate(e, arg)), lst.cdr());
 								if (!(res instanceof List list)) throw new TypeException("expected a {expected}, found: {datum}", res, symbol("List"));
-								res = bind(def, bndRes, e, symbol(at.name), at.apply(cons(rhs, list)));
+								res = bind0(def, bndRes, e, symbol(at.name), at.apply(cons(rhs, list)));
 						}
 						else if (car instanceof AtDot atDot) {
-							res = bind(def, bndRes, e, symbol(atDot.name), atDot.apply(cons(rhs)));
+							res = bind0(def, bndRes, e, symbol(atDot.name), atDot.apply(cons(rhs)));
 						}
 						else if (isObjEnv) {
-							res = bind(def, bndRes, e, car, objEnv.get(car instanceof Cons car2 && car2.car == sharpColon ? car2.car(2) : car));
+							res = bind0(def, bndRes, e, car, objEnv.get(car instanceof Cons car2 && car2.car == sharpColon ? car2.car(2) : car));
 						}
 						else if (isArray) {
 							//f (rhs.getClass().isArray()) { ... Array.get(rhs, i) ... Array.getLength(rhs) ...
-							res = bind(def, bndRes, e, car, array[i]);
+							res = bind0(def, bndRes, e, car, array[i]);
 						}
 						else {
 							throw new MatchException("expected {operands#,%+d} operands, found: {datum}", rhs, len(lc));
 						}
 					}
-					yield head == null ? res : bind(def, bndRes, e, head, isArray ? copyOfRange(array, i, array.length) : rhs);
+					yield head == null ? res : bind0(def, bndRes, e, head, isArray ? copyOfRange(array, i, array.length) : rhs);
 				}
 				else {
 					throw new MatchException("expected {operands#,%+d} operands, found: {datum}", rhs, len(lc));
@@ -903,7 +897,7 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			var xe = env(this.e);
 			var dbg = dbg(e, this, o);
-			return tco(()-> pipe(dbg, ()-> bind(dbg, xe, pt, o), (_)-> bind(dbg, xe, ep, e), (_)-> tco(()-> begin.combine(xe, xs))));
+			return tco(()-> pipe(dbg, ()-> bind(dbg, true, bndRes, xe, pt, o), (_)-> bind(dbg, true, bndRes, xe, ep, e), (_)-> tco(()-> begin.combine(xe, xs))));
 		}
 		public String toString() {
 			return "{%Opv " + ifnull(pt, "()", Vm.this::toString) + " " + Vm.this.toString(ep) + eIfnull(xs, ()-> " " + stream(array(xs)).map(Vm.this::toString).collect(joining(" "))) + /*" " + e +*/ "}";
@@ -1691,8 +1685,9 @@ public class Vm {
 		if (userBreak == null) throw err;
 		return (T) pipe(dbg(theEnv, "userBreak", err), ()-> getTco(evaluate(theEnv, list(userBreak, err)))
 			/* TODO da problemi al debuger
-			, val->{ throw thwErr ? err : new Value(ignore, val); }
-			*/
+			//, val->{ throw thwErr ? err : new Value(ignore, val[1]); }
+			, val->switch (log(val[1])) { case Suspension s-> s; default-> { throw thwErr ? err : new Value(ignore, val); }}
+			//*/
 		);
 	}
 	<T> T error(String msg, Object ... objs) { return error(new Error(msg, objs)); }

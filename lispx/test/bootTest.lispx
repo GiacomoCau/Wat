@@ -836,8 +836,8 @@
     
   (defTest caseType.5
     (signalsError?
-     (caseType (+ 2 2) (else (simpleError "none clause")))
-     SimpleError :type 'simple @getMessage "none clause"))
+     (caseType (+ 2 2) (else (error "none clause")))
+     Error @getMessage "none clause"))
 
   (defTest caseType.6
     (signalsError?
@@ -2828,7 +2828,7 @@
   (defTest getOpt.3
     (signalsError?
      (optDft! #null)
-     SimpleError :type 'simple @getMessage "Option is #null")))
+     Error @getMessage "Option is #null")))
 
 (defSuite some
 

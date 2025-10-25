@@ -687,7 +687,7 @@
             (handlerBind ((Error (\ (#ignore) (error (new UnboundVariable :name 'fred)))))
                (handlerCase ((UnboundVariable (\ (c) (list 'inner c))))
                  ;; Signal an arbitrary error:
-                 (simpleError "Not an UNBOUND-VARIABLE error.") )))) )
+                 (error "Not an UNBOUND-VARIABLE error.") )))) )
       (assert#t
         (&& (== (car result) 'outer)
           (type? (cadr result) UnboundVariable)

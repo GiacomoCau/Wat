@@ -30,14 +30,14 @@
         (if (null? extend)
           (apply new args (obj :cnt :this obj :super env))
           (let1\ (!this #_ (error "this not yet defined!"))
-            ;; new invocation (new must invoke (super ...) if (&& (!null? extend) (extend :hasnew?))
+            ;; new invocation (new must invoke (super ...) if (&& (!null? extend) (extend :hasnew?)))
             (apply new args  
               (obj :cnt :this !this :super
                 (\ args
                   (def super (apply instance (cons extend args) env))
                   (.parent proxi super) (obj :this obj :super super) )))
             (when (== (obj :this) !this) (error "super not invoked!")) )))
-     obj )))
+      obj )))
 
 (let ()
   (def A (class () (a 1) (B (class () ((new b) (this :b b)) (b 0) ((f c) (+ a b c))))))
@@ -66,12 +66,12 @@
 (let ()  
   (def A (class () ((new a) (this :a a))))
   (def B (class A ((new) #;(super 1)) (b 2)))
-  (assert (instance B)) ;; super not invoked!
+  (assert (instance B) Error @getMessage "super not invoked!")
 )
 (let ()  
   (def A (class () ((new a) (this :a a))))
   (def B (class A ((new) (this) (super 1)) (b 2)))
-  (assert (instance B)) ;; this not yet defined!
+  (assert (instance B) Error @getMessage "this not yet defined!")
 )
 (let ()  
   (def A (class () (a 1)))
@@ -113,12 +113,12 @@
 )
 (let ()
   (def A (class () ((new))))
-  (assert (class A (b 1))) ;; new not defined!!
+  (assert (class A (b 1)) Error @getMessage "new not defined!")
 )
 (let ()
   (def A (class () ((new))))
   (def B (class A ((new) ) (b 1)))
-  (assert (instance B)) ;; super not invoked!
+  (assert (instance B) Error @getMessage "super not invoked!")
 )
 (let ()
   (def A (class () a (b 1) ((f) (list a b))))

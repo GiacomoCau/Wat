@@ -300,6 +300,7 @@
    |If the condition is unhandled, invoke the debugger. Therefore never returns normally.
    |See `error'.
    |#
+  (if (type? condition String) (def condition (new Error condition)))
   (signal condition)
   (invokeDebugger condition) )
 
@@ -314,10 +315,11 @@
   (vau (condition . handlerSpecs) env
     (let1 (condition (eval condition env))
       (let1\
-        (appendAssociatedCondition (handlerSpec)
-          (append handlerSpec (list :associatedConditions (list 'list condition))) )
-        (eval (list 'restartCase (map appendAssociatedCondition handlerSpecs)
-                    (list signalOperator condition))
+        ( (appendAssociatedCondition handlerSpec)
+            (append handlerSpec (list :associatedConditions (list 'list condition))) )
+        (eval (list 'restartCase
+                (map appendAssociatedCondition handlerSpecs)
+                (list signalOperator condition) )
               env )))))
 
 (def signal
