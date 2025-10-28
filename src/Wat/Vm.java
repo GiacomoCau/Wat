@@ -34,7 +34,6 @@ import static Wat.Utility.BinOp.Sl;
 import static Wat.Utility.BinOp.Sr;
 import static Wat.Utility.BinOp.Sr0;
 import static Wat.Utility.BinOp.Xor;
-import static Wat.Utility.PrimitiveWrapper.isWrapper;
 import static java.lang.Character.isISOControl;
 import static java.lang.Integer.toHexString;
 import static java.lang.Runtime.version;
@@ -151,7 +150,6 @@ public class Vm {
 	boolean prInert = false; // print inert
 	boolean aQuote = true; // auto quote list
 	boolean hdlAny = true; // any value for catch handler
-	boolean bndSmt = false; // bind simil match type
 	boolean thwErr = true; // error throw err (or val returned from userBreak)
 	boolean setErr = true; // error if set don't find the bind
 	boolean rwBC = false; // write & read bytecode (slower)
@@ -768,7 +766,7 @@ public class Vm {
 				}
 				else if (lc.car == sharpColon) {
 					checkO(rhs, getTco(evalChk.combine(e, cons(lc.car(1)))));
-					yield bind0(def, bndRes, e, lc.car(2), rhs);
+					yield bind0(def, bndRes, e, lc.cdr(2) == null ? lc.car(2) : lc.cdr(1) , rhs);
 				}
 				else if (rhs instanceof Cons rc) {
 					var res = bind0(def, bndRes, e, lc.car, rc.car);
@@ -781,12 +779,6 @@ public class Vm {
 					//if (bndSmt && !(rhs instanceof Number || rhs instanceof String)) {
 					//if (bndSmt && !isInstance(rhs, Number.class, String.class)) {
 					//if (!bndSmt && lc.cdr() != null && !isWrapper(rhs.getClass()) && !(rhs instanceof String)) {
-					if (bndSmt && lc.cdr() != null && !(isWrapper(rhs.getClass()) || rhs instanceof String)) {
-						res = getTco(evaluate(e, lc.car));
-						if (!(res instanceof Class cls)) throw new TypeException("expected an {expected}, found: {datum}", res, symbol("Class"));
-						if (!isType(rhs, cls)) yield false;
-						head = lc.cdr();
-					}
 					var objEnv = rhs instanceof ObjEnv oe ? oe : null; var isObjEnv = objEnv != null;
 					var array = rhs instanceof Object[] oa ? oa : null; var isArray = array != null;
 					//var isObjEnv = rhs instanceof ObjEnv; var objEnv = isObjEnv ? (ObjEnv) rhs : null;
@@ -808,7 +800,7 @@ public class Vm {
 							res = bind0(def, bndRes, e, car, objEnv.get(car instanceof Cons car2 && car2.car == sharpColon ? car2.car(2) : car));
 						}
 						else if (isArray) {
-							//f (rhs.getClass().isArray()) { ... Array.get(rhs, i) ... Array.getLength(rhs) ...
+							//if (rhs.getClass().isArray()) { ... Array.get(rhs, i) ... Array.getLength(rhs) ...
 							res = bind0(def, bndRes, e, car, array[i]);
 						}
 						else {
@@ -1745,14 +1737,12 @@ public class Vm {
 			if (member(c.car, quotes))
 				return len == 2
 					? null
-					: matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: {subex} of: {expr}", 2 > len ? null : c.cdr(len-2), 2-len, c, expr)
+					: matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: {subex} of: {expr}", len < 2 ? null : c.cdr(len-2), 2-len, c, expr)
 				;
 			if (c.car == sharpColon)
-				return len != 3
-					? matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: {subex} of: {expr}", 3 > len ? null : c.cdr(len-2), 3-len, c, expr)
-					: !apply(v-> v instanceof Symbol || v == ignore, c.car(2))
-					? typeError("invalid parameter tree, not a {expected}: {datum} in: " + c + " of: {expr}", c.car(2), toChk(or(Symbol.class, ignore)), expr)
-					: check(c.car(2))
+				return len >= 3
+					? check(c.cdr(1))
+					: matchError("invalid parameter tree, expected {operands#,%+d} operands, found: {datum} in: {subex} of: {expr}", null, 3-len, c, expr)
 				;
 			var msg = check(c.car); if (msg != null) return msg;
 			return c.cdr() == null ? null : check(c.cdr());
@@ -2466,7 +2456,6 @@ public class Vm {
 				"prWrn", wrap(new JFun("PrWrn", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prWrn : inert(prWrn=o.car()) )),
 				"prAttr", wrap(new JFun("PrAttr", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prAttr : inert(prAttr=o.car()) )),
 				"prInert", wrap(new JFun("PrInert", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? prInert : inert(prInert=o.car()) )),
-				"bndSmt", wrap(new JFun("BndSmt", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? bndSmt : inert(bndSmt=o.car()) )),
 				"thwErr", wrap(new JFun("ThwErr", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? thwErr : inert(thwErr=o.car()) )),
 				"hdlAny", wrap(new JFun("HdlAny", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? hdlAny : inert(hdlAny=o.car()) ))
 			)

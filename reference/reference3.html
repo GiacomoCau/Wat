@@ -64,9 +64,9 @@
       </h3>
       <ul>
         <li>
-          (<b>defVau</b> name parameterTree . forms)
+          (<b>defVau</b> name parameterTree environmentParameter . forms)
           <br/>
-            (<b>defVau</b> (name parameterTree) . forms)
+            (<b>defVau</b> (name parameterTree) environmentParameter . forms)
           <br/>
             (type macro)
           <br/>
@@ -100,8 +100,6 @@
         <li>
           (<b>def*</b> definiendTree . values)
           <br/>
-            (<b>def*</b> definiendTree bindResult . values)
-          <br/>
             (type macro)
           <br/>
             &nbsp;
@@ -121,8 +119,6 @@
       <ul>
         <li>
           (<b>set!*</b> definiendTree . values)
-          <br/>
-            (<b>set!*</b> definiendTree bindResult . values)
           <br/>
             (type macro)
           <br/>

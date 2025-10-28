@@ -111,6 +111,38 @@
     </div>
     <div>
       <h3>
+        delay
+      </h3>
+      <ul>
+        <li>
+          (<b>delay</b> . forms)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            Returns a thunk (a \ with no parameters) that encapsulates and defers the evaluation of <b>forms</b> to a subsequent force.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        force
+      </h3>
+      <ul>
+        <li>
+          (<b>force</b> expr)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            Returns the cached value of the evaluation of <b>expr</b> if it is a thunk, <b>expr</b> otherwise..
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         &amp;&amp;
       </h3>
       <ul>

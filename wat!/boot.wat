@@ -451,8 +451,8 @@
 (assert (expand (defMacro succ (n) (list '+ n 1))) '(def succ (macro (n) (list (%' +) n 1))))
 
 (defMacro (defVau lhs . rhs)
-  #|($nm name parameterTree . forms)
-   |($nm (name parameterTree) . forms)
+  #|($nm name parameterTree environmentParameter . forms)
+   |($nm (name parameterTree) environmentParameter . forms)
    |(type macro)
    |
    |Defines into the current environment the named fexpr <b>name</b> with the given <b>parameterTree</b>, <b>environmentParameter</b> and <b>forms</b> as body.
@@ -474,7 +474,6 @@
 
 (defMacro (def* lhs . rhs)
   #|($nm definiendTree . values)
-   |($nm definiendTree bindResult . values)
    |(type macro)
    |
    |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
@@ -485,7 +484,6 @@
 
 (defMacro (set!* lhs . rhs)
   #|($nm definiendTree . values)
-   |($nm definiendTree bindResult . values)
    |(type macro)
    |
    |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
@@ -2097,6 +2095,27 @@
    |#
   (list 'if test #inert (cons 'else forms)) )
 
+(defVau (delay . xs) env
+  #|($nm . forms)
+   |(type fexpr)
+   |
+   |Returns a thunk (a \ with no parameters) that encapsulates and defers the evaluation of <b>forms</b> to a subsequent force.
+   |#
+  (let ((e #f) (v #inert))
+    (\ () (if e v (prog1 (set! v :rhs (eval (cons 'begin xs) env)) (set! e #t)))) ))
+     
+(def\ (force x)
+  #|($nm expr)
+   |(type function)
+   |
+   |Returns the cached value of the evaluation of <b>expr</b> if it is a thunk, <b>expr</b> otherwise..
+   |#
+  #;(if (&& (type? x Apv) (== (arity x) 0)) (x) x) 
+  (if (if (! (type? x Apv)) #f (!= (.arity x) 0) #f #t) (x) x) )
+
+;(assert (let1 (x 1) (def p (delay (++ x))) (force p) (force p) (force p)) 2)
+(assert (let1 (x 1) (def p (delay (def x :rhs (+ 1 x)))) (force p) (force p) (force p)) 2)
+
 (defVau && ops env
   #|($nm . operands)
    |(type fexpr)
@@ -3435,31 +3454,31 @@
 
 (assert (reduceR cons () '(1 2 3 4)) '((((() . 4) . 3) . 2) . 1))
 
-(def\ (foldL f init lst . lst*)
-  #|($nm function init . list)
-   |(type function)
-   |
-   |Use the <b>function</b> to combine the elements of the <b>list</b> from first element.
-   |The <b>initialValue</b> is logically placed after the last element of the <b>list</b>.
-   |#
-  (if (null? lst*)
-    ((rec\ (foldl acc lst) (if (null? lst) acc (f (car lst) (foldl acc (cdr lst)) ) )) init lst)
-    ((rec\ (foldl* acc lst*) (if (null? (car lst*)) acc (apply* f (map car lst*) (foldl* acc (map cdr lst*)) ) )) init (cons lst lst*)) ))
-
-(assert (foldL cons () '(1 2 3 4)) '(1 . (2 . (3 . (4 . ())))))
-
 (def\ (foldR f init lst . lst*)
-  #|($nm function  init . list)
+  #|($nm function init . list)
    |(type function)
    |
    |Use the <b>function</b> to combine the elements of the <b>list</b> from last element.
    |The <b>initialValue</b> is logically placed after the last element of the <b>list</b>.
    |#
   (if (null? lst*)
-    ((rec\ (foldr acc lst) (if (null? lst) acc (foldr (f (car lst) acc) (cdr lst)) )) init lst)
-    ((rec\ (foldr* acc lst*) (if (null? (car lst*)) acc (foldr* (apply* f (map car lst*) acc) (map cdr lst*)) )) init (cons lst lst*)) ))
+    ((rec\ (fold acc lst) (if (null? lst) acc (f (car lst) (fold acc (cdr lst)) ) )) init lst)
+    ((rec\ (fold* acc lst*) (if (null? (car lst*)) acc (apply* f (map car lst*) (fold* acc (map cdr lst*)) ) )) init (cons lst lst*)) ))
 
-(assert (foldR cons () '(1 2 3 4)) '(4 . (3 . (2 . (1 . ())))))
+(assert (foldR cons () '(1 2 3 4)) '(1 . (2 . (3 . (4 . ())))))
+
+(def\ (foldL f init lst . lst*)
+  #|($nm function  init . list)
+   |(type function)
+   |
+   |Use the <b>function</b> to combine the elements of the <b>list</b> from first element.
+   |The <b>initialValue</b> is logically placed after the last element of the <b>list</b>.
+   |#
+  (if (null? lst*)
+    ((rec\ (fold acc lst) (if (null? lst) acc (fold (f (car lst) acc) (cdr lst)) )) init lst)
+    ((rec\ (fold* acc lst*) (if (null? (car lst*)) acc (fold* (apply* f (map car lst*) acc) (map cdr lst*)) )) init (cons lst lst*)) ))
+
+(assert (foldL cons () '(1 2 3 4)) '(4 . (3 . (2 . (1 . ())))))
 
 
 #|! Arrays
@@ -3473,7 +3492,7 @@
    |#
   (%array->list #t arr) )
 
-(def\ (array->cons arr)
+(def\ (array->list* arr)
   #|($nm array)
    |(type function)
    |

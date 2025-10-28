@@ -27,11 +27,31 @@
     </h2>
     <div>
       <h3>
+        -&gt;name
+      </h3>
+      <ul>
+        <li>
+          (def\ (-&gt;name lhs) (if (cons? lhs) (car lhs) lhs))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        -&gt;lambda
+      </h3>
+      <ul>
+        <li>
+          (def\ (-&gt;lambda lhs rhs) (if (cons? lhs) (list* '\ (cdr lhs) rhs) (cons '\ rhs)))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         -&gt;begin
       </h3>
       <ul>
         <li>
-          (def\ (-&gt;begin binding) (cons 'begin (cdr binding)))
+          (def\ (-&gt;begin (#_ . rhs)) (if (null? rhs) () (null? (cdr rhs)) (car rhs) (cons 'begin rhs)))
         </li>
       </ul>
     </div>
@@ -41,7 +61,7 @@
       </h3>
       <ul>
         <li>
-          (def\ (-&gt;name+#inert (lhs . #_)) (list (if (cons? lhs) (car lhs) lhs) #inert))
+          (def\ (-&gt;name+#inert (lhs . #_)) (list (-&gt;name lhs) #inert))
         </li>
       </ul>
     </div>
@@ -51,7 +71,7 @@
       </h3>
       <ul>
         <li>
-          (def\ (-&gt;name+lambda (lhs . rhs)) (if (cons? lhs) (list (car lhs) (list* '\ (cdr lhs) rhs)) (list lhs (cons '\ rhs)) ))
+          (def\ (-&gt;name+lambda (lhs . rhs)) (list (-&gt;name lhs) (-&gt;lambda lhs rhs)))
         </li>
       </ul>
     </div>
@@ -401,9 +421,9 @@
           <br/>
             (syntax functionBindings (functionBinding . functionBindings))
           <br/>
-            (syntax functionBinding ((name parameterTree . bodyForms) . functionBindings))
+            (syntax functionBinding (name parameterTree . bodyForms))
           <br/>
-            (syntax functionBinding (((name . parameterTree) . bodyForms) . functionBindings))
+            (syntax functionBinding ((name . parameterTree) . bodyForms))
           <br/>
             &nbsp;
           <br/>
