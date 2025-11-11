@@ -438,31 +438,43 @@
 (def defMacro
   #|($nm name parameterTree . forms)
    |($nm (name parameterTree) . forms)
+   |($nm name bindResult parameterTree . forms)
+   |($nm (name parameterTree) bindResult . forms)
    |(type macro)
    |
-   |Defines into the current environment the named macro <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
+   |Defines into the current environment the named macro <b>name</b> with the given <b>parameterTree</b>, <b>bindResult</b> and <b>forms</b> as body.
    |#
   (macro (lhs . rhs)
+    (if (%br?car rhs) (def (br . rhs) rhs) (def br #ignore))
     (if (cons? lhs)
-      (list 'def (car lhs) (list* 'macro (cdr lhs) rhs))
-      (list 'def lhs (cons 'macro rhs)) )))
+      (list 'def (car lhs) br (list* 'macro (cdr lhs) rhs))
+      (list 'def lhs br (cons 'macro rhs)) )))
 
-(assert (expand (defMacro (succ n) (list '+ n 1))) '(def succ (macro (n) (list (%' +) n 1))))
-(assert (expand (defMacro succ (n) (list '+ n 1))) '(def succ (macro (n) (list (%' +) n 1))))
+(assert (expand (defMacro (succ n) (list '+ n 1))) '(def succ #ignore (macro (n) (list (%' +) n 1))))
+(assert (expand (defMacro succ (n) (list '+ n 1))) '(def succ #ignore (macro (n) (list (%' +) n 1))))
+(assert (expand (defMacro (succ n) :rhs (list '+ n 1))) '(def succ :rhs (macro (n) (list (%' +) n 1))))
+(assert (expand (defMacro succ :rhs (n) (list '+ n 1))) '(def succ :rhs (macro (n) (list (%' +) n 1))))
 
 (defMacro (defVau lhs . rhs)
   #|($nm name parameterTree environmentParameter . forms)
    |($nm (name parameterTree) environmentParameter . forms)
+   |($nm name bindResult parameterTree environmentParameter . forms)
+   |($nm (name parameterTree) bindResult environmentParameter . forms)
    |(type macro)
    |
-   |Defines into the current environment the named fexpr <b>name</b> with the given <b>parameterTree</b>, <b>environmentParameter</b> and <b>forms</b> as body.
+   |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+   |
+   |Defines into the current environment the named fexpr <b>name</b> with the given <b>parameterTree</b>, <b>bindResult</b>, <b>environmentParameter</b> and <b>forms</b> as body.
    |#
+  (if (%br?car rhs) (def (br . rhs) rhs) (def br #ignore))
   (if (cons? lhs)
-    (list 'def (car lhs) (list* 'vau (cdr lhs) rhs))
-    (list 'def lhs (cons 'vau rhs)) ))
+    (list 'def (car lhs) br (list* 'vau (cdr lhs) rhs))
+    (list 'def lhs br (cons 'vau rhs)) ))
 
-(assert (expand (defVau (succ n) env (eval (list '+ n 1) env))) '(def succ (vau (n) env (eval (list (%' +) n 1) env))))
-(assert (expand (defVau succ (n) env (eval (list '+ n 1) env))) '(def succ (vau (n) env (eval (list (%' +) n 1) env))))
+(assert (expand (defVau (succ n) env (eval (list '+ n 1) env))) '(def succ #ignore (vau (n) env (eval (list (%' +) n 1) env))))
+(assert (expand (defVau succ (n) env (eval (list '+ n 1) env))) '(def succ #ignore (vau (n) env (eval (list (%' +) n 1) env))))
+(assert (expand (defVau (succ n) :rhs env (eval (list '+ n 1) env))) '(def succ :rhs (vau (n) env (eval (list (%' +) n 1) env))))
+(assert (expand (defVau succ :rhs (n) env (eval (list '+ n 1) env))) '(def succ :rhs (vau (n) env (eval (list (%' +) n 1) env))))
 
 (def defConstant
   #|(aliasof def)
@@ -474,37 +486,54 @@
 
 (defMacro (def* lhs . rhs)
   #|($nm definiendTree . values)
+   |($nm definiendTree bindResult . values)
    |(type macro)
    |
    |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
    |
    |Defines into the current environment the resulting bindings from the match of the <b>definiendTree</b> against <b>values</b>, signals an error otherwise.
    |#
-  (list 'def lhs (cons 'list rhs)) )
+  (if (%br?car rhs) (def (br . rhs) rhs) (def br #ignore))
+  (list 'def lhs br (cons 'list rhs)) )
+
+(assert (expand (def* (a b) 1 2)) '(def (a b) #ignore (list 1 2)))  
+(assert (expand (def* (a b) :rhs 1 2)) '(def (a b) :rhs (list 1 2)))  
 
 (defMacro (set!* lhs . rhs)
   #|($nm definiendTree . values)
+   |($nm definiendTree bindResult . values)
    |(type macro)
    |
    |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
    |
    |Update into the environment the resulting bindings from the match of the <b>definiendTree</b> against <b>values</b>, signals an error if a binding is not defined.
    |#
-  (list 'set! lhs (cons 'list rhs)) )
+  (if (%br?car rhs) (def (br . rhs) rhs) (def br #ignore))
+  (list 'set! lhs br (cons 'list rhs)) )
+
+(assert (expand (set!* (a b) 1 2)) '(set! (a b) #ignore (list 1 2)))  
+(assert (expand (set!* (a b) :rhs 1 2)) '(set! (a b) :rhs (list 1 2)))  
 
 (defMacro (def\ lhs . rhs)
   #|($nm name parameterTree . forms)
    |($nm (name parameterTree) . forms)
+   |($nm name bindResult parameterTree . forms)
+   |($nm (name parameterTree) bindResult . forms)
    |(type macro)
    |
-   |Defines into the current environment the named function <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
+   |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+   |
+   |Defines into the current environment the named function <b>name</b> with the given <b>parameterTree</b>, <b>bindResult</b> and <b>forms</b> as body.
    |#
+  (if (%br?car rhs) (def (br . rhs) rhs) (def br #ignore))
   (if (cons? lhs)
-    (list 'def (car lhs) (list* '\ (cdr lhs) rhs))
-    (list 'def lhs (cons '\ rhs)) ))
+    (list 'def (car lhs) br (list* '\ (cdr lhs) rhs))
+    (list 'def lhs br (cons '\ rhs)) ))
 
-(assert (expand (def\ succ (n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
-(assert (expand (def\ (succ n) (+ n 1))) '(def succ (\ (n) (+ n 1))) )
+(assert (expand (def\ succ (n) (+ n 1))) '(def succ #ignore (\ (n) (+ n 1))) )
+(assert (expand (def\ (succ n) (+ n 1))) '(def succ #ignore (\ (n) (+ n 1))) )
+(assert (expand (def\ succ :rhs (n) (+ n 1))) '(def succ :rhs (\ (n) (+ n 1))) )
+(assert (expand (def\ (succ n) :rhs (+ n 1))) '(def succ :rhs (\ (n) (+ n 1))) )
 
 
 #|! Other Core Built-Ins
@@ -577,13 +606,21 @@
 (defMacro (defde\ lhs . rhs)
   #|($nm name parameterTree . forms)
    |($nm (name parameterTree) . forms)
+   |($nm name bindResult parameterTree . forms)
+   |($nm (name parameterTree) bindResult . forms)
    |(type macro)
    |
-   |Defines into the current environment the named dynamic environment function <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
+   |Defines into the current environment the named dynamic environment function <b>name</b> with the given <b>parameterTree</b>, <b>bindResult</b> and <b>forms</b> as body.
    |#
+  (if (%br?car rhs) (def (br . rhs) rhs) (def br #ignore))
   (if (cons? lhs)
-    (list 'def (car lhs) (list* 'de\ (cdr lhs) rhs))
-    (list 'def lhs (cons 'de\ rhs)) ))
+    (list 'def (car lhs) br (list* 'de\ (cdr lhs) rhs))
+    (list 'def lhs br (cons 'de\ rhs)) ))
+
+(assert (expand (defde\ succ (n) (+ n 1))) '(def succ #ignore (de\ (n) (+ n 1))) )
+(assert (expand (defde\ (succ n) (+ n 1))) '(def succ #ignore (de\ (n) (+ n 1))) )
+(assert (expand (defde\ succ :rhs (n) (+ n 1))) '(def succ :rhs (de\ (n) (+ n 1))) )
+(assert (expand (defde\ (succ n) :rhs (+ n 1))) '(def succ :rhs (de\ (n) (+ n 1))) )
 
 
 #|! Env

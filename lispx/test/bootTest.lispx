@@ -405,7 +405,7 @@
   (defTest defVau.2
     (signalsError?
      (defVau)
-     Error :type 'match))
+     Error :type 'match :operands# '+1))
 
   (defTest defVau.3
     (signalsError?

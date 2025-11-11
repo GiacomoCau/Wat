@@ -50,11 +50,15 @@
           <br/>
             (<b>defMacro</b> (name parameterTree) . forms)
           <br/>
+            (<b>defMacro</b> name bindResult parameterTree . forms)
+          <br/>
+            (<b>defMacro</b> (name parameterTree) bindResult . forms)
+          <br/>
             (type macro)
           <br/>
             &nbsp;
           <br/>
-            Defines into the current environment the named macro <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
+            Defines into the current environment the named macro <b>name</b> with the given <b>parameterTree</b>, <b>bindResult</b> and <b>forms</b> as body.
         </li>
       </ul>
     </div>
@@ -68,11 +72,19 @@
           <br/>
             (<b>defVau</b> (name parameterTree) environmentParameter . forms)
           <br/>
+            (<b>defVau</b> name bindResult parameterTree environmentParameter . forms)
+          <br/>
+            (<b>defVau</b> (name parameterTree) bindResult environmentParameter . forms)
+          <br/>
             (type macro)
           <br/>
             &nbsp;
           <br/>
-            Defines into the current environment the named fexpr <b>name</b> with the given <b>parameterTree</b>, <b>environmentParameter</b> and <b>forms</b> as body.
+            (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+          <br/>
+            &nbsp;
+          <br/>
+            Defines into the current environment the named fexpr <b>name</b> with the given <b>parameterTree</b>, <b>bindResult</b>, <b>environmentParameter</b> and <b>forms</b> as body.
         </li>
       </ul>
     </div>
@@ -100,6 +112,8 @@
         <li>
           (<b>def*</b> definiendTree . values)
           <br/>
+            (<b>def*</b> definiendTree bindResult . values)
+          <br/>
             (type macro)
           <br/>
             &nbsp;
@@ -119,6 +133,8 @@
       <ul>
         <li>
           (<b>set!*</b> definiendTree . values)
+          <br/>
+            (<b>set!*</b> definiendTree bindResult . values)
           <br/>
             (type macro)
           <br/>
@@ -142,11 +158,19 @@
           <br/>
             (<b>def\</b> (name parameterTree) . forms)
           <br/>
+            (<b>def\</b> name bindResult parameterTree . forms)
+          <br/>
+            (<b>def\</b> (name parameterTree) bindResult . forms)
+          <br/>
             (type macro)
           <br/>
             &nbsp;
           <br/>
-            Defines into the current environment the named function <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
+            (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+          <br/>
+            &nbsp;
+          <br/>
+            Defines into the current environment the named function <b>name</b> with the given <b>parameterTree</b>, <b>bindResult</b> and <b>forms</b> as body.
         </li>
       </ul>
     </div>

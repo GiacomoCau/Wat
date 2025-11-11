@@ -170,9 +170,7 @@ public class Vm {
 				case "prv": return 2;
 				case "cnt": return 3;
 			};
-			default: return typeError("cannot determine bndRes, not {expected}: {datum}", o,
-				toChk(or(inert, ignore, keyword(":rhs"), keyword(":prv"), keyword(":cnt")))
-			);
+			default: return typeError("cannot determine bndRes, not {expected}: {datum}", o, toChk(or(bindResValues)));
 		}
 	}
 	
@@ -321,6 +319,7 @@ public class Vm {
 	Keyword keyword(String name) { return intern(name.startsWith(":") && name.length() > 1 ? name : ":" + name); }
 	class Symbol extends Intern { Symbol(String name) { super(name); }}
 	Symbol symbol(String name) { return intern(name.startsWith(":") && name.length() > 1 ? name.substring(1) : name); }
+	Object[] bindResValues = { inert, ignore, keyword(":rhs"), keyword(":prv"), keyword(":cnt") };
 	Object[] quotes = $(symbol("%'"), symbol("quote"));
 	
 	
@@ -2290,6 +2289,11 @@ public class Vm {
 				// Equals
 				"%==", wrap(new JFun("%==", (BiFunction<Object,Object,Boolean>) (a,b)-> a instanceof Number ? a.equals(b) : a == b )),
 				"%!=", wrap(new JFun("%!=", (BiFunction<Object,Object,Boolean>) (a,b)-> a instanceof Number ? !a.equals(b) : a != b )),
+				"%==*", wrap(new JFun("%==*", (ArgsList) o-> member(o.car, array(o.cdr())))),
+				"%!=*", wrap(new JFun("%!=*", (ArgsList) o-> !member(o.car, array(o.cdr())))),
+				//"br?", wrap(new JFun("Br?", (Function<Object, Boolean>) o-> o instanceof List lst && member(lst.car, bindResValue))),
+				//"!br?", wrap(new JFun("!Br?", (Function<Object, Boolean>) o-> !(o instanceof List lst && member(lst.car, bindResValue)))),
+				"%br?car", wrap(new JFun("%Br?Car", (Function<Object, Boolean>) o-> o instanceof List lst && member(lst.car, bindResValues))),
 				"%eq?", wrap(new JFun("%Eq?", (BiFunction<Object,Object,Boolean>) Vm.this::equals )),
 				// Boolean
 				//"%boolean?", wrap(new JFun("%Boolean?", (Function<Object, Boolean>) obj-> obj instanceof Boolean )),

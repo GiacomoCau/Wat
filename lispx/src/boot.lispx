@@ -423,25 +423,34 @@
 (def defMacro
   #|($nm name parameterTree . forms)
    |($nm (name parameterTree) . forms)
+   |($nm name bindResult parameterTree . forms)
+   |($nm (name parameterTree) bindResult . forms)
    |(type macro)
    |
-   |Defines into the current environment the named macro <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
+   |Defines into the current environment the named macro <b>name</b> with the given <b>parameterTree</b>, <b>bindResult</b> and <b>forms</b> as body.
    |#
   (macro (lhs . rhs)
+    (if (%br?car rhs) (def (br . rhs) rhs) (def br #ignore))
     (if (cons? lhs)
-      (list 'def (car lhs) (list* 'macro (cdr lhs) rhs))
-      (list 'def lhs (cons 'macro rhs)) )))
+      (list 'def (car lhs) br (list* 'macro (cdr lhs) rhs))
+      (list 'def lhs br (cons 'macro rhs)) )))
 
 (defMacro (defVau lhs . rhs)
   #|($nm name parameterTree environmentParameter . forms)
    |($nm (name parameterTree) environmentParameter . forms)
+   |($nm name bindResult parameterTree environmentParameter . forms)
+   |($nm (name parameterTree) bindResult environmentParameter . forms)
    |(type macro)
    |
-   |Defines into the current environment the named fexpr <b>name</b> with the given <b>parameterTree</b>, <b>environmentParameter</b> and <b>forms</b> as body.
+   |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+   |
+   |Defines into the current environment the named fexpr <b>name</b> with the given <b>parameterTree</b>, <b>bindResult</b>, <b>environmentParameter</b> and <b>forms</b> as body.
    |#
+  (if (%br?car rhs) (def (br . rhs) rhs) (def br #ignore))
   (if (cons? lhs)
-    (list 'def (car lhs) (list* 'vau (cdr lhs) rhs))
-    (list 'def lhs (cons 'vau rhs)) ))
+    (list 'def (car lhs) br (list* 'vau (cdr lhs) rhs))
+    (list 'def lhs br (cons 'vau rhs)) ))
+
 
 (def defConstant
   #|(aliasof def)
@@ -453,34 +462,43 @@
 
 (defMacro (def* lhs . rhs)
   #|($nm definiendTree . values)
+   |($nm definiendTree bindResult . values)
    |(type macro)
    |
    |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
    |
    |Defines into the current environment the resulting bindings from the match of the <b>definiendTree</b> against <b>values</b>, signals an error otherwise.
    |#
-  (list 'def lhs (cons 'list rhs)) )
+  (if (%br?car rhs) (def (br . rhs) rhs) (def br #ignore))
+  (list 'def lhs br (cons 'list rhs)) )
 
 (defMacro (set!* lhs . rhs)
   #|($nm definiendTree . values)
+   |($nm definiendTree bindResult . values)
    |(type macro)
    |
    |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
    |
    |Update into the environment the resulting bindings from the match of the <b>definiendTree</b> against <b>values</b>, signals an error if a binding is not defined.
    |#
-  (list 'set! lhs (cons 'list rhs)) )
+  (if (%br?car rhs) (def (br . rhs) rhs) (def br #ignore))
+  (list 'set! lhs br (cons 'list rhs)) )
 
 (defMacro (def\ lhs . rhs)
   #|($nm name parameterTree . forms)
    |($nm (name parameterTree) . forms)
+   |($nm name bindResult parameterTree . forms)
+   |($nm (name parameterTree) bindResult . forms)
    |(type macro)
    |
-   |Defines into the current environment the named function <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
+   |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+   |
+   |Defines into the current environment the named function <b>name</b> with the given <b>parameterTree</b>, <b>bindResult</b> and <b>forms</b> as body.
    |#
+  (if (%br?car rhs) (def (br . rhs) rhs) (def br #ignore))
   (if (cons? lhs)
-    (list 'def (car lhs) (list* '\ (cdr lhs) rhs))
-    (list 'def lhs (cons '\ rhs)) ))
+    (list 'def (car lhs) br (list* '\ (cdr lhs) rhs))
+    (list 'def lhs br (cons '\ rhs)) ))
 
 
 #|! Other Core Built-Ins
@@ -547,13 +565,16 @@
 (defMacro (defde\ lhs . rhs)
   #|($nm name parameterTree . forms)
    |($nm (name parameterTree) . forms)
+   |($nm name bindResult parameterTree . forms)
+   |($nm (name parameterTree) bindResult . forms)
    |(type macro)
    |
-   |Defines into the current environment the named dynamic environment function <b>name</b> with the given <b>parameterTree</b> and <b>forms</b> as body.
+   |Defines into the current environment the named dynamic environment function <b>name</b> with the given <b>parameterTree</b>, <b>bindResult</b> and <b>forms</b> as body.
    |#
+  (if (%br?car rhs) (def (br . rhs) rhs) (def br #ignore))
   (if (cons? lhs)
-    (list 'def (car lhs) (list* 'de\ (cdr lhs) rhs))
-    (list 'def lhs (cons 'de\ rhs)) ))
+    (list 'def (car lhs) br (list* 'de\ (cdr lhs) rhs))
+    (list 'def lhs br (cons 'de\ rhs)) ))
 
 
 #|! Env
