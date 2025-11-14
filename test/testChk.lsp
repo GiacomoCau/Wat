@@ -104,8 +104,8 @@ check(List o, List chk)
 (assert (new) Error :type 'match :operands# +1)
 (assert (new Box) Box (boxDft))
 (assert (new Box 1) Box 1)
-(assert (new Obj :a) Error :type 'type :datum (&Wat.Vm$Obj :a) :expected '(or (1 2 Box) (1 oo Obj (or (1 Env) ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))))
-(assert (new Obj :a 1 :b) Error :type 'type :datum (&Wat.Vm$Obj :a 1 :b) :expected '(or (1 2 Box) (1 oo Obj (or (1 Env) ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))))
+(assert (new Obj :a) Error :type 'type :datum (&Wat.Vm$Obj :a) :expected '(or (1 2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Env (or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) )
+(assert (new Obj :a 1 :b) Error :type 'type :datum (&Wat.Vm$Obj :a 1 :b) :expected '(or (1 2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Env (or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) )
 
 (new Obj) ;-> ok {&Wat.Vm.Obj}
 (new Box 1) ;-> ok {&Box 1}

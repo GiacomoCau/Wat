@@ -613,7 +613,7 @@
 (def newEnv
   #|($nm)
    |($nm parent . bindings)
-   |($nm parent obj)
+   |($nm parent obj . bindings)
    |(type function)
    |
    |(syntax parent (or () Env))
@@ -625,6 +625,18 @@
    |When called with an obj the obj bindings also become env bindings.
    |#
   %newEnv )
+
+(defMacro (defEnv name . bindings)
+  #|($nm name . bindings)
+   |($nm name obj . bindings)
+   |(type macro)
+   |
+   |(syntax bindings (attribute value . bindings))
+   |(syntax attribute (or Symbol Keyword String))
+   |
+   |Defines into the current environment the named obj <b>name</b> with the given <b>bindings</b>.
+   |#
+  (list 'def name (cons 'newEnv bindings)) )
 
 
 #|! Obj
@@ -655,6 +667,7 @@
 
 (def\ (newObj . bindings)
   #|($nm . bindings)
+   |($nm env . bindings)
    |(type function)
    |
    |(syntax bindings (attribute value . bindings))
@@ -666,6 +679,7 @@
 
 (defMacro (defObj name . bindings)
   #|($nm name . bindings)
+   |($nm name env . bindings)
    |(type macro)
    |
    |(syntax bindings (attribute value . bindings))
@@ -807,6 +821,7 @@
   #|($nm boxClass)
    |($nm boxClass value)
    |($nm objClass . bindings)
+   |($nm objClass env . bindings)
    |($nm objClass string . bindings)
    |($nm objClass throwableObject . bindings)
    |($nm objClass string throwableObject . bindings)
@@ -823,6 +838,7 @@
   #|($nm name boxClass)
    |($nm name boxClass value)
    |($nm name objClass . bindings)
+   |($nm name objClass env . bindings)
    |($nm name objClass string . bindings)
    |($nm name objClass throwableObject . bindings)
    |($nm name objClass string throwableObject . bindings)

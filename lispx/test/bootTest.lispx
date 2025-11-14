@@ -1390,7 +1390,7 @@
   (defTest newEnv.3
     (signalsError?
      (newEnv 12)
-     Error :type 'type :datum (12) :expected '(or () (2 (or () Env) Obj) (1 oo (or () Env) (or Symbol Keyword String) Any)))))
+     Error :type 'type :datum (12) :expected '(or () (1 oo (or () Env) (or Symbol Keyword String) Any) (2 oo (or () Env) Obj (or Symbol Keyword String) Any)))) )
 
 (defSuite cxxr
 
@@ -2375,17 +2375,17 @@
   (defTest obj.3
     (signalsError?
      (new 3)
-     Error :type 'type :datum '(3) :expected '(or (1 2 Box) (1 oo Obj (or (1 Env) ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) ))
+     Error :type 'type :datum '(3) :expected '(or (1 2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Env (or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) ))
 
   (defTest obj.4
     (signalsError?
      (new Object)
-     Error :type 'type :datum '(&java.lang.Object) :expected '(or (1 2 Box) (1 oo Obj (or (1 Env) ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) ))
+     Error :type 'type :datum '(&java.lang.Object) :expected '(or (1 2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Env (or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) ))
 
   (defTest obj.5
     (signalsError?
      (new Obj :x)
-     Error :type 'type :datum '(&Wat.Vm$Obj :x) :expected '(or (1 2 Box) (1 oo Obj (or (1 Env) ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) )) )
+     Error :type 'type :datum '(&Wat.Vm$Obj :x) :expected '(or (1 2 Box) (1 oo Obj (or ((or Symbol Keyword String) Any) (1 oo Env (or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any) (1 oo String (or ((or Symbol Keyword String) Any) (1 oo Throwable (or Symbol Keyword String) Any)))))) )) )
 
 (defSuite slots
 

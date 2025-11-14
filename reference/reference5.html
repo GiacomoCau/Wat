@@ -98,7 +98,7 @@
           <br/>
             (<b>newEnv</b> parent . bindings)
           <br/>
-            (<b>newEnv</b> parent obj)
+            (<b>newEnv</b> parent obj . bindings)
           <br/>
             (type function)
           <br/>
@@ -117,6 +117,30 @@
             The <b>bindings</b> must be of even length, and alternately contain bindings names (symbols, keywords or string) and values.
           <br/>
             When called with an obj the obj bindings also become env bindings.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        defEnv
+      </h3>
+      <ul>
+        <li>
+          (<b>defEnv</b> name . bindings)
+          <br/>
+            (<b>defEnv</b> name obj . bindings)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindings (attribute value . bindings))
+          <br/>
+            (syntax attribute (or Symbol Keyword String))
+          <br/>
+            &nbsp;
+          <br/>
+            Defines into the current environment the named obj <b>name</b> with the given <b>bindings</b>.
         </li>
       </ul>
     </div>

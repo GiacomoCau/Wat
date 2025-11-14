@@ -397,13 +397,16 @@ public class Vm {
 	}
 	record Lookup(boolean isBound, Object value) {}
 	class Env implements ArgsList, ObjEnv {
-		Env parent; LinkedHashMap<String,Object> map = new LinkedHashMap();
-		Env(Env parent, Obj obj) {
-			this.parent = parent;
-			map = obj.map;
-		}
+		Env parent; LinkedHashMap<String,Object> map;
 		Env(Env parent, Object ... objs) {
 			this.parent = parent;
+			map = new LinkedHashMap();
+			if (objs == null) return;
+			for (int i=0, e=objs.length; i<e; i+=1) map.put(toKey(objs[i]), objs[i+=1]);
+		}
+		Env(Env parent, Obj obj, Object ... objs) {
+			this.parent = parent;
+			map = obj.map;
 			if (objs == null) return;
 			for (int i=0, e=objs.length; i<e; i+=1) map.put(toKey(objs[i]), objs[i+=1]);
 		}
@@ -494,8 +497,8 @@ public class Vm {
 		}
 	}
 	Env env() { return env(null); }
-	Env env(Env env, Obj obj) { return new Env(env, obj); }
 	Env env(Env env, Object ... objs) { return new Env(env, objs); }
+	Env env(Env env, Obj obj, Object ... objs) { return new Env(env, obj, objs); }
 	
 	
 	// Box, Obj, Condition, Error
@@ -527,8 +530,8 @@ public class Vm {
 	public class Obj extends RuntimeException implements ArgsList, ObjEnv {
 		private static final long serialVersionUID = 1L;
 		LinkedHashMap<String,Object> map = new LinkedHashMap();
-		public Obj(Env env) { map = env.map; }
 		public Obj(Object ... objs) { puts(objs); }
+		public Obj(Env env, Object ... objs) { map = env.map; puts(objs); }
 		public Obj(String msg, Object ... objs) { super(msg); puts(objs); }
 		public Obj(Throwable t, Object ... objs) { super(t); puts(objs); }
 		public Obj(String msg, Throwable t, Object ... objs) { super(msg, t); puts(objs); }
@@ -1538,7 +1541,7 @@ public class Vm {
 		}
 		public String toString() { return "@" + name; }
 	}
-	Object at(String name) {
+	At at(String name) {
 		if (name == null) return typeError("method name is {name}, not a {expected}", name, symbol("String"));
 		return new At(name);
 	}
@@ -2194,9 +2197,10 @@ public class Vm {
 				"%newEnv", wrap(new JFun("%NewEnv", ge(0),
 					(n,o)-> checkR(n, o, 0, more,
 						or( null,
-							list(2, or(null, Env.class), Obj.class),
-							list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class, String.class), Any.class))),
-					(l,o)-> l==0 ? env() : l==2 ? env(o.car(), o.<Obj>car(1)) : env(o.car(), array(o.cdr())) )),
+							list(1, more, or(null, Env.class), or(Symbol.class, Keyword.class, String.class), Any.class),
+							list(2, more, or(null, Env.class), Obj.class, or(Symbol.class, Keyword.class, String.class), Any.class) )),
+					(_,o)-> at("env").apply(cons(this, o))
+					)),
 				"%bind", wrap(new JFun("%Bind", 3, (n,o)-> checkN(n, o, 3, Env.class), (_,o)-> bind(true, 3, o.<Env>car(), o.car(1), o.car(2)) )),
 				"%bind?", wrap(new JFun("%Bind?", 3, (n,o)-> checkN(n, o, 3, Env.class), (_,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (InnerException ie) { return false; }} )),
 				"%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } )),
@@ -2206,15 +2210,16 @@ public class Vm {
 					(n,o)-> checkM(n, o, 1,
 						or( list(1, 2, Box.class),
 							list(1, more, Obj.class,
-								or( list(1, Env.class),
-									list(or(Symbol.class, Keyword.class, String.class), Any.class),
+								or( list(or(Symbol.class, Keyword.class, String.class), Any.class),
+									list(1, more, Env.class,
+										or(Symbol.class, Keyword.class, String.class), Any.class),
 									list(1, more, Throwable.class,
 										or(Symbol.class, Keyword.class, String.class), Any.class),
 									list(1, more, String.class,
 										or(	list(or(Symbol.class, Keyword.class, String.class), Any.class),
 											list(1, more, Throwable.class,
 												or(Symbol.class, Keyword.class, String.class), Any.class) )))))),
-					(_,o)-> ((ArgsList) at("new")).apply(listStar(o.car, Vm.this, o.cdr()))
+					(_,o)-> at("new").apply(listStar(o.car, this, o.cdr()))
 				)),
 				// Env & Obj
 				//"%objEnv?", wrap(new JFun("%ObjEnv?", (Function<Object, Boolean>) obj-> obj instanceof ObjEnv )),
@@ -2231,7 +2236,7 @@ public class Vm {
 				"%cnr", wrap(new JFun("%Cnr", 2, (n,o)-> checkN(n, o, 2, Cons.class, Integer.class), (_,o)-> o.<Cons>car().cxr(o.<Integer>car(1)) )),
 				"%csr", wrap(new JFun("%Csr", 2, (n,o)-> checkN(n, o, 2, Cons.class, or(Symbol.class, Keyword.class)), (_,o)-> o.<Cons>car().cxr(o.<Intern>car(1).name) )),
 				"%csr", wrap(new JFun("%Csr", 2, (n,o)-> checkN(n, o, 2, Cons.class, or(Symbol.class, Keyword.class, String.class)), (_,o)-> o.<Cons>car().cxr(apply(a-> a instanceof Intern i ? i.name : (String) a, o.car(1))) )),		
-				"%cxr", wrap(new JFun("%Cxr", 2, (n,o)-> checkN(n, o, 2, Cons.class, or(Symbol.class, Keyword.class, String.class, Integer.class)), (_,o)-> ((ArgsList) at("cxr")).apply(list(o.car(), apply(a-> a instanceof Intern i ? i.name : a, o.car(1)) )) )),
+				"%cxr", wrap(new JFun("%Cxr", 2, (n,o)-> checkN(n, o, 2, Cons.class, or(Symbol.class, Keyword.class, String.class, Integer.class)), (_,o)-> at("cxr").apply(list(o.car(), apply(a-> a instanceof Intern i ? i.name : a, o.car(1)) )) )),
 				"%cadr", wrap(new JFun("%Cadr", 1, (n,o)-> checkN(n, o, 1, Cons.class), (_,o)-> o.<Cons>car().car(1) )),
 				"%cddr", wrap(new JFun("%Cddr", 1, (n,o)-> checkN(n, o, 1, Cons.class), (_,o)-> o.<Cons>car().cdr(1) )),
 				"%cons", wrap(new JFun("%Cons", list(1, 2), (n,o)-> checkR(n, o, 1, 2), (l,o)-> cons(o.car, l == 1 ? null : o.car(1)) )),
@@ -2347,7 +2352,7 @@ public class Vm {
 				"%dv\\", new DVLambda(),
 				// Errors
 				"%rootPrompt", rootPrompt,
-				"%error", wrap(new JFun("%Error", (ArgsList) o-> ((ArgsList) at("error")).apply(cons(this, o)))),
+				"%error", wrap(new JFun("%Error", (ArgsList) o-> at("error").apply(cons(this, o)))),
 				// Java Interface
 				"%jFun?", wrap(new JFun("%JFun?", (Function<Object,Boolean>) this::isjFun)),
 				"%supplier", supplier,
