@@ -207,9 +207,13 @@
         <li>
           (<b>map</b> function list)
           <br/>
-            (<b>map</b> function list1 list2 ... listN)
+            (<b>map</b> function . lists)
           <br/>
             (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax lists (list . lists) 
           <br/>
             &nbsp;
           <br/>
@@ -239,9 +243,9 @@
         <li>
           (<b>def*\</b> definiendTrees . bodies)
           <br/>
-            (<b>def*\</b> ((name parameterTree) . definiendTrees) . (forms . bodies))
+            (<b>def*\</b> ((name parameterTree) . definiendTrees) (forms) . bodies)
           <br/>
-            (<b>def*\</b> (name . definiendTrees) . ((parameterTree . forms) . bodies))
+            (<b>def*\</b> (name . definiendTrees) (parameterTree . forms) . bodies))
           <br/>
             (type macro)
           <br/>
@@ -249,7 +253,7 @@
           <br/>
             (syntax definiendTrees ((name parameterTree) . definiendTrees)
           <br/>
-            (syntax bodies (forms . bodies)
+            (syntax bodies ((forms) . bodies)
           <br/>
             (syntax definiendTrees (name . definiendTrees)
           <br/>

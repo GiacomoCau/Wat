@@ -39,6 +39,31 @@
             (when (== (obj :this) !this) (error "super not invoked!")) )))
       obj )))
 
+(def\ (is? instance class)
+  (if (&& (type? instance Env) (!null? (def static :rhs (@get (.map instance) "static"))))
+    (extend? static class)
+    (error "is not an instance!") ))
+
+(def\ (extend? class superClass)
+  (if (null? class) #f (== class superClass) #t (extend? (.parent class) superClass)) )
+
+(defMacro (invoke method obj . args)
+  (list* (list obj method) args) )
+
+(defMacro (invoke obj method . args)
+  (list* (list obj method) args) )
+
+;(load "varie/yaos/yaos.lsp")
+
+(let ()
+  (def A (class () (a 1)))
+  (def B (class A (b 2)))
+  (def b (instance B))
+  (assert (b :static) B)
+  (assert (.parent B) A)
+  (assert (is? b A) #t)
+  (assert (extend? B A) #t) )
+
 (let ()
   (def A (class () (a 1) (B (class () ((new b) (this :b b)) (b 0) ((f c) (+ a b c))))))
   (def objA (instance A))

@@ -171,9 +171,9 @@
       </h3>
       <ul>
         <li>
-          (<b>vau</b> parametersTree environmentParameter . body)
+          (<b>vau</b> parametersTree environmentParameter . forms)
           <br/>
-            (<b>vau</b> parametersTree environmentParameter #: check . body)
+            (<b>vau</b> parametersTree environmentParameter #: check . forms)
           <br/>
             (type fexpr)
           <br/>
@@ -311,13 +311,15 @@
       </h3>
       <ul>
         <li>
-          (<b>eval</b> form . environment)
+          (<b>eval</b> form)
+          <br/>
+            (<b>eval</b> form environment)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            (derivation (eval form (if (null? environment) (theEnv) (car! environment))))
+            (derivation (\ (form . environment) (eval form (if (null? environment) (theEnv) (car! environment)))) )
           <br/>
             &nbsp;
           <br/>
@@ -385,13 +387,15 @@
       </h3>
       <ul>
         <li>
-          (<b>apply</b> fun args . environment)
+          (<b>apply</b> fun args)
+          <br/>
+            (<b>apply</b> fun args environment)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            (derivation (eval (cons (unwrap fun) args) (if (null? environment) (newEnv) (car! environment)) ))
+            (derivation (\ (fun args . environment) (eval (cons (unwrap fun) args) (if (null? environment) (newEnv) (car! environment))) ))
           <br/>
             &nbsp;
           <br/>

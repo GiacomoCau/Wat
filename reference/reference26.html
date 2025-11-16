@@ -71,15 +71,17 @@
       </h3>
       <ul>
         <li>
-          (<b>ifBind?</b> (definiendTree value) then . else)
+          (<b>ifBind?</b> (definiendTree value) thenForm)
+          <br/>
+            (<b>ifBind?</b> (definiendTree value) thenForm elseForm)
           <br/>
             (type fexpr)
           <br/>
             &nbsp;
           <br/>
-            Return the evaluation of <b>then</b> into resulting <b>environment</b> if <b>value</b> match the <b>definiendTree</b>,
+            Return the evaluation of <b>thenForm</b> into resulting <b>environment</b> if <b>value</b> match the <b>definiendTree</b>,
           <br/>
-            the evaluation of <b>else</b> if present, #inert otherwise.
+            the evaluation of <b>elseForm</b> if present, #inert otherwise.
         </li>
       </ul>
     </div>

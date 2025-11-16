@@ -81,8 +81,8 @@
   %set! )
 
 (def vau
-  #|($nm parametersTree environmentParameter . body)
-   |($nm parametersTree environmentParameter #: check . body)
+  #|($nm parametersTree environmentParameter . forms)
+   |($nm parametersTree environmentParameter #: check . forms)
    |(type fexpr)
    |
    |(syntax parametersTree (or #null ignore symbol decomposeTree))
@@ -151,10 +151,11 @@
   %theEnv )
 
 (def eval
-  #|($nm form . environment)
+  #|($nm form)
+   |($nm form environment)
    |(type function)
    |
-   |(derivation (eval form (if (null? environment) (theEnv) (car! environment))))
+   |(derivation (\ (form . environment) (eval form (if (null? environment) (theEnv) (car! environment)))) )
    |
    |Return the result of evaluation of <b>form</b> in the optional <b>environment</b>.
    |#
@@ -188,10 +189,11 @@
   %unwrap )
 
 (def apply
-  #|($nm fun args . environment)
+  #|($nm fun args)
+   |($nm fun args environment)
    |(type function)
    |
-   |(derivation (eval (cons (unwrap fun) args) (if (null? environment) (newEnv) (car! environment)) ))
+   |(derivation (\ (fun args . environment) (eval (cons (unwrap fun) args) (if (null? environment) (newEnv) (car! environment))) ))
    |
    |Call the <b>function</b> with a dynamically-supplied list of <b>arguments</b> in the optional <b>environment</b>.
    |#
@@ -841,7 +843,8 @@
  |#
 
 (def\ (newBox . value)
-  #|($nm . value)
+  #|($nm)
+   |($nm value)
    |(type function)
    |
    |Return a new box with the optional <b>value</b>.
@@ -851,7 +854,8 @@
   (apply new (cons Box value)))
 
 (defMacro (defBox name . value)
-  #|($nm name . value)
+  #|($nm name)
+   |($nm name value)
    |(type macro)
    |
    |Defines into the current environment the named box <b>name</b> with the optional <b>value</b>.
@@ -1780,8 +1784,10 @@
 
 (def\ (map f lst . lst*)
   #|($nm function list)
-   |($nm function list1 list2 ... listN)
+   |($nm function . lists)
    |(type function)
+   |
+   |(syntax lists (list . lists) 
    |
    |Return a new list by applying the <b>function</b> to each element of the <b>list</b> or the <b>lists</b> which must be of the same length
    |#
@@ -1804,12 +1810,12 @@
 
 (defMacro (def*\ lhs* . rhs*)
   #|($nm definiendTrees . bodies)
-   |($nm ((name parameterTree) . definiendTrees) . (forms . bodies))
-   |($nm (name . definiendTrees) . ((parameterTree . forms) . bodies))
+   |($nm ((name parameterTree) . definiendTrees) (forms) . bodies)
+   |($nm (name . definiendTrees) (parameterTree . forms) . bodies))
    |(type macro)
    |
    |(syntax definiendTrees ((name parameterTree) . definiendTrees)
-   |(syntax bodies (forms . bodies)
+   |(syntax bodies ((forms) . bodies)
    |(syntax definiendTrees (name . definiendTrees)
    |(syntax bodies ((parameterTree . forms) . bodies)
    |
@@ -2148,23 +2154,23 @@
    |#
   (list 'if test #inert (cons 'else forms)) )
 
-(defVau (delay . xs) env
+(defVau (delay . forms) env
   #|($nm . forms)
    |(type fexpr)
    |
    |Returns a thunk (a \ with no parameters) that encapsulates and defers the evaluation of <b>forms</b> to a subsequent force.
    |#
   (let ((e #f) (v #inert))
-    (\ () (if e v (prog1 (set! v :rhs (eval (cons 'begin xs) env)) (set! e #t)))) ))
+    (\ () (if e v (prog1 (set! v :rhs (apply begin forms env)) (set! e #t)))) ))
      
-(def\ (force x)
+(def\ (force form)
   #|($nm expr)
    |(type function)
    |
    |Returns the cached value of the evaluation of <b>expr</b> if it is a thunk, <b>expr</b> otherwise..
    |#
-  #;(if (&& (type? x Apv) (== (arity x) 0)) (x) x) 
-  (if (if (! (type? x Apv)) #f (!= (.arity x) 0) #f #t) (x) x) )
+  ;(if (&& (type? form Apv) (== (arity form) 0)) (form) form) 
+  (if (! (type? form Apv)) form (!= (.arity form) 0) form (form)) )
 
 ;(assert (let1 (x 1) (def p (delay (++ x))) (force p) (force p) (force p)) 2)
 (assert (let1 (x 1) (def p (delay (def x :rhs (+ 1 x)))) (force p) (force p) (force p)) 2)
@@ -2206,18 +2212,18 @@
   || )
 
 (def\ (&&b f key val . lst)
-  #|($nm function key . list)
+  #|($nm function key . values)
    |(type function)
    |
-   |Return #true if <b>function</b> evaluate to #true when applied to <b>key</b> and all element of <b>list</b>, #false otherwise.
+   |Return #true if <b>function</b> evaluate to #true when applied to <b>key</b> and each element of <b>values</b>, #false otherwise.
    |#
   ((rec\ (loop lst) (if (null? lst) #t (f key (car lst)) (loop (cdr lst)) #f) ) (cons val lst)) )
 
 (def\ (||b f key val . lst)
-  #|($nm function key . list)
+  #|($nm function key . values)
    |(type function)
    |
-   |Return #true if <b>function</b> evaluate to #true when applied to <b>key</b> and any element of <b>list</b>, #false otherwise.
+   |Return #true if <b>function</b> evaluate to #true when applied to <b>key</b> and each element of <b>values</b>, #false otherwise.
    |#
   ((rec\ (loop lst) (if (null? lst) #f (f key (car lst)) #t (loop (cdr lst))) ) (cons val lst)) )
 
@@ -2280,11 +2286,12 @@
   %bind? )
 
 (defVau (ifBind? (dt exp) then . else) env
-  #|($nm (definiendTree value) then . else)
+  #|($nm (definiendTree value) thenForm)
+   |($nm (definiendTree value) thenForm elseForm)
    |(type fexpr)
    |
-   |Return the evaluation of <b>then</b> into resulting <b>environment</b> if <b>value</b> match the <b>definiendTree</b>,
-   |the evaluation of <b>else</b> if present, #inert otherwise.
+   |Return the evaluation of <b>thenForm</b> into resulting <b>environment</b> if <b>value</b> match the <b>definiendTree</b>,
+   |the evaluation of <b>elseForm</b> if present, #inert otherwise.
    |#
   (let1 (env+ (newEnv env))
     (if (bind? env+ dt (eval exp env))
@@ -2536,17 +2543,17 @@
   cons!)
 
 (defVau (ifOpt (pt opt) then . else) env
-  #|($nm (name option) then . else)
+  #|($nm (name option) thenForm . elseForms)
    |(type fexpr)
    |
    |Single-value <b>option</b> destructuring.
-   |Evaluate the <b>then</b> form with the <b>name</b> bound to the contents of the <b>option</b> if the evaluation of <b>option</b> is !#null,
-   |evaluate the <b>else</b> forms as an implicit `begin' otherwise.
+   |Evaluate the <b>thenForm</b> form with the <b>name</b> bound to the contents of the <b>option</b> if the evaluation of <b>option</b> is !#null,
+   |evaluate the <b>elseForms</b> forms as an implicit `begin' otherwise.
    |#
   (let1 (opt (eval opt env))
     (if (null? opt)
       (if (null? else) #null
-        (eval (cons 'begin else) env))
+        (apply begin else env))
       (if (list? opt)
         (eval (list* (list 'vau (list pt) #ignore then) opt) env)
         (typeError opt '(or () List)) ))))
@@ -2557,16 +2564,16 @@
 (assert (ifOpt ((a b) '((2 3))) (+ a b)) 5)
 
 (defVau (ifOpt* (pt opt) then . else) env
-  #|($nm (definiendTree option) then . else)
+  #|($nm (definiendTree option) thenForm . elseForms)
    |
    |Multi-valued <b>option</b> destructuring.
-   |Evaluate <b>then</b> form with the <b>definiendTree</b> bound to <b>option</b> value if the evaluation of <b>option</b> is !#null,
-   |evaluate the <b>else</b> forms as an implicit `begin' otherwise.
+   |Evaluate <b>thenForm</b> form with the <b>definiendTree</b> bound to <b>option</b> value if the evaluation of <b>option</b> is !#null,
+   |evaluate the <b>elseForms</b> forms as an implicit `begin' otherwise.
    |#
   (let1 (opt (eval opt env))
     (if (null? opt)
       (if (null? else) #null
-        (eval (cons 'begin else) env))
+        (apply begin else env))
       (if (list? opt)
         (eval (list* (list 'vau pt #ignore then) opt) env)
         (typeError opt '(or () List)) ))))
@@ -2631,7 +2638,8 @@
 (assert (caseOpt '(1 2 3) ((a) 1) ((a b) (+ a b))) #null)
 
 (defVau (optDft opt . dft) env
-  #|($nm option . default)
+  #|($nm option)
+   |($nm option default)
    |(type fexpr)
    |
    |Return the contents of the <b>option</b> if the option is !#null,
@@ -2697,7 +2705,7 @@
 (assert (optValue 'b '(a 1 b 2 c 3)) '(2))
 
 (def\ (member k lst . keywords)
-  #|($nm item list . keywords))
+  #|($nm item list . keywords)
    |(type function)
    |
    |(syntax keywords (:cmp function . keywords))
@@ -2771,10 +2779,10 @@
 (assert (assoc 'b '((a 1) (b 2) (c 3) (d 4))) '(b 2))
 
 (def\ (member?* key . lst)
-  #|($nm item . list)
+  #|($nm item . values)
    |(type function)
    |
-   |Return #true if the <b>item</b> is in the <b>list</b>, #false otherwise.
+   |Return #true if the <b>item</b> is in the <b>values</b>, #false otherwise.
    |#
   (member? key lst) )
 
@@ -2895,7 +2903,7 @@
 (assert (caseType 1 (Integer 'ok) (else 'ko)) 'ok)
 
 (defMacro (caseType\ (#: (1 Symbol) key) . clauses)
-  #|($nm (symbol) . clauses))
+  #|($nm (symbol) . clauses)
    |(type macro)
    |
    |(derivation (\ (symbol) (caseType symbol . clauses)))
@@ -3080,7 +3088,8 @@
 (assert (block exit (def x 1) (loop (if (== x 4) (exit 7)) (def x (+ x 1)))) 7)
 
 (def\ returnFrom (blockName . value)
-  #|($nm blockName . value)
+  #|($nm blockName)
+   |($nm blockName value)
    |(type function)
    |
    |Abort evaluation and return the optional <b>value</b> (which defaults to #inert) from the block named <b>blockName</b>.
@@ -3097,12 +3106,11 @@
    |Evaluate <b>forms</b> as an implicit `begin' while <b>testForm</b> evaluates to #true.
    |Defined using block and returnFrom.
    |#
-  (let ((forms (cons 'begin forms)))
-    (block exit
-      (loop
-        (if (eval testForm env)
-          (eval forms env)
-          (returnFrom exit #inert)) ))))
+  (block exit
+    (loop
+      (if (eval testForm env)
+        (apply begin forms env)
+        (returnFrom exit #inert) ))))
 
 (defde\ (mkTag tag (#: (and Integer (>= 0) (<= %deep)) n))
   #|($nm tag n)
@@ -3840,7 +3848,8 @@
  |#
 
 (def newDVar
-  #|($nm . value)
+  #|($nm)
+   |($nm value)
    |(type function)
    |
    |Define a new dynamic variable with optional <b>value</b>.
@@ -3856,7 +3865,8 @@
   %dVal)
 
 (defMacro (ddef var . val)
-  #|($nm name . value)
+  #|($nm name)
+   |($nm name value)
    |(type macro)
    |
    |Define a new or update an existing dynamic variable with the given <b>name</b> and optional <b>value</b>.
@@ -3986,12 +3996,12 @@
 ;; receiverName e parameters dei defMethod dovrebbero corrispondere a quelli del proprio defGeneric
 
 (defVau (defGeneric . args) env
-  #|($nm name receiverName . parameters)
-   |($nm (name receiverName) . parameters)
+  #|($nm name (receiverName . parameters) . properties)
+   |($nm (name receiverName . parameters) . properties)
    |(type fexpr)
    |
    |Define a new generic function with the given <b>name</b>.
-   |<b>receiverName</b>, <b>parameters</b>, and <b>properties</b> are currently ignored.
+   |<b>receiverName</b> and <b>parameters</b>, the <b>properties</b> are currently ignored.
    |#
   (if (cons? (car args))
     (def ((name receiverName . parameters) . properties) args)
@@ -4000,8 +4010,8 @@
     (eval (list 'def name generic) env) ))
 
 (defVau (defMethod . args) env
-  #|($nm ((name (receiverName class) . parameters) . forms))
-   |($nm (name ((receiverName class) . parameters) . forms))
+  #|($nm name ((receiverName class) . parameters) . forms)
+   |($nm (name (receiverName class) . parameters) . forms)
    |(type fexpr)
    |
    |Define a new method for the generic function <b>name</b> specialized for <b>class</b>.
@@ -4386,7 +4396,8 @@
 
 
 (defGeneric subSeq (sequence start . end)
-  #|($nm sequence start . end)
+  #|($nm sequence start)
+   |($nm sequence start end)
    |(type generic)
    |
    |Create a sequence that is a copy of the subsequence of the <b>sequence</b> bounded by <b>start</b> and optional <b>end</b>.
@@ -4465,7 +4476,8 @@
   (new YieldRecord :value v :continuation k))
 
 (def\ fiberYield v
-  #|($nm . value)
+  #|($nm)
+   |($nm value)
    |(type function)
    |
    |Yield a optional <b>value</b> (which defaults to #inert).
@@ -4474,7 +4486,8 @@
     (makeYieldRecord (optDft v #inert) k)))
 
 (def\ fiberResume (yieldRecord . v)
-  #|($nm yieldRecord . value)
+  #|($nm yieldRecord)
+   |($nm yieldRecord value)
    |(type function)
    |
    |Resume a suspended fiber <b>yieldRecord</b> with an optional <b>value</b> (which defaults to #inert).
@@ -4761,7 +4774,8 @@
 write)
 
 (def load
-  #|($nm fileName . environment)
+  #|($nm fileName)
+   |($nm fileName environment)
    |(type function)
    |
    |load <b>fileName</b> in the optional <b>environment</b>.
@@ -4847,7 +4861,8 @@ load)
   intStr)
 
 (def doTco
-  #|($nm . boolean)
+  #|($nm)
+   |($nm boolean)
    |(type function)
    |
    |Return or update the use of the tail call optimization.
@@ -4855,7 +4870,8 @@ load)
   doTco)
 
 (def doAsrt
-  #|($nm . boolean)
+  #|($nm)
+   |($nm boolean)
    |(type function)
    |
    |Return or update the execution of the assert.
@@ -4863,7 +4879,8 @@ load)
   doAsrt)
 
 (def prStk
-  #|($nm . boolean)
+  #|($nm)
+   |($nm boolean)
    |(type function)
    |
    |Return or update the print of the stack for uncatched errors.
@@ -4871,7 +4888,8 @@ load)
   prStk)
 
 (def prAttr
-  #|($nm . boolean)
+  #|($nm)
+   |($nm boolean)
    |(type function)
    |
    |Return or update the print of the attributes for the uncatched errors.
@@ -4879,7 +4897,8 @@ load)
   prAttr)
 
 (def prWrn
-  #|($nm . boolean)
+  #|($nm)
+   |($nm boolean)
    |(type function)
    |
    |Return or update the print of warnings.
@@ -4887,7 +4906,8 @@ load)
  prWrn)
 
 (def aQuote
-  #|($nm . boolean)
+  #|($nm)
+   |($nm boolean)
    |(type function)
    |
    |Return or update the auto quote property for the list without combinable car. 
@@ -4895,7 +4915,8 @@ load)
 aQuote)
 
 (def hdlAny
-  #|($nm . boolean)
+  #|($nm)
+   |($nm boolean)
    |(type function)
    |
    |Return or update the use of an arbitraty value for the catch handler.
@@ -4903,7 +4924,8 @@ aQuote)
   hdlAny)
 
 (def prInert
-  #|($nm . boolean)
+  #|($nm)
+   |($nm boolean)
    |(type function)
    |
    |Return or update the print of #inert value in the repl
@@ -4911,7 +4933,8 @@ aQuote)
   prInert)
 
 (def typeT
-  #|($nm . integer)
+  #|($nm)
+   |($nm integer)
    |(type function)
    |
    |Return or update the type of #true.
@@ -4925,7 +4948,8 @@ aQuote)
   typeT)
 
 (def bndRes
-  #|($nm . integer)
+  #|($nm)
+   |($nm integer)
    |(type function)
    |
    |Return or update the type of the bind result.
@@ -4938,7 +4962,8 @@ aQuote)
   bndRes)
 
 (def prTrc
-  #|($nm . integer)
+  #|($nm)
+   |($nm integer)
    |(type function)
    |
    |Return or update the type of the trace.
@@ -4954,7 +4979,8 @@ aQuote)
   prTrc)
 
 (def prEnv
-  #|($nm . integer)
+  #|($nm)
+   |($nm integer)
    |(type function)
    |
    |Return or update the max number of attributes for printable environments.
@@ -4962,7 +4988,8 @@ aQuote)
   prEnv)
 
 (def boxDft
-  #|($nm . value)
+  #|($nm)
+   |($nm value)
    |(type function)
    |
    |Return or update the <b>value</b> to use as default value for the Box.

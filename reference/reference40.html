@@ -31,9 +31,9 @@
       </h3>
       <ul>
         <li>
-          (<b>defGeneric</b> name receiverName . parameters)
+          (<b>defGeneric</b> name (receiverName . parameters) . properties)
           <br/>
-            (<b>defGeneric</b> (name receiverName) . parameters)
+            (<b>defGeneric</b> (name receiverName . parameters) . properties)
           <br/>
             (type fexpr)
           <br/>
@@ -51,9 +51,9 @@
       </h3>
       <ul>
         <li>
-          (<b>defMethod</b> ((name (receiverName class) . parameters) . forms))
+          (<b>defMethod</b> name ((receiverName class) . parameters) . forms)
           <br/>
-            (<b>defMethod</b> (name ((receiverName class) . parameters) . forms))
+            (<b>defMethod</b> (name (receiverName class) . parameters) . forms)
           <br/>
             (type fexpr)
           <br/>

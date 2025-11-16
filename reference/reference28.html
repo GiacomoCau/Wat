@@ -52,7 +52,7 @@
       </h3>
       <ul>
         <li>
-          (<b>ifOpt</b> (name option) then . else)
+          (<b>ifOpt</b> (name option) thenForm . elseForms)
           <br/>
             (type fexpr)
           <br/>
@@ -60,9 +60,9 @@
           <br/>
             Single-value <b>option</b> destructuring.
           <br/>
-            Evaluate the <b>then</b> form with the <b>name</b> bound to the contents of the <b>option</b> if the evaluation of <b>option</b> is !#null,
+            Evaluate the <b>thenForm</b> form with the <b>name</b> bound to the contents of the <b>option</b> if the evaluation of <b>option</b> is !#null,
           <br/>
-            evaluate the <b>else</b> forms as an implicit `begin' otherwise.
+            evaluate the <b>elseForms</b> forms as an implicit `begin' otherwise.
         </li>
       </ul>
     </div>
@@ -72,15 +72,15 @@
       </h3>
       <ul>
         <li>
-          (<b>ifOpt*</b> (definiendTree option) then . else)
+          (<b>ifOpt*</b> (definiendTree option) thenForm . elseForms)
           <br/>
             &nbsp;
           <br/>
             Multi-valued <b>option</b> destructuring.
           <br/>
-            Evaluate <b>then</b> form with the <b>definiendTree</b> bound to <b>option</b> value if the evaluation of <b>option</b> is !#null,
+            Evaluate <b>thenForm</b> form with the <b>definiendTree</b> bound to <b>option</b> value if the evaluation of <b>option</b> is !#null,
           <br/>
-            evaluate the <b>else</b> forms as an implicit `begin' otherwise.
+            evaluate the <b>elseForms</b> forms as an implicit `begin' otherwise.
         </li>
       </ul>
     </div>
@@ -164,7 +164,9 @@
       </h3>
       <ul>
         <li>
-          (<b>optDft</b> option . default)
+          (<b>optDft</b> option)
+          <br/>
+            (<b>optDft</b> option default)
           <br/>
             (type fexpr)
           <br/>
