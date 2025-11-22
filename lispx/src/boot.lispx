@@ -4111,6 +4111,49 @@
 (defMacro (runFiberWithValues f args) (list 'apply** 'runFiber f args))
 
 
+#|! Generators
+ |#
+  
+(def generatorPrompt
+  #|The prompt used for delimiting generator.
+   |#
+ 'generatorPrompt)
+
+(defClass Generator ()
+  #|(type Class)
+   |(extends Obj)
+   |(attributes value continuation)
+   |
+   |Instances of this class are yielded.
+   |#
+  (value continuation) )
+
+(defVau (\* pt . forms) env
+  #|($nm parametersTree . forms)
+   |(type fexpr)
+   |
+   |Returns an anonymous generator function with the given <b>parametersTree</b>, when executed, it will return a generator object with <b>forms</b> as body.
+   |In the body of the generator object can be called 
+   |- the (yield* . value) function to pause the generator and returning an optional value,
+   |- the (yield** generator) function to delegate the iteration to another generator.
+   |#
+  (defEnv env
+    (newEnv env
+      :yield* (\ value (takeSubcont generatorPrompt k (new Generator :value (optDft value #inert) :continuation k)))
+      :yield** (\ ((#: Generator generator)) (pushSubcont (generator :continuation) generator)) ))
+  (eval (list '\ pt (list* 'pushPrompt 'generatorPrompt (cons '(yield*) forms))) env) )
+
+(defVau (next* (#: Symbol symbol) . value) env
+  #|($nm generator)
+   |($nm generator value)
+   |(type fexpr)
+   |
+   |Resume a generator yielded, the optional <b>value</b> or #inert will be the value returned from the yield* resumed.  
+   |#
+  (let1 ((#: Generator generator) (eval symbol env))
+    (eval (list 'set! symbol :rhs (list 'pushDelimSubcont 'generatorPrompt (list generator :continuation) (list 'optDft value #inert))) env) ))
+
+
 #|! Auto Increment/Decrement and Assignement Operators
  |#
 

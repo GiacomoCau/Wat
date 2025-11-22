@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      50. Apl/J
+      50. Java
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,35 +23,332 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      50. Apl/J
+      50. Java
     </h2>
+    <ul>
+      <li>
+        Classes
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&amp;canonicalClassName
+        <br/>
+          &nbsp;
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&amp;int
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&amp;java.lang.Integer
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&amp;Wat.Vm$Cons
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&amp;Object[]
+        <br/>
+          &nbsp;
+        <br/>
+          Costructors
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(@new class . arguments)
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(@new class containerInstance . arguments)
+        <br/>
+          &nbsp;
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(@new &amp;java.lang.String &quot;abc&quot;)
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(@new &amp;Wat.Vm$Cons vm 1 2)
+        <br/>
+          &nbsp;
+        <br/>
+          Fields
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(.fieldName object)
+        <br/>
+          &nbsp;
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(.MAX_VALUE &amp;java.lang.Integer)
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(.car cons)
+        <br/>
+          &nbsp;
+        <br/>
+          Methods
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(@methodName object . arguments)
+        <br/>
+          &nbsp;
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(@toString cons)
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(@doubleValue 10)
+        <br/>
+          &nbsp;
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(@getField &amp;java.lang.Integer &quot;MAX_VALUE&quot;)
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(@getDeclaredField &amp;Wat.Vm$Cons &quot;car&quot;)
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(@getConstructor &amp;java.lang.Integer &amp;java.lang.String)
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(@getMethod &amp;java.lang.Integer &quot;compare&quot; &amp;int &amp;int)
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(@getConstructor &amp;java.lang.Character &amp;char)
+        <br/>
+          &nbsp;
+        <br/>
+          Utility
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(@getField &amp;Wat.Utility &amp;java.lang.Integer &quot;MAX_VALUE&quot;)
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(@getField &amp;Wat.Utility &amp;Wat.Vm$Cons &quot;car&quot;)
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(@getExecutable &amp;Wat.Utility &amp;java.lang.Integer &quot;new&quot; &amp;java.lang.String)
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(@getExecutable &amp;Wat.Utility &amp;java.lang.Integer &quot;compare&quot;)
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(@getExecutable &amp;Wat.Utility &amp;java.lang.Character &quot;new&quot;)
+      </li>
+    </ul>
     <div>
       <h3>
-        iota
+        getMethod
       </h3>
       <ul>
         <li>
-          (def\ (iota n) (reverse ((rec\ (iota n) (if (0? n) () (cons n (iota (-1+ n))))) n)))
+          (def getMethod (@getMethod Class &quot;getMethod&quot; String Class[]))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        fork
+        getDeclaredMethod
       </h3>
       <ul>
         <li>
-          (def\ (fork f l r) [_ (f (l _) (r _))])
+          (def getDeclaredMethod (getMethod Class &quot;getDeclaredMethod&quot; String Class[]))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        hook
+        getMethods
       </h3>
       <ul>
         <li>
-          (def\ (hook l r) [_ (l _ (r _))])
+          (def getMethods (getMethod Class &quot;getMethods&quot;))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        getDeclaredMethods
+      </h3>
+      <ul>
+        <li>
+          (def getDeclaredMethods (getMethod Class &quot;getDeclaredMethods&quot;))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        getConstructor
+      </h3>
+      <ul>
+        <li>
+          (def getConstructor (getMethod Class &quot;getConstructor&quot; Class[]))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        getDeclaredConstructor
+      </h3>
+      <ul>
+        <li>
+          (def getDeclaredConstructor (getMethod Class &quot;getDeclaredConstructor&quot; Class[]))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        getConstructors
+      </h3>
+      <ul>
+        <li>
+          (def getConstructors (getMethod Class &quot;getConstructors&quot;))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        getDeclaredConstructors
+      </h3>
+      <ul>
+        <li>
+          (def getDeclaredConstructors (getMethod Class &quot;getDeclaredConstructors&quot;))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        getField
+      </h3>
+      <ul>
+        <li>
+          (def getField (getMethod Class &quot;getField&quot; String))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        getDeclaredField
+      </h3>
+      <ul>
+        <li>
+          (def getDeclaredField (getMethod Class &quot;getDeclaredField&quot; String))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        getFields
+      </h3>
+      <ul>
+        <li>
+          (def getFields (getMethod Class &quot;getFields&quot;))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        getDeclaredFields
+      </h3>
+      <ul>
+        <li>
+          (def getDeclaredFields (getMethod Class &quot;getDeclaredFields&quot;))
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        getExecutable
+      </h3>
+      <ul>
+        <li>
+          (<b>getExecutable</b> Class name . classes)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            Return a constructor or a method with given name also without specify parameter classes.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        supplier
+      </h3>
+      <ul>
+        <li>
+          (<b>supplier</b> () . forms)
+          <br/>
+            &nbsp;
+          <br/>
+            Return a java Supplier.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        consumer
+      </h3>
+      <ul>
+        <li>
+          (<b>consumer</b> (symbol) . forms)
+          <br/>
+            &nbsp;
+          <br/>
+            Return a java Consumer.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        function
+      </h3>
+      <ul>
+        <li>
+          (<b>function</b> (symbol) . forms)
+          <br/>
+            &nbsp;
+          <br/>
+            Return a java Function.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        biConsumer
+      </h3>
+      <ul>
+        <li>
+          (<b>biConsumer</b> (symbol symbol) . forms)
+          <br/>
+            &nbsp;
+          <br/>
+            Return a java BiConsumer.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        biFunction
+      </h3>
+      <ul>
+        <li>
+          (<b>biFunction</b> (symbol symbol) . forms)
+          <br/>
+            &nbsp;
+          <br/>
+            Return a java BiFunction.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        close1
+      </h3>
+      <ul>
+        <li>
+          (<b>close1</b> binding . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax binding (name . initForms))
+          <br/>
+            &nbsp;
+          <br/>
+            Single try/resource
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        close
+      </h3>
+      <ul>
+        <li>
+          (<b>close</b> bindings . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax bindings ((name . initForms) . bindings))
+          <br/>
+            &nbsp;
+          <br/>
+            Multiple try/resource
         </li>
       </ul>
     </div>

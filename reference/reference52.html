@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      52. Configuration
+      52. Utility
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,293 +23,193 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      52. Configuration
+      52. Utility
     </h2>
     <div>
       <h3>
-        intStr
+        vm
       </h3>
       <ul>
         <li>
-          (<b>intStr</b>)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            Return #true if the string are interned, #false otherwise.
+          The virtual machine.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        doTco
+        toString
       </h3>
       <ul>
         <li>
-          (<b>doTco</b>)
-          <br/>
-            (<b>doTco</b> boolean)
+          (<b>toString</b> object)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Return or update the use of the tail call optimization.
+            internal to string function
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        doAsrt
+        log
       </h3>
       <ul>
         <li>
-          (<b>doAsrt</b>)
-          <br/>
-            (<b>doAsrt</b> boolean)
+          (<b>log</b> . arguments)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Return or update the execution of the assert.
+            Log all <b>arguments</b> to console and return the value of the first if present, #inert otherwise.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        prStk
+        print
       </h3>
       <ul>
         <li>
-          (<b>prStk</b>)
-          <br/>
-            (<b>prStk</b> boolean)
+          (<b>print</b> . arguments)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Return or update the print of the stack for uncatched errors.
+            Print all <b>arguments</b> to console and return the value of the last argument if present, #inert otherwise.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        prAttr
+        write
       </h3>
       <ul>
         <li>
-          (<b>prAttr</b>)
-          <br/>
-            (<b>prAttr</b> boolean)
+          (<b>write</b> . arguments)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Return or update the print of the attributes for the uncatched errors.
+            Write all <b>arguments</b> to console and return the value of the last argument if present, #inert otherwise.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        prWrn
+        load
       </h3>
       <ul>
         <li>
-          (<b>prWrn</b>)
+          (<b>load</b> fileName)
           <br/>
-            (<b>prWrn</b> boolean)
+            (<b>load</b> fileName environment)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Return or update the print of warnings.
+            load <b>fileName</b> in the optional <b>environment</b>.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        aQuote
+        read
       </h3>
       <ul>
         <li>
-          (<b>aQuote</b>)
-          <br/>
-            (<b>aQuote</b> boolean)
+          (<b>read</b>)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Return or update the auto quote property for the list without combinable car. 
+            Read expression from console.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        hdlAny
+        readString
       </h3>
       <ul>
         <li>
-          (<b>hdlAny</b>)
-          <br/>
-            (<b>hdlAny</b> boolean)
+          (<b>readString</b> string)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Return or update the use of an arbitraty value for the catch handler.
+            Read expression from string
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        prInert
+        system
       </h3>
       <ul>
         <li>
-          (<b>prInert</b>)
-          <br/>
-            (<b>prInert</b> boolean)
+          (<b>system</b> string)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Return or update the print of #inert value in the repl
+            Exec system commands
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        typeT
+        time
       </h3>
       <ul>
         <li>
-          (<b>typeT</b>)
+          (<b>time</b> n . forms)
           <br/>
-            (<b>typeT</b> integer)
-          <br/>
-            (type function)
+            (type fexpr)
           <br/>
             &nbsp;
           <br/>
-            Return or update the type of #true.
-          <br/>
-            &nbsp;
-          <br/>
-            - 0: #true
-          <br/>
-            - 1: !#false
-          <br/>
-            - 2: !(or #false #null)
-          <br/>
-            - 3: !(or #false #null #inert)
-          <br/>
-            - 4: !(or #false #null #inert 0)
+            Return the elapsed time in milliseconds after evaluate n times <b>forms</b> as implicit `begin'
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        bndRes
+        make\*
       </h3>
       <ul>
         <li>
-          (<b>bndRes</b>)
-          <br/>
-            (<b>bndRes</b> integer)
+          (<b>make\*</b> n function)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Return or update the type of the bind result.
-          <br/>
-            &nbsp;
-          <br/>
-            - 0: #inert
-          <br/>
-            - 1: the value used to set the last binding
-          <br/>
-            - 2: the previous value of the last binding
-          <br/>
-            - 3: the container obj or environment
+            Returns a function that applies <b>function</b> with the arguments from n placed in a list.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        prTrc
+        minMax
       </h3>
       <ul>
         <li>
-          (<b>prTrc</b>)
-          <br/>
-            (<b>prTrc</b> integer)
+          (<b>minMax</b> . values)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Return or update the type of the trace.
-          <br/>
-            &nbsp;
-          <br/>
-            - 0: none
-          <br/>
-            - 1: files loaded
-          <br/>
-            - 2: root evaluations
-          <br/>
-            - 3: all deep evaluations
-          <br/>
-            - 4: values returned
-          <br/>
-            - 5: applications executed
-          <br/>
-            - 6: bind/lookup symbols
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        prEnv
-      </h3>
-      <ul>
-        <li>
-          (<b>prEnv</b>)
-          <br/>
-            (<b>prEnv</b> integer)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            Return or update the max number of attributes for printable environments.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        boxDft
-      </h3>
-      <ul>
-        <li>
-          (<b>boxDft</b>)
-          <br/>
-            (<b>boxDft</b> value)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            Return or update the <b>value</b> to use as default value for the Box.
+            Returns a cons with the min and the max of the <b>values</b>.
         </li>
       </ul>
     </div>
