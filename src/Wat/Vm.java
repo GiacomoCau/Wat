@@ -384,7 +384,7 @@ public class Vm {
 	}
 	
 	
-	// Environment
+	// Obj Environment
 	interface ObjEnv {
 		<T> T value(Object key);
 		boolean isBound(Object key);
@@ -396,6 +396,9 @@ public class Vm {
 		boolean remove(Object key);
 	}
 	record Lookup(boolean isBound, Object value) {}
+	
+	
+	// Environment
 	class Env implements ArgsList, ObjEnv {
 		Env parent; LinkedHashMap<String,Object> map;
 		Env(Env parent, Object ... objs) {
@@ -845,19 +848,9 @@ public class Vm {
 	public Object arityPt(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return o == null ? i : ge(i); }
 	//public Object arityPt(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return list(symbol(o == null ? "==" : ">="), i); }
 	Object ge(int n) { return list(symbol(">="), n); }
-	/* TODO sostituito dal seguente, eliminare
-	int args(Apv apv) {
-		return switch(apv.cmb) {
-			case Opv opv-> opv.pt == null ? 0 : opv.pt instanceof Cons c && c.cdr() == null && (c.car == ignore || c.car instanceof Symbol) ? 1 : more;
-			case JFun jFun-> jFun.jfun instanceof Supplier ? 0 : jFun.jfun instanceof Function ? 1 : more;
-			default-> more;
-		};
-	}
-	/*/
 	int args(Apv apv) {
 		return switch (arity(apv)) { case Integer i-> i; default-> more; };
 	}
-	//*/
 	
 	Object combine(Env e, Object op, List o) {
 		if (prTrc >= 5) print(" combine: ", indent(), op, " ", o /*, "   ", e*/);
@@ -1031,7 +1024,6 @@ public class Vm {
 		//*/
 		public String toString() { return def ? "%Def" : "%Set!"; }
 	};
-	//*/
 	class Eval extends Combinable {
 		{ arity = list(1, 2); }
 		public Object combine(Env e, List o) {

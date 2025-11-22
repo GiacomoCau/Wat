@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      53. LispX Condition System
+      53. Configuration
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -20,801 +20,296 @@
       <input type="button" value="^"/>
     </a>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference54.html">
-      <input type="button" value="&gt;" disabled/>
+      <input type="button" value="&gt;"/>
     </a>
     <h2>
-      53. LispX Condition System
+      53. Configuration
     </h2>
-    <ul>
-      <li>
-        This file implements a condition system in the style of Common Lisp.
-        <br/>
-          &nbsp;
-        <br/>
-          Implementation Notes
-        <br/>
-          --------------------
-        <br/>
-          &nbsp;
-        <br/>
-          Condition handling and restart handling share some similarities
-        <br/>
-          while also being quite different in other respects.
-        <br/>
-          &nbsp;
-        <br/>
-          The main similarities between condition and restart handling are:
-        <br/>
-          &nbsp;
-        <br/>
-          * Both condition and restart handlers are arranged in
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;dynamically-bound handler chains, consisting of individual
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;handler frames.  Each frame binds a number of handlers.  We use
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;two dynamic variables, `*conditionHandlerFrame*' and
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;`*restartHandlerFrame*', to point at the innermost frame of
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;each chain.  Note that the variables hold options, as indicated
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;by the question mark.
-        <br/>
-          &nbsp;
-        <br/>
-          * Signalling a condition and invoking a restart are very similar
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;operations, in that a handler is looked up in the chain, and
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;then its handler function is invoked.
-        <br/>
-          &nbsp;
-        <br/>
-          The main differences:
-        <br/>
-          &nbsp;
-        <br/>
-          * Conditions are classes organized in a type hierarchy
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;(e.g. `type-error' as subtype of `error'), whereas restarts are
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;plain names (e.g. `abort' and `continue').
-        <br/>
-          &nbsp;
-        <br/>
-          * A condition handler function always receives only a single
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;argument, the condition, whereas a restart handler function
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;receives any number of arguments passed to `invokeRestart'.
-        <br/>
-          &nbsp;
-        <br/>
-          * A condition handler function may decline handling a condition by
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;returning normally instead of performing a nonlocal exit; this
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;causes the search for a handler to continue.  In contrast, if a
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;restart handler function returns normally, the restart is
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;considered handled, and its result value is returned from
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;`invokeRestart'.
-        <br/>
-          &nbsp;
-        <br/>
-          * A restart handler may optionally have an interactive function
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;that prompts the user for arguments when the restart is invoked
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;by `invokeRestartInteractively'.
-        <br/>
-          &nbsp;
-        <br/>
-          * A restart handler may optionally be associated with a list of
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;conditions, to tell apart restarts belonging to different,
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;concurrently signalled conditions.
-        <br/>
-          &nbsp;
-        <br/>
-          We follow the Common Lisp condition system quite closely (including
-        <br/>
-          details like the condition firewall), with some minor differences:
-        <br/>
-          &nbsp;
-        <br/>
-          1) For simplicity, the syntaxes of `handlerCase' and
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`restartCase' are equal to the syntaxes of the lower-level
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`handlerBind' and `restartBind' functions.  There is no extra
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;user interface&quot; processing for the higher-level functions.
-        <br/>
-          &nbsp;
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Likewise, `signal' and `error' do not support creating simple
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;conditions from formatting strings and arguments, you must
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;always pass in a fully formed condition yourself.
-        <br/>
-          &nbsp;
-        <br/>
-          2) There is no `with-condition-restarts'.  Instead there is an
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;additional keyword, `:associatedConditions', in the
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;handlerSpecs of `restartBind' and `restartCase' that
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;establishes the associations.
-        <br/>
-          &nbsp;
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Alternatively, `signal' and `error' also support the
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;establishment of restart handlers associated with the signalled
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;condition.
-        <br/>
-          &nbsp;
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A call to `signal' (or `error') with restart handler specs like:
-        <br/>
-          &nbsp;
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(signal some-condition
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(continue (\ () ...)) )
-        <br/>
-          &nbsp;
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;is equivalent to:
-        <br/>
-          &nbsp;
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(restartCase ( (continue (\ () ...) :associatedConditions (list some-condition)) )
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(signal some-condition) )
-        <br/>
-          &nbsp;
-        <br/>
-          3) Every restart must have a !null name; anonymous restarts
-        <br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;are not supported.
-      </li>
-    </ul>
     <div>
       <h3>
-        HandlerFrame
+        intStr
       </h3>
       <ul>
         <li>
-          (type Class)
-          <br/>
-            (extends Obj)
-          <br/>
-            (attributes handlers parentFrame)
-          <br/>
-            &nbsp;
-          <br/>
-            Instances of this class make up the condition and restart handler chains.
-          <br/>
-            Each frame stores a list of <b>handlers</b> and an optional <b>parentFrame</b>.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        ConditionHandler
-      </h3>
-      <ul>
-        <li>
-          (type Class)
-          <br/>
-            (extends Obj)
-          <br/>
-            (attributes conditionClass handlerFunction)
-          <br/>
-            &nbsp;
-          <br/>
-            A condition handler is handling a particular <b>conditionClass</b> (can be `object' to handle all conditions).
-          <br/>
-            The <b>handlerFunction</b> receives a signalled condition as its single argument.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        RestartHandler
-      </h3>
-      <ul>
-        <li>
-          (type Class)
-          <br/>
-            (extends Obj)
-          <br/>
-            (attributes restartName handlerFunction interactiveFunction associatedConditions)
-          <br/>
-            &nbsp;
-          <br/>
-            A restart handler is handling a particular <b>restartName</b>.
-          <br/>
-            The <b>handlerFunction</b> receives the arguments passed to `invokeRestart'.
-          <br/>
-            The optional <b>interactiveFunction</b> is called by `invokeRestartInteractively'
-          <br/>
-            and should prompt the user for required arguments.
-          <br/>
-            The <b>associatedConditions</b> are a list of conditions with which this handler is associated.
-          <br/>
-            If the list is empty, the handler is applicable to any condition.
-          <br/>
-            If it's not empty, the handler is applicable only to conditions in the list.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        lispx::makeHandlerBindOperator
-      </h3>
-      <ul>
-        <li>
-          (<b>lispx::makeHandlerBindOperator</b> handlerSpecParser handlerFrameDynamic)
+          (<b>intStr</b>)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Metaprogramming utility to create `handlerBind' and `restartBind'.
-          <br/>
-            It is parameterized by a function that parses the handler specifications of the `handlerBind' and `restartBind' forms
-          <br/>
-            and produces handlers from them, as well as the dynamic variable holding the handler chain
-          <br/>
-            (the variable itself as a first class object, not its value, so it can be used with `progv').
+            Return #true if the string are interned, #false otherwise.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        handlerBind
+        doTco
       </h3>
       <ul>
         <li>
-          (<b>handlerBind</b> handlerSpecs . forms)
+          (<b>doTco</b>)
           <br/>
-            (type fexpr)
-          <br/>
-            &nbsp;
-          <br/>
-            (syntax handlerSpecs (handlerSpec . handlerSpecs))
-          <br/>
-            (syntax handlerSpec (conditionClass handlerFunction))
-          <br/>
-            (syntax handlerSpec ((conditionClass . attributes) handlerFunction))
-          <br/>
-            (syntax attributes (attribute value . attributes))
-          <br/>
-            (syntax attribute (or Symbol Keyword String .Field @Method))
-          <br/>
-            &nbsp;
-          <br/>
-            Establish condition handlers specified by <b>handlerSpecs</b> around <b>forms</b>.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        restartBind
-      </h3>
-      <ul>
-        <li>
-          (<b>restartBind</b> handlerSpecs . forms)
-          <br/>
-            (type fexpr)
-          <br/>
-            &nbsp;
-          <br/>
-            (syntax handlerSpecs (handlerSpec . handlerSpecs))
-          <br/>
-            (syntax handlerSpec (restartName handlerFunction . properties))
-          <br/>
-            (syntax properties (:interactiveFunction iFn . properties))
-          <br/>
-            (syntax properties (:associatedConditions aCn . properties))
-          <br/>
-            &nbsp;
-          <br/>
-            Establish restart handlers specified by <b>handlerSpecs</b> around <b>forms</b>.
-          <br/>
-            You should usually prefer `restartCase'.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        lispx::makeHandlerCaseOperator
-      </h3>
-      <ul>
-        <li>
-          (<b>lispx::makeHandlerCaseOperator</b> handlerBindOperator)
+            (<b>doTco</b> boolean)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Metaprogramming utility to create `handlerCase' / `restartCase' from `handlerBind' / `restartBind'.
-          <br/>
-            The `*-case' operators unwind the stack before a handler is called.
-          <br/>
-            We do this with an outer exit and an inner trampoline, both wrapped around the original `*-bind' operator.
-          <br/>
-            The original form's handler functions are replaced with functions that use the trampoline.
-          <br/>
-            If a condition is signalled / a restart is invoked during the evaluation of the body forms,
-          <br/>
-            they unwind the stack by jumping into the trampoline, and call the original handler function there.
-          <br/>
-            If no condition is signalled / no restart is invoked, we return from the outer exit, ignoring the trampoline.
+            Return or update the use of the tail call optimization.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        handlerCase
+        doAsrt
       </h3>
       <ul>
         <li>
-          (<b>handlerCase</b> handlerSpecs . forms)
+          (<b>doAsrt</b>)
           <br/>
-            (type fexpr)
-          <br/>
-            &nbsp;
-          <br/>
-            (syntax handlerSpecs (handlerSpec . handlerSpecs))
-          <br/>
-            (syntax handlerSpec (conditionClass handlerFunction))
-          <br/>
-            (syntax handlerSpec ((conditionClass . attributes) handlerFunction))
-          <br/>
-            (syntax attributes (attribute value . attributes))
-          <br/>
-            (syntax attribute (or Symbol Keyword String .Field @Method))
-          <br/>
-            &nbsp;
-          <br/>
-            Like `handlerBind', but the stack is unwound before a handler function is called.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        restartCase
-      </h3>
-      <ul>
-        <li>
-          (<b>restartCase</b> handlerSpecs . forms)
-          <br/>
-            (type fexpr)
-          <br/>
-            &nbsp;
-          <br/>
-            (syntax handlerSpecs (handlerSpec . handlerSpecs))
-          <br/>
-            (syntax handlerSpec (restartName handlerFunction . properties))
-          <br/>
-            (syntax properties (:interactiveFunction iFn . properties))
-          <br/>
-            (syntax properties (:associatedConditions aCn . properties))
-          <br/>
-            &nbsp;
-          <br/>
-            Like `restartBind', but the stack is unwound before a handler function is called.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        _signal_
-      </h3>
-      <ul>
-        <li>
-          (<b>_signal_</b> condition)
+            (<b>doAsrt</b> boolean)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Utility to signal the <b>condition</b>.
-          <br/>
-            If the signal is unhandled, return #inert.
-          <br/>
-            See `signal'.
+            Return or update the execution of the assert.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        lispx::callConditionHandler
+        prStk
       </h3>
       <ul>
         <li>
-          (<b>lispx::callConditionHandler</b> handler handlerFrame condition)
+          (<b>prStk</b>)
+          <br/>
+            (<b>prStk</b> boolean)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Call a condition <b>handler</b>'s handler function with the given <b>condition</b>.
-          <br/>
-            During the call, the condition handler chain gets swapped to
-          <br/>
-            that chain that was active at the time the handler was established.
-          <br/>
-            This is the so-called &quot;condition firewall&quot;.
-          <br/>
-            The chain gets passed in as the value of <b>handlerFrame</b>.
+            Return or update the print of the stack for uncatched errors.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        lispx::applyHandlerFunction
+        prAttr
       </h3>
       <ul>
         <li>
-          (<b>lispx::applyHandlerFunction</b> handler arguments)
+          (<b>prAttr</b>)
+          <br/>
+            (<b>prAttr</b> boolean)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Utility to call a condition or restart <b>handler</b>'s handler function with a list of <b>arguments</b>.
+            Return or update the print of the attributes for the uncatched errors.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        _error_
+        prWrn
       </h3>
       <ul>
         <li>
-          (<b>_error_</b> condition)
+          (<b>prWrn</b>)
+          <br/>
+            (<b>prWrn</b> boolean)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Utility to signal the <b>condition</b>.
-          <br/>
-            If the condition is unhandled, invoke the debugger. Therefore never returns normally.
-          <br/>
-            See `error'.
+            Return or update the print of warnings.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        lispx::makeSignalWithRestartsOperator
+        aQuote
       </h3>
       <ul>
         <li>
-          (<b>lispx::makeSignalWithRestartsOperator</b> signalOperator)
+          (<b>aQuote</b>)
+          <br/>
+            (<b>aQuote</b> boolean)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Metaprogramming utility to create the `signal' / `error' operators that
-          <br/>
-            take restart handlerSpecs from the `_signal_' / `_error_' ones that don't.
+            Return or update the auto quote property for the list without combinable car. 
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        signal
+        hdlAny
       </h3>
       <ul>
         <li>
-          (<b>signal</b> condition . handlerSpecs)
+          (<b>hdlAny</b>)
           <br/>
-            (type fexpr)
-          <br/>
-            &nbsp;
-          <br/>
-            (syntax handlerSpecs (handlerSpec . handlerSpecs))
-          <br/>
-            (syntax handlerSpec (restartName handlerFunction . property))
-          <br/>
-            (syntax property (:interactiveFunction iFn))
-          <br/>
-            &nbsp;
-          <br/>
-            Signal the <b>condition</b>.
-          <br/>
-            If the signal is unhandled, return #inert.
-          <br/>
-            Restart handlers that are associated with the condition can be bound as per `restartCase'.
-          <br/>
-            The handlers should not specify the `:associatedConditions' property, as it will be set automatically.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        error
-      </h3>
-      <ul>
-        <li>
-          (<b>error</b> condition . handlerSpecs)
-          <br/>
-            (type fexpr)
-          <br/>
-            &nbsp;
-          <br/>
-            (syntax handlerSpecs (handlerSpec . handlerSpecs))
-          <br/>
-            (syntax handlerSpec (restartName handlerFunction . property))
-          <br/>
-            (syntax property (:interactiveFunction iFn))
-          <br/>
-            &nbsp;
-          <br/>
-            Signal the <b>condition</b>.
-          <br/>
-            If the condition is unhandled, invoke the debugger. Therefore never returns normally.
-          <br/>
-            Restart handlers that are associated with the condition can be bound as per `restartCase'.
-          <br/>
-            The handlers should not specify the `:associatedConditions' property, as it will be set automatically.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        invokeRestart
-      </h3>
-      <ul>
-        <li>
-          (<b>invokeRestart</b> conrestartDesignator . arguments)
+            (<b>hdlAny</b> boolean)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Invoke the restart designated by <b>restartDesignator</b>, which can be a symbol or a `restartHandler', with the given <b>arguments</b>.
-          <br/>
-            Signal an error if the restart is not found.
+            Return or update the use of an arbitraty value for the catch handler.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        invokeRestartInteractively
+        prInert
       </h3>
       <ul>
         <li>
-          (<b>invokeRestartInteractively</b> restartDesignator)
+          (<b>prInert</b>)
+          <br/>
+            (<b>prInert</b> boolean)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Invoke the restart designated by <b>restartDesignator</b>, which can be a symbol or a `RestartHandler',
-          <br/>
-            by prompting the user for arguments via the restart's optional interactive function.
-          <br/>
-            Signal an error if the restart is not found.
+            Return or update the print of #inert value in the repl
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        lispx::invokeRestartWithArgumentsProducingFunction
+        typeT
       </h3>
       <ul>
         <li>
-          (<b>lispx::invokeRestartWithArgumentsProducingFunction</b> restartDesignator function)
+          (<b>typeT</b>)
+          <br/>
+            (<b>typeT</b> integer)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Utility to invoke the restart designated by <b>restartDesignator</b>, which can be a symbol or a `RestartHandler',
+            Return or update the type of #true.
           <br/>
-            with an arguments list produced by <b>function</b> (which receives a `restartHandler' as argument).
+            &nbsp;
+          <br/>
+            - 0: #true
+          <br/>
+            - 1: !#false
+          <br/>
+            - 2: !(or #false #null)
+          <br/>
+            - 3: !(or #false #null #inert)
+          <br/>
+            - 4: !(or #false #null #inert 0)
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        lispx::findHandler
+        bndRes
       </h3>
       <ul>
         <li>
-          (<b>lispx::findHandler</b> object handlerFrame payload)
+          (<b>bndRes</b>)
+          <br/>
+            (<b>bndRes</b> integer)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Utility to find both condition handlers and restart handlers.
-          <br/>
-            The <b>object</b> can be either a condition or a restart name.
-          <br/>
-            The <b>handlerFrame</b> is the handler frame where the search should start
-          <br/>
-            (always the innermost handler frame at the start of the search).
+            Return or update the type of the bind result.
           <br/>
             &nbsp;
           <br/>
-            Return an option of the found handler and the frame establishing it as a two-element list.
+            - 0: #inert
           <br/>
-            The frame is needed so that we can access its parent in the implementation of the condition firewall (see `lispx::callConditionHandler').
+            - 1: the value used to set the last binding
           <br/>
-            &nbsp;
+            - 2: the previous value of the last binding
           <br/>
-            The <b>payload</b> parameter can be used to pass in an optional condition if we are looking for a restart handler (see `findRestart').
-          <br/>
-            If we are looking for a condition handler, it is always #null.
+            - 3: the container obj or environment
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        findRestart
+        prTrc
       </h3>
       <ul>
         <li>
-          (<b>findRestart</b> name . condition)
+          (<b>prTrc</b>)
+          <br/>
+            (<b>prTrc</b> integer)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Find a restart handler by <b>name</b>, optionally limited to restarts associated with a particular <b>condition</b>.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        lispx::handlerApplicable?
-      </h3>
-      <ul>
-        <li>
-          (<b>lispx::handlerApplicable?</b> handler object payload)
-          <br/>
-            (type generic)
+            Return or update the type of the trace.
           <br/>
             &nbsp;
           <br/>
-            Return #true if a condition or restart <b>handler</b> is applicable, #false otherwise.
+            - 0: none
           <br/>
-            The <b>object</b> can be a condition or a restart name.
+            - 1: files loaded
           <br/>
-            The <b>payload</b> is only used for restart handlers, is always #null for condition handlers.
+            - 2: root evaluations
+          <br/>
+            - 3: all deep evaluations
+          <br/>
+            - 4: values returned
+          <br/>
+            - 5: applications executed
+          <br/>
+            - 6: bind/lookup symbols
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        lispx::handlerApplicable?
+        prEnv
       </h3>
       <ul>
         <li>
-          (<b>lispx::handlerApplicable?</b> (handler ConditionHandler) condition #null)
+          (<b>prEnv</b>)
           <br/>
-            (type method)
-          <br/>
-            &nbsp;
-          <br/>
-            A condition handler is applicable if the condition is an instance of its condition class.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        lispx::handlerApplicable?
-      </h3>
-      <ul>
-        <li>
-          (<b>lispx::handlerApplicable?</b> (handler RestartHandler) restartName condition)
-          <br/>
-            (type method)
-          <br/>
-            &nbsp;
-          <br/>
-            A restart handler is applicable to a restart name and optional condition ...
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        lispx::restartHandlerApplicableToCondition?
-      </h3>
-      <ul>
-        <li>
-          (<b>lispx::restartHandlerApplicableToCondition?</b> handler condition)
+            (<b>prEnv</b> integer)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            A restart handler is applicable to an optional condition ...
+            Return or update the max number of attributes for printable environments.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        computeRestarts
+        boxDft
       </h3>
       <ul>
         <li>
-          (<b>computeRestarts</b> . condition)
+          (<b>boxDft</b>)
+          <br/>
+            (<b>boxDft</b> value)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Return the list of currently active restarts, with most recently established ones first,
-          <br/>
-            optionally limited to those that are explicitly associated with the supplied <b>condition</b>
-          <br/>
-            or not associated with any condition.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        RestartError
-      </h3>
-      <ul>
-        <li>
-          (type Class)
-          <br/>
-            (extends Error)
-          <br/>
-            &nbsp;
-          <br/>
-            Signalled when no handler for <b>restartName</b> is found.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        makeRestartError
-      </h3>
-      <ul>
-        <li>
-          (<b>makeRestartError</b> restartName)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            Create a new `restart-error' for the given <b>restartName</b>.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        restartError
-      </h3>
-      <ul>
-        <li>
-          (<b>restartError</b> restartName)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            Signal a new `restart-error'.
+            Return or update the <b>value</b> to use as default value for the Box.
         </li>
       </ul>
     </div>
@@ -826,7 +321,7 @@
       <input type="button" value="^"/>
     </a>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference54.html">
-      <input type="button" value="&gt;" disabled/>
+      <input type="button" value="&gt;"/>
     </a>
   </body>
 </html>

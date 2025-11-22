@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      48. Auto Increment/Decrement and Assignement Operators
+      48. Generators
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,91 +23,95 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      48. Auto Increment/Decrement and Assignement Operators
+      48. Generators
     </h2>
     <div>
       <h3>
-        ++
+        generatorPrompt
       </h3>
       <ul>
         <li>
-          (<b>++</b> number)
+          The prompt used for delimiting generator.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        Generator
+      </h3>
+      <ul>
+        <li>
+          (type Class)
           <br/>
-            (<b>++</b> box)
+            (extends Obj)
           <br/>
-            (<b>++</b> obj field)
+            (attributes value continuation)
+          <br/>
+            &nbsp;
+          <br/>
+            Instances of this class are yielded.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        \*
+      </h3>
+      <ul>
+        <li>
+          (<b>\*</b> parametersTree . forms)
           <br/>
             (type fexpr)
           <br/>
             &nbsp;
           <br/>
-            Return the incremented value of Number, Box and Obj.
+            Returns an anonymous generator function with the given <b>parametersTree</b>, when executed, it will return a generator object with <b>forms</b> as body.
+          <br/>
+            In the body of the generator object can be called 
+          <br/>
+            - the (yield* . value) function to pause the generator and returning an optional value,
+          <br/>
+            - the (yield** generator) function to delegate the iteration to another generator.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        --
+        \**
       </h3>
       <ul>
         <li>
-          (<b>--</b> number)
-          <br/>
-            (<b>--</b> box)
-          <br/>
-            (<b>--</b> obj field)
+          (<b>\**</b> . forms)
           <br/>
             (type fexpr)
           <br/>
             &nbsp;
           <br/>
-            Return the decrenented value of Number, Box and Obj.
+            Returns an generator object with <b>forms</b> as body.
+          <br/>
+            In the body of the generator object can be called 
+          <br/>
+            - the (yield* . value) function to pause the generator and returning an optional value,
+          <br/>
+            - the (yield** generator) function to delegate the iteration to another generator.
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        assignOp
+        next*
       </h3>
       <ul>
         <li>
-          (<b>assignOp</b> operator)
+          (<b>next*</b> generator)
           <br/>
-            (type function)
+            (<b>next*</b> generator value)
+          <br/>
+            (type fexpr)
           <br/>
             &nbsp;
           <br/>
-            Return a fexpr which returns the value assigned to Box, Obj and Object after applying the <b>operator</b>.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        $=
-      </h3>
-      <ul>
-        <li>
-          (def $= (assignOp %$))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        +=
-      </h3>
-      <ul>
-        <li>
-          (def += (assignOp %+))
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        -=
-      </h3>
-      <ul>
-        <li>
-          (def -= (assignOp %-))
+            Resume a generator yielded, the optional <b>value</b> or #inert will be the value returned from the yield* resumed.  
         </li>
       </ul>
     </div>

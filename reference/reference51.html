@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>
-      51. Utility
+      51. Apl/J
     </title>
     <meta charset="UTF-8"/>
     <style>
@@ -23,193 +23,35 @@
       <input type="button" value="&gt;"/>
     </a>
     <h2>
-      51. Utility
+      51. Apl/J
     </h2>
     <div>
       <h3>
-        vm
+        iota
       </h3>
       <ul>
         <li>
-          The virtual machine.
+          (def\ (iota n) (reverse ((rec\ (iota n) (if (0? n) () (cons n (iota (-1+ n))))) n)))
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        toString
+        fork
       </h3>
       <ul>
         <li>
-          (<b>toString</b> object)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            internal to string function
+          (def\ (fork f l r) [_ (f (l _) (r _))])
         </li>
       </ul>
     </div>
     <div>
       <h3>
-        log
+        hook
       </h3>
       <ul>
         <li>
-          (<b>log</b> . arguments)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            Log all <b>arguments</b> to console and return the value of the first if present, #inert otherwise.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        print
-      </h3>
-      <ul>
-        <li>
-          (<b>print</b> . arguments)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            Print all <b>arguments</b> to console and return the value of the last argument if present, #inert otherwise.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        write
-      </h3>
-      <ul>
-        <li>
-          (<b>write</b> . arguments)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            Write all <b>arguments</b> to console and return the value of the last argument if present, #inert otherwise.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        load
-      </h3>
-      <ul>
-        <li>
-          (<b>load</b> fileName)
-          <br/>
-            (<b>load</b> fileName environment)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            load <b>fileName</b> in the optional <b>environment</b>.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        read
-      </h3>
-      <ul>
-        <li>
-          (<b>read</b>)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            Read expression from console.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        readString
-      </h3>
-      <ul>
-        <li>
-          (<b>readString</b> string)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            Read expression from string
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        system
-      </h3>
-      <ul>
-        <li>
-          (<b>system</b> string)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            Exec system commands
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        time
-      </h3>
-      <ul>
-        <li>
-          (<b>time</b> n . forms)
-          <br/>
-            (type fexpr)
-          <br/>
-            &nbsp;
-          <br/>
-            Return the elapsed time in milliseconds after evaluate n times <b>forms</b> as implicit `begin'
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        make\*
-      </h3>
-      <ul>
-        <li>
-          (<b>make\*</b> n function)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            Returns a function that applies <b>function</b> with the arguments from n placed in a list.
-        </li>
-      </ul>
-    </div>
-    <div>
-      <h3>
-        minMax
-      </h3>
-      <ul>
-        <li>
-          (<b>minMax</b> . values)
-          <br/>
-            (type function)
-          <br/>
-            &nbsp;
-          <br/>
-            Returns a cons with the min and the max of the <b>values</b>.
+          (def\ (hook l r) [_ (l _ (r _))])
         </li>
       </ul>
     </div>

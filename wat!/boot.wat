@@ -4533,6 +4533,72 @@
 (assert (runFiberWithValues (\ () (fiberYield 1) (fiberYield 2)) (#inert 3)) (1 2 3))
 
 
+#|! Generators
+ |#
+  
+(def generatorPrompt
+  #|The prompt used for delimiting generator.
+   |#
+ 'generatorPrompt)
+
+(defClass Generator ()
+  #|(type Class)
+   |(extends Obj)
+   |(attributes value continuation)
+   |
+   |Instances of this class are yielded.
+   |#
+  (value continuation) )
+
+(defVau (\* pt . forms) env
+  #|($nm parametersTree . forms)
+   |(type fexpr)
+   |
+   |Returns an anonymous generator function with the given <b>parametersTree</b>, when executed, it will return a generator object with <b>forms</b> as body.
+   |In the body of the generator object can be called 
+   |- the (yield* . value) function to pause the generator and returning an optional value,
+   |- the (yield** generator) function to delegate the iteration to another generator.
+   |#
+  (defEnv env
+    (newEnv env
+      :yield* (\ value (takeSubcont generatorPrompt k (new Generator :value (optDft value #inert) :continuation k)))
+      :yield** (\ ((#: Generator generator)) (pushSubcont (generator :continuation) generator)) ))
+  (eval (list '\ pt (list* 'pushPrompt 'generatorPrompt (cons '(yield*) forms))) env) )
+
+(defVau (\** . forms) env
+  #|($nm . forms)
+   |(type fexpr)
+   |
+   |Returns an generator object with <b>forms</b> as body.
+   |In the body of the generator object can be called 
+   |- the (yield* . value) function to pause the generator and returning an optional value,
+   |- the (yield** generator) function to delegate the iteration to another generator.
+   |#
+  (eval (cons (list* '\* () forms)) env) ) 
+
+(defVau (next* (#: Symbol symbol) . value) env
+  #|($nm generator)
+   |($nm generator value)
+   |(type fexpr)
+   |
+   |Resume a generator yielded, the optional <b>value</b> or #inert will be the value returned from the yield* resumed.  
+   |#
+  (let1 ((#: Generator generator) (eval symbol env))
+    (eval (list 'set! symbol :rhs (list 'pushDelimSubcont 'generatorPrompt (list generator :continuation) (list 'optDft value #inert))) env) ))
+
+(let1 (t 0)
+  (defVau (+= plc rval) env (def rval (eval rval env)) (env :set! plc (+ (env plc) rval)))
+  (def g1 (\** (+= t (yield* 1)) (+= t (yield* 3)) 5))
+  (def g2 (\** (+= t (yield* (yield** g1))) (+= t (yield* 7)) 9))
+  (+= t ((next* g2) :value))
+  (+= t ((next* g2 2) :value))
+  (+= t ((next* g2 4) :value))
+  (+= t ((next* g2 6) :value))
+  (+= t (next* g2  8))
+  (assert t 45)
+)
+
+
 #|! Auto Increment/Decrement and Assignement Operators
  |#
 
@@ -4574,20 +4640,20 @@
   #|($nm operator)
    |(type function)
    |
-   |Return a fexpr which returns the value assigned to Box, Obj and Object after applying the <b>operator</b>.
+   |Return a fexpr which returns the value assigned to Box, ObjEnv and Object after applying the <b>operator</b>.
    |#
   (vau (plc . args) env
-    (def lval (env plc))
-    (caseType lval
+    (def rval (if (null? args) #null ((rec\ (last (fst . rst)) (if (null? rst) (eval fst env) (last rst))) args)))
+    (caseType (def lval :rhs (env plc))
       (Box (match args
-        ((rval) (lval (op (lval) (eval rval env))))
-        ((key rval) (lval key (op (lval) (eval rval env)))) ))
+        ((#_) (lval (op (lval) rval)))
+        ((key #_) (lval key (op (lval) rval))) ))
       (ObjEnv (match args
-        ((fld rval) (lval :rhs fld (op (lval fld) (eval rval env))))
-        ((key fld rval) (lval key fld (op (lval fld) (eval rval env)))) ))
+        ((fld #_) (lval :rhs fld (op (lval fld) rval)))
+        ((key fld #_) (lval key fld (op (lval fld) rval))) ))
       (Object (match args
-        ((rval) (env :set! plc (op lval (eval rval env))))
-        ((key rval) (env :set! key plc (op lval (eval rval env)))) )))))
+        ((#_) (env :set! plc (op lval rval)))
+        ((key #_) (env :set! key plc (op lval rval))) )))))
 
 (def $= (assignOp %$))
 (def += (assignOp %+))
