@@ -509,7 +509,7 @@
    |#
   (restartName) )
 
-(def\ makeRestartError (restartName)
+(def\ newRestartError (restartName)
   #|($nm restartName)
    |(type function)
    |
@@ -523,4 +523,4 @@
    |
    |Signal a new `restart-error'.
    |#
-  (error (makeRestartError restartName)) )
+  (error (newRestartError restartName)) )

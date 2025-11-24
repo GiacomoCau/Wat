@@ -1475,7 +1475,7 @@ public class Vm {
 		return isInstance(obj, Supplier.class, Consumer.class, Function.class, BiConsumer.class, BiFunction.class, Executable.class, Field.class);
 	}
 	
-	abstract class AtDot implements ArgsList { String name; }
+	abstract class AtDot /*extends Combinable*/ implements ArgsList { String name; }
 	
 	class At extends AtDot {
 		At(String name) { super.name = name; }
@@ -1534,6 +1534,7 @@ public class Vm {
 			}
 		}
 		public String toString() { return "@" + name; }
+		//public Object combine(Env e, List o) { return o.car instanceof Obj obj ? Vm.this.combine(e, obj.get(name), o.cdr()) : apply(o); }
 	}
 	At at(String name) {
 		if (name == null || name.equals("")) return typeError("method name is {name}, not a {expected}", name, or(symbol("String"), ""));
@@ -1565,6 +1566,7 @@ public class Vm {
 			}
 		}
 		public String toString() { return "." + name; }
+		//public Object combine(Env e, List o) { return o.car instanceof Obj obj ? Vm.this.combine(e, obj.get(name), null) : apply(o); }
 	}
 	Object dot(String name) {
 		if (name == null || name.equals("")) return typeError("field name is null, not a {expected}", name, symbol("String"));
@@ -2274,7 +2276,7 @@ public class Vm {
 				"%list*", wrap(new JFun("%List*", (ArgsList) this::listStar)),
 				"%list-", wrap(new JFun("%List-", (ArgsList) this::listMinus)),
 				"%append", wrap(new JFun("%Append", 2, (n,o)-> checkN(n, o, 2, or(null, List.class)), (_,o)-> append(o.car(),o.car(1)) )),
-				"%len", wrap(new JFun("%Len", 1, (n,o)-> checkN(n, o, 1 /*, or(null, List.class)*/), (_,o)-> len(o.car()) )),
+				"%length", wrap(new JFun("%Length", 1, (n,o)-> checkN(n, o, 1 /*, or(null, List.class)*/), (_,o)-> len(o.car()) )),
 				"%last", wrap(new JFun("%Last", 1, (n,o)-> checkN(n, o, 1, or(null, List.class)), (_,o)-> last(o.car()) )),
 				"%arity", wrap(new JFun("%Arity", (Function) Vm.this::arity )),
 				"%reverse", wrap(new JFun("%Reverse", 1, (n,o)-> checkN(n, o, 1, or(null, List.class)), (_,o)-> reverse(o.car()) )),

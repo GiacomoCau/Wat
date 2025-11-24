@@ -1035,7 +1035,7 @@
    |
    |Return the number of elements in the <b>list</b>.
    |#
-  %len)
+  %length)
 
 (def list?
   #|($nm object)
@@ -1563,7 +1563,7 @@
    |#
   %error )
 
-(def\ makeTypeError (datum expected)
+(def\ newTypeError (datum expected)
   #|($nm datum expected)
    |(type function)
    |
@@ -1577,7 +1577,7 @@
    |
    |Signal a type error with <b>datum</b> and <b>expected</b>.
    |#
-  (error (makeTypeError datum expected)) )
+  (error (newTypeError datum expected)) )
 
 (def test
   #|($nm name expression value)
@@ -4381,7 +4381,7 @@
 (defMethod length ((seq Null))
   0)
 (defMethod length ((seq List))
-  (%len seq))
+  (%lenght seq))
 (defMethod length ((seq String))
   (@length seq))
 (defMethod length ((seq Object[]))
@@ -4475,7 +4475,7 @@
    |#
   (value continuation) )
 
-(def\ makeYieldRecord (v k)
+(def\ newYieldRecord (v k)
   #|($nm value continuation)
    |(type function)
    |
@@ -4491,7 +4491,7 @@
    |Yield a optional <b>value</b> (which defaults to #inert).
    |#
   (takeSubcont fiberPrompt k
-    (makeYieldRecord (optDft v #inert) k)))
+    (newYieldRecord (optDft v #inert) k)))
 
 (def\ fiberResume (yieldRecord . v)
   #|($nm yieldRecord)
