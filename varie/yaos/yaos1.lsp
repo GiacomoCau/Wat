@@ -39,13 +39,13 @@
 
 (prEnv 0)
 
-(let ()
+(begenv
   (def A (class () (a 1) (B (class () ((new b) (this :b b)) (b 0) ((f c) (+ a b c))))))
   (def objA (instance A))
   (def objB (instance (objA :B) 2)) 
   (assert ((objB :f) 3) 6)
 )
-(let ()  
+(begenv  
   (def A (class () (a 1)))
   (def B (class A (b 2)))
   (def C (class B (c 3) ((f d) (+ a b c d))))
@@ -54,7 +54,7 @@
   (def objC (instance C))
   (assert ((objC :f) 4) 10)
 )
-(let ()  
+(begenv  
   (def A (class () ((new a) (this :a a))))
   (def B (class A ((new) (super 1)) (b 2)))
   (def C (class B (c 3) (a 5) ((f d) (+ (super :a) b c d))))
@@ -63,17 +63,17 @@
   (def objC (instance C))
   (assert ((objC :f) 4) 10)
 )
-(let ()  
+(begenv  
   (def A (class () ((new a) (this :a a))))
   (def B (class A ((new) #;(super 1)) (b 2)))
   (assert (instance B)) ;; super not invoked!
 )
-(let ()  
+(begenv  
   (def A (class () ((new a) (this :a a))))
   (def B (class A ((new) (this) (super 1)) (b 2)))
   (assert (instance B)) ;; this not yet defined!
 )
-(let ()  
+(begenv  
   (def A (class () (a 1)))
   (def B (class A (static (a 0)) (b 2) ((f c) (+ (super :a) b c)) ((g c) (+ (static :a) b c)) ((h c) (+ a b c))))
   (def objB (instance B))
@@ -81,7 +81,7 @@
   (assert ((objB :g) 3) 5)
   (assert ((objB :h) 3) 5)
 )
-(let ()
+(begenv
   (def A (class () (static (a 0)) ((new) (++ a) (++ static a) (++ A a)) ((f) (++ static a) (++ A a))))
   (instance A)
   (def objA (instance A))

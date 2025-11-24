@@ -23,6 +23,8 @@
 (%def BiFunction &java.util.function.BiFunction)
 (%def Box &Wat.Vm$Box)
 (%def Boolean &java.lang.Boolean)
+(%def CaseMacro &Wat.Vm$CaseMacro)
+(%def CaseOpv &Wat.Vm$CaseOpv)
 (%def Class &java.lang.Class)
 (%def Class[] &java.lang.Class[])
 (%def Combinable &Wat.Vm$Combinable)
@@ -47,6 +49,7 @@
 (%def JFun &Wat.Vm$JFun)
 (%def List &Wat.Vm$List)
 (%def Long &java.lang.Long)
+(%def Macro &Wat.Vm$Macro)
 (%def Math &java.lang.Math)
 (%def Method &java.lang.reflect.Method)
 (%def Number &java.lang.Number)
@@ -69,6 +72,8 @@
 (%def CheckDPtEp &Wat.Vm$CheckDPtEp)
 
 (%def %0? (%\ (v) (%== v 0)))
+(%def %1? (%\ (v) (%== v 1)))
+(%def %-1? (%\ (v) (%== v -1)))
 (%def %inert? (%\ (v) (%== v #inert)))
 (%def %ignore? (%\ (v) (%== v #ignore)))
 

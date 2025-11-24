@@ -6,17 +6,14 @@
 (def\ (instance cls . args) (apply (cls :init) args))
 
 (defVau (class extend . bindings) env
+  (def\ (->\||begin lhs rhs) (if (cons? lhs) (list* '\ (cdr lhs) rhs) (->begin (cons lhs rhs))) )
   (def\ (object bindings super)
     (def this (newEnv super))
-    (forEach (\ ((name . #ignore)) (this name #inert)) bindings)
-    (forEach (\ ((name . forms))
-      (if (cons? name)
-        (this (car name) (eval (list* '\ (cdr name) forms) this)) ;; method definition
-        (this name (eval (cons 'begin forms) this)) )) ;; attribute definition
-      bindings )
+    (forEach (\ (b) (this (if (cons? b) (->name (car b)) b) #inert)) bindings)
+    (forEach (\ (b) (when (cons? b) (let1 ((lhs . rhs) b) (this (->name lhs) (eval (apply* ->\||begin lhs rhs) this))))) bindings)
     this )
-  (def static (if (!= (caar bindings) 'static) () (prog1 (cdar bindings) (def bindings (cdr bindings)))))
-  (def hasnew? ((rec\ (loop b) (if (null? b) #f (let1 (((n . #_) . b) b) (if (&& (cons? n) (== (car n) 'new)) #t (loop b))))) bindings))
+  (def static (if (|| (null? bindings) (atom? (car bindings)) (!= (caar bindings) 'static)) () (prog1 (cdar bindings) (def bindings (cdr bindings)))))
+  (def hasnew? ((rec\ (loop b) (if (null? b) #f (atom? (car b)) (loop (cdr b)) (let1 (((n . #_) . b) b) (if (&& (cons? n) (== (car n) 'new)) #t (loop b))))) bindings))
   (def extend (if (null? extend) () (eval extend env)))
   (if (&& (!null? extend) (extend :hasnew?) (! hasnew?)) (error "new not defined!"))
   (def class (object static (if (null? extend) env extend)))
@@ -33,7 +30,7 @@
         (if (null? extend)
           (apply new args (obj :cnt :this obj :super env))
           (let1\ (!this #_ (error "this not yet defined!"))
-            ;; new invocation (new must invoke (super ...) if (!null? extend))
+            ;; new invocation (new must invoke (super ...) if (&& (!null? extend) (extend :hasnew?)))
             (apply new args  
               (obj :cnt :this !this :super
                 (\ args
@@ -42,7 +39,30 @@
             (when (== (obj :this) !this) (error "super not invoked!")) )))
       obj )))
 
-(prEnv 0)
+(def\ (is? instance class)
+  (if (&& (type? instance Env) (!null? (def static :rhs (@get (.map instance) "static"))))
+    (extend? static class)
+    (error "is not an instance!") ))
+
+(def\ (extend? class superClass)
+  (if (null? class) #f (== class superClass) #t (extend? (.parent class) superClass)) )
+
+(defMacro (invoke method obj . args)
+  (list* (list obj method) args) )
+
+(defMacro (invoke obj method . args)
+  (list* (list obj method) args) )
+
+;(load "varie/yaos/yaos.lsp")
+
+(begenv
+  (def A (class () (a 1)))
+  (def B (class A (b 2)))
+  (def b (instance B))
+  (assert (b :static) B)
+  (assert (.parent B) A)
+  (assert (is? b A) #t)
+  (assert (extend? B A) #t) )
 
 (begenv
   (def A (class () (a 1) (B (class () ((new b) (this :b b)) (b 0) ((f c) (+ a b c))))))
@@ -71,12 +91,12 @@
 (begenv
   (def A (class () ((new a) (this :a a))))
   (def B (class A ((new) #;(super 1)) (b 2)))
-  (assert (instance B)) ;; super not invoked!
+  (assert (instance B) Error @getMessage "super not invoked!")
 )
-(begenv  
+(begenv
   (def A (class () ((new a) (this :a a))))
   (def B (class A ((new) (this) (super 1)) (b 2)))
-  (assert (instance B)) ;; this not yet defined!
+  (assert (instance B) Error @getMessage "this not yet defined!")
 )
 (begenv
   (def A (class () (a 1)))
@@ -118,10 +138,14 @@
 )
 (begenv
   (def A (class () ((new))))
-  (assert (class A (b 1))) ;; new not defined!!
+  (assert (class A (b 1)) Error @getMessage "new not defined!")
 )
 (begenv
   (def A (class () ((new))))
   (def B (class A ((new) ) (b 1)))
-  (assert (instance B)) ;; super not invoked!
+  (assert (instance B) Error @getMessage "super not invoked!")
+)
+(begenv
+  (def A (class () a (b 1) ((f) (list a b))))
+  (assert (((instance A) :f)) (#inert 1))
 )

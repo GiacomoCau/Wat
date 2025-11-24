@@ -1,4 +1,6 @@
 
+;(load "varie/marsRover/marsRover.lsp")
+
 (load "varie/yaos/yaos.lsp")
 
 (def Plateau (class ()
@@ -6,7 +8,7 @@
   ((new mxX mxY) (this :mxX mxX :mxY mxY))
   (Rover (class ()
     (x 0) (y 0) (i 0) ;; i: 0:Nord 1:Est 2:Sud 3:Ovest
-    ((new x y d) (this :x x :y y :i (->i d)))
+    ((new x y d) (this :x x :y y :i (->i d)) )
     (set (case\
       ((x y d)
        	(if (|| (< x mnX) (> x mxX)) (error "illegal x!"))
@@ -19,12 +21,12 @@
       (2 (if (> y mnY) (-= y 1)))
       (3 (if (> x mnX) (-= x 1))) ))
     ((toString) ($ x " " y " " (->d i)))
-    (log #f)
+    (log? #f)
     ((cmd s)
       (def s (@toLowerCase s))
       (for1 (i 0 (1+ i)) (< i (@length s))
         (case (def c :rhs (@charAt s i)) (#\l (l)) (#\r (r)) (#\m (m)))
-        (when log (print (if (== c #\ ) "  " ($ c ":")) " " (toString))) )
+        (when log? (print (if (== c #\ ) "  " ($ c ":")) " " (toString))) )
       (toString) )
     ((chk xn yn dn)
       (unless (&& (== x xn) (== y yn) (== i (->i dn)))
@@ -36,8 +38,8 @@
 
 (def pl (instance Plateau 5 5))
 (def rr (instance (pl :Rover) 1 2 "N"))
-(log ((rr :cmd) "LMLMLMLMM"))
-((rr :chk) 1 3 "N")
-(log ((rr :set) 3 3 "E" "MMRMMRMRRM" 5 1 "E"))
+(log (invoke :cmd rr "LMLMLMLMM"))
+(invoke :chk rr 1 3 "N")
+(log (invoke :set rr 3 3 "E" "MMRMMRMRRM" 5 1 "E"))
 
 #inert
