@@ -343,6 +343,16 @@
    |#
   %assert )
 
+(def begenv
+  #|($nm . forms)
+   |(type fexpr)
+   |
+   |(derivation (vau forms env (apply begin forms (newEnv env)))
+   |
+   |Sequentially evaluate <b>forms</b> in an new enviroment that extends the current returning the value of the last one, #inert if <b>forms</b> is #null.
+   |#
+  (vau forms env (apply begin forms (newEnv env))) )
+
 
 #|! Macro
  |#
@@ -382,13 +392,16 @@
     (vau (expander) #ignore
       (def && (vau ops env (if (null? ops) #t (eval (car ops) env) (apply && (cdr ops) env) #f )))
       (def || (vau ops env (if (null? ops) #f (eval (car ops) env) #t (apply || (cdr ops) env) )))
-      (def macro? (\ (op) (&& (type? op Opv) (%== (car (.xs op)) :macro))))
+      (def macro? (\ (op) (%type? op Macro)))
       (vau operands env :macro
         (def em (set! expandMacro :prv 0))
         (def exp (apply expander operands))
-        (if (%== em 0) (eval exp env)
-            (%== em 1) exp
-            (%0? (set! expandMacro :rhs (if (&& (cons? exp) (|| (symbol? (car exp)) (macro? (car exp)) (&& (cons? (car exp)) (macro? (eval (caar exp) env))))) (%- em 1) 0))) exp
+        (if (%0? em) (eval exp env)
+            (%0? (set! expandMacro :rhs
+                    (if (&& (cons? exp) (|| (%symbol? (car exp)) (&& (cons? (car exp)) (macro? (eval (caar exp) env)))))
+                      (%- em 1)
+                      0 )))
+            exp
             (eval exp env) )))))
 
 (def macro
@@ -412,19 +425,19 @@
     (def ((#: (or Integer (%> 0)) n) form) (if (null? rhs) (list 1 lhs) (list* lhs rhs)))
     (list 'begin (list 'set! 'expandMacro n) form) ))
 
-#;(let ()
-  (assert (expand 1 (letrec ((a 1) (b 2)) (+ a b))) '(let ((a #inert) (b #inert)) (def* (a b) (begin 1) (begin 2)) (+ a b)))
-  (assert (expand 2 (letrec ((a 1) (b 2)) (+ a b))) '((\ (a b) (def* (a b) (begin 1) (begin 2)) (+ a b)) (begin #inert) (begin #inert)))
-  (assert (expand 3 (letrec ((a 1) (b 2)) (+ a b))) '((\ (a b) (def* (a b) (begin 1) (begin 2)) (+ a b)) (begin #inert) (begin #inert)))
+#;(begenv
+  (assert (expand 1 (letrec ((a 1) (b 2)) (+ a b))) '(let ((a #inert) (b #inert)) (def* (a b) 1 2) (+ a b)))
+  (assert (expand 2 (letrec ((a 1) (b 2)) (+ a b))) '((\ (a b) (def* (a b) 1 2) (+ a b)) #inert #inert))
+  (assert (expand 3 (letrec ((a 1) (b 2)) (+ a b))) '((\ (a b) (def* (a b) 1 2) (+ a b)) #inert #inert))
   
-  (assert (expand 1 (let ((a #inert) (b #inert)) (def* (a b) (begin 1) (begin 2)) (+ a b))) '((\ (a b) (def* (a b) (begin 1) (begin 2)) (+ a b)) (begin #inert) (begin #inert)))
-  (assert (expand 2 (let ((a #inert) (b #inert)) (def* (a b) (begin 1) (begin 2)) (+ a b))) '((\ (a b) (def* (a b) (begin 1) (begin 2)) (+ a b)) (begin #inert) (begin #inert)))
+  (assert (expand 1 (let ((a #inert) (b #inert)) (def* (a b) (begin 1) (begin 2)) (+ a b))) '((\ (a b) (def* (a b) (begin 1) (begin 2)) (+ a b)) #inert #inert))
+  (assert (expand 2 (let ((a #inert) (b #inert)) (def* (a b) (begin 1) (begin 2)) (+ a b))) '((\ (a b) (def* (a b) (begin 1) (begin 2)) (+ a b)) #inert #inert))
   
   (assert (expand 1 (let aa ((a 1) (b 2)) (+ a b))) '(letLoop aa ((a 1) (b 2)) (+ a b)))
-  (assert (expand 2 (let aa ((a 1) (b 2)) (+ a b))) '((rec\ aa (a b) (+ a b)) (begin 1) (begin 2)))
-  (assert (expand 3 (let aa ((a 1) (b 2)) (+ a b))) '((rec aa (\ (a b) (+ a b))) (begin 1) (begin 2)))
-  (assert (expand 4 (let aa ((a 1) (b 2)) (+ a b))) '(((\ (aa) (def aa :rhs (\ (a b) (+ a b)))) #inert) (begin 1) (begin 2)))
-  (assert (expand 5 (let aa ((a 1) (b 2)) (+ a b))) '(((\ (aa) (def aa :rhs (\ (a b) (+ a b)))) #inert) (begin 1) (begin 2)))
+  (assert (expand 2 (let aa ((a 1) (b 2)) (+ a b))) '((rec\ aa (a b) (+ a b)) 1 2))
+  (assert (expand 3 (let aa ((a 1) (b 2)) (+ a b))) '((rec aa (\ (a b) (+ a b))) 1 2))
+  (assert (expand 4 (let aa ((a 1) (b 2)) (+ a b))) '(((\ (aa) (def aa :rhs (\ (a b) (+ a b)))) #inert) 1 2))
+  (assert (expand 5 (let aa ((a 1) (b 2)) (+ a b))) '(((\ (aa) (def aa :rhs (\ (a b) (+ a b)))) #inert) 1 2))
 )
 
 
@@ -686,6 +699,22 @@
    |#
   (list 'def name (cons 'newEnv bindings)) )
 
+(def parent
+  #|($nm env)
+   |(type function)
+   |
+   |Return the parent of the <b>env</b>.
+   |#
+  %parent )
+
+(def setParent!
+  #|($nm env parent)
+   |(type function)
+   |
+   |Return the <b>env</b> after set the parent of <b>env</b> the with <b>parent</b> .
+   |#
+  %setParent! )
+
 
 #|! Obj
  |(obj)
@@ -779,6 +808,19 @@
    |Return the value of the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, signals an error otherwise.
    |#
   %get )
+
+(def remove!
+  #|($nm attribute object)
+   |(type function)
+   |
+   |(syntax attribute (or Symbol Keyword String))
+   |(syntax object (or Env Obj))
+   |
+   |(derivation (@remove object attribute))
+   |
+   |Remove and return the value of the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, signals an error otherwise.
+   |#
+  %remove! )
 
 (def\ (slotBound? object attribute)
   #|($nm object attribute)
@@ -1035,7 +1077,7 @@
    |
    |Return the number of elements in the <b>list</b>.
    |#
-  %len)
+  %length)
 
 (def list?
   #|($nm object)
@@ -1563,7 +1605,7 @@
    |#
   %error )
 
-(def\ makeTypeError (datum expected)
+(def\ newTypeError (datum expected)
   #|($nm datum expected)
    |(type function)
    |
@@ -1577,7 +1619,7 @@
    |
    |Signal a type error with <b>datum</b> and <b>expected</b>.
    |#
-  (error (makeTypeError datum expected)) )
+  (error (newTypeError datum expected)) )
 
 (def test
   #|($nm name expression value)
@@ -2292,6 +2334,9 @@
    |Return #true if <b>value</b> match the <b>definiendTree</b> and update the <b>environment</b> with the new bindings, #false otherwise.
    |#
   %bind? )
+  
+;((rec\ (insert p b) (if (null? b) (cons p) (== (car b) 'else) (cons p b) (bind? (newEnv (theEnv)) (car b) p) (cons p b) (cons (car b) (insert p (cdr b))))) '(a b) '((a) (a . b) else))
+;((rec\ (insert p b) (if (null? b) (cons p) (== (car b) 'else) (cons p b) (bind? (newEnv (theEnv)) (car b) p) (cons p b) (cons (car b) (insert p (cdr b))))) '(a . b) '((a) (a b)))
 
 (defVau (ifBind? (dt exp) then . else) env
   #|($nm (definiendTree value) thenForm)
@@ -2307,11 +2352,12 @@
       (unless (null? else)
         (eval (car! else) env) ))))
 
-(defVau (caseVau . clauses) env
-  #|($nm . clauses)
-   |($nm #: check . clauses)
+(defVau (caseVau (#: (or #ignore Symbol) ep) . clauses) env
+  #|($nm environmentParameter . clauses)
+   |($nm environmentParameter #: check . clauses)
    |(type fexpr)
    |
+   |(syntax environmentParameter (or #ignore Symbol))
    |(syntax clauses (clause . clauses))
    |(syntax clause (else . forms))
    |(syntax clause (else => apv1))
@@ -2326,16 +2372,18 @@
    |Otherwise go to the next <b>clause</b>.
    |#
   (vau values #ignore :caseVau
+    (if (&& (cons? clauses) (cons? (car clauses)) (== (caar clauses) '=>))
+      (begin ((eval (car! (cdar clauses)) env) values) (def clauses (cdr clauses))) )
     (let1 loop (clauses clauses)
       (unless (null? clauses)
         (let1 (((dt . forms) . clauses) clauses)
           (if (== dt 'else)
             (if (== (car forms) '=>)
-              ((eval (cadr! forms) env) values)
-              (apply begin forms env) )
+              ((eval (cadr! forms) (if (ignore? ep) env (newEnv env ep env))) values)
+              (apply begin forms (if (ignore? ep) env (newEnv env ep env))) )
             (let1 (env+ (newEnv env))
               (if (bind? env+ dt values)
-                (apply begin forms env+)
+                (apply begin forms (if (ignore? ep) env+ (newEnv env+ ep env+)))
                 (loop clauses) ))))))))
 
 (def arity
@@ -2377,23 +2425,60 @@
 (assert (arity (_)) 1)
 (assert (arity (\ (a b))) 2)
 (assert (arity (\ (a b . c))) '(>= 2))
-(assert (arity (caseVau ((a)) ((a b)) (a))) (1 2 (>= 0)))
-(assert (arity (caseVau ((a)) ((a b)) ((a b . c)))) (1 2 (>= 2)))
+(assert (arity (caseVau env ((a)) ((a b)) (a))) (1 2 (>= 0)))
+(assert (arity (caseVau env ((a)) ((a b)) ((a b . c)))) (1 2 (>= 2)))
 (assert (arity %wrap) 1)
 (assert (arity %+) 2)
 (assert (arity %==) 2)
 (assert (arity begin '(>= 0)))
 
-(defMacro (defCaseVau name . clauses)
+(defMacro (defCaseVau name (#: (or #ignore Symbol) ep) . clauses)
+  #|($nm name environmentParameter . clauses)
+   |($nm environmentParameter #: check . clauses)
+   |(type macro)
+   |
+   |(syntax environmentParameter (or #ignore Symbol))
+   |(derivation (def name (caseVau . clauses)))
+   |
+   |Defines into the current environment the named caseVau <b>name</b> with the given <b>environmentParameter</b> and <b>clauses</b>.
+   |#
+  (list 'def name (list* 'caseVau ep clauses)) )
+
+(def caseMacro
+  #|($nm . clauses)
+   |($nm #: check . clauses)
+   |(type fexpr)
+   |
+   |(syntax clauses (clause . clauses))
+   |(syntax clause (else . forms))
+   |(syntax clause (else => apv1))
+   |(syntax clause (definiendTree . forms))
+   |
+   |Return a multi-armed macro operator, when applied go through the <b>clauses</b> in order.
+   |If <b>clauses</b> is #null return #inert.
+   |If `car' of <b>clause</b> is else
+   |  if the `cadr' of <b>clauses</b> is =>, evaluate `caddr' of <b>clause</b> and apply it to the operands,
+   |  otherwise evaluate <b>forms</b> as an implicit `begin'.
+   |If the operands match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
+   |Otherwise go to the next <b>clause</b>.
+   |#
+  (makeMacro
+    (vau forms #ignore
+      (list 'makeMacro (list* 'caseVau #ignore forms)) )))
+
+(assert (expand 2 ((caseMacro ((a) a) ((a b) (list 'list a b))) (+ 1 2) (+ 3 4))) '(list (+ 1 2) (+ 3 4)) )
+(assert ((caseMacro ((a) a) ((a b) (list 'list a b))) (+ 1 2) (+ 3 4)) '(3 7))
+
+(defMacro (defCaseMacro name . clauses)
   #|($nm name . clauses)
    |($nm #: check . clauses)
    |(type macro)
    |
    |(derivation (def name (caseVau . clauses)))
    |
-   |Defines into the current environment the named caseVau <b>name</b> with the given <b>clauses</b>.
+   |Defines into the current environment the named caseMacro <b>name</b> with the given <b>clauses</b>.
    |#
-  (list 'def name (cons 'caseVau clauses)) )
+  (list 'def name (cons 'caseMacro clauses)) )
 
 (defMacro (case\ . clauses)
   #|($nm . clauses)
@@ -2415,7 +2500,7 @@
    |If the arguments match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
    |Otherwise go to the next <b>clause</b>.
    |#
-  (list 'wrap (cons 'caseVau clauses)) )
+  (list 'wrap (list* 'caseVau #ignore clauses)) )
 
 (defMacro (defCase\ name . clauses)
   #|($nm name . clauses)
@@ -2513,21 +2598,36 @@
 
 #|! Quasiquote
  |Idea from Alf Petrofsky http://scheme-reports.org/mail/scheme-reports/msg00800.html
+ |
+ |As an undocumented "feature" this takes optional extra arguments, which must all be #f.
+ |One level of unquotation is ignored per extra argument supplied.
+ |
+ |(define-syntax quasiquote
+ |  (syntax-rules (unquote unquote-splicing quasiquote)
+ |    ( (_ ,x )              x)
+ |    ( (_ (,@x . y) )       (append x `y))
+ |    ( (_ `x . d)           (list 'quasiquote (quasiquote x #f . d)))
+ |    ( (_ ,x #f . d)        (list 'unquote (quasiquote x . d)))
+ |    ( (_ (,x . y) #f . d)  (append (map (lambda (z) (list 'unquote z)) (quasiquote (x) . d)) (quasiquote y #f . d)))
+ |    ( (_ (,@x . y) #f . d) (append (map (lambda (z) (list 'unquote-splicing z)) (quasiquote (x) . d)) (quasiquote y #f . d)))
+ |    ( (_ (x . y) . d)      (cons (quasiquote x . d) (quasiquote y . d)))
+ |    ( (_ #(x ...) . d)     (list->vector (quasiquote (x ...) . d)))
+ |    ( (_ x . d)            'x) ))
  |#
 
-(defVau %` (x) env
+(defVau (%` x) env
   #|(let ((a 1) (b 2) (c '(3 4))) `(,@c ,a (,a) (,@c) b ,@c)) -> (3 4 1 (1) (3 4) b 3 4)
    |(let1 (x '(a b c)) ``(,,x ,@,x ,,@x ,@,@x)) -> `(,(a b c) ,@(a b c) ,a ,b ,c ,@a ,@b ,@c)
    |``(,,@'() ,@,@(list)) -> `()
    |`````(a ,(b c ,@,,@,@'(a b c))) -> ````(a ,(b c ,@,,@a ,@,,@b ,@,,@c))
    |#
   (defCase\ qq
-    ( ((('%,@ x) . y) #f . d) (append (map (\ (x) (list '%,@ x)) (apply** qq (list x) d)) (apply** qq y #f d)) )
-    ( ((('%,@ x) . y) . d)    (append (eval x env) (apply** qq y d)) )
-    ( ((('%, x) . y) #f . d)  (append (map (\ (x) (list '%, x))  (apply** qq (list x) d)) (apply** qq y #f d)) )
-    ( (('%, x) #f . d)        (list '%, (apply** qq x d)) )
-    ( (('%, x) . d)           (eval x env) )
+    ( (('%, x))               (eval x env) )
+    ( ((('%,@ x) . y))        (append (eval x env) (apply* qq y)) )
     ( (('%` x) . d)           (list '%` (apply** qq x #f d)) )
+    ( (('%, x) #f . d)        (list '%, (apply** qq x d)) )
+    ( ((('%, x) . y) #f . d)  (append (map (\ (x) (list '%, x))  (apply** qq (list x) d)) (apply** qq y #f d)) )
+    ( ((('%,@ x) . y) #f . d) (append (map (\ (x) (list '%,@ x)) (apply** qq (list x) d)) (apply** qq y #f d)) )
     ( ((x . y) . d)           (cons (apply** qq x d) (apply** qq y d)) )
     ( (x . d)                 x) )
   (qq x))
@@ -3228,7 +3328,7 @@
     (if (%ignore? whileCond) forms
       (cons (list 'while? whileCond) forms) )))
 
-(let ()
+(begenv
   (assert (loop (break 3)) 3)
   (assert (loop (loop (break- 1 3))) 3)
   (defMacro (+= n v) (list 'set! n :rhs (list '+ n v)) )
@@ -3259,7 +3359,7 @@
    |#
   (list* 'loop (list 'until? untilCond) forms) )
 
-(let ()
+(begenv
   (defMacro (++ n) (list 'set! n :rhs (list '1+ n)) )
   (defMacro (-- n) (list 'set! n :rhs (list '-1+ n)) )
   (assert (let1 (i 0) (while (< i 3) (++ i)) i) 3)
@@ -3309,7 +3409,7 @@
       (loop (def result (apply begin forms env))
         (break? (0? (set! times :rhs (-1+ times))) result) ))))
 
-(let ()
+(begenv
   ;(defMacro (++ n) (list 'set! n :rhs (list '1+ n)) )
   ;(defMacro (-- n) (list 'set! n :rhs (list '-1+ n)) )
   (defMacro (+= n v) (list 'set! n :rhs (list '+ n v)) )
@@ -3956,7 +4056,7 @@
       (list (car bindings))
       (list* 'dlet* (cdr bindings) forms) )))
 
-(let ()
+(begenv
 	(def a (newDVar 1))
 	(assert (expand (ddef a 1)) '((%dv\ (a)) 1) )
 	(assert (expand (ddef* (a b) 1 2)) '((%dv\ (a b)) 1 2) )
@@ -4031,12 +4131,14 @@
     (apply
       (eval
         (list* '\ (cons receiverName parameters) forms)
-        (let1 (receiver (car args)) (if (type? receiver Obj) (newEnv env receiver) env)) )
+        (let1 (receiver (car args))
+          (if (type? receiver Obj) (newEnv env receiver) env) 
+          #;(newEnv (if (type? receiver Obj) (newEnv env receiver) env) :this receiver)) )
       args ))
   (def prv (%addMethod (eval class env) name method))
   (case (bndRes) (:rhs method) (:prv prv) (else #inert)) )
 
-(let ()
+(begenv
   (defClass Foo () ())
   (defClass Bar (Foo) (a b))
   (defGeneric g1 (obj p))
@@ -4381,7 +4483,7 @@
 (defMethod length ((seq Null))
   0)
 (defMethod length ((seq List))
-  (%len seq))
+  (%length seq))
 (defMethod length ((seq String))
   (@length seq))
 (defMethod length ((seq Object[]))
@@ -4475,7 +4577,7 @@
    |#
   (value continuation) )
 
-(def\ makeYieldRecord (v k)
+(def\ newYieldRecord (v k)
   #|($nm value continuation)
    |(type function)
    |
@@ -4491,7 +4593,7 @@
    |Yield a optional <b>value</b> (which defaults to #inert).
    |#
   (takeSubcont fiberPrompt k
-    (makeYieldRecord (optDft v #inert) k)))
+    (newYieldRecord (optDft v #inert) k)))
 
 (def\ fiberResume (yieldRecord . v)
   #|($nm yieldRecord)
@@ -4640,9 +4742,9 @@
     (Number (let1 (() args) (env :set! :rhs plc (-1+ val))))
     (else   (error ($ "not valid type: " val))) ))
 
-(assert (let () (def obj (newObj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
-(assert (let () (def box (newBox 1)) (++ box) (++ box) (-- box)) 2)
-(assert (let () (def n 1) (++ n) (++ n) (-- n)) 2)
+(assert (begenv (def obj (newObj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
+(assert (begenv (def box (newBox 1)) (++ box) (++ box) (-- box)) 2)
+(assert (begenv (def n 1) (++ n) (++ n) (-- n)) 2)
 
 (def\ (assignOp op)
   #|($nm operator)

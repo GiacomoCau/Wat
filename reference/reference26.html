@@ -91,13 +91,15 @@
       </h3>
       <ul>
         <li>
-          (<b>caseVau</b> . clauses)
+          (<b>caseVau</b> environmentParameter . clauses)
           <br/>
-            (<b>caseVau</b> #: check . clauses)
+            (<b>caseVau</b> environmentParameter #: check . clauses)
           <br/>
             (type fexpr)
           <br/>
             &nbsp;
+          <br/>
+            (syntax environmentParameter (or #ignore Symbol))
           <br/>
             (syntax clauses (clause . clauses))
           <br/>
@@ -201,9 +203,73 @@
       </h3>
       <ul>
         <li>
-          (<b>defCaseVau</b> name . clauses)
+          (<b>defCaseVau</b> name environmentParameter . clauses)
           <br/>
-            (<b>defCaseVau</b> #: check . clauses)
+            (<b>defCaseVau</b> environmentParameter #: check . clauses)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax environmentParameter (or #ignore Symbol))
+          <br/>
+            (derivation (def name (caseVau . clauses)))
+          <br/>
+            &nbsp;
+          <br/>
+            Defines into the current environment the named caseVau <b>name</b> with the given <b>environmentParameter</b> and <b>clauses</b>.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        caseMacro
+      </h3>
+      <ul>
+        <li>
+          (<b>caseMacro</b> . clauses)
+          <br/>
+            (<b>caseMacro</b> #: check . clauses)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax clauses (clause . clauses))
+          <br/>
+            (syntax clause (else . forms))
+          <br/>
+            (syntax clause (else =&gt; apv1))
+          <br/>
+            (syntax clause (definiendTree . forms))
+          <br/>
+            &nbsp;
+          <br/>
+            Return a multi-armed macro operator, when applied go through the <b>clauses</b> in order.
+          <br/>
+            If <b>clauses</b> is #null return #inert.
+          <br/>
+            If `car' of <b>clause</b> is else
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;if the `cadr' of <b>clauses</b> is =&gt;, evaluate `caddr' of <b>clause</b> and apply it to the operands,
+          <br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;otherwise evaluate <b>forms</b> as an implicit `begin'.
+          <br/>
+            If the operands match the <b>definiendTree</b> evaluate <b>forms</b> as an implicit `begin' into resulting <b>environment</b>.
+          <br/>
+            Otherwise go to the next <b>clause</b>.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        defCaseMacro
+      </h3>
+      <ul>
+        <li>
+          (<b>defCaseMacro</b> name . clauses)
+          <br/>
+            (<b>defCaseMacro</b> #: check . clauses)
           <br/>
             (type macro)
           <br/>
@@ -213,7 +279,7 @@
           <br/>
             &nbsp;
           <br/>
-            Defines into the current environment the named caseVau <b>name</b> with the given <b>clauses</b>.
+            Defines into the current environment the named caseMacro <b>name</b> with the given <b>clauses</b>.
         </li>
       </ul>
     </div>

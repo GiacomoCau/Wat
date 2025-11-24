@@ -395,7 +395,7 @@ public class Vm {
 		List keys();
 		List symbols();
 		List keywords();
-		boolean remove(Object key);
+		Object remove(Object key);
 	}
 	record Lookup(boolean isBound, Object value) {}
 	
@@ -455,16 +455,24 @@ public class Vm {
 			return toString(false);
 		}
 		public String toString(boolean t) {
-			return "{" + (this==theEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" + (t || map.size() > prEnv ? "[" + map.size() + "] ..." : toStringSet(map.reversed().entrySet())) + eIfnull(parent, ()-> " " + parent.toString(t)) + "}";
+			//return "{" + (this==theEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" + (t || map.size() > prEnv ? "[" + map.size() + "] ..." : toStringSet(map.reversed().entrySet())) + eIfnull(parent, ()-> " " + parent.toString(t)) + "}";
+			return "{"
+				+ (this==theEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" + 
+				(map.size() > prEnv || t
+					? "[" + map.size() + "] ..."
+					: t
+					? toStringKeySet(map.reversed().keySet())
+					: toStringEntrySet(map.reversed().entrySet()))
+				+ eIfnull(parent, ()-> " " + parent.toString(t))
+				+ "}";
 		}
-		public boolean remove(Object obj) {
+		public Object remove(Object obj) {
 			var key = toKey(obj);
 			for (var env=this; env != null; env=env.parent) {
 				if (!env.map.containsKey(key)) continue;
-				env.map.remove(key);
-				return true;
+				return env.map.remove(key);
 			}
-			return false;
+			return null;
 		};
 		public Set<String> keySet() {
 			Set<String> keySet = new HashSet();
@@ -542,7 +550,7 @@ public class Vm {
 		public Obj(String msg, Throwable t, Object ... objs) { super(msg, t); puts(objs); }
 		public Object value(Object key) { return map.get(toKey(key)); }
 		public boolean isBound(Object key) { return map.containsKey(toKey(key)); }
-		public boolean remove(Object key) { key=toKey(key); if (!map.containsKey(key)) return false; map.remove(key); return true; }
+		public Object remove(Object key) { key=toKey(key); if (!map.containsKey(key)) return null; return map.remove(key); }
 		public Set<String> keySet() { return map.keySet(); }
 		public List keys() { return list(keySet().toArray()); }
 		public List symbols() { return list(keySet().stream().map(Vm.this::symbol).toArray()); }
@@ -577,7 +585,7 @@ public class Vm {
 			return "{" + toSource(obj.getClass()) // or .getSimpleName()?
 				+ eIfnull(obj.getMessage(), m-> " " + Vm.this.toString(true, m))
 				//+ eIfnull(getCause(), t-> " " + symbol(t.getClass().getSimpleName()))
-				+ (map.size() > 10 ? " [" + map.size() + "]" + " ..." : toStringSet(obj.map.entrySet()))
+				+ (map.size() > 10 ? " [" + map.size() + "]" + " ..." : toStringEntrySet(obj.map.entrySet()))
 				+ "}"
 			;
 		}
@@ -865,19 +873,10 @@ public class Vm {
 	class Opv extends Combinable {
 		Env e; Object pt, ep; List xs;
 		Opv(Env e, Object pt, Object ep, List xs) {
-			this.e = e; this.pt = pt; this.ep = ep; //this.x = x
-			if (xs == null || xs.car != keyword("caseVau")) arity = arityPt(pt);
-			else {
-				Object check = null;
-				var clauses = e.<List>get("clauses");
-				if (clauses != null && clauses.car == sharpColon) {
-					check = clauses.car(1);
-					e.set("clauses", clauses = clauses.cdr(1));
-				}
-				arity = map("arityCaseVau", c-> arityPt(((List) c).car), clauses);
-				xs = xs.cdr(); // via keyword :caseVau
-				if (check != null) xs = listStar(sharpColon, check, xs);
-			}
+			this(e, pt, arityPt(pt), ep, xs);
+		}
+		Opv(Env e, Object pt, Object arity, Object ep, List xs) {
+			this.e = e; this.pt = pt; this.ep = ep; this.xs = xs; this.arity = arity;
 			this.xs = xs == null || xs.car != sharpColon ? xs
 				: xs.cdr() != null ? cons(cons(new Colon(this), xs.cdr()))
 				: matchError("invalid return value check, expected {operands#,%+d} operands, found: {datum} in: {expr}", null, 1, xs)
@@ -889,8 +888,34 @@ public class Vm {
 			return tco(()-> pipe(dbg, ()-> bind(dbg, true, bndRes, xe, pt, o), (_)-> bind(dbg, true, bndRes, xe, ep, e), (_)-> tco(()-> begin.combine(xe, xs))));
 		}
 		public String toString() {
-			return "{%Opv " + ifnull(pt, "()", Vm.this::toString) + " " + Vm.this.toString(ep) + eIfnull(xs, ()-> " " + stream(array(xs)).map(Vm.this::toString).collect(joining(" "))) + /*" " + e +*/ "}";
+			return "{%Opv " + ifnull(pt, "()", Vm.this::toString) + " " + Vm.this.toString(ep) + toStringForms(xs) + /*" " + e +*/ "}";
 		}
+	}
+	class Macro extends Opv {
+		Macro(Env e, Object pt, Object ep, List xs) { super(e, pt, ep, xs); }
+		public String toString() {
+			var expander = e.<Opv>get("expander");
+		    return "{%Macro " + expander.pt + toStringForms(expander.xs) + "}" ; }
+	}
+	class CaseMacro extends Opv {
+		CaseMacro(Env e, Object pt, Object ep, List xs) { super(e, pt, ep, xs); }
+		public String toString() {
+			return "{%CaseMacro" + toStringForms(e.<CaseOpv>get("expander").e.<List>get("clauses")) + "}";
+		}
+	}
+	class CaseOpv extends Opv {
+		CaseOpv(Env e, Object pt, Object ep, List xs) {
+			Object check = null;
+			var clauses = e.<List>get("clauses");
+			if (clauses != null && clauses.car == sharpColon) {
+				check = clauses.car(1);
+				e.set("clauses", clauses = clauses.cdr(1));
+			}
+			var arity = map("arityCaseVau", c-> arityPt(((List) c).car), clauses);
+			if (check != null) xs = listStar(sharpColon, check, xs);
+			super(e, pt, arity, ep, xs);
+		}
+		public String toString() { return "{%CaseOpv" + toStringForms(e.<List>get("clauses")) + "}"; }
 	}
 	class Colon extends Combinable {
 		Object op; boolean isCheck;
@@ -963,7 +988,19 @@ public class Vm {
 			var pt = o.car;
 			var ep = o.car(1);
 			var err = checkPtEp(cons(this, o), pt, ep); if (err != null) return err;
-			return new Opv(e, pt, ep, o.cdr(1));
+			List xs = o.cdr(1);
+			if (xs != null) {
+				var car = xs.car;
+				if (car == keyword("macro")) {
+					return 
+						e.get("expander") instanceof CaseOpv
+						? new CaseMacro(e, pt, ep, xs.cdr())
+						: new Macro(e, pt, ep, xs.cdr())
+					;
+				}
+				if (car == keyword("caseVau")) return new CaseOpv(e, pt, ep, xs.cdr());
+			}		
+			return new Opv(e, pt, ep, xs);
 		}
 		public String toString() { return "%Vau"; }
 	};
@@ -1448,6 +1485,15 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			return pipe(dbg(e, this, o), ()-> {
 				try {
+					/*
+					if (jfun instanceof AtDot atdot && o.car instanceof Obj obj) {
+						Lookup lookup = obj.lookup(atdot.name);
+						if (lookup.isBound)	return jfun instanceof Dot
+							? lookup.value
+	 						: Vm.this.combine(env(e, obj), lookup.value, o.cdr())
+	 					;
+					}
+					*/
 					return jfun.apply(o);
 				}
 				catch (Throwable thw) {
@@ -1472,6 +1518,7 @@ public class Vm {
 		}
 	}
 	boolean isjFun(Object obj) {
+		// { At, Dot } < AtDot < ArgsList < Function < isjfun!
 		return isInstance(obj, Supplier.class, Consumer.class, Function.class, BiConsumer.class, BiFunction.class, Executable.class, Field.class);
 	}
 	
@@ -1543,7 +1590,7 @@ public class Vm {
 	class Dot extends AtDot {
 		Dot(String name) { super.name = name; }
 		public Object apply(List o) {
-			var chk = checkR("Dot", o, 1, 2);
+			var chk = checkR("Dot", o, 1, 3);
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
 			var o0 = o.car;
@@ -1554,8 +1601,11 @@ public class Vm {
 			Field field = getField(o0 instanceof Class ? (Class) o0 : o0.getClass(), name);
 			if (field == null) return unboundFieldError(name, o0 instanceof Class cl ? cl : o0.getClass());
 			try {
-				if (len == 1) return field.get(o0);
-				field.set(o0, o.car(1)); return inert;
+				var prv = field.get(o0);
+				if (len == 1) return prv;
+				var rhs = o.car(len-1);
+				field.set(o0, rhs);
+				return switch((Integer) bndRes(len == 2 ? ignore : o.car(1))) {case 1->rhs; case 2->prv; case 3->o0; default->inert; };
 			}
 			catch (Throwable thw) {
 				return len==1
@@ -1583,7 +1633,7 @@ public class Vm {
 					return getTco(opv.combine(e, null));
 				};
 				@Override public String toString() {
-					return "{Supplier " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
+					return "{Supplier" + toStringForms(o) + "}";
 				}
 			};
 		}
@@ -1601,7 +1651,7 @@ public class Vm {
 					getTco(opv.combine(e, cons(t)));
 				};
 				@Override public String toString() {
-					return "{Consumer " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
+					return "{Consumer" + toStringForms(o) + "}";
 				}
 			};
 		}
@@ -1619,7 +1669,7 @@ public class Vm {
 					return getTco(opv.combine(e, cons(t)));
 				};
 				@Override public String toString() {
-					return "{Function " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
+					return "{Function" + toStringForms(o) + "}";
 				};
 			};
 		}
@@ -1637,7 +1687,7 @@ public class Vm {
 					getTco(opv.combine(e, list(t, u)));
 				};
 				@Override public String toString() {
-					return "{BiConsumer " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
+					return "{BiConsumer" + toStringForms(o) + "}";
 				}
 			};
 		}
@@ -1655,7 +1705,7 @@ public class Vm {
 					return getTco(opv.combine(e, list(t, u)));
 				};
 				@Override public String toString() {
-					return "{Function " + stream(array(o)).map(Vm.this::toString).collect(joining(" ")) + "}";
+					return "{BiFunction" + toStringForms(o) + "}";
 				};
 			};
 		}
@@ -2149,13 +2199,19 @@ public class Vm {
 			default-> o.toString();
 		};
 	}
-	String toStringSet(Set<Entry<String,Object>> set) {
+	String toStringEntrySet(Set<Entry<String,Object>> set) {
 		return set.isEmpty() ? "" : " " + set.stream().map(e-> ":" + e.getKey() + " " + toString(true, e.getValue())).collect(joining(" "));
+	}
+	String toStringKeySet(Set<String> set) {
+		return set.isEmpty() ? "" : " " + set.stream().map(k-> k /*+ ": ..."*/).collect(joining(", "));
 	}
 	String toString(String name, Class[] classes) {
 		return (name.equals("new") ? "constructor: " : "method: ") + name
 			+ "(" + stream(classes).map(Class::getSimpleName).collect(joining(", ")) + ")"
 		;
+	}
+	String toStringForms(List xs) {
+		return eIfnull(xs, ()-> " " + stream(array(xs)).map(Vm.this::toString).collect(joining(" ")));
 	}
 	public String toKey(Object key) {
 		return switch (key) {
@@ -2195,6 +2251,13 @@ public class Vm {
 							list(2, more, or(null, Env.class), Obj.class, or(Symbol.class, Keyword.class, String.class), Any.class) )),
 					(_,o)-> at("env").apply(cons(this, o))
 					)),
+				//"%parent", wrap(new JFun("%Parent", list(1, 2), (n,o)-> checkR(n, o, 1, 2, Env.class, or(null, Env.class)), (l,o)-> { if (l==1) return (o.<Env>car()).parent; Env e = o.<Env>car(); e.parent = o.<Env>car(1); return e; } )),
+				"%parent", wrap(new JFun("%Parent", 1, (n,o)-> checkN(n, o, 1, Env.class), (_,o)-> (o.<Env>car()).parent )),
+				//"%setParent!", wrap(new JFun("%SetParent!", 2, (n,o)-> checkN(n, o, 2, Env.class, or(null, Env.class)),	(_,o)->{ Env e = o.<Env>car(); e.parent = o.<Env>car(1); return e; } )),
+				"%setParent!", wrap(new JFun("%SetParent!", 2, (n,o)-> checkR(n, o, 2, 3, Env.class),
+					(l,o)->{ Env e = o.<Env>car(); var prv = e.parent; e.parent = o.<Env>car(l-1);
+						return switch((Integer) bndRes(l == 2 ? ignore : o.car(1))) {case 1->e.parent; case 2->prv; case 3->e; default->inert; };
+					} )),
 				"%bind", wrap(new JFun("%Bind", 3, (n,o)-> checkN(n, o, 3, Env.class), (_,o)-> bind(true, 3, o.<Env>car(), o.car(1), o.car(2)) )),
 				"%bind?", wrap(new JFun("%Bind?", 3, (n,o)-> checkN(n, o, 3, Env.class), (_,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (InnerException ie) { return false; }} )),
 				"%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } )),
@@ -2274,7 +2337,7 @@ public class Vm {
 				"%list*", wrap(new JFun("%List*", (ArgsList) this::listStar)),
 				"%list-", wrap(new JFun("%List-", (ArgsList) this::listMinus)),
 				"%append", wrap(new JFun("%Append", 2, (n,o)-> checkN(n, o, 2, or(null, List.class)), (_,o)-> append(o.car(),o.car(1)) )),
-				"%len", wrap(new JFun("%Len", 1, (n,o)-> checkN(n, o, 1 /*, or(null, List.class)*/), (_,o)-> len(o.car()) )),
+				"%length", wrap(new JFun("%Length", 1, (n,o)-> checkN(n, o, 1 /*, or(null, List.class)*/), (_,o)-> len(o.car()) )),
 				"%last", wrap(new JFun("%Last", 1, (n,o)-> checkN(n, o, 1, or(null, List.class)), (_,o)-> last(o.car()) )),
 				"%arity", wrap(new JFun("%Arity", (Function) Vm.this::arity )),
 				"%reverse", wrap(new JFun("%Reverse", 1, (n,o)-> checkN(n, o, 1, or(null, List.class)), (_,o)-> reverse(o.car()) )),
@@ -2572,7 +2635,7 @@ public class Vm {
 			thw instanceof ParseException pe
 			? "{&" + Utility.getMessage(pe) + "}"
 			: thw instanceof Obj o
-			? ifnull(o.getMessage(), toSource(o.getClass())) + (prAttr ? toStringSet(o.map.entrySet()) : "")
+			? ifnull(o.getMessage(), toSource(o.getClass())) + (prAttr ? toStringEntrySet(o.map.entrySet()) : "")
 			: toSource(thw.getClass()) + eIfnull(thw.getMessage(), msg-> ": " + msg)
 		);
 		while ((thw = thw.getCause()) != null);

@@ -1,168 +1,167 @@
-{	name: "Wat",
-	scopeName : "source.wat",
-	fileTypes: ["wat","lispx","lsp","ark","scm"],
-	patterns : [
-		{ include: "#expr" }
+{	"name" : "Wat",
+	"scopeName" : "source.wat",
+	"fileTypes": ["wat","lispx","lsp","ark","scm"],
+	"patterns" : [
+		{ "include": "#expr" }
 	],
-	repository: {
-		constant: {
-			name: "constant",
-			match: "((?<=^)|(?<=(\\s|\\(|\\)|\\[|\\])))(#null|#inert|#_|#ignore|#t|#true|#f|#false|#:)(?=(\\s|\\(|\\)|\\[|\\]))"
+	"repository": {
+		"constant": {
+			"name": "constant",
+			"match": "((?<=^)|(?<=(\\s|\\(|\\)|\\[|\\])))(#null|#inert|#_|#ignore|#t|#true|#f|#false|#:)(?=(\\s|\\(|\\)|\\[|\\]))"
 			//match: "((?<=^)|(?<=[\\s()\\[\\]]))(#null|\\(\\)|#inert|#_|#ignore|#t|#true|#f|#false|#:)(?=[\\s()\\[\\]])"
 		},
-		primitive: {
-			name: "primitive",
-			match: "(?<=(\\s|\\(|\\)))%[^\\s()]+(?=(\\s|\\(|\\)))"
+		"primitive": {
+			"name": "primitive",
+			"match": "(?<=(\\s|\\(|\\)))%[^\\s()]+(?=(\\s|\\(|\\)))"
 		},
-		stdlib: {
-			name: "stdlib",
-			match: "(?<=(\\s|\\(|\\)))(if!?|begin|then|else|vau|macro|cond|type\\?|case(Vau|\\\\|Type\\\\?)?|check(\\?|\\*)?|the|match(Type\\?\\*?)?|bind\\??|def(\\\\|Vau|Macro|de\\\\|Suite|Test\\*?|Case(Vau|\\\\)?|Class|Env|Box|Obj|New|\\*|Generic|Method)?|set!\\*?|set(Car|Cdr)!|quote|lambda|\\\\|de\\\\|(un)?wrap|apply\\*?\\*?|eval|list\\*?|cons!?|c(a|d)+r!?|(cons|atom|list|!?null|inert|ignore)\\?|map|assert(#t)?|new(Env|Box|Obj)?|prog1|block|when|unless|loop|(continue|break)\\??-?|(while|until)\\??|for1?|do(List|Times)|close1?|atEnd|finally|rec\\\\?|let(\\*|1)?((rec)?\\\\?|Loop)?|catch(Tag)?(Wth)?|throw(Tag)?|takeSubcont|pushPrompt|push(Delim)?Subcont|pushSubcontBarrier|log|load|print|write|error|signalsError\\?|!?eq\\?|append|reverse|forEach#?|(symbol|keyword)(\\?|Name)?)(?=(\\s|\\(|\\)))"
+		"stdlib": {
+			"name": "stdlib",
+			"match": "(?<=(\\s|\\(|\\)))(if!?|begin|begenv|then|else|vau|macro|cond|type\\?|case(Vau|\\\\|Type\\\\?)?|check(\\?|\\*)?|the|match(Type\\?\\*?)?|bind\\??|def(\\\\|Vau|Macro|de\\\\|Suite|Test\\*?|Case(Vau|\\\\)?|Class|Env|Box|Obj|New|\\*|Generic|Method)?|set!\\*?|set(Car|Cdr)!|quote|lambda|\\\\|de\\\\|(un)?wrap|apply\\*?\\*?|eval|list\\*?|cons!?|c(a|d)+r!?|(cons|atom|list|!?null|inert|ignore)\\?|map|assert(#t)?|new(Env|Box|Obj)?|prog1|block|when|unless|loop|(continue|break)\\??-?|(while|until)\\??|for1?|do(List|Times)|close1?|atEnd|finally|rec\\\\?|let(\\*|1)?((rec)?\\\\?|Loop)?|catch(Tag)?(Wth)?|throw(Tag)?|takeSubcont|pushPrompt|push(Delim)?Subcont|pushSubcontBarrier|log|load|print|write|error|signalsError\\?|!?eq\\?|append|reverse|forEach#?|(symbol|keyword)(\\?|Name)?)(?=(\\s|\\(|\\)))"
 		},
-		string: {
-			name: "string",		
-			begin: "\"",
-			end: "(?<!\\\\)\"",
+		"string": {
+			"name": "string",		
+			"begin": "\"",
+			"end": "(?<!\\\\)\""
 		},
-		character: {
-			name: "character",		
-			match: "(?<=(\\s|\\(|\\)))(#\\\\(x\\h(\\h(\\h\\h?)?)?|[\\x0021-\\xffff]| ))(?=(\\s|\\(|\\)))" 
+		"character": {
+			"name": "character",		
+			"match": "(?<=(\\s|\\(|\\)))(#\\\\(x\\h(\\h(\\h\\h?)?)?|[\\x0021-\\xffff]| ))(?=(\\s|\\(|\\)))" 
 		},
-		keyword: {
-			name: "keyword",		
-			//match: ":\\w+"
-			 match: "(?<=[\\s()\\[\\]]):[^ ()]+(?=[\\s()\\[\\]])"
+		"keyword": {
+			"name": "keyword",		
+			"match": "(?<=[\\s()\\[\\]]):[^ ()]+(?=[\\s()\\[\\]])"
 		},
-		java: {
-			name: "java",		
-			match: "(?<=(\\s|\\(|\\)))(&|@|\\.)([A-Za-z0-9$_.]|\\[\\])+(?=(\\s|\\(|\\)|\\[|\\]))"
+		"java": {
+			"name": "java",		
+			"match": "(?<=(\\s|\\(|\\)))(&|@|\\.)([A-Za-z0-9$_.]|\\[\\])+(?=(\\s|\\(|\\)|\\[|\\]))"
 		},
-		number: {
-			name: "number",
-			match: "(?<=(\\s|\\(|\\)))(\\+|-)?\\d(_|\\d+)*(l|L|bi|BI|d|D|Bd|Bd|(\\.\\d(_|\\d+)*((e|E)(\\+|-)?\\d(_|\\d+)*)?(d|D|bd|BD)?)?)?(?=(\\s|\\(|\\)))"
+		"number": {
+			"name": "number",
+			"match": "(?<=(\\s|\\(|\\)))(\\+|-)?\\d(_|\\d+)*(l|L|bi|BI|d|D|Bd|Bd|(\\.\\d(_|\\d+)*((e|E)(\\+|-)?\\d(_|\\d+)*)?(d|D|bd|BD)?)?)?(?=(\\s|\\(|\\)))"
 		},
 		//*
-		quoteSym: {
-			name: "quote",		
-			begin: "'\\s*",
-			end: "(?=(\\s|\\(|\\)))"
+		"quoteSym": {
+			"name": "quote",		
+			"begin": "'\\s*",
+			"end": "(?=(\\s|\\(|\\)))"
 		},
-		quoteList: {
-			name: "quote",		
-			begin: "'\\s*\\(",
-			end: "\\)",
-			patterns: [
-		        { include: "#qlist" }
+		"quoteList": {
+			"name": "quote",		
+			"begin": "'\\s*\\(",
+			"end": "\\)",
+			"patterns": [
+		        { "include": "#qlist" }
 			]
 		},
-		qlist: {
-			begin: "\\(",
-			end: "\\)",
-			patterns: [
-		        { include: "#qlist" }
+		"qlist": {
+			"begin": "\\(",
+			"end": "\\)",
+			"patterns": [
+		        { "include": "#qlist" }
 			]
 		},
 		/*/
-		quote: {
-			name: "quote",		
-			match: "'\\s*",
-			patterns: [
-				{ include: "#quotelist" },
-				{ match: "\\w+" }
+		"quote": {
+			"name": "quote",		
+			"match": "'\\s*",
+			"patterns": [
+				{ "include": "#quotelist" },
+				{ "match": "\\w+" }
 			]
 		},
-		quotelist: {
-			begin: "\\(",
-			end: "\\)",
-			patterns: [
-				{ include: "#quotelist" }
+		"quotelist": {
+			"begin": "\\(",
+			"end": "\\)",
+			"patterns": [
+				{ "include": "#quotelist" }
 			]
 		},
 		//*/
-		symbol: {
-			name: "symbol",		
-			match: "(?<!')\\w+"
+		"symbol": {
+			"name": "symbol",		
+			"match": "(?<!')\\w+"
 		},
-		list: {
-			begin: "\\(",
-			beginCaptures: {
+		"list": {
+			"begin": "\\(",
+			"beginCaptures": {
 				"0": { "name": "lPar" }
 			},
-			end: "\\)",
-			endCaptures: {
+			"end": "\\)",
+			"endCaptures": {
 				"0": { "name": "rPar" }
 			},	
-			patterns: [
-		        { include: "#expr" }
+			"patterns": [
+		        { "include": "#expr" }
 			]
 		},
-		scomment: { // symbol comment
-			name: "comment",		
-			begin: "((?<=^)|(?<=(\\s|\\(|\\))))#;\\s*",
-			end: "(?=(\\s|\\(|\\)))",
+		"scomment": { // symbol comment
+			"name": "comment",		
+			"begin": "((?<=^)|(?<=(\\s|\\(|\\))))#;\\s*",
+			"end": "(?=(\\s|\\(|\\)))",
 			//contentName: "comment", 
-			patterns: [
-				{ name: "comment",		
-				  match: "\\w+"
+			"patterns": [
+				{ "name": "comment",		
+				  "match": "\\w+"
 				}			
 			]
 		},
-		ecomment: { // expression comment
-			name: "comment",		
-			begin: "((?<=^)|(?<=(\\s|\\(|\\))))#;\\s*\\(",
-			end: "\\)",
+		"ecomment": { // expression comment
+			"name": "comment",		
+			"begin": "((?<=^)|(?<=(\\s|\\(|\\))))#;\\s*\\(",
+			"end": "\\)",
 			//contentName: "comment", 
-			patterns: [
-		        { name: "comment", include: "#expr"},
+			"patterns": [
+		        { "name": "comment", "include": "#expr"}
 			]
 		},
-		lcomment: { // line comment
-			// puÃ² cominciare a inizio riga e termina a fine riga
+		"lcomment": { // line comment
+			// può cominciare a inizio riga e termina a fine riga
 			// non deve essere preceduto da #
 			// o meglio da qualunque carattere diverso da \s ( )
 			// ovvero non va confuso con #; e non inizia dentro ad un simbolo!
-			name: "comment",		
+			"name": "comment",		
 			//begin: "(?<=(^|\\s|\\(|\\)));", // ko! va in errore!
-			begin: "((?<=^)|(?<=(\\s|\\(|\\))));",
-			end: "$",
-			patterns: [
-		        {	match: "\"(\\\"|[^\"])+\"" }
+			"begin": "((?<=^)|(?<=(\\s|\\(|\\))));",
+			"end": "$",
+			"patterns": [
+		        {	"match": "\"(\\\"|[^\"])+\"" }
 			]
 		},
-		ncomment: { // nested comment
-			name: "comment",		
-			begin: "#\\|",
-			end: "\\|#",
-			patterns: [
-		        {	name: "doc",
-					match: "(?<=(\\())(syntax|type|derivation|aliasof|extends|attributes|\\$nm|example|use)(?=(\\s|\\)))"
+		"ncomment": { // nested comment
+			"name": "comment",		
+			"begin": "#\\|",
+			"end": "\\|#",
+			"patterns": [
+		        {	"name": "doc",
+					"match": "(?<=(\\())(syntax|type|derivation|aliasof|extends|attributes|\\$nm|example|use)(?=(\\s|\\)))"
 				},
-		        {	match: "\"(\\\"|[^\"])+\"" },
-		        {	include: "#lcomment" },
-		        {	include: "#ncomment" }
+		        {	"match": "\"(\\\"|[^\"])+\"" },
+		        {	"include": "#lcomment" },
+		        {	"include": "#ncomment" }
 			]
 		},
-		expr: {
-			patterns: [
-		        { include: "#ncomment" },
-		        { include: "#lcomment" },
-		        { include: "#scomment" },
-		        { include: "#ecomment" },
-		        { include: "#constant" },
-		        { include: "#java" },
-				{ include: "#primitive" },
-				{ include: "#stdlib" },
+		"expr": {
+			"patterns": [
+		        { "include": "#ncomment" },
+		        { "include": "#lcomment" },
+		        { "include": "#scomment" },
+		        { "include": "#ecomment" },
+		        { "include": "#constant" },
+		        { "include": "#java" },
+				{ "include": "#primitive" },
+				{ "include": "#stdlib" },
 				//*
-				{ include: "#quoteList" },
-				{ include: "#quoteSym" },
+				{ "include": "#quoteList" },
+				{ "include": "#quoteSym" },
 				/*/
-				{ include: "#quote" },
+				{ "include": "#quote" },
 				//*/
-		        { include: "#string" },
-		        { include: "#character" },
-				{ include: "#keyword" },
-				{ include: "#number" },
-				{ include: "#symbol" },
-				{ include: "#list" }
+		        { "include": "#string" },
+		        { "include": "#character" },
+				{ "include": "#keyword" },
+				{ "include": "#number" },
+				{ "include": "#symbol" },
+				{ "include": "#list" }
 			]
 		}
 	}

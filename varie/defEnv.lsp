@@ -26,7 +26,7 @@
 (assert (expand (letEnv ((a 1) ((b c) (log c))) (theEnv))) '(let ((a 1) (b (\ (c) (log c)))) (theEnv)))
 (assert (expand (letrecEnv ((a 1) ((b c) (log c))) (theEnv))) '(let ((a #inert) (b #inert)) (defEnv* (a (b c)) (1) ((log c))) (theEnv)))
 
-#;(let () ;; esercizio di recursione ...
+#;(begenv ;; esercizio di recursione ...
 
   (defVau (defEnv . bindings) env ;; 13ms
     (if (null? bindings) env
@@ -34,7 +34,7 @@
         (env (->name lhs) (eval (apply* ->\||begin lhs rhs) env))
         (apply defEnv bindings env) )))
   
-  (let () (defEnv (a 1) (b 1 2) ((c c) (1+ c))) (assert a 1) (assert b 2) (assert (c 3) 4) )
+  (begenv (defEnv (a 1) (b 1 2) ((c c) (1+ c))) (assert a 1) (assert b 2) (assert (c 3) 4) )
   (time 100 (defEnv (a 1) (b 1 2) ((c c) (1+ c))) #inert)
     
   (defMacro (defEnv . bindings) ;; 21ms
@@ -95,7 +95,7 @@
   (forEach (\ ((lhs . rhs)) (env (->name lhs) (eval (apply* ->\||begin lhs rhs) env))) bindings)
   env ) 
 
-(let () (defEnv (a 1) (b 1 2) ((c c) (1+ c))) (assert a 1) (assert b 2) (assert (c 3) 4) )
+(begenv (defEnv (a 1) (b 1 2) ((c c) (1+ c))) (assert a 1) (assert b 2) (assert (c 3) 4) )
 
 (defVau (defrecEnv . bindings) env
   (forEach (\ ((lhs . #_)) (env (->name lhs) #inert)) bindings)

@@ -1,6 +1,6 @@
 ;; comment -> html
 
-(let ()
+(begenv
 
 (def milli (@currentTimeMillis System))
 

@@ -83,14 +83,14 @@
 
   (defTest error.3
     (handlerBind ((SimpleError (\ (e) (invokeRestart 'continue 12))))
-      (error (makeSimpleError "Foo!")
+      (error (newSimpleError "Foo!")
         (abort (\ (value) (* value 10)))
         (continue (\ (value) (* value 2)))))
     24)
 
   (defTest error.3b
     (handlerBind ((SimpleError (\ (e) (invokeRestart 'abort 12))))
-      (error (makeSimpleError "Foo!")
+      (error (newSimpleError "Foo!")
         (abort (\ (value) (* value 10)))
         (continue (\ (value) (* value 2)))))
     120)
@@ -98,7 +98,7 @@
   (defTest error.4
     (restartCase ((abort (\ (value) (* 1000 value))))
       (handlerBind ((SimpleError (\ (e) (invokeRestart 'abort 12))))
-        (error (error (makeSimpleError "Foo!"))
+        (error (error (newSimpleError "Foo!"))
           (abort (\ (value) (* value 10)))
           (continue (\ (value) (* value 2))))))
     12000)
@@ -108,7 +108,7 @@
       (restartCase ((abort (\ (value) (* 1000 value))))
         (handlerBind ((SimpleError (\ (e) (invokeRestart 'abort 12))))
           (error
-            (error (makeSimpleError "Foo!")
+            (error (newSimpleError "Foo!")
               (abort (\ (value) (returnFrom b (* 10000 value)))) )
             (abort (\ (value) (* value 10)))
             (continue (\ (value) (* value 2)))))))
@@ -140,10 +140,10 @@
      (the #t)
      Error :type 'match :operands# +1)))
 
-(defSuite makeTypeError
+(defSuite newTypeError
 
-  (defTest makeTypeError.1
-    (let ((e (makeTypeError "foo" 'Number)))
+  (defTest newTypeError.1
+    (let ((e (newTypeError "foo" 'Number)))
       (assert#t (matchType?* e Error :type 'type :datum "foo" :expected 'Number))
       (assert#t (type? e Error))
       (assert#t (type? e Condition))
@@ -153,8 +153,8 @@
 
 (defSuite simpleError
 
-  (defTest makeSimpleError.1
-    (let ((e (makeSimpleError "foo")))
+  (defTest newSimpleError.1
+    (let ((e (newSimpleError "foo")))
       (assert#t (type? e SimpleError))
       (assert#t (type? e Error))
       (assert#t (type? e Condition))
@@ -171,10 +171,10 @@
      (simpleError "foo")
      SimpleError :type 'simple @getMessage "foo")))
 
-(defSuite makeRestartError
+(defSuite newRestartError
 
-  (defTest makeRestartError.1
-    (let ((e (makeRestartError 'continue)))
+  (defTest newRestartError.1
+    (let ((e (newRestartError 'continue)))
       (assert#t (type? e RestartError))
       (assert#t (type? e Error))
       (assert#t (type? e Condition))
@@ -1900,13 +1900,13 @@
      (length #f)
      Error)))
 
-(defSuite len
+(defSuite listLength
 
-  (defTest len.1
+  (defTest listLength.1
     (length '())
     0)
 
-  (defTest len.2
+  (defTest listLength.2
     (length '(1 2 3))
     3))
 
@@ -2772,12 +2772,12 @@
      Error :type 'type :datum 1 :expected '(or () List) ))
 
   (defTest opt.lazy.1
-    (optDft (some 1) (error (makeSimpleError "foo")))
+    (optDft (some 1) (error (newSimpleError "foo")))
     1)
 
   (defTest opt.lazy.2
     (signalsError?
-     (optDft #null (error (makeSimpleError "foo")))
+     (optDft #null (error (newSimpleError "foo")))
      SimpleError :type 'simple @getMessage "foo")))
 
 (defSuite optDft*

@@ -190,7 +190,7 @@
 ;;;; Dynamic Binding Tests
 
 (test defdynamic.1
-  (let ()
+  (begenv
     (ddef* (x y) 1 (+ 1 1))
     (assert (dval x) 1)
     (assert (dval y) 2)
@@ -207,7 +207,7 @@
   #t)
   
 (test defdynamic.redefine
-  (let ()  
+  (begenv  
     (ddef a (+ 1 1))
     (def oa a)
     (assert (dval a) 2)
@@ -222,7 +222,7 @@
   #t )
 
 (test progv.1
-  (let ()
+  (begenv
     (ddef* (*x* *y*) 1 2)
     (assert (dval *x*) 1)
     (assert (dval *y*) 2)
@@ -239,7 +239,7 @@
   #t )
     
 (test dynamic.1
-  (let ()
+  (begenv
     (ddef foo)
     (assert (== (.value foo) #null) #t)
     (assert (== (dval foo) #null) #t)
@@ -250,7 +250,7 @@
   #t )
 
 (test set-dynamic.1
-  (let ()
+  (begenv
     (ddef *bar* #null)
     (dlet ((*bar* 1))
       (dval *bar* 2)
@@ -264,25 +264,25 @@
   #t )
 
 (test dynamic-let*.1
-  (let ()
+  (begenv
     (dlet* () (+ 1 1)))
   2)
 
 (test dynamic-let*.2
-  (let ()
+  (begenv
     (ddef *x* 1)
     (dlet* ((*x* 2)) (+ 1 (dval *x*))))
   3)
 
 (test dynamic-let*.2
-  (let ()
+  (begenv
     (ddef* (*x* *y*) 1 0)
     (dlet* ((*x* 2) (*y* (+ (dval *x*) 1)))
       (list (dval *x*) (dval *y*))))
   '(2 3))
 
 (test dynamic-let-sanity-check
-  (let ()
+  (begenv
     (ddef* (*x* *y*) 1 0)
     (dlet ((*x* 2) (*y* (+ (dval *x*) 1)))
       (list (dval *x*) (dval *y*))))

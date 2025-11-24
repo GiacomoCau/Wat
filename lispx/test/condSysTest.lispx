@@ -29,12 +29,12 @@
 
   (defTest handlerBind.no-handler
     (handlerBind ((TestError (\ (e) 'whatever)))
-      (signal (makeSimpleError "foo")) )
+      (signal (newSimpleError "foo")) )
     #inert )
 
   (defTest handlerBind.unhandled
     (handlerBind ((SimpleError (\ (e) 'whatever)))
-      (signal (makeSimpleError "foo")) )
+      (signal (newSimpleError "foo")) )
     #inert )
 
   (defTest handlerBind.unhandled'
@@ -46,13 +46,13 @@
     (block b
       (handlerBind ((SimpleError (\ (e) (returnFrom b 1))))
         (handlerBind ((SimpleError (\ (e) 'decline)))
-          (signal (makeSimpleError "foo")) )))
+          (signal (newSimpleError "foo")) )))
     1 )
 
   (defTest handlerBind.handled
     (block b
       (handlerBind ((SimpleError (\ (e) (assert#t (eq? "foo" (@getMessage e))) (returnFrom b 1))))
-        (signal (makeSimpleError "foo")) ))
+        (signal (newSimpleError "foo")) ))
     1 )
 
   (defTest handlerBind.handled'
@@ -65,14 +65,14 @@
     (block b
       (handlerBind ((SimpleError (\ (e) (returnFrom b 'outer))))
         (handlerBind ((SimpleError (\ (e) (returnFrom b 'inner))))
-          (signal (makeSimpleError "foo")) )))
+          (signal (newSimpleError "foo")) )))
     'inner )
 
   (defTest handlerBind.resignal
     (block b
       (handlerBind ((SimpleError (\ (e) (returnFrom b 'outer))))
         (handlerBind ((SimpleError (\ (e) (signal e))))
-          (signal (makeSimpleError "foo")) )))
+          (signal (newSimpleError "foo")) )))
     'outer )
 
   (defTest handlerBind.firewall
@@ -80,7 +80,7 @@
       (handlerBind ((TestError (\ (e) (returnFrom b 'outer))))
         (handlerBind ((SimpleError (\ (e) (signal (new TestError)))))
           (handlerBind ((TestError (\ (e) (returnFrom b 'inner))))
-            (signal (makeSimpleError "foo")) ))))
+            (signal (newSimpleError "foo")) ))))
     'outer )
 
   (defTest handlerBind.firewall'
@@ -104,7 +104,7 @@
       (handlerBind 
         ( (TestError (\ (e) (returnFrom b 'test)))
           (SimpleError (\ (e) (returnFrom b 'simple))) )
-        (signal (makeSimpleError "foo")) ))
+        (signal (newSimpleError "foo")) ))
     'simple )
 
   (defTest handlerBind.multiple.2
@@ -153,31 +153,31 @@
 
   (defTest handlerCase.no-handler
     (handlerCase ((TestError (\ (e) 'whatever)))
-      (signal (makeSimpleError "foo")) )
+      (signal (newSimpleError "foo")) )
     #inert )
 
   (defTest handlerCase.handled
     (handlerCase ((SimpleError (\ (e) (assert#t (eq? "foo" (@getMessage e))) 'whatever)))
-      (signal (makeSimpleError "foo")) )
+      (signal (newSimpleError "foo")) )
     'whatever )
 
   (defTest handlerCase.nested
     (handlerCase ((SimpleError (\ (e) 'outer)))
       (handlerCase ((SimpleError (\ (e) 'inner)))
-        (signal (makeSimpleError "foo")) ))
+        (signal (newSimpleError "foo")) ))
     'inner )
 
   (defTest handlerCase.resignal
     (handlerCase ((SimpleError (\ (e) 'outer)))
       (handlerCase ((SimpleError (\ (e) (signal e))))
-        (signal (makeSimpleError "foo")) ))
+        (signal (newSimpleError "foo")) ))
     'outer )
 
   (defTest handlerCase.multiple.1
     (handlerCase
       ( (TestError (\ (e) 'test))
         (SimpleError (\ (e) 'simple)) )
-      (signal (makeSimpleError "foo")) )
+      (signal (newSimpleError "foo")) )
     'simple )
 
   (defTest handlerCase.multiple.2
@@ -430,7 +430,7 @@
     #null )
 
   (defTest findRestart.2
-    (findRestart 'foo (makeSimpleError "foo"))
+    (findRestart 'foo (newSimpleError "foo"))
     #null )
 
   (defTest findRestart.3
@@ -456,7 +456,7 @@
 
   (defTest findRestart.4
     (block exit
-      (def c (makeSimpleError "foo"))
+      (def c (newSimpleError "foo"))
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg))) :associatedConditions (list c)))
         (ifOpt (r (findRestart 'x c))
           (begin
@@ -468,7 +468,7 @@
 
   (defTest findRestart.4b
     (begin
-      (def c (makeSimpleError "foo"))
+      (def c (newSimpleError "foo"))
       (restartBind ((x (\ (arg) (+ 1000 arg)) :associatedConditions (list c)))
         (ifOpt (r (findRestart 'x c))
           (begin
@@ -480,7 +480,7 @@
 
   (defTest findRestart.5
     (block exit
-      (def c (makeSimpleError "foo"))
+      (def c (newSimpleError "foo"))
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg))) :associatedConditions (list c)))
         (restartBind ((x (\ (arg) (returnFrom exit (- 1000 arg)))))
           (ifOpt (r (findRestart 'x c))
@@ -490,7 +490,7 @@
 
   (defTest findRestart.5b
     (begin
-      (def c (makeSimpleError "foo"))
+      (def c (newSimpleError "foo"))
       (restartCase ((x (\ (arg) (+ 1000 arg)) :associatedConditions (list c)))
         (restartCase ((x (\ (arg) (- 1000 arg))))
           (ifOpt (r (findRestart 'x c))
@@ -500,8 +500,8 @@
 
   (defTest findRestart.6
     (block exit
-      (def c (makeSimpleError "foo"))
-      (def d (makeSimpleError "bar"))
+      (def c (newSimpleError "foo"))
+      (def d (newSimpleError "bar"))
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg))) :associatedConditions (list c)))
         (restartBind ((x (\ (arg) (returnFrom exit (- 1000 arg))) :associatedConditions (list d)))
           (ifOpt (r (findRestart 'x c))
@@ -511,8 +511,8 @@
 
   (defTest findRestart.6b
     (begin
-      (def c (makeSimpleError "foo"))
-      (def d (makeSimpleError "bar"))
+      (def c (newSimpleError "foo"))
+      (def d (newSimpleError "bar"))
       (restartCase ((x (\ (arg) (+ 1000 arg)) :associatedConditions (list c)))
         (restartCase ((x (\ (arg) (- 1000 arg)) :associatedConditions (list d)))
           (ifOpt (r (findRestart 'x c))
@@ -547,8 +547,8 @@
 
   (defTest computeRestarts.2
     (begin
-      (def c (makeSimpleError "foo"))
-      (def d (makeSimpleError "bar"))
+      (def c (newSimpleError "foo"))
+      (def d (newSimpleError "bar"))
       (restartCase
         ( (outer1 (\ ()))
           (outer2 (\ ()) :associatedConditions (list c)) )
@@ -571,7 +571,7 @@
       Error :type 'match :operands# +1 ))
 
   (defTest signal.1
-    (signal (makeSimpleError "foo"))
+    (signal (newSimpleError "foo"))
     #inert )
 
   (defTest signal.2
@@ -581,14 +581,14 @@
 
   (defTest signal.3
     (handlerBind ((SimpleError (\ (e) (invokeRestart 'continue 12))))
-      (signal (makeSimpleError "Foo!")
+      (signal (newSimpleError "Foo!")
         (abort (\ (value) (* value 10)))
         (continue (\ (value) (* value 2))) ))
     24 )
 
   (defTest signal.3b
     (handlerBind ((SimpleError (\ (e) (invokeRestart 'abort 12))))
-      (signal (makeSimpleError "Foo!")
+      (signal (newSimpleError "Foo!")
         (abort (\ (value) (* value 10)))
         (continue (\ (value) (* value 2))) ))
     120 )
@@ -598,7 +598,7 @@
       (handlerBind ((SimpleError (\ (e) (invokeRestart 'abort 12))))
         ;; Silly?  Yeah, probably.
         (signal 
-          (signal (makeSimpleError "Foo!"))
+          (signal (newSimpleError "Foo!"))
           (abort (\ (value) (* value 10)))
           (continue (\ (value) (* value 2))) )))
     12000 )
@@ -608,7 +608,7 @@
       (restartCase ((abort (\ (value) (* 1000 value))))
         (handlerBind ((SimpleError (\ (e) (invokeRestart 'abort 12))))
           (signal
-            (signal (makeSimpleError "Foo!")
+            (signal (newSimpleError "Foo!")
               (abort (\ (value) (returnFrom b (* 10000 value)))) )
             (abort (\ (value) (* value 10)))
             (continue (\ (value) (* value 2))) ))))
@@ -626,7 +626,7 @@
                     (aCn (getSlot handler 'associatedConditions)) )
                   (assert#t (member? e aCn))
                   (returnFrom ok) ))) )
-          (signalOperator (makeSimpleError "error!")
+          (signalOperator (newSimpleError "error!")
             (r (\ () 1)) ))))))
 
 (defSuite invokeRestart

@@ -691,6 +691,26 @@
         </li>
       </ul>
     </div>
+    <div>
+      <h3>
+        begenv
+      </h3>
+      <ul>
+        <li>
+          (<b>begenv</b> . forms)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (vau forms env (apply begin forms (newEnv env)))
+          <br/>
+            &nbsp;
+          <br/>
+            Sequentially evaluate <b>forms</b> in an new enviroment that extends the current returning the value of the last one, #inert if <b>forms</b> is #null.
+        </li>
+      </ul>
+    </div>
     <br/>
     <a href="https://htmlpreview.github.io?https://github.com/GiacomoCau/Wat/blob/main/reference/reference0.html">
       <input type="button" value="&lt;" disabled/>
