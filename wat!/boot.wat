@@ -1158,6 +1158,14 @@
    |#
   %eq? )
 
+(def !eq?
+  #|($nm a b)
+   |(type function)
+   |
+   |Return #false if <b>a</b> is equals <b>b</b>, #true otherwise.
+   |#
+  %!eq? )
+
 (def\ (ignore? o) (== o #_))
 (def\ (inert? o) (== o #inert))
 (def\ (sharpColon? o) (== o #:))
@@ -1631,7 +1639,7 @@
    |#
   %classOf )
 
-(def typeOf
+(def type
   #|(aliasof classOf)
    |#
   classOf)

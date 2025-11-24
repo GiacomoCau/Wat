@@ -59,6 +59,17 @@ check(List o, List chk)
 (assert ((\ ((#: (or () (1 'a)) x)) x) '(a)) '(a))
 (assert ((\ ((#: (or () (1 'a)) x)) x) ()) ())
 
+(assert ((\ ((#: (and Integer (> 0)) i)) i) 0) Error :type 'type)
+(assert ((\ ((#: (and Integer (> 0)) i)) i) 1) 1)
+
+(assert ((\ ((#: (and String ((\ (s) (! (eq? s ""))))) s)) s) "") Error :type 'type)
+(assert ((\ ((#: (and String ((\ (s) (! (eq? s ""))))) s)) s) "1") "1")
+
+(assert ((\ ((#: (and String ((\ (s) (> (@length s) 0)))) s)) s) "") Error :type 'type)
+(assert ((\ ((#: (and String ((\ (s) (> (@length s) 0)))) s)) s) "1") "1")
+
+(assert ((\ ((#: (and String (!eq? "")) s)) s) "") Error :type 'type)
+(assert ((\ ((#: (and String (!eq? "")) s)) s) "1") "1")
 
 ; test check e #:
 

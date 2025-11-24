@@ -16,7 +16,7 @@
 		},
 		stdlib: {
 			name: "stdlib",
-			match: "(?<=(\\s|\\(|\\)))(if!?|begin|then|else|vau|macro|cond|type\\?|case(Vau|\\\\|Type\\\\?)?|check(\\?|\\*)?|the|match(Type\\?\\*?)?|bind\\??|def(\\\\|Vau|Macro|de\\\\|Suite|Test\\*?|Case(Vau|\\\\)?|Class|Env|Box|Obj|New|\\*|Generic|Method)?|set!\\*?|set(Car|Cdr)!|quote|lambda|\\\\|de\\\\|(un)?wrap|apply\\*?\\*?|eval|list\\*?|cons!?|c(a|d)+r!?|(cons|atom|list|!?null|inert|ignore)\\?|map|assert(#t)?|new(Env|Box|Obj)?|prog1|block|when|unless|loop|(continue|break)\\??-?|(while|until)\\??|for1?|do(List|Times)|close1?|atEnd|finally|rec\\\\?|let(\\*|1)?((rec)?\\\\?|Loop)?|catch(Tag)?(Wth)?|throw(Tag)?|takeSubcont|pushPrompt|push(Delim)?Subcont|pushSubcontBarrier|log|load|print|write|error|signalsError\\?|eq\\?|append|reverse|forEach#?|(symbol|keyword)(\\?|Name)?)(?=(\\s|\\(|\\)))"
+			match: "(?<=(\\s|\\(|\\)))(if!?|begin|then|else|vau|macro|cond|type\\?|case(Vau|\\\\|Type\\\\?)?|check(\\?|\\*)?|the|match(Type\\?\\*?)?|bind\\??|def(\\\\|Vau|Macro|de\\\\|Suite|Test\\*?|Case(Vau|\\\\)?|Class|Env|Box|Obj|New|\\*|Generic|Method)?|set!\\*?|set(Car|Cdr)!|quote|lambda|\\\\|de\\\\|(un)?wrap|apply\\*?\\*?|eval|list\\*?|cons!?|c(a|d)+r!?|(cons|atom|list|!?null|inert|ignore)\\?|map|assert(#t)?|new(Env|Box|Obj)?|prog1|block|when|unless|loop|(continue|break)\\??-?|(while|until)\\??|for1?|do(List|Times)|close1?|atEnd|finally|rec\\\\?|let(\\*|1)?((rec)?\\\\?|Loop)?|catch(Tag)?(Wth)?|throw(Tag)?|takeSubcont|pushPrompt|push(Delim)?Subcont|pushSubcontBarrier|log|load|print|write|error|signalsError\\?|!?eq\\?|append|reverse|forEach#?|(symbol|keyword)(\\?|Name)?)(?=(\\s|\\(|\\)))"
 		},
 		string: {
 			name: "string",		

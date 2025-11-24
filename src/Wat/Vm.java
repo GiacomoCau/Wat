@@ -377,7 +377,9 @@ public class Vm {
 		@Override Object setCdr(Object cdr) { return cdr == null || cdr instanceof List ? super.setCdr(cdr) : typeError("cannot set cdr, not a {expected}: {datum}", cdr, symbol("List") ); }
 	}
 	//public int len(List o) { int i=0; for (; o != null; i+=1, o=o.cdr()); return i; }
-	public int len(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return i /*o == null ? i : i + .5*/; }
+	public int len(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return i; }
+	//public double len(Object o) { int i=0; for (; o instanceof Cons c; i+=1, o=c.cdr()); return o == null ? i : i + .5; }
+	public Object last(List o) { if (o == null) return null; for (;;) { var cdr = o.cdr(); if (cdr == null) return o.car; o = cdr; }};
 	<T extends Cons> T cons(Object car) { return (T) new List(car, null); }
 	<T extends Cons> T cons(Object car, Object cdr) {
 		return (T)(cdr == null || cdr instanceof List ? new List(car, (List) cdr) : new Cons(car, cdr));
@@ -1534,7 +1536,7 @@ public class Vm {
 		public String toString() { return "@" + name; }
 	}
 	At at(String name) {
-		if (name == null) return typeError("method name is {name}, not a {expected}", name, symbol("String"));
+		if (name == null || name.equals("")) return typeError("method name is {name}, not a {expected}", name, or(symbol("String"), ""));
 		return new At(name);
 	}
 	
@@ -1565,7 +1567,7 @@ public class Vm {
 		public String toString() { return "." + name; }
 	}
 	Object dot(String name) {
-		if (name == null) return typeError("field name is null, not a {expected}", name, symbol("String"));
+		if (name == null || name.equals("")) return typeError("field name is null, not a {expected}", name, symbol("String"));
 		return new Dot(name);
 	}
 	
@@ -2273,6 +2275,7 @@ public class Vm {
 				"%list-", wrap(new JFun("%List-", (ArgsList) this::listMinus)),
 				"%append", wrap(new JFun("%Append", 2, (n,o)-> checkN(n, o, 2, or(null, List.class)), (_,o)-> append(o.car(),o.car(1)) )),
 				"%len", wrap(new JFun("%Len", 1, (n,o)-> checkN(n, o, 1 /*, or(null, List.class)*/), (_,o)-> len(o.car()) )),
+				"%last", wrap(new JFun("%Last", 1, (n,o)-> checkN(n, o, 1, or(null, List.class)), (_,o)-> last(o.car()) )),
 				"%arity", wrap(new JFun("%Arity", (Function) Vm.this::arity )),
 				"%reverse", wrap(new JFun("%Reverse", 1, (n,o)-> checkN(n, o, 1, or(null, List.class)), (_,o)-> reverse(o.car()) )),
 				// Symbol Keyword
@@ -2292,6 +2295,7 @@ public class Vm {
 				//"!br?", wrap(new JFun("!Br?", (Function<Object, Boolean>) o-> !(o instanceof List lst && member(lst.car, bindResValue)))),
 				"%br?car", wrap(new JFun("%Br?Car", (Function<Object, Boolean>) o-> o instanceof List lst && member(lst.car, bindResValues))),
 				"%eq?", wrap(new JFun("%Eq?", (BiFunction<Object,Object,Boolean>) Vm.this::equals )),
+				"%!eq?", wrap(new JFun("%Eq?", (BiFunction<Object,Object,Boolean>) (a,b)-> !a.equals(b) )),
 				// Boolean
 				//"%boolean?", wrap(new JFun("%Boolean?", (Function<Object, Boolean>) obj-> obj instanceof Boolean )),
 				//"%t?", wrap(new JFun("%T?", (Function<Object, Boolean>) obj-> { try { return switch (istrue(obj)) { case Suspension s-> s; case Boolean b-> b; default-> false; }; } catch (Throwable t) { return false; }})),
