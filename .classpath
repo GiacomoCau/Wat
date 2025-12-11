@@ -8,8 +8,8 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="lib" path="D:/Programmi/Eclipse 2025-09/plugins/org.eclipse.tm4e.core_0.15.0.202506111431.jar"/>
-	<classpathentry kind="lib" path="D:/Programmi/Eclipse 2025-09/plugins/com.google.gson_2.13.1.jar"/>
+	<classpathentry kind="lib" path="D:/Programmi/Eclipse 2025-09/plugins/org.eclipse.tm4e.core_0.17.1.202511281119.jar"/>
+	<classpathentry kind="lib" path="D:/Programmi/Eclipse 2025-09/plugins/com.google.gson_2.13.2.jar"/>
 	<classpathentry kind="lib" path="D:/Programmi/Eclipse 2025-09/plugins/org.joni_2.2.6.v20250329-1000.jar"/>
 	<classpathentry kind="lib" path="D:/Programmi/Eclipse 2025-09/plugins/org.jcodings_1.0.63.v20250307-1000.jar"/>
 	<classpathentry kind="output" path="bin"/>

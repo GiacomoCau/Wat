@@ -9,7 +9,7 @@
 	    ["{", "}"]
 	],
 	"surroundingPairs": [
-		// indispensabile per evidenziazione parentesi corrispondente
+		// indispensabile perche siano evidenziate le parentesi corrispondente
 		["(", ")"],
 		["[", "]"],
 	    ["{", "}"]
