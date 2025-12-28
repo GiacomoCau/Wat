@@ -7,22 +7,22 @@
 
 (defVau (class extend . bindings) env
   (def\ (mkMethod exp)
-    (def method (vau args env (apply (eval exp (env :this)) args env)))
-    (if (member? (car exp) '(\ case\)) (wrap method) method) )
-  (def\ (->cmb||val env static lhs rhs)
+    (list 'wrap (list 'vau 'args 'env (list 'apply (list 'eval (list 'quote exp) '(env :this)) 'args))) )
+  (def\ (->\||begin static lhs rhs)
     (if (cons? lhs)
-          (if (|| static (== (car lhs) 'new))
-            (eval (list* '\ (cdr lhs) rhs) env)
-            (mkMethod (list* '\ (cdr lhs) rhs)) )
+      (if (|| static (== (car lhs) 'new))
+        (list* '\ (cdr lhs) rhs)
+        ;(mkMethod (list* '\ (cdr lhs) rhs))
+        (mkMethod (list* 'vau (cdr lhs) #_ rhs)) )
       (&& (cons? rhs) (cons? (car rhs)) (member? (caar rhs) '(vau caseVau macro caseMacro \ case\)))
         (if (|| static (== lhs 'new))
-          (eval (car! rhs) env)
+          (car! rhs)
           (mkMethod (car! rhs)) )
-      (apply begin (cons lhs rhs) env) ))
+      (->begin (cons lhs rhs)) ))
   (def\ (object static bindings super)
     (def this (newEnv super))
     (forEach (\ (b) (this (if (cons? b) (->name (car b)) b) #inert)) bindings)
-    (forEach (\ (b) (when (cons? b) (let1 ((lhs . rhs) b) (this (->name lhs) (->cmb||val this static lhs rhs))))) bindings)
+    (forEach (\ (b) (when (cons? b) (let1 ((lhs . rhs) b) (this (->name lhs) (eval (apply* ->\||begin static lhs rhs) this))))) bindings)
     this )
   (def static (if (|| (null? bindings) (atom? (car bindings)) (!= (caar bindings) 'static)) () (prog1 (cdar bindings) (def bindings (cdr bindings)))))
   (def hasnew? ((rec\ (loop b) (if (null? b) #f (atom? (car b)) (loop (cdr b)) (let1 (((n . #_) . b) b) (if (&& (cons? n) (== (car n) 'new)) #t (loop b))))) bindings))
@@ -67,11 +67,6 @@
 
 (def\ (invoke method obj . args)
   (apply (obj method) args obj) )
-
-(defVau (invoke method obj . args) env
-  (def obj (eval obj env))
-  (def method (obj (eval method env)))
-  (apply method (if (type? method Apv) (eval (cons 'list args) env) args) obj) )
 
 
 ;(load "varie/yaos/yaos.lsp")
@@ -196,9 +191,3 @@
   (def a (instance A 2))
   (assert (a :a) 2)
 )
-(begenv
-  (def A (class () (a 3 2 1) (add (macro (b) (list 'quote (list '+ a b))))))
-  (def a (instance A 2))
-  (assert (invoke :add a (+ 2 2)) '(+ 1 (+ 2 2)))
-)
-
