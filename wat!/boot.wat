@@ -161,6 +161,17 @@
    |#
   %eval )
 
+(def evalList
+  #|($nm forms)
+   |($nm forms environment)
+   |(type function)
+   |
+   |(derivation (\ (forms . environment) (eval (cons 'list forms) (if (null? environment) (theEnv) (car! environment)))) )
+   |
+   |Return the result of evaluation of <b>forms</b> in the optional <b>environment</b>.
+   |#
+  %evalList )
+
 (def \
   #|($nm parameterTree . forms)
    |($nm parameterTree #: check . forms)

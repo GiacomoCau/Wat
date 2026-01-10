@@ -28,6 +28,36 @@
     <ul>
       <li>
         Idea from Alf Petrofsky http://scheme-reports.org/mail/scheme-reports/msg00800.html
+        <br/>
+          &nbsp;
+        <br/>
+          As an undocumented &quot;feature&quot; this takes optional extra arguments, which must all be #f.
+        <br/>
+          One level of unquotation is ignored per extra argument supplied.
+        <br/>
+          &nbsp;
+        <br/>
+          (define-syntax quasiquote
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;(syntax-rules (unquote unquote-splicing quasiquote)
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;( (_ ,x )              x)
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;( (_ (,@x . y) )       (append x `y))
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;( (_ `x . d)           (list 'quasiquote (quasiquote x #f . d)))
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;( (_ ,x #f . d)        (list 'unquote (quasiquote x . d)))
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;( (_ (,x . y) #f . d)  (append (map (lambda (z) (list 'unquote z)) (quasiquote (x) . d)) (quasiquote y #f . d)))
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;( (_ (,@x . y) #f . d) (append (map (lambda (z) (list 'unquote-splicing z)) (quasiquote (x) . d)) (quasiquote y #f . d)))
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;( (_ (x . y) . d)      (cons (quasiquote x . d) (quasiquote y . d)))
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;( (_ #(x ...) . d)     (list-&gt;vector (quasiquote (x ...) . d)))
+        <br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;( (_ x . d)            'x) ))
       </li>
     </ul>
     <div>

@@ -329,6 +329,28 @@
     </div>
     <div>
       <h3>
+        evalList
+      </h3>
+      <ul>
+        <li>
+          (<b>evalList</b> forms)
+          <br/>
+            (<b>evalList</b> forms environment)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (\ (forms . environment) (eval (cons 'list forms) (if (null? environment) (theEnv) (car! environment)))) )
+          <br/>
+            &nbsp;
+          <br/>
+            Return the result of evaluation of <b>forms</b> in the optional <b>environment</b>.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         \
       </h3>
       <ul>

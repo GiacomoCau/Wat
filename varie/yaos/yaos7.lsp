@@ -5,24 +5,27 @@
 
 (def\ (instance cls . args) (apply (cls :init) args))
 
+
+
+
 (defVau (class extend . bindings) env
-  (def\ (mkMethod exp)
-    (def method (vau args env (apply (eval exp (env :this)) args env)))
-    (if (member? (car exp) '(\ case\)) (wrap method) method) )
-  (def\ (->cmb||val env static lhs rhs)
+  (def\ (->\||begin static lhs rhs)
     (if (cons? lhs)
-          (if (|| static (== (car lhs) 'new))
-            (eval (list* '\ (cdr lhs) rhs) env)
-            (mkMethod (list* '\ (cdr lhs) rhs)) )
-      (&& (cons? rhs) (cons? (car rhs)) (member? (caar rhs) '(vau caseVau macro caseMacro \ case\)))
-        (if (|| static (== lhs 'new))
-          (eval (car! rhs) env)
-          (mkMethod (car! rhs)) )
-      (apply begin (cons lhs rhs) env) ))
+      (list* '\ (cdr lhs) rhs)
+      (->begin (cons lhs rhs)) ))
+  (def\ (->\||begin static lhs rhs)
+    (if (cons? lhs)
+      (if (|| static (== (car lhs) 'new))
+        (list* '\ (cdr lhs) rhs)
+        (list 'wrap (list 'vau 'args 'env :method (list 'eval (list 'list* (list 'quote (list* '\ (cdr lhs) rhs)) 'args) '(env :this))))
+        ;(list 'wrap (list 'vau 'args 'this (list 'eval (list 'list* (list 'quote (list* '\ (cdr lhs) rhs)) 'args) 'this)))
+        ;(list '\ '(this . args) :method (list 'log 'args 'this) (list 'apply (list 'log (list 'eval (list 'quote (list* '\ (cdr lhs) rhs)) 'this)) 'args 'this))
+        )
+      (->begin (cons lhs rhs)) ))
   (def\ (object static bindings super)
     (def this (newEnv super))
     (forEach (\ (b) (this (if (cons? b) (->name (car b)) b) #inert)) bindings)
-    (forEach (\ (b) (when (cons? b) (let1 ((lhs . rhs) b) (this (->name lhs) (->cmb||val this static lhs rhs))))) bindings)
+    (forEach (\ (b) (when (cons? b) (let1 ((lhs . rhs) b) (this (->name lhs) (eval (apply* ->\||begin static lhs rhs) this))))) bindings)
     this )
   (def static (if (|| (null? bindings) (atom? (car bindings)) (!= (caar bindings) 'static)) () (prog1 (cdar bindings) (def bindings (cdr bindings)))))
   (def hasnew? ((rec\ (loop b) (if (null? b) #f (atom? (car b)) (loop (cdr b)) (let1 (((n . #_) . b) b) (if (&& (cons? n) (== (car n) 'new)) #t (loop b))))) bindings))
@@ -33,12 +36,12 @@
     (\ args
       (def proxi (newEnv env (newObj class)))
       (def obj ((object #f bindings proxi) :cnt :static class))
-      (def new (remove! :new (newObj obj)))
+      (def new (@remove (.map obj) "new"))
       (if (null? new)
         (if (null? extend)
           (obj :this obj :super env)
           (let1 (super (apply instance (cons extend args) env))
-            (setParent! proxi super) (obj :this obj :super super) ))
+            (.parent proxi super) (obj :this obj :super super) ))
         (if (null? extend)
           (apply new args (obj :cnt :this obj :super env))
           (let1\ (!this #_ (error "this not yet defined!"))
@@ -47,9 +50,14 @@
               (obj :cnt :this !this :super
                 (\ args
                   (def super (apply instance (cons extend args) env))
-                  (setParent! proxi super) (obj :this obj :super super) )))
+                  (.parent proxi super) (obj :this obj :super super) )))
             (when (== (obj :this) !this) (error "super not invoked!")) )))
       obj )))
+
+(def\ (is? instance class)
+  (if (&& (type? instance Env) (!null? (def static :rhs (@get (.map instance) "static"))))
+    (extend? static class)
+    (error "is not an instance!") ))
 
 (def\ (is? instance class)
   (if (&& (type? instance Env) (!null? (def static :rhs (value :static (newObj instance)))))
@@ -60,20 +68,64 @@
   (if (null? class) #f (== class superClass) #t (extend? (.parent class) superClass)) )
 
 (def\ (class? class)
+  (&& (type? class Env) (@containsKey (.map class) "init")) )
+
+(def\ (class? class)
   (&& (type? class Env) (bound? :init (newObj class))) )
 
+  
 (def\ (instance? obj)
-  (&& (type? obj Env) (bound? :super (newObj obj))) )
+  (&& (type? class Env) (@containsKey (.map class) "super")) )
+
+(defMacro (invoke obj method . args)
+  (list* (list obj method) args) )
+
+(defMacro (invoke method obj . args)
+  (if (class? obj)
+    (list* (list obj method) args)
+    (list 'let1 (list 'this obj) (list* (list 'this method) args)) ))
+
+(defMacro (invoke method obj . args)
+  (def expr (list* (list obj method) args))
+  (if (class? obj) expr (list 'let1 (list 'this obj) expr)) )
+
+(def\ (invoke method obj . args)
+  (def method (obj method))
+  (if (class? obj)
+    (apply method args obj)
+    (let1 (this obj) (apply method args obj))) )
 
 (def\ (invoke method obj . args)
   (apply (obj method) args obj) )
 
-(defVau (invoke method obj . args) env
-  (def obj (eval obj env))
-  (def method (obj (eval method env)))
-  ;(apply method (if (type? method Apv) (map (\ (x) (eval x env)) args) args) obj)
-  ;(apply method (if (type? method Apv) (eval (cons 'list args) env) args) obj)
-  (apply method (if (type? method Apv) (evalList args env) args) obj)  )
+
+
+#;(def\ (invoke method obj . args)
+  (def method (obj method)) 
+  (unless (class? obj) (.e (.cmb method) obj))
+  (apply method args) )
+
+#;(def\ (invoke method obj . args)
+  (def method (obj method)) 
+  (when (instance? obj) (.e (.cmb method) obj))
+  (apply method args) )
+
+#;(def\ (invoke method obj . args)
+  (def method (obj method))
+  (log method args)
+  ;(let1 (xs (.xs (unwrap method))) (|| (null? xs) (!= (car xs) :method)))
+  ;(let1 (xs (.xs (unwrap method))) (&& (cons? xs) (== (car xs) :method)))
+  ;(!= (.pt (unwrap method)) '(this . args)) 
+  ;(== (.pt (unwrap method)) '(this . args)) 
+  (if (log (|| (class? obj) (let1 (xs (.xs (unwrap method))) (|| (null? xs) (!= (car xs) :method))) ))
+    (apply method args obj)
+    (apply method (cons obj args) obj) ))
+
+#;(def\ (invoke method obj . args)
+  (def method (obj method))
+  (if ((\ (xs) (&& (cons? xs) (== (car xs) :method))) (.xs (unwrap method)))
+    (apply method (cons obj args) obj)
+    (apply method args obj) ))
 
 
 ;(load "varie/yaos/yaos.lsp")
@@ -83,7 +135,7 @@
   (def B (class A (b 2)))
   (def b (instance B))
   (assert (b :static) B)
-  (assert (parent B) A)
+  (assert (.parent B) A)
   (assert (is? b A) #t)
   (assert (extend? B A) #t) )
 
@@ -181,7 +233,7 @@
    (assert (invoke :f b) 2)
 )
 (begenv
-   (def A (class () (f (\ () (g))) ((g) 1)))
+   (def A (class () ((f) (g)) ((g) 1)))
    (def a (instance A))
    (def B (class A ((g) 2)))
    (def b (instance B))
@@ -189,18 +241,10 @@
    (assert (invoke :f b) 2)
 )
 (begenv
-  (def A (class () (a 3 2 1) ((new a) (assert (this :a) 1) (this :a a))))
+  (def A (class () (a 0) ((= b) b) ((new a) (this :a (= a)))))
   (def a (instance A 2))
   (assert (a :a) 2)
 )
-(begenv
-  (def A (class () (a 3 2 1) (new (\ (a) (assert (this :a) 1) (this :a a)))))
-  (def a (instance A 2))
-  (assert (a :a) 2)
-)
-(begenv
-  (def A (class () (a 3 2 1) (add (macro (b) (list 'quote (list '+ a b))))))
-  (def a (instance A 2))
-  (assert (invoke :add a (+ 2 2)) '(+ 1 (+ 2 2)))
-)
+
+(begenv (def A (class () ((f) (g)) ((g) 1))) (def a (instance A)) (assert (invoke :f a) 1))
 

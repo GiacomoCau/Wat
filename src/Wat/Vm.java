@@ -846,7 +846,7 @@ public class Vm {
 		return switch (obj) {
 			case Combinable cmb-> cmb.arity;
 			case Supplier _-> 0;
-			case ArgsList _-> ge(0);
+			case ArgsList _, EnvArgsList _-> ge(0);
 			case Consumer _, Function _-> 1;
 			case BiConsumer _, BiFunction _-> 2;
 			case Field _-> list(1, 2);
@@ -1073,6 +1073,19 @@ public class Vm {
 		}
 		public String toString() { return "%Eval"; }
 	}
+	/*
+	class EvalArgs extends Combinable {
+		{ arity = list(1,2); }
+		public Object combine(Env e, List o) {
+			var chk = checkR(this, o, 1, 2, or(list(1, or(null, List.class)), list(2, Env.class, or(null, List.class)))); // o = (lst) | (eo lst)
+			if (chk instanceof Suspension s) return s;
+			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+			Env ee = len == 1 ? e : o.car();
+			return map("%%EvalArgs", car-> getTco(evaluate(ee, car)), o.car(len-1));
+		}
+		public String toString() { return "{%EvalArgs}"; }
+	}
+	*/
 	
 	
 	// First-Order Control
@@ -1393,48 +1406,58 @@ public class Vm {
 	
 	
 	// Java Native Interface
-	interface ArgsList extends Function<List, Object> {}
-	interface ChkList extends BiFunction<Symbol, List, Object> {}
-	interface LenList extends BiFunction<Integer, List, Object> {}
+	sealed interface Args permits ArgsList, EnvArgsList {}
+	non-sealed interface ArgsList extends Args , Function<List, Object> {};
+	non-sealed interface EnvArgsList extends Args, BiFunction<Env, List, Object> {}
+	//non-sealed interface ArgsList extends Args { Object apply(List o);};
+	//non-sealed interface EnvArgsList extends Args { Object apply(Env e, List o);}
+	interface ChkList { Object apply(Symbol sym, List o); }
+	interface LenList { Object apply(Integer len, List o); }
+	interface LenEnvList { Object apply(Integer l, Env e, List o); }
 	
 	class JFun extends Combinable {
-		Symbol op; ArgsList jfun; ChkList check;
+		Symbol op; Args jfun; ChkList check;
 		JFun(String name, Object arity, ChkList check, LenList jfun) { this(name, check, jfun); this.arity=arity; };
-		JFun(String name, ChkList check, LenList jfun) { this(name, jfun); this.check = check; };
+		JFun(String name, Object arity, ChkList check, LenEnvList jfun) { this(name, check, jfun); this.arity=arity; };
+		private JFun(String name, ChkList check, Object jfun) { this(name, jfun); this.check = check; };
 		JFun(String name, Object jfun) { this(jfun); this.op = symbol(name); };
-		JFun(Object jfun) {
+		private JFun(Object jfun) {
 			if (arity == null) arity = arity(jfun);
 			this.jfun = switch (jfun) {
 				case ArgsList al-> al;
-				case LenList ll-> o-> pipe(dbg(null, "%" + op, o), ()-> check.apply(op, o),
-					res-> res[0] instanceof Integer len ? ll.apply(len, o)	: resumeError(res[0], symbol("Integer")));
-				case Supplier s-> o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 0),
+				case LenList ll-> (ArgsList) o-> pipe(dbg(null, "%" + op, o), ()-> check.apply(op, o),
+					res-> res[0] instanceof Integer len ? ll.apply(len, o)	: resumeError(res[0], symbol("Integer")));			
+				case EnvArgsList eal -> eal;
+				case LenEnvList lel-> (EnvArgsList) (e, o)-> pipe(dbg(null, "%" + op, o), ()-> check.apply(op, o),
+					res-> res[0] instanceof Integer len ? lel.apply(len, e, o): resumeError(res[0], symbol("Integer")));
+				
+				case Supplier s-> (ArgsList) o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 0),
 					res-> res[0] instanceof Integer /*len*/ ? s.get() : resumeError(res[0], symbol("Integer")));
-				case Consumer c-> o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 1),
+				case Consumer c-> (ArgsList) o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 1),
 					res->{
 						if (! (res[0] instanceof Integer /*len*/)) return resumeError(res[0], symbol("Integer"));
 						c.accept(o.car);
 						return inert;
 					}
 				);
-				case Function f-> o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 1),
+				case Function f-> (ArgsList) o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 1),
 					res-> res[0] instanceof Integer /*len*/ ? f.apply(o.car) : resumeError(res[0], symbol("Integer")));
-				case BiConsumer bc-> o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 2),
+				case BiConsumer bc-> (ArgsList) o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 2),
 					res->{
 						if (! (res[0] instanceof Integer /*len*/)) return resumeError(res[0], symbol("Integer"));
 						bc.accept(o.car, o.car(1));
 						return inert;
 					}
 				);
-				case BiFunction bf-> o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 2),
+				case BiFunction bf-> (ArgsList) o-> pipe(dbg(null, "%" + op, o), ()-> checkN(op, o, 2),
 					res-> res[0] instanceof Integer /*len*/ ? bf.apply(o.car, o.car(1)) : resumeError(res[0], symbol("Integer")));
-				case Field f-> o-> pipe(null, ()-> checkR(op, o, 1, 2), res->{
+				case Field f-> (ArgsList) o-> pipe(null, ()-> checkR(op, o, 1, 2), res->{
 						if (!(res[0] instanceof Integer len)) return resumeError(res[0], symbol("Integer"));
 						if (len == 1) return uncked(()-> f.get(o.car));
 						return uncked(()->{ f.set(o.car, o.car(1)); return inert; });
 					}
 				);
-				case Method m-> o->{
+				case Method m-> (ArgsList) o->{
 					var pc = m.getParameterCount();
 					return pipe(dbg(null, "%" + op, o),
 						()-> m.isVarArgs() ? checkM(op, o, pc) : checkN(op, o, pc+1),
@@ -1443,7 +1466,7 @@ public class Vm {
 							: resumeError(res[0], symbol("Integer"))
 					);
 				};
-				case Constructor c-> o->{
+				case Constructor c-> (ArgsList) o->{
 					var pc = c.getParameterCount();
 					return pipe(dbg(null, "%" + op, o),
 						()-> c.isVarArgs() ? checkM(op, o, pc-1) : checkN(op, o, pc),
@@ -1455,7 +1478,7 @@ public class Vm {
 				default -> typeError("cannot build jfun, not a {expected}: {datum}", this, toChk(or(ArgsList.class, LenList.class, Supplier.class, Function.class, BiFunction.class, Field.class, Executable.class)));
 			};
 		}
-		/*
+		/* TODO eliminare, non più necessario
 		public Object combine(Env e, List o) {
 			return pipe(dbg(e, this, o), ()-> {
 					try {
@@ -1486,15 +1509,18 @@ public class Vm {
 			return pipe(dbg(e, this, o), ()-> {
 				try {
 					/*
-					if (jfun instanceof AtDot atdot && o.car instanceof Obj obj) {
-						Lookup lookup = obj.lookup(atdot.name);
+					if (jfun instanceof AtDot atdot && o.car instanceof ObjEnv objEnv) {
+						Lookup lookup = objEnv.lookup(atdot.name);
 						if (lookup.isBound)	return jfun instanceof Dot
 							? lookup.value
 	 						: Vm.this.combine(env(e, obj), lookup.value, o.cdr())
 	 					;
 					}
 					*/
-					return jfun.apply(o);
+					return switch (jfun) {
+						case EnvArgsList envArgsList-> envArgsList.apply(e, o);
+						case ArgsList argsList-> argsList.apply(o);
+					};
 				}
 				catch (Throwable thw) {
 					if (thw instanceof RuntimeException rte
@@ -1519,7 +1545,7 @@ public class Vm {
 	}
 	boolean isjFun(Object obj) {
 		// { At, Dot } < AtDot < ArgsList < Function < isjfun!
-		return isInstance(obj, Supplier.class, Consumer.class, Function.class, BiConsumer.class, BiFunction.class, Executable.class, Field.class);
+		return isInstance(obj, Supplier.class, Consumer.class, Function.class, BiConsumer.class, BiFunction.class, Field.class, Executable.class);
 	}
 	
 	abstract class AtDot implements ArgsList { String name; }
@@ -1828,7 +1854,7 @@ public class Vm {
 			: new MatchException("expected {operands#,%+d} operands in: {datum}", o, len<min ? min-len : max-len)
 		;
 	}
-	/*
+	/* TODO eliminare, non più necessario
 	int checkT(int min, int max, List o, Object ... chks) {
 		int i=0, len=chks.length, lst=len-1, mdl=len-min;
 		if (min >= len) max = len;
@@ -2234,6 +2260,45 @@ public class Vm {
 				"%def", new DefSet(true),
 				"%set!", new DefSet(false),
 				"%eval", wrap(new Eval()),
+				/* TODO eliminare, non più necessario
+				"%evalArgs", wrap(new JFun("%EvalArgs", 2,
+					(n,o)-> checkN(n, o, 2, Env.class, or(null, List.class)),
+					(_,o)-> map("%%EvalArgs", car-> getTco(evaluate(o.car(), car)), o.car(1)) )),
+				"%evalArgs", wrap(new Combinable() {
+					{ arity = list(1, 2); }
+					@Override public final <T> T combine(Env e, List o) {
+						var chk = checkR(this, o, 1, 2, or(list(1, or(null, List.class)), list(2, Env.class, or(null, List.class))));
+						if (chk instanceof Suspension s) return (T) s;
+						if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+						Env ee = len == 1 ? e : o.car();
+						return (T) map("%%EvalArgs", car-> getTco(evaluate(ee, car)), o.car(len-1));
+					}
+					@Override public String toString() { return "%EvalArgs"; }
+				}),
+				"%evalArgs", wrap(new EvalArgs()),
+				"%evalList", wrap(new Combinable() {
+					{ arity = list(1, 2); }
+					@Override public final <T> T combine(Env e, List o) {
+						var chk = checkR(this, o, 1, 2, or(null, List.class), Env.class);
+						if (chk instanceof Suspension s) return (T) s;
+						if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+						Env ee = len == 1 ? e : o.car(1);
+						return (T) map("%%EvalArgs", car-> getTco(evaluate(ee, car)), o.car());
+					}
+					@Override public String toString() { return "%EvalArgs"; }
+				}),
+				"%evalList", wrap(new JFun("%EvalList", (EnvArgsList) (e,o)-> map("%%EvalArgs", car-> getTco(evaluate(e, car)), o.car()) )),
+				"%evalList", wrap(new JFun("%EvalList", list(1, 2),
+					(n, o)-> checkR(n, o, 1, 2, or(null, List.class), Env.class),
+					(l, e, o)-> map("%%EvalArgs", car-> getTco(evaluate(l==1 ? e : o.car(1) , car)), o.car()) )),
+				*/
+				"%evalList", wrap(new JFun("%EvalList", list(1, 2),
+					(n, o)-> checkR(n, o, 1, 2, or(null, List.class)),
+					(l, e, o)->{ 
+						Env env = l==1 ? e : o.car(1);
+						return map("%%EvalList", car-> getTco(evaluate(env, car)), o.car());
+				})),
+				//"%evalList*", new JFun("%EvalList*", (EnvArgsList) (e,o)-> map("%%EvalArgs", car-> getTco(evaluate(e, car)), o) ),
 				"%wrap", wrap(new JFun("%Wrap", (Function) this::wrap)),
 				"%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap)),
 				//"%opv?", wrap(new JFun("%Opv?", (Function<Object, Boolean>) obj-> obj instanceof Opv )),
@@ -2490,6 +2555,7 @@ public class Vm {
 				"log", wrap(new JFun("Log", (ArgsList) o-> log(array(o)) )),
 				"print", wrap(new JFun("Print", (ArgsList) o-> print(array(o)) )),
 				"write", wrap(new JFun("Write", (ArgsList) o-> write(array(o)) )),
+				/* TODO eliminare, non più necessario
 				"load", wrap(new Combinable() {
 					{ arity = list(1, 2); }
 					@Override public final <T> T combine(Env e, List o) {
@@ -2500,6 +2566,10 @@ public class Vm {
 					}
 					@Override public String toString() { return "%Load"; }
 				}),
+				*/
+				"load", wrap(new JFun("Load", list(1, 2),
+					(n, o)-> checkR(n, o, 1, 2, String.class, Env.class),
+					(l, e, o)-> uncked(()-> loadText(l==1 ? e : o.<Env>car(1), o.<String>car())) )),
 				"read", wrap(new JFun("Read", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> uncked(()-> str2lst(read(l == 0 ? 0 : o.<Integer>car())).car) )),
 				//"eof", new JFun("eof", (n,o)-> checkN(n, o, 0), (l,o)-> List.Parser.eof),
 				//"eof?", wrap(new JFun("eof?", (n,o)-> checkN(n, o, 1), (l,o)-> List.Parser.eof.equals(o.car))),
