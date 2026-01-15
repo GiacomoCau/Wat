@@ -1559,7 +1559,7 @@ public class Vm {
 			Object o0 = o.car;
 			Object[] args = array(o, 1);
 			// (@new class . objects)            -> class.getConstructor(getClasses(objects)).newInstance(objects) -> constructor.newInstance(objects)
-			// (@<name> object . objects)        -> object.getClass().getMethod(name, getClasses(objects)).invocke(object, objects) -> method.invoke(object, objects)
+			// (@<name> object . objects)        -> object.getClass().getMethod(name, getClasses(objects)).invoke(object, objects) -> method.invoke(object, objects)
 			// (@getConstructor class . classes) -> class.getConstructor(classes) -> constructor
 			// (@getMethod class name . classes) -> class.getMethod(name, classes) -> method
 			// (@getField class name)            -> class.getField(name) -> field
@@ -1786,11 +1786,11 @@ public class Vm {
 	
 	
 	// Check Definiend/Parameter Tree and Environment Parameter
-	class CheckDPtEp {
+	class DPtEp {
 		private List expr;
 		private Object pt, ep; // ep == null per DefSet, ep == (or #ignore Symbol) per Vau
 		private Set syms = new HashSet();
-		CheckDPtEp(List expr, Object pt, Object ep) { this.expr=expr; this.pt=pt; this.ep=ep; }
+		Object check(List expr, Object pt, Object ep) { this.expr=expr; this.pt=pt; this.ep=ep; syms.clear(); return check(); }
 		Object check() {
 			if (!((pt instanceof Symbol || (pt == null || pt == ignore) && ep != null) && syms.add(pt))) {
 				if (!(pt instanceof Cons)) return typeError("invalid parameter tree, not {expected}: {datum} in: {expr}", pt, toChk(ep == null ? or(Symbol.class, Cons.class) : or(null, ignore, Symbol.class, Cons.class)), expr);
@@ -1820,10 +1820,11 @@ public class Vm {
 			return c.cdr() == null ? null : check(c.cdr());
 		}
 	}
-	Object checkDt(List expr, Object dt) { return new CheckDPtEp(expr, dt, null).check(); }
+	DPtEp dptEp = new DPtEp();
+	Object checkDt(List expr, Object dt) { return dptEp.check(expr, dt, null); }
 	Object checkPtEp(List expr, Object pt, Object ep) {
 		return ep != null
-			? new CheckDPtEp(expr, pt, ep).check()
+			? dptEp.check(expr, pt, ep)
 			: typeError("invalid environment parameter, not {expected}: {datum} in: {expr}", ep, toChk(or(ignore, Symbol.class)), expr)
 		;
 	}

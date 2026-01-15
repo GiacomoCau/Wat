@@ -69,7 +69,7 @@
 (%def Utility &Wat.Utility)
 (%def Vm &Wat.Vm)
 (%def Parser &List.Parser)
-(%def CheckDPtEp &Wat.Vm$CheckDPtEp)
+(%def DPtEp &Wat.Vm$DPtEp)
 
 (%def %0? (%\ (v) (%== v 0)))
 (%def %1? (%\ (v) (%== v 1)))
