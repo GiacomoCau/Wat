@@ -37,7 +37,7 @@
        (standard-object dget
                         (condition (error type-error
                                           unbound-symbol-error
-                                          unbound-slot-error
+                                          unbound-key-error
                                           unbound-method-error
                                           assertion-error
                                           match-error

@@ -61,22 +61,22 @@
 (def after (lispx::make-mocha-hook mocha:after))
 (def after-each (lispx::make-mocha-hook mocha:after-each))
 
-(defVau signalsError? (form conditionClass . slotSpecs) env
+(defVau signalsError? (form conditionClass . keySpecs) env
   "Evaluate the FORM and assert#t that it signals a condition of the
-  |given CONDITION-CLASS.  Expected slots of the condition can be
-  |specified by SLOT-SPECS (a plist) and will be compared against the
-  |slots of the signalled condition."
+  |given CONDITION-CLASS.  Expected keys of the condition can be
+  |specified by KEY-SPECS (a plist) and will be compared against the
+  |keys of the signalled condition."
   (let ((class (findClass conditionClass env)))
     (block exit
       (handlerCase ((Obj (\ (c)
                                (if (type? c class)
                                    (begin
-                                     (letLoop -check-slots- ((slotSpecs slotSpecs))
-                                       (when (not (null? slotSpecs))
-                                         (let (((name value . rest-slotSpecs) slotSpecs))
-                                           (unless (eq? (getSlot c name) (eval value env))
+                                     (letLoop -check-keys- ((keySpecs keySpecs))
+                                       (when (not (null? keySpecs))
+                                         (let (((name value . rest-keySpecs) keySpecs))
+                                           (unless (eq? (getKey c name) (eval value env))
                                              (returnFrom exit #f))
-                                           (-check-slots- rest-slotSpecs))))
+                                           (-check-keys- rest-keySpecs))))
                                      (returnFrom exit #t))
                                    (returnFrom exit #f)))))
         (eval form env))
