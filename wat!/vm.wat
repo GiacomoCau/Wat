@@ -124,9 +124,9 @@
 (%def %className (%\ ((#: Class class)) (%intern (@getSimpleName class))))
 ;(%def %newClass ((%\ (%newClass) (%\ (name superclass) (%newClass (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass))) %newClass))
 
-(%def %getSlot (%\ ((#: ObjEnv obj) (#: Intern slot)) (obj slot)))
-(%def %setSlot (%\ ((#: ObjEnv obj) (#: Intern slot) value) (obj slot value)))
-(%def %slotBound? (%\ ((#: ObjEnv obj) (#: Intern slot)) (%bound? slot obj)))
+(%def %getKey (%\ ((#: ObjEnv obj) (#: Intern key)) (obj key)))
+(%def %setKey (%\ ((#: ObjEnv obj) (#: Intern key) value) (obj key value)))
+(%def %keyBound? (%\ ((#: ObjEnv obj) (#: Intern key)) (%bound? key obj)))
 
 
 ;;; Boot

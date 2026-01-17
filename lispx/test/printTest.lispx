@@ -31,14 +31,14 @@
 
   (defTest *print-level*.standard-object
     (begin
-      (defClass a () (slot))
-      (def\ make-a (slot) (new A :slot slot))
+      (defClass a () (key))
+      (def\ make-a (key) (new A :key key))
       (def a (make-a (make-a (make-a 12))))
       (assert#t (eq? "#" (write-with-level a 0)))
-      (assert#t (eq? "#<a :slot #>" (write-with-level a 1)))
-      (assert#t (eq? "#<a :slot #<a :slot #>>" (write-with-level a 2)))
-      (assert#t (eq? "#<a :slot #<a :slot #<a :slot 12>>>" (write-with-level a 3)))
-      (assert#t (eq? "#<a :slot #<a :slot #<a :slot 12>>>" (write-with-level a 4)))
+      (assert#t (eq? "#<a :key #>" (write-with-level a 1)))
+      (assert#t (eq? "#<a :key #<a :key #>>" (write-with-level a 2)))
+      (assert#t (eq? "#<a :key #<a :key #<a :key 12>>>" (write-with-level a 3)))
+      (assert#t (eq? "#<a :key #<a :key #<a :key 12>>>" (write-with-level a 4)))
       #t)))
 
 (defSuite write

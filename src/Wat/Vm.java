@@ -558,7 +558,7 @@ public class Vm {
 		public Object get(Object obj) {
 			var key = toKey(obj);
 			var val = map.get(key);
-			return val != null || map.containsKey(key) ? val : unboundSlotError(key, this);
+			return val != null || map.containsKey(key) ? val : unboundKeyError(key, this);
 		}
 		public Lookup lookup(Object obj) {
 			var key = toKey(obj);
@@ -1770,7 +1770,7 @@ public class Vm {
 	<T> T notUniqueError(String msg, Object datum, Object expr) { return error(msg, "type", symbol("syntax"), "datum", datum, "expr", expr); }
 	<T> T resumeError(Object datum, Object expected) { return typeError("invalid resume value, not a {expected}: {datum}", datum, expected); }
 	<T> T unboundSymbolError(Object name, Env env) { return error("unbound symbol: {symbol} in: {env}", "type", symbol("unboundSymbol"), "symbol", name, "env", env); }
-	<T> T unboundSlotError(String slot, Obj obj) { return error("unbound slot: {slot} in: {obj}", "type", symbol("unboundSlot"), "slot", slot, "obj", obj); }
+	<T> T unboundKeyError(String key, Obj obj) { return error("unbound key: {key} in: {obj}", "type", symbol("unboundKey"), "key", key, "obj", obj); }
 	<T> T unboundFieldError(String field, Object object) { return error("unbound field: {field} in: {object}", "type", symbol("unboundField"), "field", field, "object", object); }
 	<T> T unboundExecutableError(String msg, Symbol executable, Object object) { return error(msg, "type", symbol("unboundExecutable"), "executable", executable, "class", object); }
 	<T> T unboundExecutableError(String msg, Symbol executable, List classes, Object object) { return error(msg, "type", symbol("unboundExecutable"), "executable", executable, "classes", classes, "class", object); }

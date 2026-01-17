@@ -88,7 +88,7 @@ public class Prova {
 	
 	public static void main(String[] args) throws Exception {
 		//new Prova().new X().f();
-		new Prova().new Z(2).m();
+		//new Prova().new Z(2).m();
 		//out.println(1 * 1.2);
 		//out.println(1.2 * 1);
 		//System.out.println(".. __aaa__ dddssd".replaceAll("__([^_]*)__", "<b>$1<b/>"));
@@ -123,6 +123,7 @@ public class Prova {
 		*/
 		//System.out.println("1" + 1);
 		//System.out.println(1 + "1");
+		//out.println(System.console());
 	}
 	
 	public static void functions() {

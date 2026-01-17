@@ -438,8 +438,8 @@
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg)))))
         (ifOpt (r (findRestart 'x))
           (begin
-            (assert#t (eq? (getSlot r 'restartName) 'x))
-            (assert#t (eq? (getSlot r 'associatedConditions) '()))
+            (assert#t (eq? (getKey r 'restartName) 'x))
+            (assert#t (eq? (getKey r 'associatedConditions) '()))
             (invokeRestart r 1) )
           (assert#t #f) )))
     1001 )
@@ -448,8 +448,8 @@
     (restartCase ((x (\ (arg) (+ 1000 arg))))
       (ifOpt (r (findRestart 'x))
         (begin
-          (assert#t (eq? (getSlot r 'restartName) 'x))
-          (assert#t (eq? (getSlot r 'associatedConditions) '()))
+          (assert#t (eq? (getKey r 'restartName) 'x))
+          (assert#t (eq? (getKey r 'associatedConditions) '()))
           (invokeRestart r 1) )
         (assert#t #f) ))
     1001 )
@@ -460,8 +460,8 @@
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg))) :associatedConditions (list c)))
         (ifOpt (r (findRestart 'x c))
           (begin
-            (assert#t (eq? (getSlot r 'restartName) 'x))
-            (assert#t (eq? (getSlot r 'associatedConditions) (list c)))
+            (assert#t (eq? (getKey r 'restartName) 'x))
+            (assert#t (eq? (getKey r 'associatedConditions) (list c)))
             (invokeRestart r 1) )
           (assert#t #f) )))
     1001 )
@@ -472,8 +472,8 @@
       (restartBind ((x (\ (arg) (+ 1000 arg)) :associatedConditions (list c)))
         (ifOpt (r (findRestart 'x c))
           (begin
-            (assert#t (eq? (getSlot r 'restartName) 'x))
-            (assert#t (eq? (getSlot r 'associatedConditions) (list c)))
+            (assert#t (eq? (getKey r 'restartName) 'x))
+            (assert#t (eq? (getKey r 'associatedConditions) (list c)))
             (invokeRestart r 1) )
           (assert#t #f) )))
     1001 )
@@ -529,7 +529,7 @@
   (def\ restart-names condition?
     (let ((restarts (apply computeRestarts condition?)))
       (map
-        (\ (restart) (getSlot restart 'restartName))
+        (\ (restart) (getKey restart 'restartName))
         restarts )))
 
   (defTest computeRestarts.1
@@ -623,7 +623,7 @@
               (\ (e)
                 (let*
                   ( (handler (optDft (findRestart 'r e)))
-                    (aCn (getSlot handler 'associatedConditions)) )
+                    (aCn (getKey handler 'associatedConditions)) )
                   (assert#t (member? e aCn))
                   (returnFrom ok) ))) )
           (signalOperator (newSimpleError "error!")
@@ -691,7 +691,7 @@
       (assert#t
         (&& (== (car result) 'outer)
           (type? (cadr result) UnboundVariable)
-          (== (getSlot (cadr result) 'name) 'fred) ))))
+          (== (getKey (cadr result) 'name) 'fred) ))))
 
   (defTest* firewall.2
     (let
@@ -703,4 +703,4 @@
       (assert#t
         (&& (== (car result) 'inner)
           (type? (cadr result) UnboundVariable)
-          (== (getSlot (cadr result) 'name) 'marvin) )))) )
+          (== (getKey (cadr result) 'name) 'marvin) )))) )
