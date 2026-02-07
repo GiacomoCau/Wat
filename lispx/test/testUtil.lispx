@@ -74,7 +74,7 @@
                                      (letLoop -check-keys- ((keySpecs keySpecs))
                                        (when (not (null? keySpecs))
                                          (let (((name value . rest-keySpecs) keySpecs))
-                                           (unless (eq? (getKey c name) (eval value env))
+                                           (unless (eq? (getValue c name) (eval value env))
                                              (returnFrom exit #f))
                                            (-check-keys- rest-keySpecs))))
                                      (returnFrom exit #t))

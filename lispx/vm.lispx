@@ -130,8 +130,7 @@
 (%def %className (%\ ((#: Class class)) (%intern (@getSimpleName class))))
 ;(%def %newClass ((%\ (%newClass) (%\ (name superclass) (%newClass (%intern (@capitalize Utility (@camelize Utility (%$ "" name) "-"))) superclass))) %newClass))
 
-(%def %getKey (%\ ((#: ObjEnv obj) (#: Intern key)) (obj key)))
-(%def %setKey (%\ ((#: ObjEnv obj) (#: Intern key) value) (obj key value)))
+(%def %getValue (%\ ((#: ObjEnv obj) (#: Intern key)) (obj key)))
 (%def %keyBound? (%\ ((#: ObjEnv obj) (#: Intern key)) (%bound? key obj)))
 
 

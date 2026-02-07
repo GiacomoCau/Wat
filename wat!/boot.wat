@@ -782,95 +782,105 @@
  |#
 
 (def bound?
-  #|($nm attribute object)
+  #|($nm attribute objEnv)
    |(type function)
    |
    |(syntax attribute (or Symbol Keyword String))
-   |(syntax object (or Env Obj))
+   |(syntax objEnv (or Env Obj))
    |
-   |(derivation (@isBound object attribute))
+   |(derivation (@isBound objEnv attribute))
    |
    |Return #true if the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, #false otherwise.
    |#
   %bound? )
 
 (def value
-  #|($nm attribute object)
+  #|($nm attribute objEnv)
    |(type function)
    |
    |(syntax attribute (or Symbol Keyword String))
-   |(syntax object (or Env Obj))
+   |(syntax objEnv (or Env Obj))
    |
-   |(derivation (@value object attribute))
+   |(derivation (@value objEnv attribute))
    |
    |Return the value of the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, #null otherwise.
    |#
   %value )
 
 (def get
-  #|($nm attribute object)
+  #|($nm attribute objEnv)
    |(type function)
    |
    |(syntax attribute (or Symbol Keyword String))
-   |(syntax object (or Env Obj))
+   |(syntax objEnv (or Env Obj))
    |
-   |(derivation (@get object attribute))
+   |(derivation (@get objEnv attribute))
    |
    |Return the value of the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, signals an error otherwise.
    |#
   %get )
 
 (def remove!
-  #|($nm attribute object)
+  #|($nm attribute objEnv)
    |(type function)
    |
    |(syntax attribute (or Symbol Keyword String))
-   |(syntax object (or Env Obj))
+   |(syntax objEnv (or Env Obj))
    |
-   |(derivation (@remove object attribute))
+   |(derivation (@remove objEnv attribute))
    |
    |Remove and return the value of the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, signals an error otherwise.
    |#
   %remove! )
 
-(def\ (keyBound? object attribute)
-  #|($nm object attribute)
+(def\ (keyBound? objEnv attribute)
+  #|($nm objEnv attribute)
    |(type function)
    |
-   |(syntax object (or Env Obj))
+   |(syntax objEnv (or Env Obj))
    |(syntax attribute (or Symbol Keyword String))
    |
-   |(derivation (@isBound object attribute))
+   |(derivation (@isBound objEnv attribute))
    |
    |Return #true if the <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, #false otherwise.
    |#
-  (%keyBound? object attribute) )
+  (%keyBound? objEnv attribute) )
 
-(def\ (getKey object attribute)
-  #|($nm object attribute)
+(def\ (getValue objEnv attribute)
+  #|($nm objEnv attribute)
    |(type function)
    |
-   |(syntax object (or Env Obj))
+   |(syntax objEnv (or Env Obj))
    |(syntax attribute (or Symbol Keyword String))
    |
-   |(derivation (object attribute))
+   |(derivation (objEnv attribute))
    |
    |Return the value of <b>attribute</b> is bound in the <b>environment</b> or <b>obj</b>, signals an error otherwise.
    |#
-  (%getKey object attribute) )
+  (%getValue objEnv attribute) )
 
-(def\ (setKey object attribute value)
-  #|($nm object attribute value)
+(def setValue!
+  #|($nm objEnv attribute value)
+   |($nm objEnv attribute value . attributes)
+   |($nm objEnv bindResult attribute value . attributes)
+   |($nm env bindType attribute value . attributes)
+   |($nm env bindType bindResult attribute value . attributes)
    |(type function)
    |
-   |(syntax object (or Env Obj))
+   |(syntax objEnv (or Env Obj))
    |(syntax attribute (or Symbol Keyword String))
+   |(syntax attributes (attribute value . attributes))
+   |(syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+   |(syntax bindType (or :def :set!))
    |
-   |(derivation (object attribute value))
+   |(derivation (objEnv attribute value . attributes))
+   |(derivation (objEnv bindResult attribute value . attributes))
+   |(derivation (env bindType attribute value . attributes))
+   |(derivation (env bindType bindResult attribute value . attributes))
    |
    |Update or define with <b>value</b> the <b>attribute</b> in the <b>environment</b> or <b>obj</b>.
    |#
-  (%setKey object attribute value) )
+  %setValue! )
 
 
 #|! Box

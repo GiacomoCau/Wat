@@ -31,7 +31,7 @@
       </h3>
       <ul>
         <li>
-          (<b>bound?</b> attribute object)
+          (<b>bound?</b> attribute objEnv)
           <br/>
             (type function)
           <br/>
@@ -39,11 +39,11 @@
           <br/>
             (syntax attribute (or Symbol Keyword String))
           <br/>
-            (syntax object (or Env Obj))
+            (syntax objEnv (or Env Obj))
           <br/>
             &nbsp;
           <br/>
-            (derivation (@isBound object attribute))
+            (derivation (@isBound objEnv attribute))
           <br/>
             &nbsp;
           <br/>
@@ -57,7 +57,7 @@
       </h3>
       <ul>
         <li>
-          (<b>value</b> attribute object)
+          (<b>value</b> attribute objEnv)
           <br/>
             (type function)
           <br/>
@@ -65,11 +65,11 @@
           <br/>
             (syntax attribute (or Symbol Keyword String))
           <br/>
-            (syntax object (or Env Obj))
+            (syntax objEnv (or Env Obj))
           <br/>
             &nbsp;
           <br/>
-            (derivation (@value object attribute))
+            (derivation (@value objEnv attribute))
           <br/>
             &nbsp;
           <br/>
@@ -83,7 +83,7 @@
       </h3>
       <ul>
         <li>
-          (<b>get</b> attribute object)
+          (<b>get</b> attribute objEnv)
           <br/>
             (type function)
           <br/>
@@ -91,11 +91,11 @@
           <br/>
             (syntax attribute (or Symbol Keyword String))
           <br/>
-            (syntax object (or Env Obj))
+            (syntax objEnv (or Env Obj))
           <br/>
             &nbsp;
           <br/>
-            (derivation (@get object attribute))
+            (derivation (@get objEnv attribute))
           <br/>
             &nbsp;
           <br/>
@@ -109,7 +109,7 @@
       </h3>
       <ul>
         <li>
-          (<b>remove!</b> attribute object)
+          (<b>remove!</b> attribute objEnv)
           <br/>
             (type function)
           <br/>
@@ -117,11 +117,11 @@
           <br/>
             (syntax attribute (or Symbol Keyword String))
           <br/>
-            (syntax object (or Env Obj))
+            (syntax objEnv (or Env Obj))
           <br/>
             &nbsp;
           <br/>
-            (derivation (@remove object attribute))
+            (derivation (@remove objEnv attribute))
           <br/>
             &nbsp;
           <br/>
@@ -135,19 +135,19 @@
       </h3>
       <ul>
         <li>
-          (<b>keyBound?</b> object attribute)
+          (<b>keyBound?</b> objEnv attribute)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            (syntax object (or Env Obj))
+            (syntax objEnv (or Env Obj))
           <br/>
             (syntax attribute (or Symbol Keyword String))
           <br/>
             &nbsp;
           <br/>
-            (derivation (@isBound object attribute))
+            (derivation (@isBound objEnv attribute))
           <br/>
             &nbsp;
           <br/>
@@ -157,23 +157,23 @@
     </div>
     <div>
       <h3>
-        getKey
+        getValue
       </h3>
       <ul>
         <li>
-          (<b>getKey</b> object attribute)
+          (<b>getValue</b> objEnv attribute)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            (syntax object (or Env Obj))
+            (syntax objEnv (or Env Obj))
           <br/>
             (syntax attribute (or Symbol Keyword String))
           <br/>
             &nbsp;
           <br/>
-            (derivation (object attribute))
+            (derivation (objEnv attribute))
           <br/>
             &nbsp;
           <br/>
@@ -183,23 +183,43 @@
     </div>
     <div>
       <h3>
-        setKey
+        setValue!
       </h3>
       <ul>
         <li>
-          (<b>setKey</b> object attribute value)
+          (<b>setValue!</b> objEnv attribute value)
+          <br/>
+            (<b>setValue!</b> objEnv attribute value . attributes)
+          <br/>
+            (<b>setValue!</b> objEnv bindResult attribute value . attributes)
+          <br/>
+            (<b>setValue!</b> env bindType attribute value . attributes)
+          <br/>
+            (<b>setValue!</b> env bindType bindResult attribute value . attributes)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            (syntax object (or Env Obj))
+            (syntax objEnv (or Env Obj))
           <br/>
             (syntax attribute (or Symbol Keyword String))
           <br/>
+            (syntax attributes (attribute value . attributes))
+          <br/>
+            (syntax bindResult (or #ignore #inert :rhs :prv :cnt))
+          <br/>
+            (syntax bindType (or :def :set!))
+          <br/>
             &nbsp;
           <br/>
-            (derivation (object attribute value))
+            (derivation (objEnv attribute value . attributes))
+          <br/>
+            (derivation (objEnv bindResult attribute value . attributes))
+          <br/>
+            (derivation (env bindType attribute value . attributes))
+          <br/>
+            (derivation (env bindType bindResult attribute value . attributes))
           <br/>
             &nbsp;
           <br/>

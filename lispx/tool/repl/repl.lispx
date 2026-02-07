@@ -62,7 +62,7 @@
   (print "\nAvailable restarts -- use (invokeRestart 'name ...) to invoke:")
   (forEach
     (\ (restart)
-      (case (getKey restart 'restartName)
+      (case (getValue restart 'restartName)
         ((replAbort replEnd) #|Don't print our internal REPL-ABORT restart|#)
         (else => (\ (restartName) (print "    " restartName))) ))
     (computeRestarts condition) )
@@ -93,8 +93,8 @@
           ;; squirt blood from their eyes.
           (caseType condition
             ( (Error :type 'unboundSymbol)
-                (let ( (symbol (getKey condition 'symbol))
-                       (env (getKey condition 'env)) )
+                (let ( (symbol (getValue condition 'symbol))
+                       (env (getValue condition 'env)) )
                   (restartCase 
                     ( (useValue (\ (value) value) :associatedConditions (list condition))
                       (continue (\ () (eval symbol env)) :associatedConditions (list condition))
@@ -103,7 +103,7 @@
             #|
             ( (Error :type 'type :operands List)
                 ;; va corretto il singolo operando
-                (let ( (operands (getKey condition 'operands)) )
+                (let ( (operands (getValue condition 'operands)) )
                   (restartCase 
                     ( (useValue (\ (value) value) :associatedConditions (list condition))
 					  (setOperand (\ (index value) (setCar! (nthCdr index operands) value) value) :associatedConditions (list condition)) )

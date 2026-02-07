@@ -396,6 +396,7 @@ public class Vm {
 		List symbols();
 		List keywords();
 		Object remove(Object key);
+		Object apply(List o);
 	}
 	record Lookup(boolean isBound, Object value) {}
 	
@@ -483,7 +484,7 @@ public class Vm {
 		public List keys() { return list(keySet().toArray()); }
 		public List symbols() { return list(keySet().stream().map(Vm.this::symbol).toArray()); }
 		public List keywords() { return list(keySet().stream().map(Vm.this::keyword).toArray()); }
-		@Override public Object apply(List o) { // () | (value) | (key value ...) | ((or #inert #ignore :rhs :prv :cnt) key value ...)
+		@Override public Object apply(List o) { // () | (value) | (key value ...) | ((or :def :set!) key value ...) | ((or #inert #ignore :rhs :prv :cnt) key value ...) | ((or :def :set!) (or #inert #ignore :rhs :prv :cnt) key value ...)
 			var len = len(o);
 			return switch (len) {
 				case 0-> this;
@@ -920,7 +921,6 @@ public class Vm {
 	class Colon extends Combinable {
 		Object op; boolean isCheck;
 		Colon(Object op) { this.op = op; isCheck = op.equals("check"); arity = isCheck ? 2 : ge(2); }
-		//*
 		public Object combine(Env e, List o) {
 			var chk = isCheck ? checkN(this, o, 2) : checkM(this, o, 2); // o = (form check) | (check form . forms)
 			if (chk instanceof Suspension s) return s;
@@ -931,21 +931,6 @@ public class Vm {
 				(res)-> apply(len2-> len2 instanceof Suspension s ? s : isCheck ? len2 : res[0], check(op, res[0], res[1]))
 			);
 		}
-		/*/
-		public Object combine(Env e, List o) {
-			var dbg = dbg(e, this, o);
-			return pipe(dbg, ()-> isCheck ? checkN(this, o, 2) : checkM(this, o, 2), // o = (form check) | (check form . forms)
-				chk-> {
-					if (!(chk instanceof Integer len) || (isCheck ? len != 2 : len < 2)) return resumeError(chk, and("Integer " + "(" + (isCheck ? "==" : ">=") + " 2)"));
-					return pipe(dbg(e, this, o),
-						()-> getTco(isCheck ? evaluate(e, o.car) : begin.combine(e, o.cdr())),
-						(_)-> getTco(evalChk.combine(e, cons(o.car(isCheck ? 1 : 0)))),
-						(val, eck)-> pipe(dbg(e, "check", val, eck), ()-> check(op, val, eck), len2-> isCheck ? len2 : val)
-					);
-				}
-			);
-		}
-		//*/
 		public String toString() { return isCheck ? "%check" : "%:"; }
 	};
 	class Apv extends Combinable {
@@ -998,7 +983,8 @@ public class Vm {
 						: new Macro(e, pt, ep, xs.cdr())
 					;
 				}
-				if (car == keyword("caseVau")) return new CaseOpv(e, pt, ep, xs.cdr());
+				else if (car == keyword("caseVau"))
+					return new CaseOpv(e, pt, ep, xs.cdr());
 			}		
 			return new Opv(e, pt, ep, xs);
 		}
@@ -1008,7 +994,7 @@ public class Vm {
 		{ arity = list(2, 3); }
 		boolean def;
 		DefSet(boolean def) { this.def = def; }
-		//*
+		//* TODO valutare alternative per il codice dei Combinable
 		public Object combine(Env e, List o) {
 			var chk = checkR(this, o, 2, 3); // o = (dt val) | (dt (or #ignore #inert :rhs :prv :cnt) val)
 			if (chk instanceof Suspension s) return s;
@@ -1073,19 +1059,6 @@ public class Vm {
 		}
 		public String toString() { return "%Eval"; }
 	}
-	/*
-	class EvalArgs extends Combinable {
-		{ arity = list(1,2); }
-		public Object combine(Env e, List o) {
-			var chk = checkR(this, o, 1, 2, or(list(1, or(null, List.class)), list(2, Env.class, or(null, List.class)))); // o = (lst) | (eo lst)
-			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
-			Env ee = len == 1 ? e : o.car();
-			return map("%%EvalArgs", car-> getTco(evaluate(ee, car)), o.car(len-1));
-		}
-		public String toString() { return "{%EvalArgs}"; }
-	}
-	*/
 	
 	
 	// First-Order Control
@@ -1407,7 +1380,7 @@ public class Vm {
 	
 	// Java Native Interface
 	sealed interface Args permits ArgsList, EnvArgsList {}
-	non-sealed interface ArgsList extends Args , Function<List, Object> {};
+	non-sealed interface ArgsList extends Args, Function<List, Object> {};
 	non-sealed interface EnvArgsList extends Args, BiFunction<Env, List, Object> {}
 	//non-sealed interface ArgsList extends Args { Object apply(List o);};
 	//non-sealed interface EnvArgsList extends Args { Object apply(Env e, List o);}
@@ -1478,33 +1451,6 @@ public class Vm {
 				default -> typeError("cannot build jfun, not a {expected}: {datum}", this, toChk(or(ArgsList.class, LenList.class, Supplier.class, Function.class, BiFunction.class, Field.class, Executable.class)));
 			};
 		}
-		/* TODO eliminare, non più necessario
-		public Object combine(Env e, List o) {
-			return pipe(dbg(e, this, o), ()-> {
-					try {
-						return jfun.apply(o);
-					}
-					catch (Throwable thw) {
-						switch (thw) {
-							case Value val: throw val;
-							case Condition cnd: throw cnd;
-							case InnerException ie /*when name.equals("%CheckO")* /: throw ie;
-							case RuntimeException rte when rte.getCause() instanceof InvocationTargetException ite: {
-								switch (ite.getTargetException()) {
-									case Value val: throw val;
-									case Condition cnd: throw cnd;
-									case InnerException ie: throw ie;
-									default: break;
-								}
-							}
-							default: break;
-						}
-						return javaError("error executing: {member} with: {args}", thw, op, o, null);
-					}
-				}
-			);
-		}
-		/*/
 		public Object combine(Env e, List o) {
 			return pipe(dbg(e, this, o), ()-> {
 				try {
@@ -1518,8 +1464,8 @@ public class Vm {
 					}
 					*/
 					return switch (jfun) {
-						case EnvArgsList envArgsList-> envArgsList.apply(e, o);
 						case ArgsList argsList-> argsList.apply(o);
+						case EnvArgsList envArgsList-> envArgsList.apply(e, o);
 					};
 				}
 				catch (Throwable thw) {
@@ -1536,7 +1482,6 @@ public class Vm {
 				}
 			});
 		}
-		//*/
 		public String toString() {
 			if (op != null) return op.name;
 			var intefaces = stream(jfun.getClass().getInterfaces()).map(Vm.this::toString).collect(joining(" "));
@@ -1855,26 +1800,6 @@ public class Vm {
 			: new MatchException("expected {operands#,%+d} operands in: {datum}", o, len<min ? min-len : max-len)
 		;
 	}
-	/* TODO eliminare, non più necessario
-	int checkT(int min, int max, List o, Object ... chks) {
-		int i=0, len=chks.length, lst=len-1, mdl=len-min;
-		if (min >= len) max = len;
-		for (; o != null; i+=1, o=o.cdr()) {
-			if (i >= max) continue;
-			var cksi = i < len ? chks[i] : chks[min + (i-min) % mdl];
-			if (i == lst // i is the last index
-			&& cksi instanceof Object[] cksor // is an or
-			&& (cksor[0] instanceof List // and the first is a list
-			||  cksor.length > 1 && cksor[0] == null && cksor[1] instanceof List) // or length > 1 and the first is null and the second is a list
-			) {
-				// check the rest of o!
-				return i + checkO(o, cksi);
-			}
-			checkO(o.car, cksi);
-		}
-		return i;
-	}
-	/*/
 	static private Object none = new Object();
 	int checkT(int min, int max, List o, Object ... chks) {
 		int i=0, len=chks.length, mdl=len-min;
@@ -1893,7 +1818,6 @@ public class Vm {
 		}
 		return i;
 	}
-	//*/
 	public int checkO(Object o, Object chk) {
 		if (equals(o, chk)) return len(o);
 		if (chk instanceof Object[] chks) {
@@ -2261,38 +2185,6 @@ public class Vm {
 				"%def", new DefSet(true),
 				"%set!", new DefSet(false),
 				"%eval", wrap(new Eval()),
-				/* TODO eliminare, non più necessario
-				"%evalArgs", wrap(new JFun("%EvalArgs", 2,
-					(n,o)-> checkN(n, o, 2, Env.class, or(null, List.class)),
-					(_,o)-> map("%%EvalArgs", car-> getTco(evaluate(o.car(), car)), o.car(1)) )),
-				"%evalArgs", wrap(new Combinable() {
-					{ arity = list(1, 2); }
-					@Override public final <T> T combine(Env e, List o) {
-						var chk = checkR(this, o, 1, 2, or(list(1, or(null, List.class)), list(2, Env.class, or(null, List.class))));
-						if (chk instanceof Suspension s) return (T) s;
-						if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
-						Env ee = len == 1 ? e : o.car();
-						return (T) map("%%EvalArgs", car-> getTco(evaluate(ee, car)), o.car(len-1));
-					}
-					@Override public String toString() { return "%EvalArgs"; }
-				}),
-				"%evalArgs", wrap(new EvalArgs()),
-				"%evalList", wrap(new Combinable() {
-					{ arity = list(1, 2); }
-					@Override public final <T> T combine(Env e, List o) {
-						var chk = checkR(this, o, 1, 2, or(null, List.class), Env.class);
-						if (chk instanceof Suspension s) return (T) s;
-						if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
-						Env ee = len == 1 ? e : o.car(1);
-						return (T) map("%%EvalArgs", car-> getTco(evaluate(ee, car)), o.car());
-					}
-					@Override public String toString() { return "%EvalArgs"; }
-				}),
-				"%evalList", wrap(new JFun("%EvalList", (EnvArgsList) (e,o)-> map("%%EvalArgs", car-> getTco(evaluate(e, car)), o.car()) )),
-				"%evalList", wrap(new JFun("%EvalList", list(1, 2),
-					(n, o)-> checkR(n, o, 1, 2, or(null, List.class), Env.class),
-					(l, e, o)-> map("%%EvalArgs", car-> getTco(evaluate(l==1 ? e : o.car(1) , car)), o.car()) )),
-				*/
 				"%evalList", wrap(new JFun("%EvalList", list(1, 2),
 					(n, o)-> checkR(n, o, 1, 2, or(null, List.class)),
 					(l, e, o)->{ 
@@ -2353,6 +2245,7 @@ public class Vm {
 				"%keys", wrap(new JFun("%Keys", 1, (n,o)-> checkN(n, o, 1, or(ObjEnv.class)), (_,o)-> o.<ObjEnv>car().keys()) ),
 				"%symbols", wrap(new JFun("%Symbols", 1, (n,o)-> checkN(n, o, 1, ObjEnv.class), (_,o)-> o.<ObjEnv>car().symbols()) ),
 				"%keywords", wrap(new JFun("%Keywords", 1, (n,o)-> checkN(n, o, 1, ObjEnv.class), (_,o)-> o.<ObjEnv>car().keywords()) ),
+				"%setValue!", wrap(new JFun("%setValue!", ge(3), (n,o)->checkM(n, o, 3, ObjEnv.class), (_,o)-> o.<ObjEnv>car().apply(o.cdr()) )),		
 				// Cons
 				"%car", wrap(new JFun("%Car", list(1, 2), (n,o)-> checkR(n, o, 1, 2, Cons.class, Integer.class), (l,o)-> apply(c-> l == 1 ? c.car() : c.car(o.<Integer>car(1)), o.<Cons>car()) )),
 				"%cdr", wrap(new JFun("%Car", list(1, 2), (n,o)-> checkR(n, o, 1, 2, Cons.class, Integer.class), (l,o)-> apply(c-> l == 1 ? c.cdr() : c.cdr(o.<Integer>car(1)), o.<Cons>car()) )),
@@ -2556,18 +2449,6 @@ public class Vm {
 				"log", wrap(new JFun("Log", (ArgsList) o-> log(array(o)) )),
 				"print", wrap(new JFun("Print", (ArgsList) o-> print(array(o)) )),
 				"write", wrap(new JFun("Write", (ArgsList) o-> write(array(o)) )),
-				/* TODO eliminare, non più necessario
-				"load", wrap(new Combinable() {
-					{ arity = list(1, 2); }
-					@Override public final <T> T combine(Env e, List o) {
-						var chk = checkR(this, o, 1, 2, String.class, Env.class); // o = (string env)
-						if (chk instanceof Suspension s) return (T) s;
-						if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
-						return (T) uncked(()-> loadText(len==1 ? e : o.<Env>car(1), o.<String>car()));
-					}
-					@Override public String toString() { return "%Load"; }
-				}),
-				*/
 				"load", wrap(new JFun("Load", list(1, 2),
 					(n, o)-> checkR(n, o, 1, 2, String.class, Env.class),
 					(l, e, o)-> uncked(()-> loadText(l==1 ? e : o.<Env>car(1), o.<String>car())) )),

@@ -147,8 +147,8 @@
       (assert#t (matchType?* e Error :type 'type :datum "foo" :expected 'Number))
       (assert#t (type? e Error))
       (assert#t (type? e Condition))
-      (assert#t (eq? "foo" (getKey e 'datum)))
-      (assert#t (eq? 'Number (getKey e 'expected))))
+      (assert#t (eq? "foo" (getValue e 'datum)))
+      (assert#t (eq? 'Number (getValue e 'expected))))
     #inert))
 
 (defSuite simpleError
@@ -178,7 +178,7 @@
       (assert#t (type? e RestartError))
       (assert#t (type? e Error))
       (assert#t (type? e Condition))
-      (assert#t (eq? 'continue (getKey e 'restartName))))
+      (assert#t (eq? 'continue (getValue e 'restartName))))
     #inert))
 
 (defSuite vau
@@ -2361,10 +2361,10 @@
   (defTest obj.1
     (begin
       (def obj (new Error :type 'type :datum 1 :expected 'String))
-      (assert#t (eq? (getKey obj 'datum) 1))
-      (assert#t (eq? (getKey obj :datum) 1))
-      (assert#t (eq? (getKey obj 'expected) 'String))
-      (assert#t (eq? (getKey obj :expected) 'String)))
+      (assert#t (eq? (getValue obj 'datum) 1))
+      (assert#t (eq? (getValue obj :datum) 1))
+      (assert#t (eq? (getValue obj 'expected) 'String))
+      (assert#t (eq? (getValue obj :expected) 'String)))
     #inert)
 
   (defTest obj.2
@@ -2395,59 +2395,54 @@
       (assert#t (not (keyBound? obj 'x)))
       (assert#t (not (keyBound? obj :x)))
       (assert#t
-        (signalsError? (getKey obj 'x)
+        (signalsError? (getValue obj 'x)
           Error :type 'unboundKey :obj obj :key "x"))
       (assert#t
-        (signalsError? (getKey obj :x)
+        (signalsError? (getValue obj :x)
           Error :type 'unboundKey :obj obj :key "x"))
-      (setKey obj 'x 1)
+      (setValue! obj 'x 1)
       (assert#t (keyBound? obj 'x))
       (assert#t (keyBound? obj :x))
-      (assert#t (eq? (getKey obj 'x) 1))
-      (assert#t (eq? (getKey obj :x) 1))
-      (setKey obj 'x 2)
-      (assert#t (eq? (getKey obj 'x) 2))
-      (assert#t (eq? (getKey obj :x) 2)))
+      (assert#t (eq? (getValue obj 'x) 1))
+      (assert#t (eq? (getValue obj :x) 1))
+      (setValue! obj 'x 2)
+      (assert#t (eq? (getValue obj 'x) 2))
+      (assert#t (eq? (getValue obj :x) 2)))
     #inert)
 
-  (defTest getKey.1
+  (defTest getValue.1
     (signalsError?
-     (getKey "foo" 'x)
+     (getValue "foo" 'x)
      Error :type 'type :datum "foo" :expected 'ObjEnv))
 
-  (defTest getKey.1a
+  (defTest getValue.1a
     (signalsError?
-     (getKey (new Obj) "x")
+     (getValue (new Obj) "x")
      Error :type 'type :datum "x" :expected 'Intern))
 
-  (defTest getKey.2
+  (defTest getValue.2
     (signalsError?
-     (getKey (new Obj))
+     (getValue (new Obj))
      Error :type 'match :operands# +1))
 
-  (defTest getKey.3
+  (defTest getValue.3
     (signalsError?
-     (getKey)
+     (getValue)
      Error :type 'match :operands# +2))
 
-  (defTest setKey.1
+  (defTest setValue!.1
     (signalsError?
-     (setKey "foo" 'x 1)
+     (setValue! "foo" 'x 1)
      Error :type 'type :datum "foo" :expected 'ObjEnv))
 
-  (defTest setKey.1a
+  (defTest setValue!.2
     (signalsError?
-     (setKey (new Obj) "x" 1)
-     Error :type 'type :datum "x" :expected 'Intern))
-
-  (defTest setKey.2
-    (signalsError?
-     (setKey (new Obj))
+     (setValue! (new Obj))
      Error :type 'match :operands# +2))
 
-  (defTest setKey.3
+  (defTest setValue!.3
     (signalsError?
-     (setKey (new Obj) 'x)
+     (setValue! (new Obj) 'x)
      Error :type 'match :operands# +1))
 
   (defTest keyBound?.1
@@ -3040,8 +3035,8 @@
   (assert#t (type? p c))
   (assert#t (type? p Obj))
   (assert#t (type? p Object))
-  (assert#t (eq? (getKey p 'x) 1))
-  (assert#t (eq? (getKey p 'y) 2))
+  (assert#t (eq? (getValue p 'x) 1))
+  (assert#t (eq? (getValue p 'y) 2))
 
   (assert#t (type? d Class))
   (assert#t (type? d Object))
@@ -3054,9 +3049,9 @@
   (assert#t (type? q c))
   (assert#t (type? q Obj))
   (assert#t (type? q Object))
-  (assert#t (eq? (getKey q 'x) 1))
-  (assert#t (eq? (getKey q 'y) 2))
-  (assert#t (eq? (getKey q 'z) 3)))
+  (assert#t (eq? (getValue q 'x) 1))
+  (assert#t (eq? (getValue q 'y) 2))
+  (assert#t (eq? (getValue q 'z) 3)))
 
 (defSuite %newClass
 
