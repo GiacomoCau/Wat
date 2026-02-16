@@ -213,7 +213,6 @@
 (load "lispx/test/condSysTest.lispx")
 (load "lispx/test/delimccTest.lispx")
 (load "lispx/test/controlTest.lispx")
-(load "test/testMsg.lsp")
 
 ;(load "lispx/test/streamTest.lispx")
 ;(load "lispx/test/readTest.lispx")

@@ -177,7 +177,6 @@
 ;;;; Test
 
 (load "wat!/test.wat")
-(load "test/testMsg.lsp")
 
 (def milli (- (@currentTimeMillis &java.lang.System) milli))
 ($ "vm started in " (%$ milli "ms"))

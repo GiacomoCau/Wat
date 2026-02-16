@@ -893,15 +893,24 @@ public class Vm {
 		}
 	}
 	class Macro extends Opv {
-		Macro(Env e, Object pt, Object ep, List xs) { super(e, pt, ep, xs); }
+		Macro(Env e, Object pt, Object ep, List xs) {
+			var expander = e.<Opv>get("expander");
+			var arity = arityPt(expander.pt);
+			super(e, pt, arity, ep, xs); 
+		}
 		public String toString() {
 			var expander = e.<Opv>get("expander");
 		    return "{%Macro " + expander.pt + toStringForms(expander.xs) + "}" ; }
 	}
 	class CaseMacro extends Opv {
-		CaseMacro(Env e, Object pt, Object ep, List xs) { super(e, pt, ep, xs); }
+		CaseMacro(Env e, Object pt, Object ep, List xs) {
+			var clauses = e.<Opv>get("expander").e.<List>get("clauses");
+			var arity = map("arityCaseMacro", c-> arityPt(((List) c).car), clauses);
+			super(e, pt, arity, ep, xs);
+		}
 		public String toString() {
-			return "{%CaseMacro" + toStringForms(e.<CaseOpv>get("expander").e.<List>get("clauses")) + "}";
+			var clauses = e.<Opv>get("expander").e.<List>get("clauses");
+			return "{%CaseMacro" + toStringForms(clauses) + "}";
 		}
 	}
 	class CaseOpv extends Opv {
@@ -1382,8 +1391,8 @@ public class Vm {
 	sealed interface Args permits ArgsList, EnvArgsList {}
 	non-sealed interface ArgsList extends Args, Function<List, Object> {};
 	non-sealed interface EnvArgsList extends Args, BiFunction<Env, List, Object> {}
-	//non-sealed interface ArgsList extends Args { Object apply(List o);};
-	//non-sealed interface EnvArgsList extends Args { Object apply(Env e, List o);}
+	//non-sealed interface ArgsList extends Args { Object apply(List o); };
+	//non-sealed interface EnvArgsList extends Args { Object apply(Env e, List o); }
 	interface ChkList { Object apply(Symbol sym, List o); }
 	interface LenList { Object apply(Integer len, List o); }
 	interface LenEnvList { Object apply(Integer l, Env e, List o); }
@@ -1454,7 +1463,7 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			return pipe(dbg(e, this, o), ()-> {
 				try {
-					/*
+					/* TODO possibile ottimizzazione?
 					if (jfun instanceof AtDot atdot && o.car instanceof ObjEnv objEnv) {
 						Lookup lookup = objEnv.lookup(atdot.name);
 						if (lookup.isBound)	return jfun instanceof Dot
@@ -1489,8 +1498,9 @@ public class Vm {
 		}
 	}
 	boolean isjFun(Object obj) {
-		// { At, Dot } < AtDot < ArgsList < Function < isjfun!
+		// {{ At, Dot } < AtDot < ArgsList < Function, EnvArgsList < BiFunction } < isjfun!
 		return isInstance(obj, Supplier.class, Consumer.class, Function.class, BiConsumer.class, BiFunction.class, Field.class, Executable.class);
+		//return isInstance(obj, Supplier.class, Consumer.class, ArgsList.class, Function.class, BiConsumer.class, EnvArgsList.class, BiFunction.class, Field.class, Executable.class);
 	}
 	
 	abstract class AtDot implements ArgsList { String name; }
@@ -1524,7 +1534,7 @@ public class Vm {
 				};
 			}
 			catch (Throwable thw) {
-				//*
+				//* TODO valutare la migliore, vanno bene entrambe
 				if (thw instanceof InvocationTargetException ite) {
 					switch (thw = ite.getTargetException()) {
 						case Value val: throw val;
@@ -2190,7 +2200,7 @@ public class Vm {
 					(l, e, o)->{ 
 						Env env = l==1 ? e : o.car(1);
 						return map("%%EvalList", car-> getTco(evaluate(env, car)), o.car());
-				})),
+				} )),
 				//"%evalList*", new JFun("%EvalList*", (EnvArgsList) (e,o)-> map("%%EvalArgs", car-> getTco(evaluate(e, car)), o) ),
 				"%wrap", wrap(new JFun("%Wrap", (Function) this::wrap)),
 				"%unwrap", wrap(new JFun("%Unwrap", (Function) this::unwrap)),
@@ -2209,10 +2219,9 @@ public class Vm {
 							list(2, more, or(null, Env.class), Obj.class, or(Symbol.class, Keyword.class, String.class), Any.class) )),
 					(_,o)-> at("env").apply(cons(this, o))
 					)),
-				//"%parent", wrap(new JFun("%Parent", list(1, 2), (n,o)-> checkR(n, o, 1, 2, Env.class, or(null, Env.class)), (l,o)-> { if (l==1) return (o.<Env>car()).parent; Env e = o.<Env>car(); e.parent = o.<Env>car(1); return e; } )),
 				"%parent", wrap(new JFun("%Parent", 1, (n,o)-> checkN(n, o, 1, Env.class), (_,o)-> (o.<Env>car()).parent )),
-				//"%setParent!", wrap(new JFun("%SetParent!", 2, (n,o)-> checkN(n, o, 2, Env.class, or(null, Env.class)),	(_,o)->{ Env e = o.<Env>car(); e.parent = o.<Env>car(1); return e; } )),
-				"%setParent!", wrap(new JFun("%SetParent!", 2, (n,o)-> checkR(n, o, 2, 3, Env.class),
+				"%setParent!", wrap(new JFun("%SetParent!", 2,
+					(n,o)-> checkR(n, o, 2, 3, Env.class),
 					(l,o)->{ Env e = o.<Env>car(); var prv = e.parent; e.parent = o.<Env>car(l-1);
 						return switch((Integer) bndRes(l == 2 ? ignore : o.car(1))) {case 1->e.parent; case 2->prv; case 3->e; default->inert; };
 					} )),
@@ -2262,10 +2271,10 @@ public class Vm {
 					(l,o)->	switch (bndRes(l == 2 ? ignore : o.car(1))) {
 						case Suspension s-> s;
 						case Integer i-> switch(i) {
-							case 0-> inert((o.<Cons>car()).setCar(o.car(l-1)));
-							case 1-> { var v = o.car(l-1); (o.<Cons>car()).setCar(v); yield v; }
+							case 0-> inert(o.<Cons>car().setCar(o.car(l-1)));
+							case 1-> { var v = o.car(l-1); o.<Cons>car().setCar(v); yield v; }
 							case 2-> { var cons = o.<Cons>car(); var v = cons.car; cons.setCar(o.car(l-1)); yield v; }
-							case 3-> (o.<Cons>car()).setCar(o.car(l-1));
+							case 3-> o.<Cons>car().setCar(o.car(l-1));
 							default-> typeError("cannot set car, invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
 						};
 						case Object obj-> resumeError(obj, symbol("Integer"));
@@ -2277,10 +2286,10 @@ public class Vm {
 					(l,o)->	switch (bndRes(l == 2 ? ignore : o.car(1))) {
 						case Suspension s-> s;
 						case Integer i-> switch(i) {
-							case 0-> inert((o.<Cons>car()).setCdr(o.car(l-1)));
-							case 1-> { var v = o.car(l-1); (o.<Cons>car()).setCdr(v); yield v; }
+							case 0-> inert(o.<Cons>car().setCdr(o.car(l-1)));
+							case 1-> { var v = o.car(l-1); o.<Cons>car().setCdr(v); yield v; }
 							case 2-> { var cons = o.<Cons>car(); var v = cons.cdr; cons.setCdr(o.car(l-1)); yield v; }
-							case 3-> (o.<Cons>car()).setCdr(o.car(l-1));
+							case 3-> o.<Cons>car().setCdr(o.car(l-1));
 							default-> typeError("cannot set cdr, invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
 						};
 						case Object obj-> resumeError(obj, symbol("Integer"));

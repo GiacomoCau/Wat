@@ -386,7 +386,7 @@
    |#
   (wrap
     (vau (expander) #ignore
-      (vau operands env
+      (vau operands env :macro
         (eval (apply expander operands) env) ))))
 |#
 ;TODO da valutare in sostituzione della precedente 
@@ -434,7 +434,7 @@
    |#
   (macro (lhs . rhs)
     (def ((#: (or Integer (%> 0)) n) form) (if (null? rhs) (list 1 lhs) (list* lhs rhs)))
-    (list 'begin (list 'set! 'expandMacro n) form) ))
+    (list '%atEnd (list 'set! 'expandMacro 0) (list 'set! 'expandMacro n) form) ))
 
 #;(begenv
   (assert (expand 1 (letrec ((a 1) (b 2)) (+ a b))) '(let ((a #inert) (b #inert)) (def* (a b) 1 2) (+ a b)))
@@ -449,6 +449,9 @@
   (assert (expand 3 (let aa ((a 1) (b 2)) (+ a b))) '((rec aa (\ (a b) (+ a b))) 1 2))
   (assert (expand 4 (let aa ((a 1) (b 2)) (+ a b))) '(((\ (aa) (def aa :rhs (\ (a b) (+ a b)))) #inert) 1 2))
   (assert (expand 5 (let aa ((a 1) (b 2)) (+ a b))) '(((\ (aa) (def aa :rhs (\ (a b) (+ a b)))) #inert) 1 2))
+  
+  (assert (expand 1 (def* (a b) 1 2)) '(def (a b) #ignore (list 1 2)) )
+  (assert (expand 2 (def* (a b) 1 2)) #inert )
 )
 
 

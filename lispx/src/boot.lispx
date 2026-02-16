@@ -434,7 +434,7 @@
    |#
   (macro (lhs . rhs)
     (def ((#: (or Integer (%> 0)) n) form) (if (null? rhs) (list 1 lhs) (list* lhs rhs)))
-    (list 'begin (list 'set! 'expandMacro n) form) ))
+    (list '%atEnd (list 'set! 'expandMacro 0) (list 'set! 'expandMacro n) form) ))
 
 
 #|! Definition Forms

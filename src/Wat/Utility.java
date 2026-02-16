@@ -251,18 +251,19 @@ public class Utility {
 		};
 	}
 	static Object binOp(BinOp op, Number a, Number b) {
-		if (op == null) throw new RuntimeException("no operator for this operands");
-		return a instanceof BigDecimal || b instanceof BigDecimal
+		if (op == null) throw new RuntimeException("null aritmetic binary operator!");
+		//if (op.* == null) throw new RuntimeException("no operator "+ op.name() +" for this operands (" + a.getClass().getSimpleName() + " " + b.getClass().getSimpleName() + ")");
+		return (a instanceof BigDecimal || b instanceof BigDecimal) && op.bd != null
 			? op.bd.apply(new BigDecimal(""+a), new BigDecimal(""+b))
-			: a instanceof Double || b instanceof Double
+			: (a instanceof Double || b instanceof Double) && op.d != null
 			? op.d.apply(a.doubleValue(), b.doubleValue())
-			: a instanceof BigInteger || b instanceof BigInteger
+			: (a instanceof BigInteger || b instanceof BigInteger) && op.bi != null
 			? op.bi.apply(new BigInteger(""+a), new BigInteger(""+b))
 			: a instanceof Long || b instanceof Long
 			? op.l.apply(a.longValue(), b.longValue())
 			: op.i.apply(a.intValue(), b.intValue())
 		;
-	}	
+	}
 	
 	public static boolean isInstance(Object o, Class ... cs) {
 		for (Class c: cs) if (c.isInstance(o)) return true;
