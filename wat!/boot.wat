@@ -2396,6 +2396,7 @@
    |Otherwise go to the next <b>clause</b>.
    |#
   (vau values #ignore :caseVau
+    ; per eseguire codice prima delle clausole!
     (if (&& (cons? clauses) (cons? (car clauses)) (== (caar clauses) '=>))
       (begin ((eval (car! (cdar clauses)) env) values) (def clauses (cdr clauses))) )
     (let1 loop (clauses clauses)
@@ -4736,45 +4737,77 @@
 #|! Auto Increment/Decrement and Assignement Operators
  |#
 
-(defVau (++ plc . args) env
+(def\ (autoOp pp op)
+  #|($nm bndRes unaryOperator)
+   |(type function)
+   |
+   |Return a fexpr to define pre/post increment/decrement operators which returns the value assigned to Box, ObjEnv and Object before or after applying the <b>unaryOperator</b>.
+   |#
+  (vau (plc . args) env
+    (def val (eval plc env))
+      (caseType val
+        (Box    (let1 (() args) (val pp (op (val)))))
+        (ObjEnv (let1 ((fld) args) (val pp fld (op (val fld)))))
+        (Number (let1 (() args) (env :set! pp plc (op val))))
+        (else   (error ($ "not valid type: " val))) )))
+
+(def ++
   #|($nm number)
    |($nm box)
    |($nm obj field)
    |(type fexpr)
    |
-   |Return the incremented value of Number, Box and Obj.
+   |(derivation (autoOp :rhs 1+))
+   |
+   |Return the pre incremented value of Number, Box and Obj fields.
    |#
-  (def val (eval plc env))
-  (caseType val
-    (Box    (let1 (() args) (val :rhs (1+ (val)))))
-    (ObjEnv (let1 ((fld) args) (val :rhs fld (1+ (val fld)))))
-    (Number (let1 (() args) (env :set! :rhs plc (1+ val))))
-    (else   (error ($ "not valid type: " val))) ))
-
-(defVau (-- plc . args) env
+  (autoOp :rhs 1+))
+  
+(def --
   #|($nm number)
    |($nm box)
    |($nm obj field)
    |(type fexpr)
    |
-   |Return the decrenented value of Number, Box and Obj.
+   |(derivation (autoOp :rhs -1+))
+   |
+   |Return the pre decremented value of Number, Box and Obj fields.
    |#
-  (def val (eval plc env))
-  (caseType val
-    (Box    (let1 (() args) (val :rhs (-1+ (val)))))
-    (ObjEnv (let1 ((fld) args) (val :rhs fld (-1+ (val fld)))))
-    (Number (let1 (() args) (env :set! :rhs plc (-1+ val))))
-    (else   (error ($ "not valid type: " val))) ))
+  (autoOp :rhs -1+))
+  
+(def ++.
+  #|($nm number)
+   |($nm box)
+   |($nm obj field)
+   |(type fexpr)
+   |
+   |(derivation (autoOp :prv 1+))
+   |
+   |Return the value of Number, Box and Obj fields and then does a post incremented.
+   |#
+  (autoOp :prv 1+))
 
-(assert (begenv (def obj (newObj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a)) 2)
-(assert (begenv (def box (newBox 1)) (++ box) (++ box) (-- box)) 2)
-(assert (begenv (def n 1) (++ n) (++ n) (-- n)) 2)
+(def --.
+  #|($nm number)
+   |($nm box)
+   |($nm obj field)
+   |(type fexpr)
+   |
+   |(derivation (autoOp :prv -1+))
+   |
+   |Return the value of Number, Box and Obj fields and then does a post decremented.
+   |#
+  (autoOp :prv -1+))
+
+(begenv (def obj (newObj :a 1)) (++ obj :a) (++ obj :a) (-- obj :a) (assert (obj :a) 2))
+(begenv (def box (newBox 1)) (++ box) (++ box) (-- box) (assert (box) 2))
+(begenv (def n 1) (++ n) (++ n) (-- n) (assert n 2))
 
 (def\ (assignOp op)
   #|($nm operator)
    |(type function)
    |
-   |Return a fexpr which returns the value assigned to Box, ObjEnv and Object after applying the <b>operator</b>.
+   |Return a fexpr to define assign operators which returns the value assigned to Box, ObjEnv and Object after applying the <b>operator</b>.
    |#
   (vau (plc . args) env
     (def rval (if (null? args) #null ((rec\ (last (fst . rst)) (if (null? rst) (eval fst env) (last rst))) args)))

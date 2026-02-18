@@ -1,7 +1,6 @@
 package Wat;
 
 import static List.Parser.str2bc;
-import static List.Parser.datum;
 import static Wat.Utility.$;
 import static Wat.Utility.apply;
 import static Wat.Utility.binOp;
@@ -83,6 +82,7 @@ import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
 
 import List.ParseException;
+import List.Parser.datum;
 
 // java.exe -cp bin --enable-preview Wat.Vm
 
@@ -872,21 +872,18 @@ public class Vm {
 	}
 	
 	class Opv extends Combinable {
-		Env e; Object pt, ep; List xs;
+		Env e; Object pt, ep; List xs; Combinable cmb;
 		Opv(Env e, Object pt, Object ep, List xs) {
 			this(e, pt, arityPt(pt), ep, xs);
 		}
 		Opv(Env e, Object pt, Object arity, Object ep, List xs) {
 			this.e = e; this.pt = pt; this.ep = ep; this.xs = xs; this.arity = arity;
-			this.xs = xs == null || xs.car != sharpColon ? xs
-				: xs.cdr() != null ? cons(cons(new Colon(this), xs.cdr()))
-				: matchError("invalid return value check, expected {operands#,%+d} operands, found: {datum} in: {expr}", null, 1, xs)
-			;
+			cmb = xs != null && xs.car() == sharpColon ? new Colon(this) : begin;
 		}
 		public Object combine(Env e, List o) {
 			var xe = env(this.e);
 			var dbg = dbg(e, this, o);
-			return tco(()-> pipe(dbg, ()-> bind(dbg, true, bndRes, xe, pt, o), (_)-> bind(dbg, true, bndRes, xe, ep, e), (_)-> tco(()-> begin.combine(xe, xs))));
+			return tco(()-> pipe(dbg, ()-> bind(dbg, true, bndRes, xe, pt, o), (_)-> bind(dbg, true, bndRes, xe, ep, e), (_)-> tco(()-> cmb.combine(xe, xs))));
 		}
 		public String toString() {
 			return "{%Opv " + ifnull(pt, "()", Vm.this::toString) + " " + Vm.this.toString(ep) + toStringForms(xs) + /*" " + e +*/ "}";
@@ -909,11 +906,13 @@ public class Vm {
 			super(e, pt, arity, ep, xs);
 		}
 		public String toString() {
-			var clauses = e.<Opv>get("expander").e.<List>get("clauses");
-			return "{%CaseMacro" + toStringForms(clauses) + "}";
+			var expander = e.<Opv>get("expander");
+			var clauses = expander.e.<List>get("clauses");
+			return "{%CaseMacro" + eIf(expander.xs != null && expander.xs.car() != sharpColon, ()-> " " + sharpColon + " " + expander.xs.car(1))  + toStringForms(clauses) + "}";
 		}
 	}
 	class CaseOpv extends Opv {
+		Object check = null;
 		CaseOpv(Env e, Object pt, Object ep, List xs) {
 			Object check = null;
 			var clauses = e.<List>get("clauses");
@@ -924,19 +923,20 @@ public class Vm {
 			var arity = map("arityCaseVau", c-> arityPt(((List) c).car), clauses);
 			if (check != null) xs = listStar(sharpColon, check, xs);
 			super(e, pt, arity, ep, xs);
+			this.check = check;
 		}
-		public String toString() { return "{%CaseOpv" + toStringForms(e.<List>get("clauses")) + "}"; }
+		public String toString() { return "{%CaseOpv " + ep + eIfnull(check, ()-> toStringForms(list(sharpColon, check))) + toStringForms(e.<List>get("clauses")) + "}"; }
 	}
 	class Colon extends Combinable {
 		Object op; boolean isCheck;
 		Colon(Object op) { this.op = op; isCheck = op.equals("check"); arity = isCheck ? 2 : ge(2); }
 		public Object combine(Env e, List o) {
-			var chk = isCheck ? checkN(this, o, 2) : checkM(this, o, 2); // o = (form check) | (check form . forms)
+			var chk = isCheck ? checkN(this, o, 2) : checkM(this, o, 2); // o = (form check) | (check form . forms) | (#: check form . forms) 
 			if (chk instanceof Suspension s) return s;
 			if (!(chk instanceof Integer len) || (isCheck ? len != 2 : len < 2)) return resumeError(chk, and("Integer " + "(" + (isCheck ? "==" : ">=") + " 2)"));
 			return pipe(dbg(e, this, o),
-				()-> getTco(isCheck ? evaluate(e, o.car) : begin.combine(e, o.cdr())),
-				(_)-> getTco(evalChk.combine(e, cons(o.car(isCheck ? 1 : 0)))),
+				()-> getTco(isCheck ? evaluate(e, o.car) : begin.combine(e, o.cdr(o.car == sharpColon ? 1 : 0))),
+				(_)-> getTco(evalChk.combine(e, cons(o.car(isCheck || o.car == sharpColon ? 1 : 0)))),
 				(res)-> apply(len2-> len2 instanceof Suspension s ? s : isCheck ? len2 : res[0], check(op, res[0], res[1]))
 			);
 		}
@@ -1077,7 +1077,7 @@ public class Vm {
 		Begin() {}; Begin(boolean root) { this.root = root; }
 		public Object combine(Env e, List o) {
 			// o = () | (form . forms)
-			return o == null ? inert : tco(()-> combine(null, e, o));
+			return o == null ? inert : tco(()-> o.car == sharpColon ? new Colon(cons(this, o)).combine(e, o.cdr()) : combine(null, e, o));
 		}
 		Object combine(Resumption r, Env e, List lst) {
 			for (var first = true;; lst = lst.cdr()) { // only one resume for suspension
@@ -1916,7 +1916,9 @@ public class Vm {
 	}
 	private Object innerError(InnerException ie, Object op, Object o, Object chk) {
 		return op instanceof Opv
-			? error("returning from {opv}", ie, "opv", op)
+			? error("returning from {op}", ie, "op", op)
+			: op instanceof List lst && lst.car instanceof Begin
+			? error("exiting from {op}", ie, "op", op)
 			: !member(op, ":", "check")
 			? error("combining {operator} with {operands}", ie, "operator", op, "operands", o)
 			// quando : e check vanno in errore per un check in profondità, es. (: (Integer) (#t))

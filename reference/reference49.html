@@ -27,6 +27,22 @@
     </h2>
     <div>
       <h3>
+        autoOp
+      </h3>
+      <ul>
+        <li>
+          (<b>autoOp</b> bndRes unaryOperator)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            Return a fexpr to define pre/post increment/decrement operators which returns the value assigned to Box, ObjEnv and Object before or after applying the <b>unaryOperator</b>.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         ++
       </h3>
       <ul>
@@ -41,7 +57,11 @@
           <br/>
             &nbsp;
           <br/>
-            Return the incremented value of Number, Box and Obj.
+            (derivation (autoOp :rhs 1+))
+          <br/>
+            &nbsp;
+          <br/>
+            Return the pre incremented value of Number, Box and Obj fields.
         </li>
       </ul>
     </div>
@@ -61,7 +81,59 @@
           <br/>
             &nbsp;
           <br/>
-            Return the decrenented value of Number, Box and Obj.
+            (derivation (autoOp :rhs -1+))
+          <br/>
+            &nbsp;
+          <br/>
+            Return the pre decremented value of Number, Box and Obj fields.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        ++.
+      </h3>
+      <ul>
+        <li>
+          (<b>++.</b> number)
+          <br/>
+            (<b>++.</b> box)
+          <br/>
+            (<b>++.</b> obj field)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (autoOp :prv 1+))
+          <br/>
+            &nbsp;
+          <br/>
+            Return the value of Number, Box and Obj fields and then does a post incremented.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        --.
+      </h3>
+      <ul>
+        <li>
+          (<b>--.</b> number)
+          <br/>
+            (<b>--.</b> box)
+          <br/>
+            (<b>--.</b> obj field)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            (derivation (autoOp :prv -1+))
+          <br/>
+            &nbsp;
+          <br/>
+            Return the value of Number, Box and Obj fields and then does a post decremented.
         </li>
       </ul>
     </div>
@@ -77,7 +149,7 @@
           <br/>
             &nbsp;
           <br/>
-            Return a fexpr which returns the value assigned to Box, ObjEnv and Object after applying the <b>operator</b>.
+            Return a fexpr to define assign operators which returns the value assigned to Box, ObjEnv and Object after applying the <b>operator</b>.
         </li>
       </ul>
     </div>

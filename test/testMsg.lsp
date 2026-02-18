@@ -13,8 +13,13 @@
 (assert ((\ ((#: (and Integer (< 1)) a) b) a) "0" #t) Error @getMessage "not a (and Integer (< 1)): \"0\" binding: ((#: (and Integer (< 1)) a) b) of: {%Opv ((#: (and Integer (< 1)) a) b) #ignore a} with: (\"0\" #t)")
 
 ; #:
-(assert ((\ (a) #: (> 1) a) 0) Error @getMessage "not a (> 1): 0 returning from {%Opv (a) #ignore (%: (> 1) a)}")
-(assert ((\ (a) #: (and Integer (> 1)) a) 0) Error @getMessage "not a (and Integer (> 1)): 0 returning from {%Opv (a) #ignore (%: (and Integer (> 1)) a)}")
+(assert ((\ (a) #: (> 1) a) 0) Error @getMessage "not a (> 1): 0 returning from {%Opv (a) #ignore #: (> 1) a}")
+(assert ((\ (a) #: (and Integer (> 1)) a) 0) Error @getMessage "not a (and Integer (> 1)): 0 returning from {%Opv (a) #ignore #: (and Integer (> 1)) a}")
+
+(assert ((caseVau #ignore #: List (() 1 2 3))) Error @getMessage "not a List: 3 returning from {%CaseOpv #ignore #: List (() 1 2 3)}")
+
+(assert (begin #: List 1 2 3) Error @getMessage "not a List: 3 exiting from (%Begin #: List 1 2 3)")
+(assert ((caseVau #ignore (() #: List 1 2 3))) Error @getMessage "not a List: 3 exiting from (%Begin #: List 1 2 3)")
 
 (assert (car 1) Error @getMessage "not a Cons: 1 combining %Car with (1)")
 (assert (+ 1 #t) Error @getMessage "not a Number: #t combining %+ with (1 #t)")
