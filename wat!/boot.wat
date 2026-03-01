@@ -603,7 +603,7 @@
 
 (defMacro (wrau pt ep . forms)
   #|($nm parameterTree environmentParameter . forms)
-   |(type function)
+   |(type macro)
    |
    |(derivation (wrap (vau parameterTree environmentParameter . forms))
    |
@@ -1497,7 +1497,7 @@
 
 (defMacro (throw . forms)
   #|($nm . forms)
-   |(type fexpr)
+   |(type macro)
    |
    |(derivation (throwTag #ignore forms))
    |
@@ -2193,7 +2193,7 @@
 
 (defMacro (if! test thenForm . forms)
   #|($nm test thenForm . forms)
-   |(type fexpr)
+   |(type macro)
    |
    |(syntax forms (or () (elseForm)))
    |
@@ -2575,6 +2575,7 @@
 
 (defVau (cond . clauses) env
   #|($nm . clauses)
+   |(type fexpr)
    |
    |(syntax clauses (clause . clauses))
    |(syntax clause (else . forms))
@@ -2698,6 +2699,7 @@
 
 (defVau (ifOpt* (pt opt) then . else) env
   #|($nm (definiendTree option) thenForm . elseForms)
+   |(type fexpr)
    |
    |Multi-valued <b>option</b> destructuring.
    |Evaluate <b>thenForm</b> form with the <b>definiendTree</b> bound to <b>option</b> value if the evaluation of <b>option</b> is !#null,
@@ -2722,7 +2724,7 @@
 
 (defMacro whenOpt ((pt opt) . forms)
   #|($nm (name option) . forms)
-   |(type fexpr)
+   |(type macro)
    |
    |Destructure the <b>option</b>.
    |Return #null if the evaluation of <b>option</b> it's #null,
@@ -2732,7 +2734,7 @@
 
 (defMacro unlessOpt (opt . forms)
   #|($nm option . forms)
-   |(type fexpr)
+   |(type macro)
    |
    |Destructure the <b>option</b>.
    |Return the evaluation of <b>forms</b> as an implicit `begin' if the evaluation of <b>option</b> is #null, #null otherwise.
@@ -2811,7 +2813,7 @@
 
 (def\ optDft! (opt)
   #|($nm option)
-   |(type fexpr)
+   |(type function)
    |
    |Returns the contents of the <b>option</b> or signals an error if it is #null.
    |#
@@ -2959,7 +2961,7 @@
 
 (defVau (matchType? object typeCheck . typeChecks) env
   #|($nm object typeCheck . typeChecks)
-   |(type function)
+   |(type fexpr)
    |
    |(syntax typeCheck class)
    |(syntax typeCheck (class . attributes))
@@ -2990,7 +2992,7 @@
 
 (defMacro (matchType?* obj class . attributes)
   #|($nm object class . attributes)
-   |(type function)
+   |(type macro)
    |
    |(syntax attributes (attribute check . attributes))
    |(syntax attribute (or Symbol Keyword String .Field @Method))
@@ -3518,7 +3520,7 @@
 
 (defMacro (any?* f . lst)
   #|($nm function . values)
-   |(type function)
+   |(type macro)
    |
    |Return #true if the apply of the <b>function</b> to every element of <b>values</b> return #true, #false otherwise.
    |#
@@ -3541,7 +3543,7 @@
 
 (defMacro (all?* f . lst)
   #|($nm function . values)
-   |(type function)
+   |(type macro)
    |
    |Return #true if the apply of the <b>function</b> to one element of <b>values</b> return #true, #false otherwise.
    |#
@@ -3606,7 +3608,7 @@
 
 (defMacro (remove f lst . lst*)
   #|($nm function . lists)
-   |(type function)
+   |(type macro)
    |
    |Returns the list of the first elements of the <b>list</b> without those for which the application of the <b>function</b> returns #true.
    |#
@@ -3813,7 +3815,7 @@
 
 (defVau (defSet+ (#: Symbol plc) v) env
   #|($nm symbol value)
-   |(type function)
+   |(type fexpr)
    |
    |Return the set after update the set of <b>symbol</b> with an <b>value</b> more if <b>value</b> not is in the set.
    |#
@@ -5057,7 +5059,7 @@ load)
   #|($nm n function)
    |(type function)
    |
-   |Returns a function that applies <b>function</b> with the arguments from n placed in a list.
+   |Returns a function that applies <b>function</b> with the arguments from <b>n</b> placed in a list.
    |#
   (def\ (resize n lst)
     (let loop ((n n) (h ()) (t lst))
@@ -5145,7 +5147,7 @@ load)
    |
    |Return or update the auto quote property for the list without combinable car. 
    |#
-aQuote)
+  aQuote)
 
 (def hdlAny
   #|($nm)

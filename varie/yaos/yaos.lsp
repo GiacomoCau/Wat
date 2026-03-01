@@ -51,9 +51,9 @@
             (when (== (obj :this) !this) (error "super not invoked!")) )))
       obj )))
 
-(def\ (is? instance class)
-  (if (&& (type? instance Env) (!null? (def static :rhs (value :static (newObj instance)))))
-    (extend? static class)
+(def\ (is? instance superClass)
+  (if (&& (type? instance Env) (!null? (def class :rhs (value :static (newObj instance)))))
+    (extend? class superClass)
     (error "is not an instance!") ))
 
 (def\ (extend? class superClass)

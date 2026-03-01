@@ -36,6 +36,7 @@
 (def\ (join lst)
   (if (null? lst) ""
     (let1 ((key value . lst) lst)
+      (def key (caseType key (Intern (.name key)) (String key) (else (error ($ "invalid key type: " key)))))  
       (if (type? value Boolean)
         (if value ($ " " key (join lst)) (join lst))
         ($ " " key "=" (if (type? value String) ($ "\"" (encode value) "\"") value) (join lst)) ))))
