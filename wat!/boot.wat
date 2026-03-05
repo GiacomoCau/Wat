@@ -2663,6 +2663,15 @@
 (assert ``(,,@'() ,@,@(list)) '`())
 (assert `````(a ,(b c ,@,,@,@'(a b c))) '````(a ,(b c ,@,,@a ,@,,@b ,@,,@c)))
 
+; vedi https://github.com/melvinzhang/bit-scheme/blob/master/alexpander.scm
+(assert (let ((x '(a b c))) ``(,,x ,@,x ,,@x ,@,@x)) '`(,(a b c) ,@(a b c) ,a ,b ,c ,@a ,@b ,@c))
+(assert ``(,,@'() ,@,@(list)) '`())
+(assert `````(a ,(b c ,@,,@,@(list 'a 'b 'c))) '````(a ,(b c ,@,,@a ,@,,@b ,@,,@c)))
+(assert (let ((vars '(x y))) (eval `(let ((x '(1 2)) (y '(3 4))) `(foo ,@,@vars)))) '(foo 1 2 3 4))
+
+(assert (let ((x '(a b c)) (a 1) (b 2) (c 3)) ``(,,@x)) '`(,a ,b ,c) ) ;TODO sembrerebbe dover essere (1 2 3) che si ha invece per (eval ``(,,@x))
+(assert (let ((x '(a b c)) (a 1) (b 2) (c 3)) (eval ``(,,@x))) (1 2 3)) ; TODO così sembrerebbe mancare un eval ma ...
+
 
 #|! Options
  |An option is either #null ("none"), or a one-element list ("some").
@@ -4731,7 +4740,7 @@
   (+= t ((next* g2 2) :value))
   (+= t ((next* g2 4) :value))
   (+= t ((next* g2 6) :value))
-  (+= t (next* g2  8))
+  (+= t  (next* g2 8))
   (assert t 45)
 )
 

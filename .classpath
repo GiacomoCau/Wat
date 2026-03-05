@@ -8,9 +8,9 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="lib" path="D:/Programmi/Eclipse/plugins/org.eclipse.tm4e.core_0.17.1.202511281119.jar"/>
+	<classpathentry kind="lib" path="D:/Programmi/Eclipse/plugins/org.eclipse.tm4e.core_0.17.2.202511281144.jar"/>
 	<classpathentry kind="lib" path="D:/Programmi/Eclipse/plugins/com.google.gson_2.13.2.jar"/>
-	<classpathentry kind="lib" path="D:/Programmi/Eclipse/plugins/org.joni_2.2.6.v20250329-1000.jar"/>
-	<classpathentry kind="lib" path="D:/Programmi/Eclipse/plugins/org.jcodings_1.0.63.v20250307-1000.jar"/>
+	<classpathentry kind="lib" path="D:/Programmi/Eclipse/plugins/org.junit_4.13.2.v20240929-1000.jar"/>
+	<classpathentry kind="lib" path="D:/Programmi/Eclipse/plugins/org.jcodings_1.0.64.v20260220-1000.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

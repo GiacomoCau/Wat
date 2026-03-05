@@ -2141,6 +2141,11 @@ public class Vm {
 	<T extends Cons> T str2lst(String s) throws Exception {
 		return (T) bc2lst(str2bc(s));
 	}
+	<T> T str2exp(String s) throws Exception {
+		//var lst = str2lst(s); if (lst != null && lst.cdr == null) return (T) lst.car;
+		var bc = str2bc(s); if (bc.length == 1) return (T) bc2exp(bc[0]);
+		return error("not a single expession: {string}", "string", s);
+	}
 	
 	
 	// Stringification
@@ -2466,7 +2471,7 @@ public class Vm {
 				"read", wrap(new JFun("Read", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Integer.class), (l,o)-> uncked(()-> str2lst(read(l == 0 ? 0 : o.<Integer>car())).car) )),
 				//"eof", new JFun("eof", (n,o)-> checkN(n, o, 0), (l,o)-> List.Parser.eof),
 				//"eof?", wrap(new JFun("eof?", (n,o)-> checkN(n, o, 1), (l,o)-> List.Parser.eof.equals(o.car))),
-				"readString", wrap(new JFun("ReadString", 1, (n,o)-> checkN(n, o, 1), (_,o)-> uncked(()-> str2lst(o.toString())) )),
+				"readString", wrap(new JFun("ReadString", 1, (n,o)-> checkN(n, o, 1, String.class), (_,o)-> uncked(()-> str2exp(o.<String>car())) )),
 				"system", wrap(new JFun("System", list(1, 2), (n,o)-> checkR(n, o, 1, 2, String.class, Boolean.class), (l,o)-> uncked(()-> system(l==1 ? false : o.<Boolean>car(1),  "cmd.exe", "/e:on", "/c", o.<String>car())) )),
 				// Config
 				"doTco", wrap(new JFun("DoTco", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doTco : inert(doTco=o.car()) )),
