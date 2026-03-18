@@ -42,21 +42,51 @@
       </h3>
       <ul>
         <li>
-          (<b>append</b> list1 list2)
+          (<b>append</b> list object)
           <br/>
             (type function)
           <br/>
             &nbsp;
           <br/>
-            Return the append of the <b>list2</b> to the <b>list1</b>.
+            Return the append of <b>object</b> to the <b>list</b>.
           <br/>
-            The first one must be proper and is copied.
+            The first one must be proper list and is copied.
           <br/>
             The second one is not copied (and doesn't even have to be a list).
           <br/>
-            It becomes the `cdr' of the final cons of the first list,
+            It becomes the `cdr' of the final cons of the copied <b>list</b>,
           <br/>
-            or is returned directly if the first list is empty.
+            or is returned directly if <b>list</b> is empty.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        append
+      </h3>
+      <ul>
+        <li>
+          (<b>append</b> list . rest)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax rest (or (object) (list . rest))))
+          <br/>
+            (derivation (\ (lst lst/object . rest) (apply** (rec\ (append lst . rest) (if (null? rest) lst (%append lst (apply append rest)))) lst lst/object rest))
+          <br/>
+            &nbsp;
+          <br/>
+            Return the append of <b>object</b> to the <b>list</b>s.
+          <br/>
+            The firsts one <b>list</b>s must be all proper list and are copied.
+          <br/>
+            The last one <b>object</b> is not copied (and doesn't even have to be a list).
+          <br/>
+            It becomes the `cdr' of the final cons of the copied <b>list</b>s,
+          <br/>
+            or is returned directly if <b>list</b> is empty.
         </li>
       </ul>
     </div>

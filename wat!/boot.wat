@@ -1084,16 +1084,33 @@
  |#
 
 (def append
-  #|($nm list1 list2)
+  #|($nm list object)
    |(type function)
    |
-   |Return the append of the <b>list2</b> to the <b>list1</b>.
-   |The first one must be proper and is copied.
+   |Return the append of <b>object</b> to the <b>list</b>.
+   |The first one must be proper list and is copied.
    |The second one is not copied (and doesn't even have to be a list).
-   |It becomes the `cdr' of the final cons of the first list,
-   |or is returned directly if the first list is empty.
+   |It becomes the `cdr' of the final cons of the copied <b>list</b>,
+   |or is returned directly if <b>list</b> is empty.
    |#
   %append)
+
+(def append
+  #|($nm list . rest)
+   |(type function)
+   |
+   |(syntax rest (or (object) (list . rest))))
+   |(derivation (\ (lst lst/object . rest) (apply** (rec\ (append lst . rest) (if (null? rest) lst (%append lst (apply append rest)))) lst lst/object rest))
+   |
+   |Return the append of <b>object</b> to the <b>list</b>s.
+   |The firsts one <b>list</b>s must be all proper list and are copied.
+   |The last one <b>object</b> is not copied (and doesn't even have to be a list).
+   |It becomes the `cdr' of the final cons of the copied <b>list</b>s,
+   |or is returned directly if <b>list</b> is empty.
+   |#
+  ( (\ (append)
+      (\ (lst lst/object . rest) (apply append (list* lst lst/object rest))) )
+    ((vau () #ignore (def append :rhs (\ (lst . rest) (if (null? rest) lst (%append lst (apply append rest))))))) ))
 
 (def len
   #|($nm list)
@@ -5049,6 +5066,15 @@ load)
    |Exec system commands
    |#
   system)
+  
+(def getEnv
+  #|($nm string)
+   |(type function)
+   |
+   |Return system variables if exists, #null otherwise.
+   |#
+  (let1 (getEnv (@getMethod System "getenv" String))
+    (\ (str) (getEnv #null str))))
 
 (defVau (time times . forms) env
   #|($nm n . forms)

@@ -225,12 +225,14 @@ public class Utility {
 		//  Integer         Long            BigInteger                           Double                   BigDecimal 
 		Pls((a, b)-> a+b,   (a, b)-> a+b,   (a, b)-> a.add(b),                   (a, b)-> a+b,            (a, b)-> a.add(b)            ),
 		Mns((a, b)-> a-b,   (a, b)-> a-b,   (a, b)-> a.subtract(b),              (a, b)-> a-b,            (a, b)-> a.subtract(b)       ),
-		Pwr((a, b)-> a*b,   (a, b)-> a*b,   (a, b)-> a.multiply(b),              (a, b)-> a*b,            (a, b)-> a.multiply(b)       ),
+		Mlt((a, b)-> a*b,   (a, b)-> a*b,   (a, b)-> a.multiply(b),              (a, b)-> a*b,            (a, b)-> a.multiply(b)       ),
 		Dvd((a, b)-> a/b,   (a, b)-> a/b,   (a, b)-> a.divide(b),                (a, b)-> a/b,            (a, b)-> a.divide(b)         ),
 		Rst((a, b)-> a%b,   (a, b)-> a%b,   (a, b)-> a.mod(b),                   (a, b)-> a%b,            null                         ),
 		And((a, b)-> a&b,   (a, b)-> a&b,   (a, b)-> a.and(b),                   null,                    null                         ),
 		 Or((a, b)-> a|b,   (a, b)-> a|b,   (a, b)-> a.or(b),                    null,                    null                         ),
-		Xor((a, b)-> a^b,   (a, b)-> a^b,   (a, b)-> a.pow(b.intValue()),        (a, b)-> Math.pow(a, b), (a, b)-> a.pow(b.intValue()) ),
+		Xor((a, b)-> a^b,   (a, b)-> a^b,   null,                                null,                    null                         ),
+		Pwr(Math::powExact, (a, b)-> Math.powExact(a, b.intValue()),
+			                                (a, b)-> a.pow(b.intValue()),        (a, b)-> Math.pow(a, b), (a, b)-> a.pow(b.intValue()) ),
 		 Sl((a, b)-> a<<b,  (a, b)-> a<<b,  (a, b)-> a.shiftLeft(b.intValue()),  null,                    null                         ),
 		 Sr((a, b)-> a>>b,  (a, b)-> a>>b,  (a, b)-> a.shiftRight(b.intValue()), null,                    null                         ),
 		Sr0((a, b)-> a>>>b, (a, b)-> a>>>b, null,                                null,                    null                         );                  

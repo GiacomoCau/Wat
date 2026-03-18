@@ -28,6 +28,7 @@ import static Wat.Utility.BinOp.Mns;
 import static Wat.Utility.BinOp.Or;
 import static Wat.Utility.BinOp.Pls;
 import static Wat.Utility.BinOp.Pwr;
+import static Wat.Utility.BinOp.Mlt;
 import static Wat.Utility.BinOp.Rst;
 import static Wat.Utility.BinOp.Sl;
 import static Wat.Utility.BinOp.Sr;
@@ -2042,14 +2043,14 @@ public class Vm {
 						if (! (val instanceof Box)) {
 							var expt = o.<List>cdr(1);
 							if (Vm.this.equals(val, pushRootSubcontBarrier(env, expt))) return true;
-							print(name, exp, " should be ", o.car(2), " but is ", val);
+							print(name, exp, " should be₁ ", o.car(2), " but is ", val);
 							break;
 						}
 					}
 					default: {
 						List expt = pushRootSubcontBarrier(env, cons(cons(symbol("%list"), o.cdr(1))));
 						if (expt.car instanceof Class && singleMatchType(val, expt)) return true;
-						print(name, exp, " should be ", expt, " but is ", val);
+						print(name, exp, " should be₂ ", expt.cdr() == null ? expt.car : expt, " but is ", val);
 					}
 				}
 			}
@@ -2061,7 +2062,7 @@ public class Vm {
 					var val = thw instanceof Value v ? v.value : thw;
 					List expt = pushRootSubcontBarrier(env, cons(cons(symbol("%list"), o.cdr(1))));
 					if (expt.car instanceof Class && singleMatchType(val, expt)) return true;
-					print(name, exp, " should be ", expt, " but is ", val);
+					print(name, exp, " should be₃ ", expt.cdr() == null ? expt.car : expt, " but is ", val);
 				}
 			}
 			return false;
@@ -2342,7 +2343,7 @@ public class Vm {
 				// Number
 				"%number?", wrap(new JFun("%Number?", (Function<Object, Boolean>) obj-> obj instanceof Number )),
 				"%+", wrap(new JFun("%+", 2, (n,o)-> checkN(n, o, 2, Number.class, Number.class), (_,o)-> binOp(Pls, o.car(), o.car(1)) )),
-				"%*", wrap(new JFun("%*", 2, (n,o)-> checkN(n, o, 2, Number.class, Number.class), (_,o)-> binOp(Pwr, o.car(), o.car(1)) )),
+				"%*", wrap(new JFun("%*", 2, (n,o)-> checkN(n, o, 2, Number.class, Number.class), (_,o)-> binOp(Mlt, o.car(), o.car(1)) )),
 				"%-", wrap(new JFun("%-", 2, (n,o)-> checkN(n, o, 2, Number.class, Number.class), (_,o)-> binOp(Mns, o.car(), o.car(1)) )),
 				"%/", wrap(new JFun("%/", 2, (n,o)-> checkN(n, o, 2, Number.class, Number.class), (_,o)-> binOp(Dvd, o.car(), o.car(1)) )),
 				"%%", wrap(new JFun("%%", 2, (n,o)-> checkN(n, o, 2, Number.class, Number.class), (_,o)-> binOp(Rst, o.car(), o.car(1)) )),
@@ -2361,6 +2362,9 @@ public class Vm {
 				"%&", wrap(new JFun("%&", 2, (n,o)-> checkN(n, o, 2, Number.class, Number.class), (_,o)-> binOp(And, o.car(), o.car(1)) )),
 				"%|", wrap(new JFun("%|", 2, (n,o)-> checkN(n, o, 2, Number.class, Number.class), (_,o)-> binOp(Or, o.car(), o.car(1)) )),
 				"%^", wrap(new JFun("%^", 2, (n,o)-> checkN(n, o, 2, Number.class, Number.class), (_,o)-> binOp(Xor, o.car(), o.car(1)) )),
+				"%^", wrap(new JFun("%^", 2, (n,o)-> checkN(n, o, 2, or(list(Number.class, Number.class), list(Boolean.class, Boolean.class))),
+					(_,o)-> o.car() instanceof Number ? binOp(Xor, o.car(), o.car(1)) : o.<Boolean>car() ^ o.<Boolean>car(1) )),
+				"%^^", wrap(new JFun("%^^", 2, (n,o)-> checkN(n, o, 2, Number.class, Number.class), (_,o)-> binOp(Pwr, o.car(), o.car(1)) )),
 				"%<<", wrap(new JFun("%<<", 2, (n,o)-> checkN(n, o, 2, Number.class, Number.class), (_,o)-> binOp(Sl, o.car(), o.car(1)) )),
 				"%>>", wrap(new JFun("%>>", 2, (n,o)-> checkN(n, o, 2, Number.class, Number.class), (_,o)-> binOp(Sr, o.car(), o.car(1)) )),
 				"%>>>", wrap(new JFun("%>>>", 2, (n,o)-> checkN(n, o, 2, Number.class, Number.class), (_,o)-> binOp(Sr0, o.car(), o.car(1)) )),

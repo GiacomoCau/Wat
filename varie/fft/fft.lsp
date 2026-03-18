@@ -1,6 +1,7 @@
 ;;; fast fourier trasformation
 
-(def\ (cx r . i) (list :complex r (optDft i 0d)))
+(def\ (cx r . i)
+  (list :complex r (optDft i 0d)) )
 
 (def\ (c+ (:complex rx ix) (:complex ry iy))
   (cx (+ rx ry) (+ ix iy)) )
@@ -39,6 +40,7 @@
   (if (null? lst) #null
     (cons (cadr lst) (odds (cddr lst))) ))
 
+#|
 (def\ (fft x)
   (if (== (len x) 1) x 
     (let*
@@ -51,10 +53,18 @@
 (def\ (fft x)
   (if (== (len x) 1) x 
     (let ( (even (fft (evens x))) (odd (fft (odds x))) (k -1) )
+      (let ( (aux (map (\ (j) (c* j (cexp (c/ (c* (cx 0 -2) (cx (* pi (++ k)))) (cx (len x)))))) odd)) )
+        (append (map c+ even aux) (map c- even aux)) ))))
+|#
+(def\ (fft x)
+  (if (== (len x) 1) x 
+    (let ( (even (fft (evens x))) (odd (fft (odds x))) (k -1) )
       (def aux (map (\ (j) (c* j (cexp (c/ (c* (cx 0 -2) (cx (* pi (++ k)))) (cx (len x)))))) odd))
       (append (map c+ even aux) (map c- even aux)) )))
 
 (def\ (fftR . rs) (fft (map cx rs)))
+
+;(load "varie/fft/fft.lsp")
 
 (assert (fftR 1 1 1 1 0 0 0 0)
   ((:complex 4.0 0.0)

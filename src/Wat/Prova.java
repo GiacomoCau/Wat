@@ -124,6 +124,11 @@ public class Prova {
 		//System.out.println("1" + 1);
 		//System.out.println(1 + "1");
 		//out.println(System.console());
+		out.println(false ^ false);
+		out.println(true ^ true);
+		out.println(false ^ true);
+		out.println(111 ^ 111);
+		out.println(111 ^ 101);
 	}
 	
 	public static void functions() {
