@@ -79,6 +79,24 @@
     </div>
     <div>
       <h3>
+        ifnull?
+      </h3>
+      <ul>
+        <li>
+          (<b>ifnull?</b> (definiendTree value) thenForm . elseForms)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            Evaluate <b>thenForm</b> if the evaluation of <b>value</b> is #null,
+          <br/>
+            evaluate the <b>elseForms</b> forms as an implicit `begin' with the <b>definiendTree</b> bound to <b>value</b> otherwise.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         when
       </h3>
       <ul>

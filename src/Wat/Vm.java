@@ -1989,7 +1989,7 @@ public class Vm {
 		return cdr == null ? (l.car == null ? null : l) : cons(l.car, listMinusN(cdr));
 	}
 	<T> T print(Object ... objs) {
-		for (var obj: objs) out.print(toString(obj)); out.println();
+		for (var obj: objs) out.print(toString(false, obj)); out.println();
 		return (T)(objs.length == 0 ? inert : objs[objs.length - 1]);
 	}
 	<T> T write(Object ... objs) {

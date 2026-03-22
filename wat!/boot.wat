@@ -1083,7 +1083,7 @@
  |The last `cdr' of lists is alwais #null.
  |#
 
-(def append
+#;(def append
   #|($nm list object)
    |(type function)
    |
@@ -1099,12 +1099,12 @@
   #|($nm list . rest)
    |(type function)
    |
-   |(syntax rest (or (object) (list . rest))))
-   |(derivation (\ (lst lst/object . rest) (apply** (rec\ (append lst . rest) (if (null? rest) lst (%append lst (apply append rest)))) lst lst/object rest))
+   |(syntax rest (or (list/object) (list . rest)))
+   |(derivation (\ (list list/object . rest) (apply** (rec\ (append list . rest) (if (null? rest) list (%append list (apply append rest)))) list list/object rest)))
    |
-   |Return the append of <b>object</b> to the <b>list</b>s.
+   |Return the append of <b>list/object</b> to the <b>list</b>s.
    |The firsts one <b>list</b>s must be all proper list and are copied.
-   |The last one <b>object</b> is not copied (and doesn't even have to be a list).
+   |The last one <b>list/object</b> is not copied (and doesn't even have to be a list).
    |It becomes the `cdr' of the final cons of the copied <b>list</b>s,
    |or is returned directly if <b>list</b> is empty.
    |#
@@ -1746,8 +1746,7 @@
    |#
   %subClass? )
 
-#|
-(def type?
+#;(def type?
   #|($nm object class)
    |(type function)
    |
@@ -1757,7 +1756,7 @@
    |Return #true if the <b>object</b> is an instance of the <b>class</b>, #false otherwise.
    |#
   %type? )
-|#
+
 (def\ (type? object class . classes)
   #|($nm object class . classes)
    |(type function)
@@ -2229,6 +2228,23 @@
 (assert (if! #t 1 2 3))
 (assert (if! #f 1 2) 1)
 
+(defVau (ifnull? (pt value) thenForm . elseForms) env
+  #|($nm (definiendTree value) thenForm . elseForms)
+   |(type fexpr)
+   |
+   |Evaluate <b>thenForm</b> if the evaluation of <b>value</b> is #null,
+   |evaluate the <b>elseForms</b> forms as an implicit `begin' with the <b>definiendTree</b> bound to <b>value</b> otherwise.
+   |#
+  (let1 (value (eval value env))
+    (if (null? value) (eval thenForm env)
+      (eval (list (list* 'vau (list pt) #ignore elseForms) value) env) )))
+
+(assert (ifnull? (v 1) 0 (1+ v)) 2)
+(assert (ifnull? (v ()) 0 (1+ v)) 0)
+(assert (ifnull? ((v) (1)) 0 (1+ v)) 2)
+(assert (ifnull? (v (1)) 0 (1+ (car v))) 2)
+(assert (ifnull? ((a b) (1 2)) 0 (+ a b)) 3)
+ 
 (defMacro (when test . forms)
   #|($nm test . forms)
    |(type macro)
@@ -2379,7 +2395,7 @@
 ;((rec\ (insert p b) (if (null? b) (cons p) (== (car b) 'else) (cons p b) (bind? (newEnv (theEnv)) (car b) p) (cons p b) (cons (car b) (insert p (cdr b))))) '(a b) '((a) (a . b) else))
 ;((rec\ (insert p b) (if (null? b) (cons p) (== (car b) 'else) (cons p b) (bind? (newEnv (theEnv)) (car b) p) (cons p b) (cons (car b) (insert p (cdr b))))) '(a . b) '((a) (a b)))
 
-(defVau (ifBind? (dt exp) then . else) env
+(defVau (ifBind? (dt exp) thenForm . elseForms) env
   #|($nm (definiendTree value) thenForm)
    |($nm (definiendTree value) thenForm elseForm)
    |(type fexpr)
@@ -2389,9 +2405,9 @@
    |#
   (let1 (env+ (newEnv env))
     (if (bind? env+ dt (eval exp env))
-      (eval then env+)
-      (unless (null? else)
-        (eval (car! else) env) ))))
+      (eval thenForm env+)
+      (unless (null? elseForms)
+        (eval (car! elseForms) env) ))))
 
 (defVau (caseVau (#: (or #ignore Symbol) ep) . clauses) env
   #|($nm environmentParameter . clauses)
@@ -2702,7 +2718,7 @@
    |#
   cons!)
 
-(defVau (ifOpt (pt opt) then . else) env
+(defVau (ifOpt (pt opt) thenForm . elseForms) env
   #|($nm (name option) thenForm . elseForms)
    |(type fexpr)
    |
@@ -2712,10 +2728,10 @@
    |#
   (let1 (opt (eval opt env))
     (if (null? opt)
-      (if (null? else) #null
-        (apply begin else env))
+      (if (null? elseForms) #null
+        (apply begin elseForms env))
       (if (list? opt)
-        (eval (list* (list 'vau (list pt) #ignore then) opt) env)
+        (eval (list* (list 'vau (list pt) #ignore thenForm) opt) env)
         (typeError opt '(or () List)) ))))
 
 (assert (ifOpt (a ()) (+ a 1)) #null)
@@ -2723,7 +2739,7 @@
 (assert (ifOpt (a '(2 3)) (+ a 1)) Error :type 'match :operands# -1)
 (assert (ifOpt ((a b) '((2 3))) (+ a b)) 5)
 
-(defVau (ifOpt* (pt opt) then . else) env
+(defVau (ifOpt* (pt opt) thenForm . elseForms) env
   #|($nm (definiendTree option) thenForm . elseForms)
    |(type fexpr)
    |
@@ -2733,10 +2749,10 @@
    |#
   (let1 (opt (eval opt env))
     (if (null? opt)
-      (if (null? else) #null
-        (apply begin else env))
+      (if (null? elseForms) #null
+        (apply begin elseForms env))
       (if (list? opt)
-        (eval (list* (list 'vau pt #ignore then) opt) env)
+        (eval (list* (list 'vau pt #ignore thenForm) opt) env)
         (typeError opt '(or () List)) ))))
 
 (assert (ifOpt* ((a) ()) (+ 1 a)) #null)
@@ -3303,7 +3319,7 @@
    |(type fexpr)
    |
    |(syntax bindings (binding . bindings))
-   |(syntax binding (symbol initForm . incrFrom))
+   |(syntax binding (symbol initForm . (incrForm)))
    |(syntax forms (form . forms) )
    |(syntax form (break . forms))
    |(syntax form (break- n . forms))
@@ -3360,7 +3376,7 @@
   #|($nm binding whileCond . forms)
    |(type macro)
    |
-   |(syntax binding (symbol initForm . incrFrom))
+   |(syntax binding (symbol initForm . (incrForm)))
    |
    |Single variabile for loop.
    |#
@@ -3373,7 +3389,7 @@
    |(type macro)
    |
    |(syntax bindings (binding . bindings))
-   |(syntax binding (symbol initForm . incrForm))
+   |(syntax binding (symbol initForm . (incrForm)))
    |
    |Multile variabiles for loop.
    |#

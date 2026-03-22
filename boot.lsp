@@ -6,4 +6,5 @@
 (load "test/testChk.lsp")
 (load "test/testObjDec.lsp")
 (load "lispx/vm.lispx")
+(load "varie/reference/help.lsp")
 "(load \"boot.lsp\")(load \"wat!/vm.wat\")(load \"lispx/vm.lispx\")"

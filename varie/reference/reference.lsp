@@ -60,6 +60,8 @@
 
 (def* (chapter# def# l) 0 0 #null)
 
+(def help ((.theEnv vm) :rhs :help (newObj :help "(help symbol)\n(type function)\n\nReturn the help page of symbol")))
+
 (def\ (buttons)
   (br)
   (a (@ 'href ($ base (-1+ chapter#) ".html"))
@@ -69,64 +71,74 @@
   (a (@ 'href ($ base (1+ chapter#) ".html"))
     (input (@ 'type "button" 'value ">" 'disabled (== chapter# chapters))) ) )
     
-(def\ (replace$nm s name)
-	(if (startsWith s "\x28;$nm") (@replace s "$nm" ($ "<b>" name "</b>")) s) )
+(def\ (replace$nm s name b)
+	(if (startsWith s "\x28;$nm") (@replace s "$nm" (if b ($ "<b>" name "</b>") name)) s) )
 
-(doList (file files)
-  (close1 (r (@new BufferedReader (@new FileReader file)))
-    (log file)
-    (loop (set! l (readLine r)) (until? (|| (null? l) (startsWith l "#|!"))))
-    (loop (until? (null? l))
-      ;(until? (>= chapter# 2))
-      (+= chapter# 1)
-      (def chapter ($ chapter# ". " (subSeq l 4)))
-      (log 'chapter chapter)
-      (def chapter (encode chapter))
-      (close1 (w (@new PrintWriter ($ "reference/reference" chapter# ".html") "utf-8")) 
-        (dlet ( (htmlDeep 0) (htmlWriter w) )
-          ;(log htmlDeep 0) 
-          (pr "<!DOCTYPE html>")
-          (html
-            (head
-              (title (pr chapter))
-              (meta (@ 'charset "UTF-8"))
-              (style
-                (pr "body { margin-left: 2%; }")
-                (pr "ul { list-style-type: none; }")
-                (pr "a { text-decoration: none; }") ))
-            (body
-              (buttons)
-              (h2 (pr chapter))
-              (unless (startsWith (set! l :rhs (readLine r)) " |#")
-                (ul (li (pr (encode (subSeq l 2))) (until (startsWith (set! l :rhs (readLine r)) " |#") (br (pr (encode (subSeq l 2))))))))
-              (loop
-                (set! l :rhs (readLine r))
-                (break?- 1 (null? l) (buttons))
-                (continue?- 1 (startsWith l "#|!") (buttons))
-                (continue? (startsWith l ";;!") (ul (li (pr (encode (subSeq l 3))))))
-                (continue? (startsWith l "  #|!") (ul (li (until (startsWith (set! l :rhs (readLine r)) "   |#") (br (pr (encode (subSeq l 4))))) )))
-                (continue? (startsWith l "#|") (until (or (startsWith (set! l :rhs (readLine r)) "|#") (startsWith l "  |#")) ))
-                (continue? (! (|| (startsWith l "\x28;def") (startsWith l "\x28;%def"))))
-                (def l0 l)
+(close1 (h (@new PrintWriter "varie/reference/help.lsp" "utf-8"))
+  (@println h (list 'defObj 'help :help "(help symbol)\n(type function)\n\nReturn the help page of symbol"))
+  (doList (file files)
+    (close1 (r (@new BufferedReader (@new FileReader file)))
+      (log file)
+      (loop (set! l (readLine r)) (until? (|| (null? l) (startsWith l "#|!"))))
+      (loop (until? (null? l))
+        ;(until? (>= chapter# 2))
+        (+= chapter# 1)
+        (def chapter ($ chapter# ". " (subSeq l 4)))
+        (log 'chapter chapter)
+        (def chapter (encode chapter))
+        (close1 (w (@new PrintWriter ($ "reference/reference" chapter# ".html") "utf-8")) 
+          (dlet ( (htmlDeep 0) (htmlWriter w) )
+            ;(log htmlDeep 0) 
+            (pr "<!DOCTYPE html>")
+            (html
+              (head
+                (title (pr chapter))
+                (meta (@ 'charset "UTF-8"))
+                (style
+                  (pr "body { margin-left: 2%; }")
+                  (pr "ul { list-style-type: none; }")
+                  (pr "a { text-decoration: none; }") ))
+              (body
+                (buttons)
+                (h2 (pr chapter))
+                (unless (startsWith (set! l :rhs (readLine r)) " |#")
+                  (ul (li (pr (encode (subSeq l 2))) (until (startsWith (set! l :rhs (readLine r)) " |#") (br (pr (encode (subSeq l 2))))))))
                 (loop
-                  (+= def# 1)
-                  (set! l0 l)
-                  (while? (startsWith (set! l :rhs (readLine r)) "\x28;def"))
-                  (div
-                    (h3 (pr (encode (getName l0))))
-                    (ul (li (pr (encode l0)))) ))
-                (if (startsWith l "  #|")
-                  (div
-                    (h3 (pr (encode (def name :rhs (getName l0)))))
-                    (ul
-                      (li
-                        (pr (encode (replace$nm (subSeq l 4) name)))
-                        (loop 
-                          (until? (startsWith (set! l :rhs (readLine r)) "   |#"))
-                          (br (pr (encode (replace$nm (subSeq l 4) name)))) ))))
-                  (div
-                    (h3 (pr (encode (getName l0))))
-                    (ul (li (pr (encode l0)))) )))) )))) ))
+                  (set! l :rhs (readLine r))
+                  (break?- 1 (null? l) (buttons))
+                  (continue?- 1 (startsWith l "#|!") (buttons))
+                  (continue? (startsWith l ";;!") (ul (li (pr (encode (subSeq l 3))))))
+                  (continue? (startsWith l "  #|!") (ul (li (until (startsWith (set! l :rhs (readLine r)) "   |#") (br (pr (encode (subSeq l 4))))) )))
+                  (continue? (startsWith l "#|") (until (or (startsWith (set! l :rhs (readLine r)) "|#") (startsWith l "  |#")) ))
+                  (continue? (! (|| (startsWith l "\x28;def") (startsWith l "\x28;%def"))))
+                  (def l0 l)
+                  (loop
+                    (+= def# 1)
+                    (set! l0 l)
+                    (while? (startsWith (set! l :rhs (readLine r)) "\x28;def"))
+                    (div
+                      (h3 (pr (encode (getName l0))))
+                      (ul (li (pr (encode l0)))) ))
+                  (if (startsWith l "  #|")
+                    (let* ((name (getName l0)) (lh (@new &java.lang.StringBuilder (ifnull? (value (value name help)) "" ($ value "\n\n")))) )
+                      (div
+                        (h3 (pr (encode name)))
+                        (ul
+                          (li
+                            (def ln (subSeq l 4))
+                            (pr (encode (replace$nm ln name #t)))
+                            (loop
+                              (@append lh ($ (@replaceAll (@replaceAll (replace$nm ln name #f) "<b>" "<") "</b>" ">") "\n"))
+                              (until? (startsWith (set! l :rhs (readLine r)) "   |#"))
+                              (set! ln (subSeq l 4))
+                              (br (pr (encode (replace$nm ln name #t)))) ))))
+                         (@setLength lh (-1+ (@length lh)))
+                         (doList (name (if (@contains name " ") (@str2lst vm name) (cons name)))
+                           (help name (@toString lh))
+                           (@println h (list 'help (list 'quote name) (@toString lh)))) )
+                    (div
+                      (h3 (pr (encode (getName l0))))
+                      (ul (li (pr (encode l0)))) )))) )))) )) )
 
 (log chapter# 'chapters def# 'definitions)
 
