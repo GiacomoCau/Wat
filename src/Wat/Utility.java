@@ -42,10 +42,11 @@ import List.ParseException;
 
 public class Utility {
 	
-	/*
+	//*
 	public static void main(String[] args) throws Exception {
-		out.println(new File("reference/*.html").list().length);
-		Files.exists(Path.of(" "));
+		//out.println(new File("reference/*.html").list().length);
+		//Files.exists(Path.of(" "));
+		out.println(encode("..<</b>>..<<b>>..<..>..</b"));
 	}
 	//*/
 	
@@ -190,6 +191,7 @@ public class Utility {
 		return m.appendTail(sb).toString();
 	}
 	
+	/*
 	public static String encode(String a) {
 		if (a == null) return "";
 		if (a.trim().length() == 0) return "&nbsp;";
@@ -220,6 +222,36 @@ public class Utility {
 		}
 		return sb.toString();
 	}
+	/*/
+	public static String encode(String a) {
+		if (a == null) return "";
+		if (a.trim().length() == 0) return "&nbsp;";
+		char c;
+		StringBuffer sb = new StringBuffer(2*a.length());
+		int i = 0, end = a.length();
+		for (; i < end && (c = a.charAt(i)) == ' '; i++) sb.append("&nbsp;&nbsp;");
+		for (; i < end; i++) {
+			switch (c = a.charAt(i)) {
+				case '<'-> {
+					int i2 = i + 1; boolean b = false;
+					if (i2 >= end) { sb.append("&lt;"); break; }
+					if (b = a.charAt(i2) == '/') i2 += 1;
+					if (i2 >= end) { sb.append("&lt;"); break; }
+					if (!a.startsWith("b>", i2)) { sb.append("&lt;"); break; }
+					sb.append(b ? "</b>" : "<b>");
+					i = i2 + 1;
+				}
+				case '>'-> sb.append("&gt;");
+				case '&'-> sb.append("&amp;");
+				case '"'-> sb.append("&quot;");
+				case '\n'-> sb.append("<br>");
+				case '\t'-> sb.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
+				default-> sb.append(c);
+			}
+		}
+		return sb.toString();
+	}
+	//*/
 
 	enum BinOp {
 		//  Integer         Long            BigInteger                           Double                   BigDecimal 

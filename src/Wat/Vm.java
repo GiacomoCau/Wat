@@ -13,6 +13,7 @@ import static Wat.Utility.getField;
 import static Wat.Utility.headAdd;
 import static Wat.Utility.ifnull;
 import static Wat.Utility.isInstance;
+import static Wat.Utility.isSubclass;
 import static Wat.Utility.member;
 import static Wat.Utility.more;
 import static Wat.Utility.or;
@@ -1519,8 +1520,11 @@ public class Vm {
 			// (@getConstructor class . classes) -> class.getConstructor(classes) -> constructor
 			// (@getMethod class name . classes) -> class.getMethod(name, classes) -> method
 			// (@getField class name)            -> class.getField(name) -> field
-			if (name.equals("new") && o0 instanceof Class c && c.getDeclaringClass() == Vm.class && (args.length == 0 || args[0].getClass() != Vm.class)) {
+			if (name.equals("new") && o0 instanceof Class c
+			&& (c.getDeclaringClass() == Vm.class || c.getCanonicalName().startsWith("Ext."))
+			&& (args.length == 0 || args[0].getClass() != Vm.class)) {
 				// (@new Error "assert error!") -> (@new Error vm "assert error!")
+				// (@new &Ext.Foo) -> (@new &Ext.Foo vm)
 				args = headAdd(args, Vm.this);
 			}
 			var classes = getClasses(args);
@@ -2175,7 +2179,7 @@ public class Vm {
 		return set.isEmpty() ? "" : " " + set.stream().map(k-> k /*+ ": ..."*/).collect(joining(", "));
 	}
 	String toString(String name, Class[] classes) {
-		return (name.equals("new") ? "constructor: " : "method: ") + name
+		return (name.equals("new") ? "constructor" : "method " + name)
 			+ "(" + stream(classes).map(Class::getSimpleName).collect(joining(", ")) + ")"
 		;
 	}
@@ -2238,6 +2242,7 @@ public class Vm {
 				"%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } )),
 				// Obj
 				//"%obj?", wrap(new JFun("%Obj?", (Function<Object, Boolean>) obj-> obj instanceof Obj )),
+				/* TODO non più necessario, eliminare
 				"%new", wrap(new JFun("%New", ge(1),
 					(n,o)-> checkM(n, o, 1,
 						or( list(1, 2, Box.class),
@@ -2253,6 +2258,28 @@ public class Vm {
 												or(Symbol.class, Keyword.class, String.class), Any.class) )))))),
 					(_,o)-> at("new").apply(listStar(o.car, this, o.cdr()))
 				)),
+				*/
+				"%new", wrap(new JFun("%New", ge(1),
+					(n,o)->{ 
+						var chk = checkM(n, o, 1, Class.class);
+						if (chk instanceof Suspension s) return s;
+						if (!(chk instanceof Integer len)) return resumeError(chk, symbol("Integer"));
+						return !isSubclass(o.<Class>car(), Box.class, Obj.class)
+							? len 
+							: checkM(n, o, 1,
+								or( list(1, 2, Box.class),
+									list(1, more, Obj.class,
+										or( list(or(Symbol.class, Keyword.class, String.class), Any.class),
+											list(1, more, Env.class,
+												or(Symbol.class, Keyword.class, String.class), Any.class),
+											list(1, more, Throwable.class,
+												or(Symbol.class, Keyword.class, String.class), Any.class),
+											list(1, more, String.class,
+												or(	list(or(Symbol.class, Keyword.class, String.class), Any.class),
+													list(1, more, Throwable.class,
+														or(Symbol.class, Keyword.class, String.class), Any.class) ))))));
+					},
+					(_,o)-> at("new").apply(o))),
 				// Env & Obj
 				//"%objEnv?", wrap(new JFun("%ObjEnv?", (Function<Object, Boolean>) obj-> obj instanceof ObjEnv )),
 				"%get", wrap(new JFun("%Get", 2, (n,o)-> checkN(n, o, 2, or(Symbol.class, Keyword.class, String.class), ObjEnv.class), (_,o)-> o.<ObjEnv>car(1).get(o.car)) ),

@@ -892,6 +892,7 @@
    |($nm objClass string . bindings)
    |($nm objClass throwableObject . bindings)
    |($nm objClass string throwableObject . bindings)
+   |($nm class . args)
    |(type function)
    |
    |(syntax bindings (attribute value . bindings))
@@ -909,6 +910,7 @@
    |($nm name objClass string . bindings)
    |($nm name objClass throwableObject . bindings)
    |($nm name objClass string throwableObject . bindings)
+   |($nm name class . args)
    |(type macro)
    |
    |(syntax bindings (attribute value . bindings))
