@@ -249,9 +249,9 @@
 
   (defTest restartBind.no-exit.2
     (restartBind ((continue (\ () 'whatever)))
-      (ifOpt? (restartHandler (findRestart 'continue))
-        (invokeRestart restartHandler)
-        (assert#t #f) ))
+      (ifnull? (restartHandler (findRestart 'continue))
+        (assert#t #f)
+        (invokeRestart restartHandler) ))
     'whatever )
 
   (defTest restartBind.handled
@@ -349,9 +349,9 @@
 
   (defTest restartCase.no-exit.2
     (restartCase ((continue (\ () 'whatever)))
-      (ifOpt? (restartHandler (findRestart 'continue))
-        (invokeRestart restartHandler)
-        (assert#t #f) ))
+      (ifnull? (restartHandler (findRestart 'continue))
+        (assert#t #f)
+        (invokeRestart restartHandler) ))
     'whatever )
 
   (defTest restartCase.handled
@@ -436,46 +436,42 @@
   (defTest findRestart.3
     (block exit
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg)))))
-        (ifOpt? (r (findRestart 'x))
-          (begin
-            (assert#t (eq? (getValue r 'restartName) 'x))
-            (assert#t (eq? (getValue r 'associatedConditions) '()))
-            (invokeRestart r 1) )
-          (assert#t #f) )))
+        (ifnull? (r (findRestart 'x))
+          (assert#t #f)
+          (assert#t (eq? (getValue r 'restartName) 'x))
+          (assert#t (eq? (getValue r 'associatedConditions) '()))
+          (invokeRestart r 1) )))
     1001 )
 
   (defTest findRestart.3b
     (restartCase ((x (\ (arg) (+ 1000 arg))))
-      (ifOpt? (r (findRestart 'x))
-        (begin
-          (assert#t (eq? (getValue r 'restartName) 'x))
-          (assert#t (eq? (getValue r 'associatedConditions) '()))
-          (invokeRestart r 1) )
-        (assert#t #f) ))
+      (ifnull? (r (findRestart 'x))
+        (assert#t #f)
+        (assert#t (eq? (getValue r 'restartName) 'x))
+        (assert#t (eq? (getValue r 'associatedConditions) '()))
+        (invokeRestart r 1) ))
     1001 )
 
   (defTest findRestart.4
     (block exit
       (def c (newSimpleError "foo"))
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg))) :associatedConditions (list c)))
-        (ifOpt? (r (findRestart 'x c))
-          (begin
-            (assert#t (eq? (getValue r 'restartName) 'x))
-            (assert#t (eq? (getValue r 'associatedConditions) (list c)))
-            (invokeRestart r 1) )
-          (assert#t #f) )))
+        (ifnull? (r (findRestart 'x c))
+          (assert#t #f)
+          (assert#t (eq? (getValue r 'restartName) 'x))
+          (assert#t (eq? (getValue r 'associatedConditions) (list c)))
+          (invokeRestart r 1) )))
     1001 )
 
   (defTest findRestart.4b
     (begin
       (def c (newSimpleError "foo"))
       (restartBind ((x (\ (arg) (+ 1000 arg)) :associatedConditions (list c)))
-        (ifOpt? (r (findRestart 'x c))
-          (begin
-            (assert#t (eq? (getValue r 'restartName) 'x))
-            (assert#t (eq? (getValue r 'associatedConditions) (list c)))
-            (invokeRestart r 1) )
-          (assert#t #f) )))
+        (ifnull? (r (findRestart 'x c))
+          (assert#t #f)
+          (assert#t (eq? (getValue r 'restartName) 'x))
+          (assert#t (eq? (getValue r 'associatedConditions) (list c)))
+          (invokeRestart r 1) )))
     1001 )
 
   (defTest findRestart.5
@@ -483,9 +479,9 @@
       (def c (newSimpleError "foo"))
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg))) :associatedConditions (list c)))
         (restartBind ((x (\ (arg) (returnFrom exit (- 1000 arg)))))
-          (ifOpt? (r (findRestart 'x c))
-            (invokeRestart r 1)
-            (assert#t #f) ))))
+          (ifnull? (r (findRestart 'x c))
+            (assert#t #f)
+            (invokeRestart r 1) ))))
     999 )
 
   (defTest findRestart.5b
@@ -493,9 +489,9 @@
       (def c (newSimpleError "foo"))
       (restartCase ((x (\ (arg) (+ 1000 arg)) :associatedConditions (list c)))
         (restartCase ((x (\ (arg) (- 1000 arg))))
-          (ifOpt? (r (findRestart 'x c))
-            (invokeRestart r 1)
-            (assert#t #f) ))))
+          (ifnull? (r (findRestart 'x c))
+            (assert#t #f)
+            (invokeRestart r 1) ))))
     999 )
 
   (defTest findRestart.6
@@ -504,9 +500,9 @@
       (def d (newSimpleError "bar"))
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg))) :associatedConditions (list c)))
         (restartBind ((x (\ (arg) (returnFrom exit (- 1000 arg))) :associatedConditions (list d)))
-          (ifOpt? (r (findRestart 'x c))
-            (invokeRestart r 1)
-            (assert#t #f) ))))
+          (ifnull? (r (findRestart 'x c))
+            (assert#t #f)
+            (invokeRestart r 1) ))))
     1001 )
 
   (defTest findRestart.6b
@@ -515,10 +511,10 @@
       (def d (newSimpleError "bar"))
       (restartCase ((x (\ (arg) (+ 1000 arg)) :associatedConditions (list c)))
         (restartCase ((x (\ (arg) (- 1000 arg)) :associatedConditions (list d)))
-          (ifOpt? (r (findRestart 'x c))
-            (invokeRestart r 1)
-            (assert#t #f) ))))
-    1001 ) )
+          (ifnull? (r (findRestart 'x c))
+            (assert#t #f)
+            (invokeRestart r 1) ))))
+    1001 ))
 
 (defSuite computeRestarts
 
@@ -622,7 +618,7 @@
           ( (SimpleError
               (\ (e)
                 (let*
-                  ( (handler (optDft (findRestart 'r e)))
+                  ( (handler (optDft (some (findRestart 'r e))))
                     (aCn (getValue handler 'associatedConditions)) )
                   (assert#t (member? e aCn))
                   (returnFrom ok) ))) )
@@ -650,7 +646,7 @@
 
   (defTest invokeRestartInteractively.1a
     (restartBind ((r1 (\ (arg1 arg2) (+ arg1 arg2)) :interactiveFunction (\ () (list 1 2))))
-      (invokeRestartInteractively (optDft (findRestart 'r1))) )
+      (invokeRestartInteractively (optDft (some (findRestart 'r1)))) )
     3 )
 
   (defTest invokeRestartInteractively.1b
@@ -660,7 +656,7 @@
 
   (defTest invokeRestartInteractively.1c
     (restartBind ((r1 (\ () (+ 1 2))))
-      (invokeRestartInteractively (optDft (findRestart 'r1))) )
+      (invokeRestartInteractively (optDft (some (findRestart 'r1)))) )
     3 )
 
   (defTest invokeRestartInteractively.2

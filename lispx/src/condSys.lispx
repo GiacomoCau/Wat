@@ -262,14 +262,13 @@
    |#
   (let1 signal (handlerFrame (dget *conditionHandlerFrame*))
     ;; Payload to `lispx::findHandler' is always #null for condition handlers.
-    (ifOpt? ((handler frame) (lispx::findHandler condition handlerFrame #null))
-      (begin
-        ;; Handler found; call it, passing along frame.
-        (lispx::callConditionHandler handler frame condition)
-        ;; Signal unhandled: continue search for handlers.
-        (signal (getValue frame 'parentFrame)))
+    (ifnull? ((handler frame) (lispx::findHandler condition handlerFrame #null))
       ;; No handler found, return #inert.
-      #inert )))
+      #inert     
+      ;; Handler found; call it, passing along frame.
+      (lispx::callConditionHandler handler frame condition)
+      ;; Signal unhandled: continue search for handlers.
+      (signal (getValue frame 'parentFrame))) ))
 
 (def\ lispx::callConditionHandler (handler handlerFrame condition)
   #|($nm handler handlerFrame condition)
@@ -386,9 +385,9 @@
    |#
   (caseType restartDesignator
     (Symbol
-      (ifOpt? (restartHandler (findRestart restartDesignator))
-        (lispx::applyHandlerFunction restartHandler (function restartHandler))
-        (restartError restartDesignator)))
+      (ifnull? (restartHandler (findRestart restartDesignator))
+        (restartError restartDesignator)
+        (lispx::applyHandlerFunction restartHandler (function restartHandler)) ))
     (RestartHandler
       (lispx::applyHandlerFunction restartDesignator (function restartDesignator)))
     (else
@@ -409,11 +408,11 @@
    |The <b>payload</b> parameter can be used to pass in an optional condition if we are looking for a restart handler (see `findRestart').
    |If we are looking for a condition handler, it is always #null.
    |#
-  (whenOpt? (handlerFrame handlerFrame)
+  (ifnull? ((handlerFrame) handlerFrame) #null
     (block found
       (doList (handler (getValue handlerFrame 'handlers))
         (when (lispx::handlerApplicable? handler object payload)
-          (returnFrom found (some (list handler handlerFrame)))))
+          (returnFrom found (list handler handlerFrame) )))
       (lispx::findHandler object (getValue handlerFrame 'parentFrame) payload))))
 
 (def\ findRestart (name . condition)
@@ -422,10 +421,8 @@
    |
    |Find a restart handler by <b>name</b>, optionally limited to restarts associated with a particular <b>condition</b>.
    |#
-  (whenOpt?
-    ( (handler #ignore)
-        (lispx::findHandler name (dget *restartHandlerFrame*) condition) )
-    (some handler) ))
+  (ifnull? ((handler #ignore) (lispx::findHandler name (dget *restartHandlerFrame*) condition) ) #null
+    handler ))
 
 (defGeneric lispx::handlerApplicable? (handler object payload)
   #|($nm handler object payload)
@@ -465,7 +462,10 @@
    |
    |A restart handler is applicable to an optional condition ...
    |#
-  (ifOpt? (condition condition)
+  (ifnull? ((condition) condition)
+    ;; ...if we are not looking for restarts associated with a
+    ;; particular condition then every handler is applicable.
+    #t
     ;; ...if we are looking for restarts associated with a
     ;; particular condition...
     (let1 (aCn (getValue handler 'associatedConditions))
@@ -475,10 +475,7 @@
           #t
           ;; ...or if the condition we are looking is one of the
           ;; handler's associated conditions.
-          (member? condition aCn)))
-    ;; ...if we are not looking for restarts associated with a
-    ;; particular condition then every handler is applicable.
-    #t))
+          (member? condition aCn))) ))
 
 (def\ computeRestarts condition
   #|($nm . condition)
@@ -491,14 +488,13 @@
   (let computeRestarts
     ( (restarts '())
       (handlerFrame (dget *restartHandlerFrame*)) )
-    (ifOpt? (handlerFrame handlerFrame)
+    (ifnull? ((handlerFrame) handlerFrame) restarts 
       (computeRestarts
         (append restarts
           (remove
             (\ (restart) (not (lispx::restartHandlerApplicableToCondition? restart condition)))
             (getValue handlerFrame 'handlers) ))
-        (getValue handlerFrame 'parentFrame) )
-      restarts )))
+        (getValue handlerFrame 'parentFrame) ) )))
 
 
 (defClass RestartError (Error)
