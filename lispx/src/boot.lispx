@@ -1590,21 +1590,21 @@
    |#
   %error )
 
-(def\ newTypeError (datum expected)
+(def\ newTypeError (msg datum expected)
   #|($nm datum expected)
    |(type function)
    |
-   |Return a new type error with <b>datum</b> and <b>expected</b>.
+   |Return a new type error with <b>msg</b> <b>datum</b> and <b>expected</b>.
    |#
-  (new Error "not a {expected}: {datum}" :type 'type :datum datum :expected expected) )
+  (new Error ($ msg ", not a {expected}: {datum}") :type 'type :datum datum :expected expected) )
 
-(def\ typeError (datum expected)
+(def\ typeError (msg datum expected)
   #|($nm datum expected)
    |(type function)
    |
-   |Signal a type error with <b>datum</b> and <b>expected</b>.
+   |Signal a type error with <b>msg</b> <b>datum</b> and <b>expected</b>.
    |#
-  (error (newTypeError datum expected)) )
+  (error (newTypeError msg datum expected)) )
 
 (def test
   #|($nm name expression value)
@@ -2135,7 +2135,6 @@
     (if (null? value) (eval thenForm env)
       (eval (list (list* 'vau (list pt) #ignore elseForms) value) env) )))
 
-
 (defMacro (when test . forms)
   #|($nm test . forms)
    |(type macro)
@@ -2571,7 +2570,7 @@
         (apply begin elseForms env))
       (if (list? opt)
         (eval (list* (list 'vau (list pt) #ignore thenForm) opt) env)
-        (typeError opt '(or () List)) ))))
+        (typeError "invalid ifOpt argument" opt '(or () List)) ))))
 
 (defVau (ifOpt* (pt opt) thenForm . elseForms) env
   #|($nm (definiendTree option) thenForm . elseForms)
@@ -2587,7 +2586,7 @@
         (apply begin elseForms env))
       (if (list? opt)
         (eval (list* (list 'vau pt #ignore thenForm) opt) env)
-        (typeError opt '(or () List)) ))))
+        (typeError "invalid ifOpt* argument" opt '(or () List)) ))))
 
 (defMacro whenOpt ((pt opt) . forms)
   #|($nm (name option) . forms)

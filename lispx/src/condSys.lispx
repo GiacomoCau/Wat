@@ -392,7 +392,7 @@
     (RestartHandler
       (lispx::applyHandlerFunction restartDesignator (function restartDesignator)))
     (else
-      (typeError restartDesignator '(or Symbol RestartHandler) ) )))
+      (typeError "invalid restartDesignator" restartDesignator '(or Symbol RestartHandler) ) )))
 
 (def\ lispx::findHandler (object handlerFrame payload)
   #|($nm object handlerFrame payload)

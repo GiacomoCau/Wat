@@ -78,8 +78,12 @@
 		},
 		//*/
 		"symbol": {
-			"name": "symbol",		
-			"match": "(?<!')\\w+"
+			"name": "symbol",	
+			"begin": "\\\\\\|",		
+			"end": "\\|",
+			"patterns" : [
+				{ "match":  "(\\\\\\||[^|])+" }
+			]
 		},
 		"list": {
 			"begin": "\\(",

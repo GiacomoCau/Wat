@@ -1648,21 +1648,21 @@
    |#
   %error )
 
-(def\ newTypeError (datum expected)
+(def\ newTypeError (msg datum expected)
   #|($nm datum expected)
    |(type function)
    |
-   |Return a new type error with <b>datum</b> and <b>expected</b>.
+   |Return a new type error with <b>msg</b> <b>datum</b> and <b>expected</b>.
    |#
-  (new Error "not a {expected}: {datum}" :type 'type :datum datum :expected expected) )
+  (new Error ($ msg ", not a {expected}: {datum}") :type 'type :datum datum :expected expected) )
 
-(def\ typeError (datum expected)
+(def\ typeError (msg datum expected)
   #|($nm datum expected)
    |(type function)
    |
-   |Signal a type error with <b>datum</b> and <b>expected</b>.
+   |Signal a type error with <b>msg</b> <b>datum</b> and <b>expected</b>.
    |#
-  (error (newTypeError datum expected)) )
+  (error (newTypeError msg datum expected)) )
 
 (def test
   #|($nm name expression value)
@@ -2734,7 +2734,7 @@
         (apply begin elseForms env))
       (if (list? opt)
         (eval (list* (list 'vau (list pt) #ignore thenForm) opt) env)
-        (typeError opt '(or () List)) ))))
+        (typeError "invalid if&opt? argument" opt '(or () List)) ))))
 
 (assert (ifOpt (a ()) (+ a 1)) #null)
 (assert (ifOpt (a '(2)) (+ a 1)) 3)
@@ -2755,7 +2755,7 @@
         (apply begin elseForms env))
       (if (list? opt)
         (eval (list* (list 'vau pt #ignore thenForm) opt) env)
-        (typeError opt '(or () List)) ))))
+        (typeError "invalid if&opt?* argument" opt '(or () List)) ))))
 
 (assert (ifOpt* ((a) ()) (+ 1 a)) #null)
 (assert (ifOpt* ((a) ()) (+ 1 a) 0) 0)

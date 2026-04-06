@@ -143,7 +143,7 @@
 (defSuite newTypeError
 
   (defTest newTypeError.1
-    (let ((e (newTypeError "foo" 'Number)))
+    (let ((e (newTypeError "invalid foo" "foo" 'Number)))
       (assert#t (matchType?* e Error :type 'type :datum "foo" :expected 'Number))
       (assert#t (type? e Error))
       (assert#t (type? e Condition))
@@ -844,7 +844,7 @@
      (caseType (+ 2 2)
        (String 2)
        (Boolean 1)
-       (else => (\ (v) (typeError v '(or String Boolean)))) )
+       (else => (\ (v) (typeError "invalid type" v '(or String Boolean)))) )
      Error :type 'type :datum 4 :expected '(or String Boolean))) )
 
 (defSuite not
@@ -2733,39 +2733,39 @@
         (set env y (+ y 1))))
     '(5 5)))
 
-(defSuite opt
+(defSuite optDft
 
-  (defTest opt.1
+  (defTest optDft.1
     (optDft '())
     #null)
 
-  (defTest opt.2
+  (defTest optDft.2
     (optDft '() "default")
     "default")
 
-  (defTest opt.3
+  (defTest optDft.3
     (optDft (some 1))
     1)
 
-  (defTest opt.4
+  (defTest optDft.4
     (optDft (some 1) "default")
     1)
 
-  (defTest opt.5
+  (defTest optDft.5
     (signalsError?
      (optDft)
      Error :type 'match :operands# +1))
 
-  (defTest opt.6
+  (defTest optDft.6
     (signalsError?
      (optDft 1)
      Error :type 'type :datum 1 :expected '(or () List) ))
 
-  (defTest opt.lazy.1
+  (defTest optDft.lazy.1
     (optDft (some 1) (error (newSimpleError "foo")))
     1)
 
-  (defTest opt.lazy.2
+  (defTest optDft.lazy.2
     (signalsError?
      (optDft #null (error (newSimpleError "foo")))
      SimpleError :type 'simple @getMessage "foo")))
@@ -2804,18 +2804,18 @@
     (optDft* '(4 () 6) 1 2 3 4)
     '(4 2 6 4)) )
 
-(defSuite getOpt
+(defSuite optDft!
 
-  (defTest getOpt.1
+  (defTest optDft!.1
     (signalsError?
      (optDft!)
      Error :type 'match :operands# +1))
 
-  (defTest getOpt.2
+  (defTest optDft!.2
     (optDft! (some 2))
     2)
 
-  (defTest getOpt.3
+  (defTest optDft!.3
     (signalsError?
      (optDft! #null)
      Error @getMessage "Option is #null")))
@@ -2838,84 +2838,84 @@
 
 (defSuite ifOpt
 
-  (defTest ifOpt1
+  (defTest ifOpt.1
     (ifOpt (x (some 12))
                x
                14)
     12)
 
-  (defTest ifOpt2
+  (defTest ifOpt.2
     (ifOpt (x #null)
                x
                14)
     14)
 
-  (defTest ifOpt3
+  (defTest ifOpt.3
     (signalsError?
      (ifOpt)
      Error :type 'match :operands# +2))
 
-  (defTest ifOpt4
+  (defTest ifOpt.4
     (signalsError?
      (ifOpt (name))
      Error :type 'match :operands# +1))
 
-  (defTest ifOpt4.2
+  (defTest ifOpt.4.2
     (signalsError?
      (ifOpt (name) then)
      Error :type 'match :operands# +1))
 
-  (defTest ifOpt5
+  (defTest ifOpt.5
     (signalsError?
      (ifOpt (name option))
      Error :type 'match :operands# +1))
 
-  (defTest ifOpt6
+  (defTest ifOpt.6
     (signalsError?
      (ifOpt (name option) then)
      Error :type 'unboundSymbol :symbol 'option)))
 
 (defSuite whenOpt
 
-  (defTest whenOpt0
+  (defTest whenOpt.0
     (whenOpt (x (some 12)))
     #null)
 
-  (defTest whenOpt1
+  (defTest whenOpt.1
     (whenOpt (x (some 12))
                  x)
     12)
 
-  (defTest whenOpt2
+  (defTest whenOpt.2
     (whenOpt (x #null)
                  x)
     #null)
 
-  (defTest whenOpt3
+  (defTest whenOpt.3
     (signalsError?
      (whenOpt)
      Error :type 'match :operands# +1))
 
-  (defTest whenOpt4
+  (defTest whenOpt.4
     (signalsError?
      (whenOpt (name))
      Error :type 'match :operands# +1)))
 
 (defSuite unlessOpt
 
-  (defTest unlessOpt0
+  (defTest unlessOpt.0
     (unlessOpt (some 12) 2 3 (+ 2 2))
     #null)
 
-  (defTest unlessOpt1
+  (defTest unlessOpt.1
     (unlessOpt #null 2 3 (+ 2 2))
     4)
 
-  (defTest unlessOpt2
+  (defTest unlessOpt.2
     (unlessOpt #null)
     #null)
 
-  (defTest unlessOpt3
+  (defTest unlessOpt.3
     (signalsError?
      (unlessOpt)
      Error :type 'match :operands# +1)))
