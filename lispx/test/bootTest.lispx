@@ -2836,88 +2836,88 @@
      (some 1 2)
      Error :type 'match :operands# -1)))
 
-(defSuite ifOpt
+(defSuite ifOpt?
 
-  (defTest ifOpt.1
-    (ifOpt (x (some 12))
+  (defTest ifOpt?.1
+    (ifOpt? (x (some 12))
                x
                14)
     12)
 
-  (defTest ifOpt.2
-    (ifOpt (x #null)
+  (defTest ifOpt?.2
+    (ifOpt? (x #null)
                x
                14)
     14)
 
-  (defTest ifOpt.3
+  (defTest ifOpt?.3
     (signalsError?
-     (ifOpt)
+     (ifOpt?)
      Error :type 'match :operands# +2))
 
-  (defTest ifOpt.4
+  (defTest ifOpt?.4
     (signalsError?
-     (ifOpt (name))
+     (ifOpt? (name))
      Error :type 'match :operands# +1))
 
-  (defTest ifOpt.4.2
+  (defTest ifOpt?.4.2
     (signalsError?
-     (ifOpt (name) then)
+     (ifOpt? (name) then)
      Error :type 'match :operands# +1))
 
-  (defTest ifOpt.5
+  (defTest ifOpt?.5
     (signalsError?
-     (ifOpt (name option))
+     (ifOpt? (name option))
      Error :type 'match :operands# +1))
 
-  (defTest ifOpt.6
+  (defTest ifOpt?.6
     (signalsError?
-     (ifOpt (name option) then)
+     (ifOpt? (name option) then)
      Error :type 'unboundSymbol :symbol 'option)))
 
-(defSuite whenOpt
+(defSuite whenOpt?
 
-  (defTest whenOpt.0
-    (whenOpt (x (some 12)))
+  (defTest whenOpt?.0
+    (whenOpt? (x (some 12)))
     #null)
 
-  (defTest whenOpt.1
-    (whenOpt (x (some 12))
+  (defTest whenOpt?.1
+    (whenOpt? (x (some 12))
                  x)
     12)
 
-  (defTest whenOpt.2
-    (whenOpt (x #null)
+  (defTest whenOpt?.2
+    (whenOpt? (x #null)
                  x)
     #null)
 
-  (defTest whenOpt.3
+  (defTest whenOpt?.3
     (signalsError?
-     (whenOpt)
+     (whenOpt?)
      Error :type 'match :operands# +1))
 
-  (defTest whenOpt.4
+  (defTest whenOpt?.4
     (signalsError?
-     (whenOpt (name))
+     (whenOpt? (name))
      Error :type 'match :operands# +1)))
 
-(defSuite unlessOpt
+(defSuite unlessOpt?
 
-  (defTest unlessOpt.0
-    (unlessOpt (some 12) 2 3 (+ 2 2))
+  (defTest unlessOpt?.0
+    (unlessOpt? (some 12) 2 3 (+ 2 2))
     #null)
 
-  (defTest unlessOpt.1
-    (unlessOpt #null 2 3 (+ 2 2))
+  (defTest unlessOpt?.1
+    (unlessOpt? #null 2 3 (+ 2 2))
     4)
 
-  (defTest unlessOpt.2
-    (unlessOpt #null)
+  (defTest unlessOpt?.2
+    (unlessOpt? #null)
     #null)
 
-  (defTest unlessOpt.3
+  (defTest unlessOpt?.3
     (signalsError?
-     (unlessOpt)
+     (unlessOpt?)
      Error :type 'match :operands# +1)))
 
 (defSuite classOf

@@ -249,7 +249,7 @@
 
   (defTest restartBind.no-exit.2
     (restartBind ((continue (\ () 'whatever)))
-      (ifOpt (restartHandler (findRestart 'continue))
+      (ifOpt? (restartHandler (findRestart 'continue))
         (invokeRestart restartHandler)
         (assert#t #f) ))
     'whatever )
@@ -349,7 +349,7 @@
 
   (defTest restartCase.no-exit.2
     (restartCase ((continue (\ () 'whatever)))
-      (ifOpt (restartHandler (findRestart 'continue))
+      (ifOpt? (restartHandler (findRestart 'continue))
         (invokeRestart restartHandler)
         (assert#t #f) ))
     'whatever )
@@ -436,7 +436,7 @@
   (defTest findRestart.3
     (block exit
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg)))))
-        (ifOpt (r (findRestart 'x))
+        (ifOpt? (r (findRestart 'x))
           (begin
             (assert#t (eq? (getValue r 'restartName) 'x))
             (assert#t (eq? (getValue r 'associatedConditions) '()))
@@ -446,7 +446,7 @@
 
   (defTest findRestart.3b
     (restartCase ((x (\ (arg) (+ 1000 arg))))
-      (ifOpt (r (findRestart 'x))
+      (ifOpt? (r (findRestart 'x))
         (begin
           (assert#t (eq? (getValue r 'restartName) 'x))
           (assert#t (eq? (getValue r 'associatedConditions) '()))
@@ -458,7 +458,7 @@
     (block exit
       (def c (newSimpleError "foo"))
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg))) :associatedConditions (list c)))
-        (ifOpt (r (findRestart 'x c))
+        (ifOpt? (r (findRestart 'x c))
           (begin
             (assert#t (eq? (getValue r 'restartName) 'x))
             (assert#t (eq? (getValue r 'associatedConditions) (list c)))
@@ -470,7 +470,7 @@
     (begin
       (def c (newSimpleError "foo"))
       (restartBind ((x (\ (arg) (+ 1000 arg)) :associatedConditions (list c)))
-        (ifOpt (r (findRestart 'x c))
+        (ifOpt? (r (findRestart 'x c))
           (begin
             (assert#t (eq? (getValue r 'restartName) 'x))
             (assert#t (eq? (getValue r 'associatedConditions) (list c)))
@@ -483,7 +483,7 @@
       (def c (newSimpleError "foo"))
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg))) :associatedConditions (list c)))
         (restartBind ((x (\ (arg) (returnFrom exit (- 1000 arg)))))
-          (ifOpt (r (findRestart 'x c))
+          (ifOpt? (r (findRestart 'x c))
             (invokeRestart r 1)
             (assert#t #f) ))))
     999 )
@@ -493,7 +493,7 @@
       (def c (newSimpleError "foo"))
       (restartCase ((x (\ (arg) (+ 1000 arg)) :associatedConditions (list c)))
         (restartCase ((x (\ (arg) (- 1000 arg))))
-          (ifOpt (r (findRestart 'x c))
+          (ifOpt? (r (findRestart 'x c))
             (invokeRestart r 1)
             (assert#t #f) ))))
     999 )
@@ -504,7 +504,7 @@
       (def d (newSimpleError "bar"))
       (restartBind ((x (\ (arg) (returnFrom exit (+ 1000 arg))) :associatedConditions (list c)))
         (restartBind ((x (\ (arg) (returnFrom exit (- 1000 arg))) :associatedConditions (list d)))
-          (ifOpt (r (findRestart 'x c))
+          (ifOpt? (r (findRestart 'x c))
             (invokeRestart r 1)
             (assert#t #f) ))))
     1001 )
@@ -515,7 +515,7 @@
       (def d (newSimpleError "bar"))
       (restartCase ((x (\ (arg) (+ 1000 arg)) :associatedConditions (list c)))
         (restartCase ((x (\ (arg) (- 1000 arg)) :associatedConditions (list d)))
-          (ifOpt (r (findRestart 'x c))
+          (ifOpt? (r (findRestart 'x c))
             (invokeRestart r 1)
             (assert#t #f) ))))
     1001 ) )

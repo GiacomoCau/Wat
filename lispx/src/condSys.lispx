@@ -194,9 +194,9 @@
         :handlerFunction
            (the Apv (eval functionForm env))
         :interactiveFunction
-           (whenOpt (iFn (optValue :interactiveFunction properties)) (some (the Apv (eval iFn env))))
+           (whenOpt? (iFn (optValue :interactiveFunction properties)) (some (the Apv (eval iFn env))))
         :associatedConditions
-           (whenOpt (aCn (optValue :associatedConditions properties)) (the List (eval aCn env))) ))
+           (whenOpt? (aCn (optValue :associatedConditions properties)) (the List (eval aCn env))) ))
     *restartHandlerFrame* ))
 
 
@@ -262,7 +262,7 @@
    |#
   (let1 signal (handlerFrame (dget *conditionHandlerFrame*))
     ;; Payload to `lispx::findHandler' is always #null for condition handlers.
-    (ifOpt ((handler frame) (lispx::findHandler condition handlerFrame #null))
+    (ifOpt? ((handler frame) (lispx::findHandler condition handlerFrame #null))
       (begin
         ;; Handler found; call it, passing along frame.
         (lispx::callConditionHandler handler frame condition)
@@ -374,7 +374,7 @@
   (lispx::invokeRestartWithArgumentsProducingFunction
     restartDesignator
     (\ (restartHandler)
-      (whenOpt (iFn (getValue restartHandler 'interactiveFunction))
+      (whenOpt? (iFn (getValue restartHandler 'interactiveFunction))
         (iFn) ))))
 
 (def\ lispx::invokeRestartWithArgumentsProducingFunction (restartDesignator function)
@@ -386,7 +386,7 @@
    |#
   (caseType restartDesignator
     (Symbol
-      (ifOpt (restartHandler (findRestart restartDesignator))
+      (ifOpt? (restartHandler (findRestart restartDesignator))
         (lispx::applyHandlerFunction restartHandler (function restartHandler))
         (restartError restartDesignator)))
     (RestartHandler
@@ -409,7 +409,7 @@
    |The <b>payload</b> parameter can be used to pass in an optional condition if we are looking for a restart handler (see `findRestart').
    |If we are looking for a condition handler, it is always #null.
    |#
-  (whenOpt (handlerFrame handlerFrame)
+  (whenOpt? (handlerFrame handlerFrame)
     (block found
       (doList (handler (getValue handlerFrame 'handlers))
         (when (lispx::handlerApplicable? handler object payload)
@@ -422,7 +422,7 @@
    |
    |Find a restart handler by <b>name</b>, optionally limited to restarts associated with a particular <b>condition</b>.
    |#
-  (whenOpt
+  (whenOpt?
     ( (handler #ignore)
         (lispx::findHandler name (dget *restartHandlerFrame*) condition) )
     (some handler) ))
@@ -465,7 +465,7 @@
    |
    |A restart handler is applicable to an optional condition ...
    |#
-  (ifOpt (condition condition)
+  (ifOpt? (condition condition)
     ;; ...if we are looking for restarts associated with a
     ;; particular condition...
     (let1 (aCn (getValue handler 'associatedConditions))
@@ -491,7 +491,7 @@
   (let computeRestarts
     ( (restarts '())
       (handlerFrame (dget *restartHandlerFrame*)) )
-    (ifOpt (handlerFrame handlerFrame)
+    (ifOpt? (handlerFrame handlerFrame)
       (computeRestarts
         (append restarts
           (remove
