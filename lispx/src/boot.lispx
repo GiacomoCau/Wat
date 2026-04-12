@@ -2557,38 +2557,20 @@
   cons!)
 
 (defVau (ifOpt? (pt opt) thenForm . elseForms) env
-  #|($nm (name option) thenForm . elseForms)
-   |(type fexpr)
-   |
-   |Single-value <b>option</b> destructuring.
-   |Evaluate the <b>thenForm</b> form with the <b>name</b> bound to the contents of the <b>option</b> if the evaluation of <b>option</b> is !#null,
-   |evaluate the <b>elseForms</b> forms as an implicit `begin' otherwise.
-   |#
-  (let1 (opt (eval opt env))
-    (if (null? opt)
-      (if (null? elseForms) #null
-        (apply begin elseForms env))
-      (if (list? opt)
-        (eval (list* (list 'vau (list pt) #ignore thenForm) opt) env)
-        (typeError "invalid ifOpt? argument" opt '(or () List)) ))))
-
-(defVau (ifOpt?* (pt opt) thenForm . elseForms) env
   #|($nm (definiendTree option) thenForm . elseForms)
    |(type fexpr)
    |
    |Multi-valued <b>option</b> destructuring.
-   |Evaluate <b>thenForm</b> form with the <b>definiendTree</b> bound to <b>option</b> value if the evaluation of <b>option</b> is !#null,
+   |Evaluate the <b>thenForm</b> form with the <b>definiendTree</b> bound to the <b>option</b> value if the evaluation of <b>option</b> is !#null,
    |evaluate the <b>elseForms</b> forms as an implicit `begin' otherwise.
    |#
   (let1 (opt (eval opt env))
     (if (null? opt)
       (if (null? elseForms) #null
-        (apply begin elseForms env))
-      (if (list? opt)
-        (eval (list* (list 'vau pt #ignore thenForm) opt) env)
-        (typeError "invalid ifOpt?* argument" opt '(or () List)) ))))
+        (apply begin elseForms env) )
+      (eval (list (list 'vau (cons pt) #ignore thenForm) opt) env) )))
 
-(defMacro whenOpt? ((pt opt) . forms)
+(defMacro (whenOpt? (pt opt) . forms)
   #|($nm (name option) . forms)
    |(type macro)
    |
@@ -2598,7 +2580,7 @@
    |#
   (list 'ifOpt? (list pt opt) (if (null? forms) #null (cons 'begin forms))) )
 
-(defMacro unlessOpt? (opt . forms)
+(defMacro (unlessOpt? opt . forms)
   #|($nm option . forms)
    |(type macro)
    |
@@ -2642,8 +2624,8 @@
    |the evaluation if <b>default</b> if present, #inert otherwise.
    |The <b>default</b> is evaluated lazily, only when the <b>option</b> is #null.
    |#
-  (ifOpt? (opt (eval opt env)) opt
-    (ifOpt? (dft (eval (cons 'list dft) env)) dft) ))
+  (ifOpt? ((opt) (eval opt env)) opt
+    (ifOpt? ((dft) (eval (cons 'list dft) env)) dft) ))
 
 (defVau optDft* (lst . dfts) env
   #|($nm list . defaults)

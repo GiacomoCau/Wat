@@ -2759,7 +2759,7 @@
   (defTest optDft.6
     (signalsError?
      (optDft 1)
-     Error :type 'type :datum 1 :expected '(or () List) ))
+     Error :type 'match :operands# +1))
 
   (defTest optDft.lazy.1
     (optDft (some 1) (error (newSimpleError "foo")))
@@ -2839,13 +2839,13 @@
 (defSuite ifOpt?
 
   (defTest ifOpt?.1
-    (ifOpt? (x (some 12))
+    (ifOpt? ((x) (some 12))
                x
                14)
     12)
 
   (defTest ifOpt?.2
-    (ifOpt? (x #null)
+    (ifOpt? ((x) #null)
                x
                14)
     14)
@@ -2878,16 +2878,16 @@
 (defSuite whenOpt?
 
   (defTest whenOpt?.0
-    (whenOpt? (x (some 12)))
+    (whenOpt? ((x) (some 12)))
     #null)
 
   (defTest whenOpt?.1
-    (whenOpt? (x (some 12))
+    (whenOpt? ((x) (some 12))
                  x)
     12)
 
   (defTest whenOpt?.2
-    (whenOpt? (x #null)
+    (whenOpt? ((x) #null)
                  x)
     #null)
 
