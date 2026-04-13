@@ -48,11 +48,11 @@
     </div>
     <div>
       <h3>
-        ifOpt?
+        if!Opt?
       </h3>
       <ul>
         <li>
-          (<b>ifOpt?</b> (definiendTree option) thenForm . elseForms)
+          (<b>if!Opt?</b> (definiendTree option) thenForm . elseForms)
           <br/>
             (type fexpr)
           <br/>
@@ -72,7 +72,7 @@
       </h3>
       <ul>
         <li>
-          (<b>whenOpt?</b> (name option) . forms)
+          (<b>whenOpt?</b> (definiendTree option) . forms)
           <br/>
             (type macro)
           <br/>
@@ -82,7 +82,7 @@
           <br/>
             Return #null if the evaluation of <b>option</b> it's #null,
           <br/>
-            evaluate <b>forms</b> as an implicit `begin' with the <b>name</b> bound to the contents of the <b>option</b>, otherwise.
+            evaluate <b>forms</b> as an implicit `begin' with the <b>definiendTree</b> bound to the value of the <b>option</b>, otherwise.
         </li>
       </ul>
     </div>
@@ -124,7 +124,7 @@
           <br/>
             &nbsp;
           <br/>
-            Multi-armed ifOpt?.
+            Multi-armed destructure <b>option</b>.
           <br/>
             Evaluate <b>option</b> and go through the <b>clauses</b> in order.
           <br/>

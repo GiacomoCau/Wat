@@ -2720,6 +2720,7 @@
    |#
   cons!)
 
+#|
 (defVau (ifOpt? (pt opt) thenForm . elseForms) env
   #|($nm (definiendTree option) thenForm . elseForms)
    |(type fexpr)
@@ -2739,16 +2740,43 @@
 (assert (ifOpt? ((a) (2)) (+ a 1)) 3)
 (assert (ifOpt? ((a) (2 3)) (+ a 1)) Error :type 'match :operands# -1)
 (assert (ifOpt? ((a b) (2 3)) (+ a b)) 5)
+|#
+
+(defVau (if!Opt? (pt opt) thenForm . elseForms) env
+  #|($nm (definiendTree option) thenForm . elseForms)
+   |(type fexpr)
+   |
+   |Multi-valued <b>option</b> destructuring.
+   |Evaluate the <b>thenForm</b> form with the <b>definiendTree</b> bound to the <b>option</b> value if the evaluation of <b>option</b> is !#null,
+   |evaluate the <b>elseForms</b> forms as an implicit `begin' otherwise.
+   |#
+  (let1 (opt (eval opt env))
+    (if (null? opt)  (eval thenForm env)
+      (null? elseForms) #null 
+      (eval (list (list* 'vau (cons pt) #ignore elseForms) opt) env) )))
+
+(assert (if!Opt? (a ()) #null (+ a 1)) #null)
+(assert (if!Opt? (a 2) #null (+ a 1)) 3)
+(assert (if!Opt? ((a) (2)) #null (+ a 1)) 3)
+(assert (if!Opt? ((a) (2 3)) #null (+ a 1)) Error :type 'match :operands# -1)
+(assert (if!Opt? ((a b) (2 3)) #null (+ a b)) 5)
 
 (defMacro (whenOpt? (pt opt) . forms)
-  #|($nm (name option) . forms)
+  #|($nm (definiendTree option) . forms)
    |(type macro)
    |
    |Destructure the <b>option</b>.
    |Return #null if the evaluation of <b>option</b> it's #null,
-   |evaluate <b>forms</b> as an implicit `begin' with the <b>name</b> bound to the contents of the <b>option</b>, otherwise.
+   |evaluate <b>forms</b> as an implicit `begin' with the <b>definiendTree</b> bound to the value of the <b>option</b>, otherwise.
    |#
-  (list 'ifOpt? (list pt opt) (if (null? forms) #null (cons 'begin forms))) )
+  (list* 'if!Opt? (list pt opt) #null forms) )
+
+(assert (whenOpt? (a ()) (+ a 1)) #null)
+(assert (whenOpt? (a 2)) #null)
+(assert (whenOpt? (a 2) (+ a 1)) 3)
+(assert (whenOpt? ((a) (2)) (+ a 1)) 3)
+(assert (whenOpt? ((a) (2 3)) (+ a 1)) Error :type 'match :operands# -1)
+(assert (whenOpt? ((a b) (2 3)) (+ a b)) 5)
 
 (defMacro (unlessOpt? opt . forms)
   #|($nm option . forms)
@@ -2757,7 +2785,11 @@
    |Destructure the <b>option</b>.
    |Return the evaluation of <b>forms</b> as an implicit `begin' if the evaluation of <b>option</b> is #null, #null otherwise.
    |#
-  (list* 'ifOpt? (list #ignore opt) #null (if (null? forms) #null (cons 'begin forms))) )
+  (list 'if!Opt? (list #ignore opt) (if (null? forms) #null (cons 'begin forms))) )
+
+(assert (unlessOpt? ()) #null)
+(assert (unlessOpt? () 1 2 3) 3)
+(assert (unlessOpt?  4 1 2 3) #null)
 
 (defVau (caseOpt opt . clauses) env
   #|($nm option . clauses)
@@ -2767,7 +2799,7 @@
    |(syntax clause (else . forms))
    |(syntax clause (definiendTree . forms))
    |
-   |Multi-armed ifOpt?.
+   |Multi-armed destructure <b>option</b>.
    |Evaluate <b>option</b> and go through the <b>clauses</b> in order.
    |If <b>option</b> is #null return #null.
    |If <b>clauses</b> is #null return #null.
@@ -2786,9 +2818,9 @@
               (loop clauses) )))))))
 
 (assert (caseOpt () ((a) 1) ((a b) (+ a b))) ())
-(assert (caseOpt '(2) ((a) 1) ((a b) (+ a b))) 1)
-(assert (caseOpt '(1 2) ((a) 1) ((a b) (+ a b))) 3)
-(assert (caseOpt '(1 2 3) ((a) 1) ((a b) (+ a b))) #null)
+(assert (caseOpt (2) ((a) 1) ((a b) (+ a b))) 1)
+(assert (caseOpt (1 2) ((a) 1) ((a b) (+ a b))) 3)
+(assert (caseOpt (1 2 3) ((a) 1) ((a b) (+ a b))) #null)
 
 (defVau (optDft opt . dft) env
   #|($nm option)
@@ -2799,12 +2831,13 @@
    |the evaluation if <b>default</b> if present, #inert otherwise.
    |The <b>default</b> is evaluated lazily, only when the <b>option</b> is #null.
    |#
-  (ifOpt? ((opt) (eval opt env)) opt
-    (ifOpt? ((dft) (eval (cons 'list dft) env)) dft) ))
+  (if!Opt? ((opt) (eval opt env))
+    (whenOpt? ((dft) (eval (cons 'list dft) env)) dft) 
+    opt ))
 
 (assert (optDft () 10) 10)
-(assert (optDft '(2) 10) 2)
-(assert (optDft '(2 3) 10))
+(assert (optDft (2) 10) 2)
+(assert (optDft (2 3) 10) Error :type 'match :operands# -1)
 
 (defVau optDft* (lst . dfts) env
   #|($nm list . defaults)
@@ -2827,7 +2860,7 @@
         (cons (car lst)
           (loop (cdr lst) (if (null? dfts) #null (cdr dfts)))) ))))
 
-(assert (optDft* '(1 () 3) 1 2 3 4) '(1 2 3 4))
+(assert (optDft* (1 () 3) 1 2 3 4) (1 2 3 4))
 
 (def\ optDft! (opt)
   #|($nm option)

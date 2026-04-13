@@ -2836,18 +2836,15 @@
      (some 1 2)
      Error :type 'match :operands# -1)))
 
+#|
 (defSuite ifOpt?
 
   (defTest ifOpt?.1
-    (ifOpt? ((x) (some 12))
-               x
-               14)
+    (ifOpt? ((x) (some 12)) x 14)
     12)
 
   (defTest ifOpt?.2
-    (ifOpt? ((x) #null)
-               x
-               14)
+    (ifOpt? ((x) #null) x 14)
     14)
 
   (defTest ifOpt?.3
@@ -2873,6 +2870,50 @@
   (defTest ifOpt?.6
     (signalsError?
      (ifOpt? (name option) then)
+     Error :type 'unboundSymbol :symbol 'option)))
+|#
+
+(defSuite if!Opt?
+
+  (defTest if!Opt?.1
+    (if!Opt? ((x) (12)) 14 x)
+    12)
+
+  (defTest if!Opt?.1bis
+    (if!Opt? (x 12) 14 x)
+    12)
+
+  (defTest if!Opt?.2
+    (if!Opt? ((x) #null) 14 x)
+    14)
+
+  (defTest if!Opt?.2bis
+    (if!Opt? (x #null) 14 x)
+    14)
+
+  (defTest if!Opt?.3
+    (signalsError?
+     (if!Opt?)
+     Error :type 'match :operands# +2))
+
+  (defTest if!Opt?.4
+    (signalsError?
+     (if!Opt? dt)
+     Error :type 'match :operands# +2))
+
+  (defTest if!Opt?.4.2
+    (signalsError?
+     (if!Opt? dt thenForm)
+     Error :type 'match :operands# +2))
+
+  (defTest if!Opt?.5
+    (signalsError?
+     (if!Opt? (dt option))
+     Error :type 'match :operands# +1))
+
+  (defTest if!Opt?.6
+    (signalsError?
+     (if!Opt? (dt option) thenForm)
      Error :type 'unboundSymbol :symbol 'option)))
 
 (defSuite whenOpt?
