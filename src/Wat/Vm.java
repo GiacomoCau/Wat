@@ -739,9 +739,6 @@ public class Vm {
 	<T> T matchError(String msg, Object datum, int operands) {
 		return error(msg, "type", symbol("match"), "datum", datum, "operands#", operands);
 	}
-	<T> T matchError(String msg, Object datum, int operands, List expr) {
-		return error(msg, "type", symbol("match"), "datum", datum, "operands#", operands, "expr", expr);
-	}
 	<T> T matchError(String msg, Object datum, int operands, Object subex, List expr) {
 		return error(msg, "type", symbol("match"), "datum", datum, "operands#", operands, "subex", subex, "expr", expr);
 	}

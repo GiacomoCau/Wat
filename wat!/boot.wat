@@ -2230,23 +2230,6 @@
 (assert (if! #t 1 2 3))
 (assert (if! #f 1 2) 1)
 
-(defVau (ifnull? (pt value) thenForm . elseForms) env
-  #|($nm (definiendTree value) thenForm . elseForms)
-   |(type fexpr)
-   |
-   |Evaluate <b>thenForm</b> if the evaluation of <b>value</b> is #null,
-   |evaluate the <b>elseForms</b> forms as an implicit `begin' with the <b>definiendTree</b> bound to <b>value</b> otherwise.
-   |#
-  (let1 (value (eval value env))
-    (if (null? value) (eval thenForm env)
-      (eval (list (list* 'vau (list pt) #ignore elseForms) value) env) )))
-
-(assert (ifnull? (v 1) 0 (1+ v)) 2)
-(assert (ifnull? (v ()) 0 (1+ v)) 0)
-(assert (ifnull? ((v) (1)) 0 (1+ v)) 2)
-(assert (ifnull? (v (1)) 0 (1+ (car v))) 2)
-(assert (ifnull? ((a b) (1 2)) 0 (+ a b)) 3)
- 
 (defMacro (when test . forms)
   #|($nm test . forms)
    |(type macro)
@@ -2720,43 +2703,37 @@
    |#
   cons!)
 
-#|
-(defVau (ifOpt? (pt opt) thenForm . elseForms) env
+(defVau (ifnull? (pt expr) thenForm . elseForms) env
+  #|($nm (definiendTree expr) thenForm . elseForms)
+   |(type fexpr)
+   |
+   |Conditional <b>expr</b> destructuring.
+   |Evaluate the <b>thenForm</b> form if the evaluation of <b>expr</b> is #null,
+   |evaluate the <b>elseForms</b> forms, with the <b>definiendTree</b> bound to the <b>expr</b> value, as an implicit `begin' otherwise.
+   |#
+  (let1 (expr (eval expr env))
+    (if (null? expr)  (eval thenForm env)
+      (eval (list (list* 'vau (cons pt) #ignore elseForms) expr) env) )))
+
+(assert (ifnull? (v 1) 0 (1+ v)) 2)
+(assert (ifnull? (v ()) 0 (1+ v)) 0)
+(assert (ifnull? ((v) (1)) 0 (1+ v)) 2)
+(assert (ifnull? (v (1)) 0 (1+ (car v))) 2)
+(assert (ifnull? ((a b) (1 2)) 0 (+ a b)) 3)
+ 
+(defMacro (if!Opt? ((#: (or #ignore Cons) pt) opt) thenForm . elseForms)
   #|($nm (definiendTree option) thenForm . elseForms)
    |(type fexpr)
    |
-   |Multi-valued <b>option</b> destructuring.
-   |Evaluate the <b>thenForm</b> form with the <b>definiendTree</b> bound to the <b>option</b> value if the evaluation of <b>option</b> is !#null,
-   |evaluate the <b>elseForms</b> forms as an implicit `begin' otherwise.
+   |Conditional <b>option</b> destructuring.
+   |Evaluate the <b>thenForm</b> form if the evaluation of <b>option</b> is #null,
+   |return #null il elseforms is #null
+   |evaluate the <b>elseForms</b> forms, with the <b>definiendTree</b> bound to the <b>option</b> value, as an implicit `begin' otherwise.
    |#
-  (let1 (opt (eval opt env))
-    (if (null? opt)
-      (if (null? elseForms) #null
-        (apply begin elseForms env) )
-      (eval (list (list 'vau (cons pt) #ignore thenForm) opt) env) )))
+  (list* 'ifnull? (list pt (list '%: '(or Null List) opt)) thenForm (if (null? elseForms) (#null) elseForms)) )
 
-(assert (ifOpt? (a ()) (+ a 1)) #null)
-(assert (ifOpt? (a 2) (+ a 1)) 3)
-(assert (ifOpt? ((a) (2)) (+ a 1)) 3)
-(assert (ifOpt? ((a) (2 3)) (+ a 1)) Error :type 'match :operands# -1)
-(assert (ifOpt? ((a b) (2 3)) (+ a b)) 5)
-|#
-
-(defVau (if!Opt? (pt opt) thenForm . elseForms) env
-  #|($nm (definiendTree option) thenForm . elseForms)
-   |(type fexpr)
-   |
-   |Multi-valued <b>option</b> destructuring.
-   |Evaluate the <b>thenForm</b> form with the <b>definiendTree</b> bound to the <b>option</b> value if the evaluation of <b>option</b> is !#null,
-   |evaluate the <b>elseForms</b> forms as an implicit `begin' otherwise.
-   |#
-  (let1 (opt (eval opt env))
-    (if (null? opt)  (eval thenForm env)
-      (null? elseForms) #null 
-      (eval (list (list* 'vau (cons pt) #ignore elseForms) opt) env) )))
-
-(assert (if!Opt? (a ()) #null (+ a 1)) #null)
-(assert (if!Opt? (a 2) #null (+ a 1)) 3)
+(assert (if!Opt? (a ()) #null (+ a 1)))
+(assert (if!Opt? (a 2) #null (+ a 1)))
 (assert (if!Opt? ((a) (2)) #null (+ a 1)) 3)
 (assert (if!Opt? ((a) (2 3)) #null (+ a 1)) Error :type 'match :operands# -1)
 (assert (if!Opt? ((a b) (2 3)) #null (+ a b)) 5)
@@ -2771,9 +2748,9 @@
    |#
   (list* 'if!Opt? (list pt opt) #null forms) )
 
-(assert (whenOpt? (a ()) (+ a 1)) #null)
-(assert (whenOpt? (a 2)) #null)
-(assert (whenOpt? (a 2) (+ a 1)) 3)
+(assert (whenOpt? (a ()) (+ a 1)))
+(assert (whenOpt? (a 2)))
+(assert (whenOpt? (a 2) (+ a 1)))
 (assert (whenOpt? ((a) (2)) (+ a 1)) 3)
 (assert (whenOpt? ((a) (2 3)) (+ a 1)) Error :type 'match :operands# -1)
 (assert (whenOpt? ((a b) (2 3)) (+ a b)) 5)
@@ -2789,7 +2766,7 @@
 
 (assert (unlessOpt? ()) #null)
 (assert (unlessOpt? () 1 2 3) 3)
-(assert (unlessOpt?  4 1 2 3) #null)
+(assert (unlessOpt?  4 1 2 3))
 
 (defVau (caseOpt opt . clauses) env
   #|($nm option . clauses)
@@ -2838,8 +2815,9 @@
 (assert (optDft () 10) 10)
 (assert (optDft (2) 10) 2)
 (assert (optDft (2 3) 10) Error :type 'match :operands# -1)
+(assert (optDft ((2)) 10) (2))
 
-(defVau optDft* (lst . dfts) env
+(defVau (optDft* lst . dfts) env
   #|($nm list . defaults)
    |(type fexpr)
    |
@@ -2862,7 +2840,7 @@
 
 (assert (optDft* (1 () 3) 1 2 3 4) (1 2 3 4))
 
-(def\ optDft! (opt)
+(def\ (optDft! opt)
   #|($nm option)
    |(type function)
    |

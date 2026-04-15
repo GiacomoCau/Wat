@@ -262,7 +262,7 @@
    |#
   (let1 signal (handlerFrame (dget *conditionHandlerFrame*))
     ;; Payload to `lispx::findHandler' is always #null for condition handlers.
-    (if!Opt? ((handler frame) (lispx::findHandler condition handlerFrame #null))
+    (ifnull? ((handler frame) (lispx::findHandler condition handlerFrame #null))
       ;; No handler found, return #inert.
       #inert     
       ;; Handler found; call it, passing along frame.
@@ -385,7 +385,7 @@
    |#
   (caseType restartDesignator
     (Symbol
-      (if!Opt? (restartHandler (findRestart restartDesignator))
+      (ifnull? (restartHandler (findRestart restartDesignator))
         (restartError restartDesignator)
         (lispx::applyHandlerFunction restartHandler (function restartHandler)) ))
     (RestartHandler
@@ -462,7 +462,7 @@
    |
    |A restart handler is applicable to an optional condition ...
    |#
-  (if!Opt? ((condition) condition)
+  (ifnull? ((condition) condition)
     ;; ...if we are not looking for restarts associated with a
     ;; particular condition then every handler is applicable.
     #t
@@ -488,7 +488,7 @@
   (let computeRestarts
     ( (restarts '())
       (handlerFrame (dget *restartHandlerFrame*)) )
-    (if!Opt? ((handlerFrame) handlerFrame) restarts 
+    (ifnull? ((handlerFrame) handlerFrame) restarts 
       (computeRestarts
         (append restarts
           (remove
