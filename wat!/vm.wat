@@ -170,7 +170,7 @@
   (list* 'test name expression (if (null? expected?) '(#t) expected?)))
 
 (defMacro defTest* (name . forms)
-  (list defTest name (list* prog1 #t forms)) )
+  (list 'defTest name (list* 'prog1 #t forms)) )
 
 (defVau defSuite (name . forms) env
   (apply begin forms env) )

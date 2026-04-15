@@ -2124,17 +2124,6 @@
   ;(list 'if (list '! test) thenForm (list* 'begin forms)) ;; more else form 
   (list 'if (list '! test) thenForm (if (null? forms) #inert (car! forms))) ) ;; one else form
 
-(defVau (ifnull? (pt value) thenForm . elseForms) env
-  #|($nm (definiendTree value) thenForm . elseForms)
-   |(type fexpr)
-   |
-   |Evaluate <b>thenForm</b> if the evaluation of <b>value</b> is #null,
-   |evaluate the <b>elseForms</b> forms as an implicit `begin' with the <b>definiendTree</b> bound to <b>value</b> otherwise.
-   |#
-  (let1 (value (eval value env))
-    (if (null? value) (eval thenForm env)
-      (eval (list (list* 'vau (list pt) #ignore elseForms) value) env) )))
-
 (defMacro (when test . forms)
   #|($nm test . forms)
    |(type macro)
@@ -2556,34 +2545,39 @@
    |#
   cons!)
 
-#|
-(defVau (ifOpt? (pt opt) thenForm . elseForms) env
-  #|($nm (definiendTree option) thenForm . elseForms)
+(defVau (ifnull? (pt expr) thenForm . elseForms) env
+  #|($nm (definiendTree expr) thenForm . elseForms)
    |(type fexpr)
    |
-   |Multi-valued <b>option</b> destructuring.
-   |Evaluate the <b>thenForm</b> form with the <b>definiendTree</b> bound to the <b>option</b> value if the evaluation of <b>option</b> is !#null,
-   |evaluate the <b>elseForms</b> forms as an implicit `begin' otherwise.
+   |Conditional <b>expr</b> destructuring.
+   |Evaluate the <b>thenForm</b> form if the evaluation of <b>expr</b> is #null,
+   |evaluate the <b>elseForms</b> forms, with the <b>definiendTree</b> bound to the <b>expr</b> value, as an implicit `begin' otherwise.
    |#
-  (let1 (opt (eval opt env))
-    (if (null? opt)
-      (if (null? elseForms) #null
-        (apply begin elseForms env) )
-      (eval (list (list 'vau (cons pt) #ignore thenForm) opt) env) )))
-|#
+  (let1 (expr (eval expr env))
+    (if (null? expr) (eval thenForm env)
+      (eval (list (list* 'vau (cons pt) #ignore elseForms) expr) env) )))
 
-(defVau (if!Opt? (pt opt) thenForm . elseForms) env
+#;(defMacro (if!Opt? (pt opt) thenForm . elseForms)
   #|($nm (definiendTree option) thenForm . elseForms)
    |(type fexpr)
    |
-   |Multi-valued <b>option</b> destructuring.
-   |Evaluate the <b>thenForm</b> form with the <b>definiendTree</b> bound to the <b>option</b> value if the evaluation of <b>option</b> is !#null,
-   |evaluate the <b>elseForms</b> forms as an implicit `begin' otherwise.
+   |Conditional <b>option</b> destructuring.
+   |Evaluate the <b>thenForm</b> form if the evaluation of <b>option</b> is #null,
+   |return #null il elseforms is #null
+   |evaluate the <b>elseForms</b> forms, with the <b>definiendTree</b> bound to the <b>option</b> value, as an implicit `begin' otherwise.
    |#
-  (let1 (opt (eval opt env))
-    (if (null? opt)  (eval thenForm env)
-      (null? elseForms) #null 
-      (eval (list (list* 'vau (cons pt) #ignore elseForms) opt) env) )))
+  (list* 'ifnull? (list pt opt) thenForm (if (null? elseForms) (#null) elseForms)) )
+
+(defMacro (if!Opt? ((#: (or #ignore Cons) pt) opt) thenForm . elseForms)
+  #|($nm (definiendTree option) thenForm . elseForms)
+   |(type fexpr)
+   |
+   |Conditional <b>option</b> destructuring.
+   |Evaluate the <b>thenForm</b> form if the evaluation of <b>option</b> is #null,
+   |return #null il elseforms is #null
+   |evaluate the <b>elseForms</b> forms, with the <b>definiendTree</b> bound to the <b>option</b> value, as an implicit `begin' otherwise.
+   |#
+  (list* 'ifnull? (list pt (list '%: '(or Null List) opt)) thenForm (if (null? elseForms) (#null) elseForms)) )
 
 (defMacro (whenOpt? (pt opt) . forms)
   #|($nm (definiendTree option) . forms)
@@ -2643,7 +2637,7 @@
     (whenOpt? ((dft) (eval (cons 'list dft) env)) dft) 
     opt ))
 
-(defVau optDft* (lst . dfts) env
+(defVau (optDft* lst . dfts) env
   #|($nm list . defaults)
    |(type fexpr)
    |
@@ -2664,7 +2658,7 @@
         (cons (car lst)
           (loop (cdr lst) (if (null? dfts) #null (cdr dfts)))) ))))
 
-(def\ optDft! (opt)
+(def\ (optDft! opt)
   #|($nm option)
    |(type function)
    |

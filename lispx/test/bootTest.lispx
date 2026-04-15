@@ -2759,7 +2759,7 @@
   (defTest optDft.6
     (signalsError?
      (optDft 1)
-     Error :type 'match :operands# +1))
+     Error :type 'type :datum 1 :expected '(or () List)))
 
   (defTest optDft.lazy.1
     (optDft (some 1) (error (newSimpleError "foo")))
@@ -2879,16 +2879,8 @@
     (if!Opt? ((x) (12)) 14 x)
     12)
 
-  (defTest if!Opt?.1bis
-    (if!Opt? (x 12) 14 x)
-    12)
-
   (defTest if!Opt?.2
     (if!Opt? ((x) #null) 14 x)
-    14)
-
-  (defTest if!Opt?.2bis
-    (if!Opt? (x #null) 14 x)
     14)
 
   (defTest if!Opt?.3
@@ -2908,12 +2900,12 @@
 
   (defTest if!Opt?.5
     (signalsError?
-     (if!Opt? (dt option))
+     (if!Opt? ((dt) option))
      Error :type 'match :operands# +1))
 
   (defTest if!Opt?.6
     (signalsError?
-     (if!Opt? (dt option) thenForm)
+     (if!Opt? ((dt) option) thenForm)
      Error :type 'unboundSymbol :symbol 'option)))
 
 (defSuite whenOpt?

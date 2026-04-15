@@ -48,6 +48,26 @@
     </div>
     <div>
       <h3>
+        ifnull?
+      </h3>
+      <ul>
+        <li>
+          (<b>ifnull?</b> (definiendTree expr) thenForm . elseForms)
+          <br/>
+            (type fexpr)
+          <br/>
+            &nbsp;
+          <br/>
+            Conditional <b>expr</b> destructuring.
+          <br/>
+            Evaluate the <b>thenForm</b> form if the evaluation of <b>expr</b> is #null,
+          <br/>
+            evaluate the <b>elseForms</b> forms, with the <b>definiendTree</b> bound to the <b>expr</b> value, as an implicit `begin' otherwise.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         if!Opt?
       </h3>
       <ul>
@@ -58,11 +78,13 @@
           <br/>
             &nbsp;
           <br/>
-            Multi-valued <b>option</b> destructuring.
+            Conditional <b>option</b> destructuring.
           <br/>
-            Evaluate the <b>thenForm</b> form with the <b>definiendTree</b> bound to the <b>option</b> value if the evaluation of <b>option</b> is !#null,
+            Evaluate the <b>thenForm</b> form if the evaluation of <b>option</b> is #null,
           <br/>
-            evaluate the <b>elseForms</b> forms as an implicit `begin' otherwise.
+            return #null il elseforms is #null
+          <br/>
+            evaluate the <b>elseForms</b> forms, with the <b>definiendTree</b> bound to the <b>option</b> value, as an implicit `begin' otherwise.
         </li>
       </ul>
     </div>

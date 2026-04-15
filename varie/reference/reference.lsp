@@ -120,7 +120,7 @@
                       (h3 (pr (encode (getName l0))))
                       (ul (li (pr (encode l0)))) ))
                   (if (startsWith l "  #|")
-                    (let* ((name (getName l0)) (lh (@new &java.lang.StringBuilder (ifnull? (value (value name help)) "\n" ($ value "\n\n")))) )
+                    (let* ((name (getName l0)) (lh (@new &java.lang.StringBuilder (ifnull? (value (value name help)) "" ($ value "\n\n")))) )
                       (div
                         (h3 (pr (encode name)))
                         (ul
