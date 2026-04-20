@@ -32,7 +32,7 @@
       (unless (&& (== x xn) (== y yn) (== i (->i dn)))
         (print "c: " xn " " yn " " dn ": " #f) ))
     ((l) (set! i (if (== i 0) 3 (-1+ i))))
-    ((r) (set! i (if (== i 3) 0 (1+ i))))
+    ((r) (set! i (if (== i 3) 0 ( 1+ i))))
     ((->i d) (prog1 (def i :rhs (@indexOf "NESO" d)) (when (== i -1) (error "illegal d!"))))
     ((->d i) (@charAt "NESO" i)) )) ))
 

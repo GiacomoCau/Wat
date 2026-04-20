@@ -1,5 +1,5 @@
 
-(defVau (iterate (var val) . forms) env
+(defVau (iterate ((#: Symbol var) val) . forms) env
   (def* (val env) (eval val env) (newEnv env var #inert))
   (def (next? next)
     (caseType val
@@ -8,7 +8,7 @@
       (String (let ((i 0) (l (@length val))) (list (\ () (< i l)) (\ () (@charAt val (++. i))))))
       (Object[] (let ((i 0) (l (.length val))) (list (\ () (< i l)) (\ () (@get Array val (++. i))))))
       (Generator (let1 (b #t) (list (\ () b) (\ () (if (type? (next* val) Generator) (val :value) (set! b :prv #f) val)))))
-      (else (error "tipo non previsto")) ))
+      (else (error "tipo non iterabile")) ))
   (while (next?)
     (apply begin forms (env :cnt var (next))) ))
 
@@ -19,14 +19,8 @@
     (String (let ((i 0) (l (@length val))) (list (\ () (< i l)) (\ () (@charAt val (++. i))))))
     (Object[] (let ((i 0) (l (.length val))) (list (\ () (< i l)) (\ () (@get Array val (++. i))))))
     (Generator (let1 (b #t) (list (\ () b) (\ () (if (type? (next* val) Generator) (val :value) (set! b :prv #f) val)))))
-    (else (error "tipo non previsto")) ))
+    (else (error "tipo non iterabile")) ))
 
-(defVau (iterate ((#: Symbol var) val) . forms) env
-  (def (next? next) (iterator (eval val env)))
-  (def env (newEnv env))
-  (while (next?)
-    (apply begin forms (env :cnt var (next))) ))
-  
 (defVau (iterate ((#: Symbol var) val) . forms) env
   (def* ((next? next) env) (iterator (eval val env)) (newEnv env))
   (while (next?)

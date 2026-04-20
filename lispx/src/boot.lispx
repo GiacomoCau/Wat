@@ -3076,7 +3076,7 @@
    |
    |Redefine the primitive %loop to add the clauses <b>for</b> and <b>for1</b> and the forms <b>break</b>, <b>continue</b>, <b>while</b> and <b>until</b>.
    |#
-  (let1 (%loop ((.parent (theEnv)) '%loop))
+  (let1 (%loop ((.vmEnv vm) '%loop))
     (vau forms env
       (let1 (%deep (let1 (%deep (value :%deep env)) (if (null? %deep) 0 (1+ %deep))))
         (let ( (break (symbol ($ 'break %deep)))

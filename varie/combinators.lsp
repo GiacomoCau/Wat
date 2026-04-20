@@ -11,3 +11,8 @@
 (def\ (phi f g h) (\ (x) (g (f x) (h x))))
 (def\ (b1 f g) (\ (x y) (f (g x y))))
 (def\ (phi1 f g h) (\ (x y) (g (f x y) (h x y))))
+
+(def\ (b* f g) (\ x (f (apply g x))))
+(def\ (phi* f g h) (\ x (g (f x) (h x))))
+(def mean (phi* (_ (apply + _)) / length))
+(assert (mean 1 2 3 4 5) 3)

@@ -5,26 +5,26 @@
 
 (def\ (collatzLength n)
   (let count ([x n] [steps 0])
-    (if (== x 1) steps
+    (if (1? x) steps
       (count (if (even? x) (/ x 2) (1+ (* 3 x))) (1+ steps)) )))
 
 (def\ (collatzLength n)
   ((rec\ (count x steps)
-     (if (== x 1) steps
+     (if (1? x) steps
        (count (if (even? x) (/ x 2) (1+ (* 3 x))) (1+ steps)) )) n 0 ))
 
 (def\ (findLongestCollatz limit)
-  (let search ([i 1] [bestN 1] [bestLen 0])
-    (if (>= i limit) (list bestN bestLen)
-      (let ([len (collatzLength i)])
+  (let search ([n 1] [bestN 1] [bestLen 0])
+    (if (>= n limit) (list bestN bestLen)
+      (let ([len (collatzLength n)])
         (if (> len bestLen)
-          (search (1+ i) i len)
-          (search (1+ i) bestN bestLen))))))
+          (search (1+ n) n len)
+          (search (1+ n) bestN bestLen))))))
 
 (def\ (countSpecial limit)
-  (let loop ([i 1] [count 0])
-    (if (>= i limit) count
-      (loop (1+ i) (if (^ (0? (% i 3)) (0? (% i 7))) count (1+ count))) )))
+  (let loop ([n 1] [count 0])
+    (if (>= n limit) count
+      (loop (1+ n) (if (^ (0? (% n 3)) (0? (% n 7))) count (1+ count))) )))
 
 (def\ (string->number str) (@valueOf Integer str) )
 
