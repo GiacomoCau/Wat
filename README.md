@@ -2,6 +2,8 @@
 
 ### Java Kernel Wat LispX
 
+#### A Java-flavored Lisp
+
 Java port of [wat-js](https://github.com/GiacomoCau/wat-js)
 with more then a shadow of [lispx](https://github.com/lispx/lispx)
 and the tco suggestion of [jscheme](https://github.com/chidiwilliams/jscheme)

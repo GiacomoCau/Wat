@@ -123,7 +123,13 @@
       </h3>
       <ul>
         <li>
-          (def\ (printFrames k) (unless (null? k) (printFrames (.nxt k)) (log &quot;v&quot; k) #inert))
+          (<b>printFrames</b> continuation)
+          <br/>
+            (type function)
+          <br/>
+            &nbsp;
+          <br/>
+            Print the frames of the <b>continuation</b> from top to the bottom and return #inert.
         </li>
       </ul>
     </div>
@@ -139,7 +145,7 @@
           <br/>
             &nbsp;
           <br/>
-            Throw the <b>throwable</b> after print the message of <b>throwable</b> and the stacktrace if `(prStk)'.
+            Throw the <b>throwable</b> after print the message of <b>throwable</b> and the stacktrace if `(== (&amp; (prStk) 1) 1)'.
         </li>
       </ul>
     </div>
