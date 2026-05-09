@@ -231,9 +231,23 @@
 x
 (invokeRestart 'abort)
 (+ 100 x)
-(invokeRestart 'useValue 42)
+(invokeRestart 'useValue 42) ;-> 142
 (debug #f)
 (assert x Error :type 'unboundSymbol :symbol 'x)
+
+(debug #t)
+(prStk 1)
+(+ 1 (* 2 "3"))
+(debug #f)
+(invokeRestart 'useValue (* 2 3)) ;-> 7
+(prStk 0)
+
+(+ 1 ((\ () (%+ a b)) 1 2)) 
+(invokeRestart 'useValue 3) ;-> 4 no!
+(invokeRestart 'useValue (\ (a b) (%+ a b))) ;-> 4 no!
+(def* (a b) 1 2)
+(invokeRestart 'useValue 2) -> 4 ok!
+(debug #f)
 |#
 
 (def milli (- (@currentTimeMillis &java.lang.System) milli))

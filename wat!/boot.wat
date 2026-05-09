@@ -1680,15 +1680,80 @@
    |#
   %test )
 
-(def\ (printFrames k) (unless (null? k) (printFrames (.nxt k)) (log "v" k) #inert))
+; TODO sostituito dal seguente, eliminare
+#;(def\ (printFrames k)
+  #|($nm continuation)
+   |(type function)
+   |
+   |Print the frames of the <b>continuation</b> from top to the bottom and return #inert.
+   |#
+  (unless (null? k) (printFrames (.nxt k)) (log "v" k) #inert))
+
+#;(def\ (printFrames k)
+  #|($nm continuation)
+   |(type function)
+   |
+   |Print the frames of the <b>continuation</b> from top to the bottom and return #inert.
+   |#
+  ((rec\ (printFrames k) (unless (null? k) (printFrames (.nxt k)) (log "    v" k))) (.nxt k)) (log "    ." k) #inert)
+
+; TODO sostituito dal seguente, eliminare
+#;(def\ (printFrames k)
+  #|($nm continuation)
+   |(type function)
+   |
+   |Print the frames of the <b>continuation</b> from top to the bottom and return #inert.
+   |#
+  ((rec\ (printFrames k) (if (&& (!null? k) (|| (null? (.dbg k)) (!eq? (.op (.dbg k)) "userBreak"))) (printFrames (.nxt k))) (log "    v" k)) (.nxt k)) (log "    ." k) #inert)
+
+; TODO sostituito dal seguente, eliminare
+#;(def\ (printFrames k)
+  #|($nm continuation)
+   |(type function)
+   |
+   |Print the frames of the <b>continuation</b> from top to the bottom and return #inert.
+   |#
+  (def sk (if (== (value :debugOn (theEnv)) #t) 17 0)) 
+  ( (rec\ (printFrames n k)
+      (if (&& (!null? k) (|| (null? (.dbg k)) (!eq? (.op (.dbg k)) "userBreak"))) (printFrames (1+ n) (.nxt k)))
+      (if (>= n sk) (log "  " (if (== n sk) "." "v") k)) )
+    0 k )
+  #inert )
+
+; TODO sostituito dal seguente, eliminare
+#;(def\ (printFrames k)
+  #|($nm continuation)
+   |(type function)
+   |
+   |Print the frames of the <b>continuation</b> from top to the bottom and return #inert.
+   |#
+  (def sk (if (ifnull? (debug (value :debug (theEnv))) #f (debug)) (if (doTco) 17 329) (if (doTco) 0 1)))
+  ( (rec\ (printFrames n k)
+      (if (&& (!null? k) (|| (null? (.dbg k)) (!eq? (.op (.dbg k)) "userBreak"))) (printFrames (1+ n) (.nxt k)))
+      (if (>= n sk) (log "  " (if (== n sk) "." "v") k)) )
+    0 k )
+  #inert )
+
+(def\ (printFrames k)
+  #|($nm continuation)
+   |(type function)
+   |
+   |Print the frames of the <b>continuation</b> from top to the bottom and return #inert.
+   |#
+  (def sk (if (ifnull? (debug (value :debug (theEnv))) #f (debug)) (if (doTco) 17 329) (if (doTco) 0 1)))
+  ( (rec\ (printFrames n k)
+      (unless (|| (null? k) (&& (!null? (.dbg k)) (eq? (.op (.dbg k)) "userBreak"))) (printFrames (1+ n) (.nxt k)))
+      (if (>= n sk) (log "  " (if (== n sk) "." "v") k)) )
+    0 k )
+  #inert )
 
 (def\ (printStacktrace throwable)
   #|($nm throwable)
    |(type function)
    |
-   |Throw the <b>throwable</b> after print the message of <b>throwable</b> and the stacktrace if `(prStk)'.
+   |Throw the <b>throwable</b> after print the message of <b>throwable</b> and the stacktrace if `(== (& (prStk) 1) 1)'.
    |#
-  (when (prStk)
+  (when (== (& (prStk) 1) 1)
     (log "-" (@getMessage throwable)) 
     (takeSubcont rootPrompt k
       (printFrames k)
@@ -3173,7 +3238,7 @@
    |
    |Return #inert if <b>boolean</b> is #true, signals an error otherwise.
    |#
-  (unless boolean (error (new Error "invalid assetion" :type 'assert :datum boolean :expected #t))) )
+  (unless boolean (error (new Error "invalid assertion" :type 'assert :datum boolean :expected #t))) )
 
 (def check
   #|($nm expr check)

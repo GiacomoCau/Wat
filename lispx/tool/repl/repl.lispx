@@ -7,11 +7,6 @@
    |#
    (theEnv))
 
-(def repl:prStk
-  #|The repl print stack flag.
-   |#
-   #f)
-
 (ddef repl:debugLevel
   #|Current debug level. 0 if we are not in the debug.
    |#
@@ -30,35 +25,39 @@
       (log "repl:run ended!")
       (invokeRestart 'replEnd) )))
 
+(def debug
+  #|Activate and deactivate the debug.
+   |#
+  (let1 (debug #f)
+    (\ b
+      (ifnull? (((#: Boolean b)) b) debug
+        (if (set! debug :rhs b)
+          (then
+            (set repl:env (invokeDebugger- invokeDebugger) (list invokeDebugger invokeDebugger+))
+            (log "repl:run started!")
+            (repl:run) )
+          (else
+            (set repl:env invokeDebugger invokeDebugger-)
+            (log "repl:run ended!")
+            (invokeRestart 'replEnd) ))))))
+
 (def\ repl:run ()
   #|Run a REPL.
    |#
-  (restartCase ((replEnd (\ () #| nothing to do here, just return |#) ))  
+  (restartCase ((replEnd (\ () (takeSubcont rootPrompt k))))
     (loop
       ;; The internal REPL-ABORT restart causes the loop to begin from the start again.
       ;; The user actually uses ABORT, described below.
       (restartCase ((replAbort (\ () #| nothing to do here, just unwind |#)))
-        (print (eval (read (dget repl:debugLevel)) repl:env)) ))))
-
-#| TODO in alternativa al precedente
-(def\ repl:run ()
-  #|Run a REPL.
-   |#
-  (catchTagWth 'replEnd #inert  
-    (loop
-      ;; The internal REPL-ABORT restart causes the loop to begin from the start again.
-      ;; The user actually uses ABORT, described below.
-      (restartCase ( (replAbort (\ () #| nothing to do here, just unwind |#))
-                     (replEnd (\ () (throwTag 'replEnd) )) )
-        (print (eval (read (dget repl:debugLevel)) repl:env)) ))))
-|#
+        (let1 (val (eval (read (dget repl:debugLevel)) repl:env))
+          (if (|| (! (inert? val)) (prInert)) (print val)) )))))
 
 (def\ repl:runDebuggerLoop (condition k)
   #|Run a debug REPL.
    |Prints a banner and then runs a normal REPL.
    |#
   (print "Debugger invoked on condition:")
-  (print "    " condition)
+  (print "    " (ifnull? (msg (@getMessage condition)) condition msg))
   (print "\nAvailable restarts -- use (invokeRestart 'name ...) to invoke:")
   (forEach
     (\ (restart)
@@ -66,8 +65,8 @@
         ((replAbort replEnd) #|Don't print our internal REPL-ABORT restart|#)
         (else => (\ (restartName) (print "    " restartName))) ))
     (computeRestarts condition) )
-  (when repl:prStk
-    (print "Backtrace:")
+  (when (== (& (prStk) 1) 1)
+    (print "\nBacktrace:")
     (printFrames k) )
   (repl:run))
 
@@ -93,12 +92,12 @@
           ;; squirt blood from their eyes.
           (caseType condition
             ( (Error :type 'unboundSymbol)
-                (let ( (symbol (getValue condition 'symbol))
+                (let ( (sym (getValue condition 'symbol))
                        (env (getValue condition 'env)) )
                   (restartCase 
                     ( (useValue (\ (value) value) :associatedConditions (list condition))
-                      (continue (\ () (eval symbol env)) :associatedConditions (list condition))
-                      (storeValue (\ (value) (eval (list 'def symbol :rhs value) env)) :associatedConditions (list condition)) )
+                      (continue (\ () (eval sym env)) :associatedConditions (list condition))
+                      (storeValue (\ (value) (eval (list 'def sym :rhs value) env)) :associatedConditions (list condition)) )
                     (repl:runDebuggerLoop condition k) )) )
             #|
             ( (Error :type 'type :operands List)
