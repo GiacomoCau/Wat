@@ -121,10 +121,11 @@
         (%def loop (%\ (lst) (%if (%null? lst) #t (%== (%car lst) key) (loop (%cdr lst)) #f)))
         (%if (%! (loop lst)) (%apply log lst)) )
       (javaStackDeep)
+      79
       (%begin (javaStackDeep))
       (%if #t (javaStackDeep))
       (%if #f #inert (javaStackDeep))
       ((%vau () #_ (javaStackDeep)))
       (%eval '(javaStackDeep) (%theEnv))
       ((%\ () (javaStackDeep))) )
-    (%assert (testTco 400) 0) ))
+    (%assert (testTco 5000) 0) ))

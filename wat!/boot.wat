@@ -433,7 +433,7 @@
    |Expands a macro call for 1 or n level rather than evaluates it.
    |#
   (macro (lhs . rhs)
-    (def ((#: (or Integer (%> 0)) n) form) (if (null? rhs) (list 1 lhs) (list* lhs rhs)))
+    (def ((#: (and Integer (%> 0)) n) form) (if (null? rhs) (list 1 lhs) (list* lhs rhs)))
     (list '%atEnd (list 'set! 'expandMacro 0) (list 'set! 'expandMacro n) form) ))
 
 #;(begenv
@@ -495,7 +495,7 @@
    |
    |Defines into the current environment the named fexpr <b>name</b> with the given <b>parameterTree</b>, <b>bindResult</b>, <b>environmentParameter</b> and <b>forms</b> as body.
    |#
-  (if (%br?car rhs) (def (br . rhs) rhs) (def br #ignore))
+  (if (%br?car rhs) (if (%== (car rhs) #ignore) (def br #ignore) (def (br . rhs) rhs)) (def br #ignore))
   (if (cons? lhs)
     (list 'def (car lhs) br (list* 'vau (cdr lhs) rhs))
     (list 'def lhs br (cons 'vau rhs)) ))
@@ -630,7 +630,16 @@
   (vau (pt . forms) #_
     (wrau args env (apply begin forms (bind (newEnv env) pt args)))))
 
-;(assert (let* ((a 1) (f (de\ () a)) (a 2)) (f)) 2) 
+#;(defMacro (de\ pt . forms) ;ko!
+  (list 'wrap (list* 'vau pt #ignore forms)))
+#;(defVau (de\ pt . forms) env ;ko!
+  (eval (list 'wrap (list* 'vau pt #ignore forms)) env))
+#;(defVau (de\ pt . forms) #ignore ;ok
+  (wrap (vau args env (eval (list* (list* 'vau pt #ignore forms) args) env))))
+#;(log de\)
+
+
+;(assert (let* ((a 1) (f (de\ () a)) (a 2)) (f)) 2)
 
 (defMacro (defde\ lhs . rhs)
   #|($nm name parameterTree . forms)
@@ -3077,7 +3086,7 @@
    |Return #true if <b>object</b> matches one the <b>typeCheck</b>, #false otherwise.
    |Matchs one <b>typeCheck</b> if <b>object</b> is an instance of <b>class</b> and all the optional specified <b>attribute</b> matches the corresponding <b>check</b>.
    |#
-  (apply %matchType? (cons (eval object env) (map (\ (x) (eval (if (atom? x) x (cons 'list x)) env)) (cons typeCheck typeChecks))) env) )
+  (apply %matchType? (cons (eval object env) (map (\ (x) (eval (if (atom? x) x (cons '%evalChk (cons x))) env)) (cons typeCheck typeChecks))) env) )
 
 (assert (matchType? 1 Integer) #t)
 (assert (matchType? 1 String Integer) #t)
@@ -3086,6 +3095,8 @@
 (assert (matchType? 1 (Integer)) #t)
 (assert (matchType? 1 (Integer @intValue 1)) #t)
 (assert (matchType? 1 (Integer @intValue 2)) #f)
+(assert (matchType? 1 (Integer @intValue (>= 1))) #t)
+(assert (matchType? 1 (Integer @intValue (>= 2))) #f)
 (assert (matchType? (newBox 1) Box) #t)
 (assert (matchType? (newBox 1) String Box) #t)
 (assert (matchType? (newBox 1) String (Box)) #t)
@@ -3140,6 +3151,7 @@
 (assert (caseType 2.0 (String "string") (Double "double")) "double")
 (assert (caseType (newObj :a 1) (Double "double") ((Obj :a 1) "Obj :a 1")) "Obj :a 1")
 (assert (caseType 1 ((Integer @intValue 1) 'ok) (else 'ko)) 'ok)
+(assert (caseType 1 ((Integer @intValue (>= 1)) 'ok) (else 'ko)) 'ok)
 (assert (caseType 1 (Integer 'ok) (else 'ko)) 'ok)
 
 (defMacro (caseType\ (#: (1 Symbol) key) . clauses)
