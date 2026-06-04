@@ -17,3 +17,27 @@
 
 (assert ((\ ((@intValue @doubleValue . i)) i) 1) 1)
 (assert ((\ ((#: Integer @intValue @doubleValue . i)) i) 1) 1)
+
+(if (> (bndMt) 0)
+  (begenv 
+    (def obj (newObj :a 1 :b 2 :c 3))
+    
+    (assert ((\ ((#: Obj b c)) (+ b c)) obj) 5)
+    (assert ((\ ((#: (Obj) b c)) (+ b c)) obj) 5)
+    (assert ((\ ((#: (Obj :a 1) b c)) (+ b c)) obj) 5)
+    (assert ((\ ((#: (Obj :a (and Integer (>= 1))) b c)) (+ b c)) obj) 5)
+  
+    (assert ((\ ((#: Obj b c . o)) o) obj) obj)
+    (assert ((\ ((#: (Obj) b c . o)) o) obj) obj)
+    (assert ((\ ((#: (Obj :a 1) b c . o)) o) obj) obj)
+    (assert ((\ ((#: (Obj :a (and Integer (>= 1))) b c . o)) o) obj) obj)
+  
+    (assert ((\ ((#: (Obj :a (and Integer (>= 1))) b c . o)) (+ b c)) obj) 5)
+    
+    (def box (newBox 1))
+    (assert ((\ ((#: Box a . b)) a)  box) 1)
+    (assert ((\ ((#: (Box) a . b)) a)  box) 1)
+    (assert ((\ ((#: (Box (>= 1)) a . b)) a)  box) 1)
+    (assert ((\ ((#: (Box (>= 1)) a . b)) b)  box) box)
+  )
+)

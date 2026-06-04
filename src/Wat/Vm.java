@@ -35,6 +35,7 @@ import static Wat.Utility.BinOp.Sl;
 import static Wat.Utility.BinOp.Sr;
 import static Wat.Utility.BinOp.Sr0;
 import static Wat.Utility.BinOp.Xor;
+import static Wat.Utility.PrimitiveWrapper.isWrapper;
 import static java.lang.Character.isISOControl;
 import static java.lang.Integer.toHexString;
 import static java.lang.Runtime.version;
@@ -161,6 +162,7 @@ public class Vm {
 	int prStk = 0; // print stack: 1:wat, 2:java, 3:both
 	int prTrc = 0; // print trace: 0:none, 1:load, 2:eval root, 3:eval all, 4:return, 5:combine, 6:bind/lookup
 	int typeT = 0; // type true: 0:true, 1:!false, 2:!(or false null), 3:!(or false null inert), 4:!(or false null inert zero)
+	int bndMt = 0; // bind match type: 0:none, 1:ObjEnv & Box, 2:all
 	int prEnv = 10; // print environment
 	int bndRes = 0; // bind result: 0:inert 1:rhs 2:prv 3:cnt
 	private Object bndRes(Object o) {
@@ -780,8 +782,25 @@ public class Vm {
 					throw new TypeException("expected literal: {expected}, found: {datum}", rhs, lc.car(1));
 				}
 				else if (lc.car == sharpColon) {
-					checkO(rhs, getTco(evalChk.combine(e, cons(lc.car(1)))));
-					yield bind0(def, bndRes, e, lc.cdr(2) == null ? lc.car(2) : lc.cdr(1) , rhs);
+					switch (bndMt) {
+						case 0-> 
+							checkO(rhs, getTco(evalChk.combine(e, cons(lc.car(1)))));
+						case 1-> {
+							if (!isInstance(rhs, ObjEnv.class, Box.class))
+							//if (apply(cls->isWrapper(cls) || cls == String.class, rhs.getClass()))
+							//if (apply(cls->isWrapper(cls) || cls == String.class, rhs instanceof Class cls ? cls : rhs.getClass()))
+								checkO(rhs, getTco(evalChk.combine(e, cons(lc.car(1)))));
+							else {
+								var chks = (List) map("evalChk", car-> getTco(evalChk.combine(e, cons(car))), apply(chk-> chk instanceof List lst ? lst : cons(chk), lc.car(1)));
+								if (!matchType(rhs, chks)) throw new TypeException("expected: {expected}, found: {datum}", rhs, chks);
+							}
+						}
+						case 2-> {
+							List chks = (List) map("evalChk", car->getTco(evalChk.combine(e, cons(car))), apply(chk-> !isInstance(rhs, ObjEnv.class, Box.class) ? cons(cons(chk)) : chk instanceof List lst ? lst : cons(chk), lc.car(1)));
+							if (!matchType(rhs, chks)) throw new TypeException("expected: {expected}, found: {datum}", rhs, chks);
+						}
+					}
+					yield bind0(def, bndRes, e, lc.cdr(2) == null && !(rhs instanceof Box) ? lc.car(2) : lc.cdr(1) , rhs);
 				}
 				else if (rhs instanceof Cons rc) {
 					var res = bind0(def, bndRes, e, lc.car, rc.car);
@@ -796,10 +815,18 @@ public class Vm {
 					//if (!bndSmt && lc.cdr() != null && !isWrapper(rhs.getClass()) && !(rhs instanceof String)) {
 					var objEnv = rhs instanceof ObjEnv oe ? oe : null; var isObjEnv = objEnv != null;
 					var array = rhs instanceof Object[] ar ? ar : null; var isArray = array != null;
+					var box = rhs instanceof Box bx ? bx : null; var isBox = box != null;
 					//var isObjEnv = rhs instanceof ObjEnv; var objEnv = isObjEnv ? (ObjEnv) rhs : null;
 					//var isArray = rhs instanceof Object[]; var array = isArray ? (Object[]) rhs : null;
+					//var isBox = rhs instanceof Box; var box = isBox ? (Box) rhs : null;
 					//boolean isObjEnv; var objEnv = (isObjEnv=rhs instanceof ObjEnv oe) ? oe : null;
 					//boolean isArray;  var array = (isArray=rhs instanceof Object[] ar) ? ar : null;
+					//boolean isBox;  var box = (isBox=rhs instanceof Box bx) ? bx : null;
+					//enum Type { OE, Ar, Bx }; var type = switch (rhs) { case ObjEnv _-> Type.OE; case Object[] _->Type.Ar; case Box _-> Type.Bx; default-> null; };
+					//enum Type { OE, Ar, Bx }; Type type = null;
+					//var objEnv = rhs instanceof ObjEnv oe ? oe : null; if (objEnv != null) type= Type.OE;
+					//var array = rhs instanceof Object[] ar ? ar : null; if(array != null) type=Type.Ar;
+					//var box = rhs instanceof Box bx ? bx : null; if(box != null) type=Type.Bx;
 					for (; head instanceof Cons cons; i+=1, head=cons.cdr()) {
 						var car = cons.car;
 						if (car == sharpColon) break;
@@ -808,21 +835,41 @@ public class Vm {
 							if (!(res instanceof List list)) throw new TypeException("expected a {expected}, found: {datum}", res, symbol("List"));
 							res = bind0(def, bndRes, e, symbol(at.name), at.apply(cons(rhs, list)));
 						}
-						else if (car instanceof AtDot atDot) {
+						else if (car instanceof AtDot atDot)
 							res = bind0(def, bndRes, e, symbol(atDot.name), atDot.apply(cons(rhs)));
-						}
-						else if (isObjEnv) {
+						//* 
+						else if (isObjEnv)
 							res = bind0(def, bndRes, e, car, objEnv.get(car instanceof Cons car2 && car2.car == sharpColon ? car2.car(2) : car));
-						}
-						else if (isArray) {
-							//if (rhs.getClass().isArray()) { ... Array.get(rhs, i) ... Array.getLength(rhs) ...
+						else if (isArray)
 							res = bind0(def, bndRes, e, car, array[i]);
-						}
+						else if (isBox)
+							res = bind0(def, bndRes, e, car, box.value);
 						else {
 							throw new MatchException("expected {operands#,%+d} operands, found: {datum}", rhs, len(lc));
 						}
+						/* /
+						else {
+							res = switch (rhs) {
+								case ObjEnv objEnv-> bind0(def, bndRes, e, car, objEnv.get(car instanceof Cons car2 && car2.car == sharpColon ? car2.car(2) : car));
+								case Object[] array-> bind0(def, bndRes, e, car, array[i]); // (rhs.getClass().isArray()) { ... Array.get(rhs, i) ... Array.getLength(rhs) ...
+								case Box box-> bind0(def, bndRes, e, car, box.value);
+								default-> throw new MatchException("expected {operands#,%+d} operands, found: {datum}", rhs, len(lc));
+							};
+						}
+						/* /
+						else {
+							res = switch (type) {
+								case OE-> bind0(def, bndRes, e, car, ((ObjEnv) rhs).get(car instanceof Cons car2 && car2.car == sharpColon ? car2.car(2) : car));
+								case Ar-> bind0(def, bndRes, e, car, ((Object[]) rhs)[i]); // (rhs.getClass().isArray()) { ... Array.get(rhs, i) ... Array.getLength(rhs) ...
+								case Bx-> bind0(def, bndRes, e, car, ((Box) rhs).value);
+								default-> throw new MatchException("expected {operands#,%+d} operands, found: {datum}", rhs, len(lc));
+							};
+						}
+						//*/
 					}
 					yield head == null ? res : bind0(def, bndRes, e, head, isArray ? copyOfRange(array, i, array.length) : rhs);
+					//yield head == null ? res : bind0(def, bndRes, e, head, rhs instanceof Object[] array ? copyOfRange(array, i, array.length) : rhs);
+					//yield head == null ? res : bind0(def, bndRes, e, head, type == Type.Ar ? copyOfRange(array, i, array.length) : rhs);
 				}
 				else {
 					throw new MatchException("expected {operands#,%+d} operands, found: {datum}", rhs, len(lc));
@@ -1896,8 +1943,10 @@ public class Vm {
 						*/
 					}
 				}
+				catch (InnerException ie) {
+					throw ie; 
+				}
 				catch (Throwable thw) {
-					if (thw instanceof TypeException) throw thw;
 					throw new TypeException("not a {expected}: {datum}", o, toChk(chkl));
 				}
 			}
@@ -2069,16 +2118,14 @@ public class Vm {
 						print(name, exp, " should throw but is ", val);
 						break;
 					case 3: {
-						if (! (val instanceof Box)) {
-							var expt = o.<List>cdr(1);
-							if (Vm.this.equals(val, pushRootSubcontBarrier(env, expt))) return true;
-							print(name, exp, " should be₁ ", o.car(2), " but is ", val);
-							break;
-						}
+						var expt = o.<List>cdr(1);
+						if (Vm.this.equals(val, pushRootSubcontBarrier(env, expt))) return true;
+						print(name, exp, " should be₁ ", o.car(2), " but is ", val);
+						break;
 					}
 					default: {
 						List expt = pushRootSubcontBarrier(env, cons(cons(symbol("%list"), o.cdr(1))));
-						if (expt.car instanceof Class && singleMatchType(val, expt)) return true;
+						if (expt.car instanceof Class && matchType(val, expt)) return true;
 						print(name, exp, " should be₂ ", expt.cdr() == null ? expt.car : expt, " but is ", val);
 					}
 				}
@@ -2090,7 +2137,7 @@ public class Vm {
 				else {
 					var val = thw instanceof Value v ? v.value : thw;
 					List expt = pushRootSubcontBarrier(env, cons(cons(symbol("%list"), o.cdr(1))));
-					if (expt.car instanceof Class && singleMatchType(val, expt)) return true;
+					if (expt.car instanceof Class && matchType(val, expt)) return true;
 					print(name, exp, " should be₃ ", expt.cdr() == null ? expt.car : expt, " but is ", val);
 				}
 			}
@@ -2106,36 +2153,37 @@ public class Vm {
 			if (! (chk.car() instanceof List chks2)) { // null || Class
 				if (isType(object, chk.car())) return true;
 			}
-			else {
-				if (singleMatchType(object, chks2)) return true;
+			else try {
+				if (subMatchType(object, chks2)) return true;
+			}
+			catch (InnerException ie) {
+				return false;
 			}
 		}
 		return false;
 	}
-	private boolean singleMatchType(Object object, List chks) {
+	private boolean subMatchType(Object object, List chks) {
 		if (!isType(object, chks.car())) return false;
-		if (object instanceof Box box) {
-			if (chks.cdr() == null) return true;
-			var val = box.value;
-			for (var chk=chks.cdr(); chk != null; chk = chk.cdr()) {
-				if (equals(val, chk.car)) return true;
+		switch (object) {
+			case ObjEnv obj-> {
+				for (var chk=chks.cdr(); chk != null; chk = chk.cdr(1)) {
+					var key = chk.car;
+					checkO(key instanceof AtDot ad ? ad.apply(cons(obj)) : obj.get(key), chk.car(1));
+				}
 			}
-			return false;
-		}
-		for (var chk=chks.cdr(); chk != null; chk = chk.cdr(1)) {
-			var key = chk.car;
-			var expt = chk.car(1);
-			if (key instanceof AtDot ad) {
-				var val = ad.apply(cons(object));
-				try { checkO(val, expt); } catch (InnerException ie) { return false; }
+			case Box box-> {
+				var val = box.value;
+				for (var chk=chks.cdr(); chk != null; chk = chk.cdr()) {
+					checkO(val, chk.car());
+				}
 			}
-			else if (object instanceof ObjEnv obj) {
-				var lookup = obj.lookup(key);
-				if (!lookup.isBound) return false;
-				try { checkO(lookup.value, expt); } catch (InnerException ie) { return false; }
-			}
-			else {
-				return false;
+			default-> {
+				for (var chk=chks.cdr(); chk != null; chk = chk.cdr(1)) {
+					//if (!(chk.car instanceof AtDot ad)) return false;
+					//if (!(chk.car instanceof AtDot ad)) throw new TypeException("not a {expected}: {datum}", l.car, toChk(AtDot.class));
+					if (!(chk.car instanceof AtDot ad)) return typeError("not a {expected}: {datum}", chk.car, toChk(AtDot.class));
+					checkO(ad.apply(cons(object)), chk.car(1));
+				}
 			}
 		}
 		return true;
@@ -2534,6 +2582,7 @@ public class Vm {
 				"intStr", wrap(new JFun("IntStr", 0, (n,o)-> checkN(n, o, 0), (_,_)-> intStr )),
 				"prTrc", wrap(new JFun("PrTrc", list(0, 1), (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4, 5, 6)), (l,o)-> l == 0 ? prTrc : inert(start=level-(doTco ? 0 : 3), prTrc=o.car()) )),
 				"typeT", wrap(new JFun("TypeT", list(0, 1), (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2, 3, 4)), (l,o)-> l == 0 ? typeT : inert(typeT=o.car()) )),
+				"bndMt", wrap(new JFun("bndMt", list(0, 1), (n,o)-> checkR(n, o, 0, 1, or(0, 1, 2)), (l,o)-> l == 0 ? bndMt : inert(bndMt=o.car()) )),
 				"bndRes", wrap(new JFun("BndRes", list(0, 1),
 					(n,o)-> checkR(n, o, 0, 1, or(inert, keyword("rhs"), keyword("prv"), keyword("cnt"))),
 					(l,o)-> l == 0

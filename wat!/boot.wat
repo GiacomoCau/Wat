@@ -3104,6 +3104,8 @@
 (assert (matchType? (newBox 1) (Box)) #t)
 (assert (matchType? (newBox 1) (Box 1)) #t)
 (assert (matchType? (newBox 1) (Box 2)) #f)
+(assert (matchType? (newBox 1) (Box (>= 1))) #t)
+(assert (matchType? (newBox 1) (Box (>= 2))) #f)
 (assert (matchType? (newObj :type 'a) (Obj :type 'a)) #t)
 
 (defMacro (matchType?* obj class . attributes)
