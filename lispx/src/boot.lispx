@@ -31,9 +31,12 @@
    |(syntax check (min oo . checks))
    |(syntax check (or . checks))
    |(syntax check (and . checks))
-   |(syntax check (Apv . arguments))
+   |(syntax check (matchType? class . attributes))
+   |(syntax check (Apv1+ . arguments))
    |(syntax check value)
-   |(syntax arguments (value . arguments))
+   |(syntax attributes (attribute check . attributes))
+   |(syntax attribute (or Symbol Keyword String .Field @Method))
+   |(syntax arguments (expr . arguments))
    |
    |Defines into the current environment the resulting bindings from the match of the <b>definiendTree</b> against <b>value</b>, signals an error otherwise.
    |
@@ -66,9 +69,12 @@
    |(syntax check (min oo . checks))
    |(syntax check (or . checks))
    |(syntax check (and . checks))
-   |(syntax check (Apv . arguments))
+   |(syntax check (matchType? class . attributes))
+   |(syntax check (Apv1+ . arguments))
    |(syntax check value)
-   |(syntax arguments (value . arguments))
+   |(syntax attributes (attribute check . attributes))
+   |(syntax attribute (or Symbol Keyword String .Field @Method))
+   |(syntax arguments (expr . arguments))
    |
    |Update into the environment the resulting bindings from the match of the <b>definiendTree</b> against <b>value</b>, signals an error if a binding is not defined.
    |
@@ -101,9 +107,12 @@
    |(syntax check (min oo . checks))
    |(syntax check (or . checks))
    |(syntax check (and . checks))
-   |(syntax check (Apv . arguments))
+   |(syntax check (matchType? class . attributes))
+   |(syntax check (Apv1+ . arguments))
    |(syntax check value)
-   |(syntax arguments (value . arguments))
+   |(syntax attributes (attribute check . attributes))
+   |(syntax attribute (or Symbol Keyword String .Field @Method))
+   |(syntax arguments (expr . arguments))
    |
    |Return a anonymous fexpr with the given <b>parameterTree</b>, <b>environmentParameter</b> and <b>body</b>.
    |#
@@ -2962,9 +2971,12 @@
  |(syntax check (min oo . checks))
  |(syntax check (or . checks))
  |(syntax check (and . checks))
- |(syntax check (Apv . arguments))
+ |(syntax check (matchType? class . attributes))
+ |(syntax check (Apv1+ . arguments))
  |(syntax check value)
- |(syntax arguments (value . arguments))
+ |(syntax attributes (attribute check . attributes))
+ |(syntax attribute (or Symbol Keyword String .Field @Method))
+ |(syntax arguments (expr . arguments))
  |
  |A `check' can be:
  |- a `value',
@@ -2974,7 +2986,7 @@
  |- a `List' with an `Integer' and the symbol `oo' followed by zero or more `checks',
  |- a `List' with `car' equals `or' followed by two or more `check',
  |- a `List' with `car' equals `and' followed by two or more `check',
- |- a `List' with `car' `Apv' followed by zero o more arguments.
+ |- a `List' with `car' `Apv1+' followed by zero o more arguments.
  |
  |When the `check' is:
  |- a `value': the parameter value must be equal to that `value'
@@ -2991,7 +3003,8 @@
  |  - if the first element of the list is:
  |    - `or': the parameter value must match one of the `check' arguments of the `or'
  |    - `and': the parameter value must match all the `check' arguments of the `and'
- |    - `Apv': applying `Apv' to the cons of the parameter value and the remaining arguments must return #true
+ |    - `matchType?': the parameter value must match the class and the `attribute's to their `check'
+ |    - `Apv1+': applying `Apv1+' to the cons of the parameter value and the remaining arguments must return #true
  |#
 
 (def\ assert#t (boolean)

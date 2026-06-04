@@ -91,7 +91,8 @@ These are the differences compared to the original Wat/LispX
 	* a `List` with an `Integer` and the symbol `oo` followed by zero or more `checks`,
 	* a `List` with car equals `or` followed by two or more `check`,
 	* a `List` with car equals `and` followed by two or more `check`,
-	* a `List` with car an `Apv` followed by zero o more arguments.
+	* a `List` with car equals `matchType?` followed by a `class` and zero or more `attribute` `check` pairs,
+	* a `List` with car an `Apv1+` followed by zero o more arguments.
 
 	When the `check` is:
 	* a `value`: the parameter value or value returned must be equal to that `value`
@@ -108,7 +109,8 @@ These are the differences compared to the original Wat/LispX
 		* if the first element of `List` is:
 			* `or`: the parameter value or value returned must match one of the `check` arguments of the `or`
 			* `and`: the parameter value or value returned must match all the `check` arguments of the `and`
-			* an `Apv`: the applying of `Apv` to the cons of the parameter value or value returned and the remaining arguments must return `#true`
+			* `matchType?`: the parameter value must match the `class` and the `attribute`s to their `check`
+			* an `Apv1+`: the applying of `Apv1+` to the cons of the parameter value or value returned and the remaining arguments must return `#true`
 * The `Box` are different objects from `Obj`
 * The `Box` are `Combinable` and combined with
 	* `()` return the associated value `(box)`

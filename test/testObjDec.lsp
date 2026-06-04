@@ -17,3 +17,33 @@
 
 (assert ((\ ((@intValue @doubleValue . i)) i) 1) 1)
 (assert ((\ ((#: Integer @intValue @doubleValue . i)) i) 1) 1)
+
+(begenv 
+  (def obj (newObj :a 1 :b 2 :c 3))
+  
+  (assert ((\ ((#: Obj b c)) (+ b c)) obj) 5)
+  (assert ((\ ((#: (matchType? Obj) b c)) (+ b c)) obj) 5)
+  (assert ((\ ((#: (matchType? Obj :a 1) b c)) (+ b c)) obj) 5)
+  (assert ((\ ((#: (matchType? Obj :a (and Integer (>= 1))) b c)) (+ b c)) obj) 5)
+
+  (assert ((\ ((#: Obj b c . o)) o) obj) obj)
+  (assert ((\ ((#: (matchType? Obj) b c . o)) o) obj) obj)
+  (assert ((\ ((#: (matchType? Obj :a 1) b c . o)) o) obj) obj)
+  (assert ((\ ((#: (matchType? Obj :a (and Integer (>= 1))) b c . o)) o) obj) obj)
+
+  (assert ((\ ((#: (matchType? Obj :a (and Integer (>= 1))) b c . o)) (+ b c)) obj) 5)
+  
+;(def\ (p? o e f v) (f (o e) v))
+;(assert ((\ ((#: (and Obj (f? :a >= 1)) a . o)) a) (newObj :a 1)) 1)
+
+;(def\ (p? o e) (check? (o e) (and Integer (>= 1))))
+;(assert ((\ ((#: (and Obj (p? :a)) a . o)) a) (newObj :a 1)) 1)
+
+;  ((\ ((#: (and Obj (f? :a (\ (e) (: (and Integer (>= 1)) e)))) a . o)) a) (newObj :a 1))
+  
+  (def box (newBox 1))
+  (assert ((\ ((#: Box a . b)) a)  box) 1)
+  (assert ((\ ((#: (matchType? Box) a . b)) a)  box) 1)
+  (assert ((\ ((#: (matchType? Box (>= 1)) a . b)) a)  box) 1)
+  (assert ((\ ((#: (matchType? Box (>= 1)) a . b)) b)  box) box)
+)
