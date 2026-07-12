@@ -460,7 +460,7 @@ public class Vm {
 		public String toString(boolean t) {
 			//return "{" + (this==theEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" + (t || map.size() > prEnv ? "[" + map.size() + "] ..." : toStringSet(map.reversed().entrySet())) + eIfnull(parent, ()-> " " + parent.toString(t)) + "}";
 			return "{"
-				+ (this==theEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" + 
+				+ (this==bootEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" + 
 				(map.size() > prEnv || t
 					? "[" + map.size() + "] ..."
 					: t
@@ -1758,9 +1758,9 @@ public class Vm {
 		return getTco(pushSubcontBarrier.combine(env, cons(listStar(pushPrompt, rootPrompt, lst))));
 	}
 	<T> T error(Error err) {
-		var userBreak = theEnv.lookup(symbol("userBreak")).value;
+		var userBreak = bootEnv.lookup(symbol("userBreak")).value;
 		if (userBreak == null) throw err;
-		return (T) pipe(dbg(theEnv, "userBreak", err), ()-> getTco(evaluate(theEnv, list(userBreak, err)))
+		return (T) pipe(dbg(bootEnv, "userBreak", err), ()-> getTco(evaluate(bootEnv, list(userBreak, err)))
 			/* TODO da problemi al debuger
 			//, val->{ throw thwErr ? err : new Value(ignore, val[1]); }
 			, val->switch (log(val[1])) { case Suspension s-> s; default-> { throw thwErr ? err : new Value(ignore, val); }}
@@ -2074,7 +2074,7 @@ public class Vm {
 	}
 	Object vmAssert(String str, Object objs) throws Exception {
 		List exp = cons(begin, str2lst(str));
-		return vmAssert.combine(theEnv,  objs instanceof Throwable ? exp : cons(exp, bc2exp(objs)));
+		return vmAssert.combine(bootEnv,  objs instanceof Throwable ? exp : cons(exp, bc2exp(objs)));
 	}
 	Combinable vmAssert = new Combinable() {
 		public Object combine(Env env, List o) {
@@ -2182,13 +2182,26 @@ public class Vm {
 				case "#:"-> sharpColon;
 				default-> intern(intStr ? s.intern() : s);
 			};
+			//*
 			case Object[] objs->{
 				if (objs.length != 2) yield bc2lst(objs);
 				if (objs[0] == datum.at) yield at((String) objs[1]);
 				if (objs[0] == datum.dot) yield dot((String) objs[1]);
 				if (objs[0] == datum.string) yield intStr ? ((String) objs[1]).intern() : objs[1];
+				if (objs[0] == datum.array) yield objs[1];
 				yield bc2lst(objs);
 			}
+			/*/ // TODO va in errore?!
+			case Object[] objs-> objs.length != 2
+				? bc2lst(objs)
+				: switch (objs[0]) {
+					case datum.at-> at((String) objs[1]);
+					case datum.dot-> dot((String) objs[1]);
+					case datum.string-> intStr ? ((String) objs[1]).intern() : objs[1];
+					case datum.array-> objs[1];
+					default-> bc2lst(objs);
+				};
+			//*/
 			case null, default-> o;
 		};
 	}
@@ -2251,7 +2264,7 @@ public class Vm {
 	
 	
 	// Bootstrap
-	Env vmEnv=vmEnv(), theEnv=env(vmEnv);
+	Env vmEnv=vmEnv(), bootEnv=env(vmEnv);
 	Opv evalChk = vmEnv.value("%evalChk");
 	Env vmEnv() {
 		Env vmEnv = env();
@@ -2279,6 +2292,7 @@ public class Vm {
 				// Env
 				//"%env?", wrap(new JFun("%Env?", (Function<Object, Boolean>) obj-> obj instanceof Env )),
 				"%vmEnv", wrap(new JFun("%VmEnv", 0, (n,o)-> checkN(n, o, 0), (_,_)-> vmEnv() )),
+				"%bootEnv", wrap(new JFun("%bootEnv", 0, (n,o)-> checkN(n, o, 0), (_,_)-> bootEnv )),
 				"%newEnv", wrap(new JFun("%NewEnv", ge(0),
 					(n,o)-> checkR(n, o, 0, more,
 						or( null,
@@ -2294,26 +2308,9 @@ public class Vm {
 					} )),
 				"%bind", wrap(new JFun("%Bind", 3, (n,o)-> checkN(n, o, 3, Env.class), (_,o)-> bind(true, 3, o.<Env>car(), o.car(1), o.car(2)) )),
 				"%bind?", wrap(new JFun("%Bind?", 3, (n,o)-> checkN(n, o, 3, Env.class), (_,o)-> { try { bind(true, 0, o.<Env>car(), o.car(1), o.car(2)); return true; } catch (InnerException ie) { return false; }} )),
-				"%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { theEnv.map.clear(); return theEnv; } )),
+				"%resetEnv", wrap(new JFun("%ResetEnv", (Supplier) ()-> { bootEnv.map.clear(); return bootEnv; } )),
 				// Obj
 				//"%obj?", wrap(new JFun("%Obj?", (Function<Object, Boolean>) obj-> obj instanceof Obj )),
-				/* TODO non più necessario, eliminare
-				"%new", wrap(new JFun("%New", ge(1),
-					(n,o)-> checkM(n, o, 1,
-						or( list(1, 2, Box.class),
-							list(1, more, Obj.class,
-								or( list(or(Symbol.class, Keyword.class, String.class), Any.class),
-									list(1, more, Env.class,
-										or(Symbol.class, Keyword.class, String.class), Any.class),
-									list(1, more, Throwable.class,
-										or(Symbol.class, Keyword.class, String.class), Any.class),
-									list(1, more, String.class,
-										or(	list(or(Symbol.class, Keyword.class, String.class), Any.class),
-											list(1, more, Throwable.class,
-												or(Symbol.class, Keyword.class, String.class), Any.class) )))))),
-					(_,o)-> at("new").apply(listStar(o.car, this, o.cdr()))
-				)),
-				*/
 				"%new", wrap(new JFun("%New", ge(1),
 					(n,o)->{ 
 						var chk = checkM(n, o, 1, Class.class);
@@ -2590,7 +2587,7 @@ public class Vm {
 		return pushRootSubcontBarrier(env, cons(cons(new Begin(true), bc2exp(bc))));
 	}
 	public Object exec(Object bc) throws Exception {
-		return exec(theEnv, bc);
+		return exec(bootEnv, bc);
 	}
 	public Object call(String funName, Object ... args) throws Exception {
 		return exec($((Object) $(funName, ".", $(args))));
@@ -2705,7 +2702,7 @@ public class Vm {
 	public void main(String file) throws Exception {
 		if (new File(file).exists()) {
 			var milli = currentTimeMillis();
-			var res = loadText(theEnv, file);
+			var res = loadText(bootEnv, file);
 			print("start time: " + (currentTimeMillis() - milli));
 			if (prInert || res != inert) print(res);
 		}

@@ -33,7 +33,7 @@ import Wat.Utility;
 @SuppressWarnings("all")
 public class Parser {
 	
-	public enum datum { skip, eof, at, dot, string;
+	public enum datum { skip, at, dot, string, array, eof;
 		@Override public String toString() { return "#" + super.toString(); }		
 	}
 	
@@ -258,13 +258,14 @@ Object Elt(): {
 	|	t=<Kwd>      { return t.image.replaceAll("\\\\\\\\", "\\\\"); }
 	|	t=<Sym>      { return t.image.replaceAll("\\\\\\\\", "\\\\"); }  	
 //	|	t=<Sym> ["::" t2=<Sym>] { return t2 == null ? t.image : $("%eval", $("%'", t2.image), t.image); }  	
-	|	"(" ( o=Elt(){ if (o != datum.skip) l.add(o); } )+ ")" { return l.toArray(); }
-	|	"[" ( o=Elt(){ if (o != datum.skip) l.add(o); } )+ "]" { return l.toArray(); }
+	|	"#(" ( o=Elt() { if (o != datum.skip) l.add(o); } )* ")" { return $(datum.array, l.toArray()); }
+	|	"(" ( o=Elt() { if (o != datum.skip) l.add(o); } )+ ")" { return l.toArray(); }
+	|	"[" ( o=Elt() { if (o != datum.skip) l.add(o); } )+ "]" { return l.toArray(); }
 }
 
 Object[] parse() throws Exception: {
 	Object o = null;
 	List l = new ArrayList(); 
 }
-{	( o=Elt(){ if (o != datum.skip) l.add(o); } )* <EOF> { return l.toArray(); }
+{	( o=Elt() { if (o != datum.skip) l.add(o); } )* <EOF> { return l.toArray(); }
 }

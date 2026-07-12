@@ -164,7 +164,7 @@
    |($nm form environment)
    |(type function)
    |
-   |(derivation (\ (form . environment) (eval form (if (null? environment) (theEnv) (car! environment)))) )
+   |(derivation (wrap (vau (form . environment) env (eval form (if (null? environment) env (car! environment)))) )
    |
    |Return the result of evaluation of <b>form</b> in the optional <b>environment</b>.
    |#
@@ -175,7 +175,7 @@
    |($nm forms environment)
    |(type function)
    |
-   |(derivation (\ (forms . environment) (eval (cons 'list forms) (if (null? environment) (theEnv) (car! environment)))) )
+   |(derivation (wrap (vau (forms . environment) env (eval (cons 'list forms) (if (null? environment) env (car! environment)))) )
    |
    |Return the result of evaluation of <b>forms</b> in the optional <b>environment</b>.
    |#
@@ -1707,61 +1707,16 @@
    |#
   (unless (null? k) (printFrames (.nxt k)) (log "v" k) #inert))
 
-#;(def\ (printFrames k)
-  #|($nm continuation)
-   |(type function)
-   |
-   |Print the frames of the <b>continuation</b> from top to the bottom and return #inert.
-   |#
-  ((rec\ (printFrames k) (unless (null? k) (printFrames (.nxt k)) (log "    v" k))) (.nxt k)) (log "    ." k) #inert)
-
-; TODO sostituito dal seguente, eliminare
-#;(def\ (printFrames k)
-  #|($nm continuation)
-   |(type function)
-   |
-   |Print the frames of the <b>continuation</b> from top to the bottom and return #inert.
-   |#
-  ((rec\ (printFrames k) (if (&& (!null? k) (|| (null? (.dbg k)) (!eq? (.op (.dbg k)) "userBreak"))) (printFrames (.nxt k))) (log "    v" k)) (.nxt k)) (log "    ." k) #inert)
-
-; TODO sostituito dal seguente, eliminare
-#;(def\ (printFrames k)
-  #|($nm continuation)
-   |(type function)
-   |
-   |Print the frames of the <b>continuation</b> from top to the bottom and return #inert.
-   |#
-  (def sk (if (== (value :debugOn (theEnv)) #t) 17 0)) 
-  ( (rec\ (printFrames n k)
-      (if (&& (!null? k) (|| (null? (.dbg k)) (!eq? (.op (.dbg k)) "userBreak"))) (printFrames (1+ n) (.nxt k)))
-      (if (>= n sk) (log "  " (if (== n sk) "." "v") k)) )
-    0 k )
-  #inert )
-
-; TODO sostituito dal seguente, eliminare
-#;(def\ (printFrames k)
-  #|($nm continuation)
-   |(type function)
-   |
-   |Print the frames of the <b>continuation</b> from top to the bottom and return #inert.
-   |#
-  (def sk (if (ifnull? (debug (value :debug (theEnv))) #f (debug)) (if (doTco) 17 329) (if (doTco) 0 1)))
-  ( (rec\ (printFrames n k)
-      (if (&& (!null? k) (|| (null? (.dbg k)) (!eq? (.op (.dbg k)) "userBreak"))) (printFrames (1+ n) (.nxt k)))
-      (if (>= n sk) (log "  " (if (== n sk) "." "v") k)) )
-    0 k )
-  #inert )
-
 (def\ (printFrames k)
   #|($nm continuation)
    |(type function)
    |
    |Print the frames of the <b>continuation</b> from top to the bottom and return #inert.
    |#
-  (def sk (if (ifnull? (debug (value :debug (theEnv))) #f (debug)) (if (doTco) 17 329) (if (doTco) 0 1)))
+  (def skip (if (ifnull? (debug (value :debug (theEnv))) #f (debug)) (if (doTco) 17 329) (if (doTco) 0 1)))
   ( (rec\ (printFrames n k)
       (unless (|| (null? k) (&& (!null? (.dbg k)) (eq? (.op (.dbg k)) "userBreak"))) (printFrames (1+ n) (.nxt k)))
-      (if (>= n sk) (log "  " (if (== n sk) "." "v") k)) )
+      (if (>= n skip) (log "  " (if (== n skip) "." "v") k)) )
     0 k )
   #inert )
 
@@ -2745,8 +2700,10 @@
 (defVau (%` x) env
   #|(let ((a 1) (b 2) (c '(3 4))) `(,@c ,a (,a) (,@c) b ,@c)) -> (3 4 1 (1) (3 4) b 3 4)
    |(let1 (x '(a b c)) ``(,,x ,@,x ,,@x ,@,@x)) -> `(,(a b c) ,@(a b c) ,a ,b ,c ,@a ,@b ,@c)
+   |``(,,@'() ,@,@()) -> `()
    |``(,,@'() ,@,@(list)) -> `()
    |`````(a ,(b c ,@,,@,@'(a b c))) -> ````(a ,(b c ,@,,@a ,@,,@b ,@,,@c))
+   |`````(a ,(b c ,@,,@,@(list 'a 'b 'c))) -> ````(a ,(b c ,@,,@a ,@,,@b ,@,,@c))
    |#
   (defCase\ qq
     ( (('%, x))               (eval x env) )
@@ -2762,6 +2719,9 @@
 (assert (let ((a 1) (b 2) (c '(3 4))) `(,@c ,a (,a) (,@c) b ,@c)) '(3 4 1 (1) (3 4) b 3 4))
 (assert (let1 (x '(a b c)) ``(,,x ,@,x ,,@x ,@,@x)) '`(,(a b c) ,@(a b c) ,a ,b ,c ,@a ,@b ,@c))
 (assert ``(,,@'() ,@,@(list)) '`())
+(assert `````(a ,(b c ,@,,@,@(list 'a 'b 'c))) '````(a ,(b c ,@,,@a ,@,,@b ,@,,@c)))
+
+(assert ``(,,@'() ,@,@()) '`())
 (assert `````(a ,(b c ,@,,@,@'(a b c))) '````(a ,(b c ,@,,@a ,@,,@b ,@,,@c)))
 
 ; vedi https://github.com/melvinzhang/bit-scheme/blob/master/alexpander.scm
@@ -2769,9 +2729,10 @@
 (assert ``(,,@'() ,@,@(list)) '`())
 (assert `````(a ,(b c ,@,,@,@(list 'a 'b 'c))) '````(a ,(b c ,@,,@a ,@,,@b ,@,,@c)))
 (assert (let ((vars '(x y))) (eval `(let ((x '(1 2)) (y '(3 4))) `(foo ,@,@vars)))) '(foo 1 2 3 4))
+(assert (let ((vars '(x y))) (eval `(let ((x '(1 2)) (y '(3 4))) `(foo ,@,@vars)) (.theEnv vm))) '(foo 1 2 3 4))
 
 (assert (let ((x '(a b c)) (a 1) (b 2) (c 3)) ``(,,@x)) '`(,a ,b ,c) ) ;TODO sembrerebbe dover essere (1 2 3) che si ha invece per (eval ``(,,@x))
-(assert (let ((x '(a b c)) (a 1) (b 2) (c 3)) (eval ``(,,@x))) (1 2 3)) ; TODO così sembrerebbe mancare un eval ma ...
+(assert (let ((x '(a b c)) (a 1) (b 2) (c 3)) (eval ``(,,@x))) (1 2 3)) ; TODO quindi sembrerebbe mancare un eval ma ...
 
 
 #|! Options

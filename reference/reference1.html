@@ -337,7 +337,7 @@
           <br/>
             &nbsp;
           <br/>
-            (derivation (\ (form . environment) (eval form (if (null? environment) (theEnv) (car! environment)))) )
+            (derivation (wrap (vau (form . environment) env (eval form (if (null? environment) env (car! environment)))) )
           <br/>
             &nbsp;
           <br/>
@@ -359,7 +359,7 @@
           <br/>
             &nbsp;
           <br/>
-            (derivation (\ (forms . environment) (eval (cons 'list forms) (if (null? environment) (theEnv) (car! environment)))) )
+            (derivation (wrap (vau (forms . environment) env (eval (cons 'list forms) (if (null? environment) env (car! environment)))) )
           <br/>
             &nbsp;
           <br/>
