@@ -29,6 +29,10 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -130,7 +134,11 @@ public class Prova {
 		//out.println(false ^ true);
 		//out.println(111 ^ 111);
 		//out.println(111 ^ 101);
-		out.println(datum.array);
+		//out.println(datum.array);
+		
+		//out.println(Duration.between(LocalDate.now(), LocalDate.now()).toDays());
+		out.println(ChronoUnit.DAYS.between(LocalDate.now(), LocalDate.now()));
+		out.println(ChronoUnit.MINUTES.between(LocalTime.now(), LocalTime.now()));		
 	}
 	
 	public static void functions() {

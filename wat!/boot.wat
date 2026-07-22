@@ -2129,6 +2129,24 @@
 (assert (let* ((a 1)) a) 1)
 (assert (let* ((a 1)(b a)) b) 1)
 
+(defMacro (let*\ bindings . forms)
+  #|($nm functionBindings . forms)
+   |(type macro)
+   |
+   |(syntax functionBindings (functionBinding . functionBindings))
+   |(syntax functionBinding (name parameterTree . bodyForms))
+   |(syntax functionBinding ((name . parameterTree) . bodyForms))
+   |
+   |Establishes <b>functionBinding</b> serially, so that every binding can refer to previous one,
+   |after evaluate <b>forms</b> as an implicit `begin'.
+   |#
+  ( (rec\ (loop bindings)
+      (if (null? bindings)
+        (cons (list* '\ () forms))
+        (list* 'let1\ (car bindings) (cons (loop (cdr bindings)))) ))
+    bindings ))
+
+(assert (let*\ (((a b) (1+ b)) ((c b) (1+ (a b)))) (c 3)) 5)
 
 (defMacro (letLoop lhs . rhs)
   #|($nm name bindings . forms)
@@ -2729,10 +2747,12 @@
 (assert ``(,,@'() ,@,@(list)) '`())
 (assert `````(a ,(b c ,@,,@,@(list 'a 'b 'c))) '````(a ,(b c ,@,,@a ,@,,@b ,@,,@c)))
 (assert (let ((vars '(x y))) (eval `(let ((x '(1 2)) (y '(3 4))) `(foo ,@,@vars)))) '(foo 1 2 3 4))
-(assert (let ((vars '(x y))) (eval `(let ((x '(1 2)) (y '(3 4))) `(foo ,@,@vars)) (.theEnv vm))) '(foo 1 2 3 4))
+(assert (let ((vars '(x y))) (eval `(let ((x '(1 2)) (y '(3 4))) `(foo ,@,@vars)) (theEnv))) '(foo 1 2 3 4))
+(assert (let ((vars '(x y))) (eval `(let ((x '(1 2)) (y '(3 4))) `(foo ,@,@vars)) (%bootEnv))) '(foo 1 2 3 4))
+(assert (let ((vars '(x y))) (eval `(let ((x '(1 2)) (y '(3 4))) `(foo ,@,@vars)) (.bootEnv vm))) '(foo 1 2 3 4))
 
 (assert (let ((x '(a b c)) (a 1) (b 2) (c 3)) ``(,,@x)) '`(,a ,b ,c) ) ;TODO sembrerebbe dover essere (1 2 3) che si ha invece per (eval ``(,,@x))
-(assert (let ((x '(a b c)) (a 1) (b 2) (c 3)) (eval ``(,,@x))) (1 2 3)) ; TODO quindi sembrerebbe mancare un eval ma ...
+(assert (let ((x '(a b c)) (a 1) (b 2) (c 3)) (eval ``(,,@x))) (1 2 3)) ;TODO quindi sembrerebbe mancare un eval ma ...
 
 
 #|! Options
@@ -2987,13 +3007,13 @@
 (assert (optKey (:b :d) '(:a :b :c)) :b)
 (assert (optKey (:b :c) '(:a :b :c)) :b)
 
-(def\ (assoc k lst)
+(def\ (assoc k lst . keywords)
   #|($nm item list)
    |(type function)
    |
    |Return the `car' of a assoc <b>list</b> (a list of lists of keywords and values) is <b>item</b> is the `caar' if == to <b>item</b>, #null otherwise.
    |#
-  (member k lst :key car :get car) )
+  (apply** member k lst :key car :get car keywords) )
 
 (assert (assoc 'b '((a 1) (b 2) (c 3) (d 4))) '(b 2))
 
@@ -3709,6 +3729,18 @@
 
 (assert (remove odd? '(1 2 3 4 5 6 7 8 9)) '(2 4 6 8))
 (assert (remove == '(1 2 3) '(3 2 1)) '((1 3) (3 1)))
+
+(def\ (insertBefore f? a b)
+  #|($nm function? object list)
+   |(type macro)
+   |
+   |Returns the list with object insert in <b>list</b> before the element where the application of the <b>function?</b> to <b>object</b> and the elements <b>list</b> returns #true.
+   |#
+  (let1 loop (b b) (ifnull? ((carB . cdrB) b) (cons a) (if (f? carB a) (cons a b) (cons carB (loop cdrB))))))
+
+(assert (insertBefore > 3 (1 2 4 5)) (1 2 3 4 5))
+(assert (insertBefore > 0 (1 2 4 5)) (0 1 2 4 5))
+(assert (insertBefore (\ (a b) (> (car a) (car b))) (3) ((1) (2) (4) (5))) ((1) (2) (3) (4) (5)))
 
 (def\ (reduceL f init lst . lst*)
   #|($nm function  init . lists)
@@ -4990,6 +5022,13 @@
   (let1 (getExecutable (getMethod Utility "getExecutable" Object String Class[]))
     (\ (class name . classes)
       (apply** getExecutable #null class name classes) )))
+
+(def runnable
+  #|($nm form . forms)
+   |
+   |Return a java Runnable.
+   |#
+  %runnable)
 
 (def supplier
   #|($nm () . forms)

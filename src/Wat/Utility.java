@@ -24,13 +24,19 @@ import java.io.Reader;
 import java.lang.reflect.Array;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.Temporal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -46,7 +52,9 @@ public class Utility {
 	public static void main(String[] args) throws Exception {
 		//out.println(new File("reference/*.html").list().length);
 		//Files.exists(Path.of(" "));
-		out.println(encode("..<</b>>..<<b>>..<..>..</b"));
+		//out.println(encode("..<</b>>..<<b>>..<..>..</b"));
+		//getExecutable(ChronoUnit.MINUTES, "between", LocalTime.class, LocalTime.class);
+		getExecutable(LocalTime.now(), "plus", long.class, java.time.temporal.ChronoUnit.class);
 	}
 	//*/
 	
@@ -492,8 +500,12 @@ public class Utility {
 					var cost = getTotalTransformationCost(executable, argumentsClass);
 					if (cost > bestCost) continue;
 					if (cost == bestCost) {
-						if (executable.getDeclaringClass() == bestMatch.getDeclaringClass())
+						if (executable.getDeclaringClass() == bestMatch.getDeclaringClass()) {
+							if (!constructor
+							&& equals(executable.getParameters(), bestMatch.getParameters())
+							&& ((Method) executable).getReturnType().isAssignableFrom(((Method) bestMatch).getReturnType())) continue;
 							throw new RuntimeException("I " + (name.equals("new") ? "costruttori" : "metodi") + " " + bestMatch + " and " + executable + " has equal cost: " + bestCost);
+						}
 						if (executable.getDeclaringClass().isAssignableFrom(bestMatch.getDeclaringClass())) continue;
 					}
 					bestCost = cost;
@@ -506,6 +518,19 @@ public class Utility {
 				throw new RuntimeException((name.equals("new") ? "Costruttore" : "Metodo") + " non univoco." + executables);
 			}
 		}
+	}
+	
+	private static boolean equals(Parameter[] a, Parameter[] b) {
+        if (a==b) return true;
+        if (a==null || b==null) return false;
+
+        int length = a.length;
+        if (b.length != length) return false;
+
+        for (int i=0; i<length; i++) {
+            if (a[i].getType() != b[i].getType()) return false;
+        }
+        return true;
 	}
 	
 	private static String toString(String name, Class <?> ... argumentsClass) {
@@ -548,6 +573,7 @@ public class Utility {
 		}
 	}
 	
+	// https://github.com/apache/commons-lang/blob/master/src/main/java/org/apache/commons/lang3/reflect/MemberUtils.java
 	public static float getTotalTransformationCost(final Executable executable, final Class<?>[] srcArgs) {
 		final Class<?>[] destArgs = executable.getParameterTypes();
 		final boolean isVarArgs = executable.isVarArgs();
@@ -590,6 +616,7 @@ public class Utility {
 		return totalCost;
 	}
 	
+	// https://github.com/apache/commons-lang/blob/master/src/main/java/org/apache/commons/lang3/reflect/MemberUtils.java
 	private static float getObjectTransformationCost(Class<?> srcClass, final Class<?> destClass) {
 		if (destClass.isPrimitive()) return getPrimitivePromotionCost(srcClass, destClass);
 		
@@ -612,6 +639,7 @@ public class Utility {
 		return cost;
 	}
 	
+	// https://github.com/apache/commons-lang/blob/master/src/main/java/org/apache/commons/lang3/reflect/MemberUtils.java
 	private static float getPrimitivePromotionCost(final Class<?> srcClass, final Class<?> destClass) {
 		if (srcClass == null) return 1.5f;
 		
@@ -623,6 +651,7 @@ public class Utility {
 			//cls = ClassUtils.wrapperToPrimitive(cls);
 			cls = toPrimitive(cls);
 		}
+		 // Increase the cost as the loop widens the type.
 		Class<?>[] primitiveTypes = { Byte.TYPE, Short.TYPE, Character.TYPE, Integer.TYPE, Long.TYPE, Float.TYPE, Double.TYPE };
 		for (int i = 0; cls != destClass && i < primitiveTypes.length; i++) {
 			if (cls != primitiveTypes[i]) continue;
@@ -771,7 +800,13 @@ public class Utility {
 				}
 				else if (sDSymbol) switch (c) {
 					case '|'-> inDSymbol = !(sDSymbol = false);
-					default -> sDSymbol = false;
+					default -> {
+						sDSymbol = false;
+						switch (c) {
+							case '('-> open += 1;
+							case ')'-> open -= 1;
+						}
+					}
 				}
 				else if (inComment) switch (c) {
 					case '"'-> inString = true;

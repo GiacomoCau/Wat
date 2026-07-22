@@ -60,7 +60,7 @@
 
 (def* (chapter# def# l) 0 0 #null)
 
-(def help ((.theEnv vm) :rhs :help (newObj :help "(help symbol)\n(type function)\n\nReturn the help page of symbol")))
+(def help ((.bootEnv vm) :rhs :help (newObj :help "(help symbol)\n(type function)\n\nReturn the help page of symbol")))
 
 (def\ (buttons)
   (br)

@@ -301,6 +301,32 @@
     </div>
     <div>
       <h3>
+        let*\
+      </h3>
+      <ul>
+        <li>
+          (<b>let*\</b> functionBindings . forms)
+          <br/>
+            (type macro)
+          <br/>
+            &nbsp;
+          <br/>
+            (syntax functionBindings (functionBinding . functionBindings))
+          <br/>
+            (syntax functionBinding (name parameterTree . bodyForms))
+          <br/>
+            (syntax functionBinding ((name . parameterTree) . bodyForms))
+          <br/>
+            &nbsp;
+          <br/>
+            Establishes <b>functionBinding</b> serially, so that every binding can refer to previous one,
+          <br/>
+            after evaluate <b>forms</b> as an implicit `begin'.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>
         letLoop
       </h3>
       <ul>

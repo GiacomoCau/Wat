@@ -574,6 +574,12 @@ public class Vm {
 			for (int i=0, e=objs.length; i<e; i+=1) last = map.put(toKey(objs[i]), objs[i+=1]);
 			return last;
 		}
+		Object puts(Map<String,Object> map) {
+			if (map == null) return null;
+			Object last = null;
+			for (Entry<String,Object> e: map.entrySet()) last = this.map.put(e.getKey(), e.getValue());
+			return last;
+		}
 		@SuppressWarnings("unused")
 		@Override public String toString() {
 			var s = "";
@@ -719,14 +725,9 @@ public class Vm {
 	
 	
 	// Bind
-	public class InnerException extends RuntimeException {
+	public class InnerException extends Obj {
 		private static final long serialVersionUID = 1L;
-		Object[] objs;
-		public InnerException(String message, Object ... objs) { super(message); this.objs = objs; }
-		Object getValue(Object key) {
-			for (int i=0; i<objs.length; i+=2) if (key==objs[i]) return objs[i+1];
-			return null; //TODO meglio throw ...
-		}
+		public InnerException(String message, Object ... objs) { super(message, objs); }
 	}
 	public class MatchException extends InnerException {
 		private static final long serialVersionUID = 1L;
@@ -873,7 +874,7 @@ public class Vm {
 	public Object arity(Object obj) {
 		return switch (obj) {
 			case Combinable cmb-> cmb.arity;
-			case Supplier _-> 0;
+			case Runnable _, Supplier _-> 0;
 			case ArgsList _, EnvArgsList _-> ge(0);
 			case Consumer _, Function _-> 1;
 			case BiConsumer _, BiFunction _-> 2;
@@ -1458,6 +1459,12 @@ public class Vm {
 						case Integer len-> lel.apply(len, e, o);
 						case Object chk-> resumeError(chk, symbol("Integer"));
 					};
+				case Runnable r-> (ArgsList) o-> 
+					switch (checkN(op, o, 0)) {
+						case Suspension susp-> susp;
+						case Integer len when len == 0->{ r.run(); yield inert; }
+						case Object chk-> resumeError(chk, and("Integer (== 0)"));
+					};
 				case Supplier s-> (ArgsList) o-> 
 					switch (checkN(op, o, 0)) {
 						case Suspension susp-> susp;
@@ -1512,7 +1519,15 @@ public class Vm {
 						case Object chk-> resumeError(chk, and("Integer" + (c.isVarArgs() ? "(>="+(pc-1) : "(=="+pc) + ")"));
 					};
 				};
-				default -> typeError("cannot build jfun, not a {expected}: {datum}", this, toChk(or(ArgsList.class, LenList.class, Supplier.class, Function.class, BiFunction.class, Field.class, Executable.class)));
+				default->
+					typeError("cannot build JFun, not a {expected}: {datum}", jfun,
+						toChk(
+							or(	ArgsList.class, LenList.class, EnvArgsList.class, LenEnvList.class,
+								Runnable.class, Supplier.class, Function.class, BiFunction.class,
+								Field.class, Executable.class
+							)
+						)
+					);
 			};
 		}
 		public Object combine(Env e, List o) {
@@ -1554,7 +1569,7 @@ public class Vm {
 	}
 	boolean isjFun(Object obj) {
 		// {{ At, Dot } < AtDot < ArgsList < Function, EnvArgsList < BiFunction } < isjfun!
-		return isInstance(obj, Supplier.class, Consumer.class, Function.class, BiConsumer.class, BiFunction.class, Field.class, Executable.class);
+		return isInstance(obj, Runnable.class, Supplier.class, Consumer.class, Function.class, BiConsumer.class, BiFunction.class, Field.class, Executable.class);
 		//return isInstance(obj, Supplier.class, Consumer.class, ArgsList.class, Function.class, BiConsumer.class, EnvArgsList.class, BiFunction.class, Field.class, Executable.class);
 	}
 	
@@ -1660,6 +1675,23 @@ public class Vm {
 		return new Dot(name);
 	}
 	
+	Combinable runnable = new Combinable() {
+		{ arity = 0; }
+		@Override public final <T> T combine(Env e, List o) {
+			var chk = checkM(this, o, 1); // o = (form . forms)
+			if (chk instanceof Suspension s) return (T) s;
+			if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
+			return (T) new Runnable() {
+				@Override public void run() {
+					getTco(begin.combine(e, o));
+				};
+				@Override public String toString() {
+					return "{Runnable" + toStringForms(o) + "}";
+				}
+			};
+		}
+		@Override public String toString() { return "%Runnable"; }
+	};
 	Combinable supplier = new Combinable() {
 		{ arity = 0; }
 		@Override public final <T> T combine(Env e, List o) {
@@ -1773,7 +1805,7 @@ public class Vm {
 		if (thw instanceof InnerException ie) {
 			var error = new Error(ie.getMessage() + eIfnull(msg, ()->" " + msg), "type", symbol(ie.getClass().getSimpleName().replace("Exception", "").toLowerCase()));
 			error.puts(objs);
-			error.puts(ie.objs);
+			error.puts(ie.map);
 			return error(error);
 		}
 		return error(new Error(msg, thw, objs));
@@ -1919,7 +1951,7 @@ public class Vm {
 			// probabilmente non serve vista la conversione in Object[] di evalChk
 			if (chkl.car instanceof Apv) {
 				try {
-					switch (getTco(combine(env(), chkl.car, cons(o, chkl.cdr(1))))) {
+					switch (getTco(combine(env(), unwrap(chkl.car), cons(o, chkl.cdr(1))))) {
 						case Boolean b when b: return 0;
 						case Object _: throw new TypeException("not a {expected}: {datum}", o, toChk(chkl.cdr()) /*true*/);
 						/* TODO in alternativa del precedente
@@ -1986,7 +2018,7 @@ public class Vm {
 			// quando : e check vanno in errore per un check in profondità, es. (: (Integer) (#t))
 			// ovvero quando il valore in errore ("datum") è diverso dall'intero valore da controllare (o)
 			// ovvero quando il check in errore ("expected") è diverso dall'intero check da effettuare (chk)
-			: !ie.getValue("datum").equals(o) // || !ie.getValue("expected").equals(toChk(chk))
+			: !ie.value("datum").equals(o) // || !ie.value("expected").equals(toChk(chk))
 			? error("checking {operands} with {check}", ie, "operands", o, "check", toChk(chk))
 			: error(ie)
 		;
@@ -2191,7 +2223,7 @@ public class Vm {
 				if (objs[0] == datum.array) yield objs[1];
 				yield bc2lst(objs);
 			}
-			/*/ // TODO va in errore?!
+			/*/
 			case Object[] objs-> objs.length != 2
 				? bc2lst(objs)
 				: switch (objs[0]) {
@@ -2199,7 +2231,7 @@ public class Vm {
 					case datum.dot-> dot((String) objs[1]);
 					case datum.string-> intStr ? ((String) objs[1]).intern() : objs[1];
 					case datum.array-> objs[1];
-					default-> bc2lst(objs);
+					case null, default-> bc2lst(objs);
 				};
 			//*/
 			case null, default-> o;
@@ -2394,7 +2426,6 @@ public class Vm {
 				"%append", wrap(new JFun("%Append", 2, (n,o)-> checkN(n, o, 2, or(null, List.class)), (_,o)-> append(o.car(),o.car(1)) )),
 				"%length", wrap(new JFun("%Length", 1, (n,o)-> checkN(n, o, 1 /*, or(null, List.class)*/), (_,o)-> len(o.car()) )),
 				"%last", wrap(new JFun("%Last", 1, (n,o)-> checkN(n, o, 1, or(null, List.class)), (_,o)-> last(o.car()) )),
-				"%arity", wrap(new JFun("%Arity", (Function) Vm.this::arity )),
 				"%reverse", wrap(new JFun("%Reverse", 1, (n,o)-> checkN(n, o, 1, or(null, List.class)), (_,o)-> reverse(o.car()) )),
 				// Symbol Keyword
 				"%symbol", wrap(new JFun("%Symbol", 1, (n,o)-> checkN(n, o, 1, String.class), (_,o)-> symbol(o.car()) )),
@@ -2470,8 +2501,11 @@ public class Vm {
 				// Errors
 				"%rootPrompt", rootPrompt,
 				"%error", wrap(new JFun("%Error", (ArgsList) o-> at("error").apply(cons(this, o)))),
+				// Combinable
+				"%arity", wrap(new JFun("%Arity", (Function) this::arity )),
 				// Java Interface
 				"%jFun?", wrap(new JFun("%JFun?", (Function<Object,Boolean>) this::isjFun)),
+				"%runnable", runnable,
 				"%supplier", supplier,
 				"%consumer", consumer,
 				"%function", function,
@@ -2519,6 +2553,7 @@ public class Vm {
 					            (%== ckcar 'or) (%list->array (evm (%cdr ck)))
 					            (%=* ckcar and matchType?) (%cons ckcar (evm (%cdr ck)))
 					            (%=* ckcar %' quote) (%cadr ck)
+					            (%=* ckcar \\ _) (%eval ck env)
 					            ( (%\\ (evckcar)
 					                (%if (%type? evckcar &Wat.Vm$Apv)
 					                  (%cons evckcar (%cons ckcar (%eval (%list* '%list (%cdr ck)) env)))
@@ -2555,6 +2590,7 @@ public class Vm {
 				//"eof", new JFun("eof", (n,o)-> checkN(n, o, 0), (l,o)-> List.Parser.eof),
 				//"eof?", wrap(new JFun("eof?", (n,o)-> checkN(n, o, 1), (l,o)-> List.Parser.eof.equals(o.car))),
 				"readString", wrap(new JFun("ReadString", 1, (n,o)-> checkN(n, o, 1, String.class), (_,o)-> uncked(()-> str2exp(o.<String>car())) )),
+				// System
 				"system", wrap(new JFun("System", list(1, 2), (n,o)-> checkR(n, o, 1, 2, String.class, Boolean.class), (l,o)-> uncked(()-> system(l==1 ? false : o.<Boolean>car(1),  "cmd.exe", "/e:on", "/c", o.<String>car())) )),
 				// Config
 				"doTco", wrap(new JFun("DoTco", list(0, 1), (n,o)-> checkR(n, o, 0, 1, Boolean.class), (l,o)-> l == 0 ? doTco : inert(doTco=o.car()) )),
