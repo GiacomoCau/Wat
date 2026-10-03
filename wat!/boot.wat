@@ -637,7 +637,7 @@
    |The first type of lambda before Scheme.
    |#
   (vau (pt . forms) #_
-    (wrau args env (apply begin forms (bind (newEnv env) pt args)))))
+    (wrau args env :de\ (apply begin forms (bind (newEnv env) pt args)))))
 
 #;(defMacro (de\ pt . forms) ;ko!
   (list 'wrap (list* 'vau pt #ignore forms)))
@@ -2457,9 +2457,11 @@
    |
    |(syntax environmentParameter (or #ignore Symbol))
    |(syntax clauses (clause . clauses))
+   |(syntax clause (definiendTree . forms))
+   |(syntax clause (do . forms))
+   |(syntax clause (do => apv1))
    |(syntax clause (else . forms))
    |(syntax clause (else => apv1))
-   |(syntax clause (definiendTree . forms))
    |
    |Return a multi-armed vau operator, when applied go through the <b>clauses</b> in order.
    |If <b>clauses</b> is #null return #inert.
@@ -2470,9 +2472,6 @@
    |Otherwise go to the next <b>clause</b>.
    |#
   (vau values #ignore :caseVau
-    ; per eseguire codice prima delle clausole!
-    (if (&& (cons? clauses) (cons? (car clauses)) (== (caar clauses) '=>))
-      (begin ((eval (car! (cdar clauses)) env) values) (def clauses (cdr clauses))) )
     (let1 loop (clauses clauses)
       (unless (null? clauses)
         (let1 (((dt . forms) . clauses) clauses)
@@ -2480,6 +2479,12 @@
             (if (== (car forms) '=>)
               ((eval (cadr! forms) (if (ignore? ep) env (newEnv env ep env))) values)
               (apply begin forms (if (ignore? ep) env (newEnv env ep env))) )
+            (== dt 'do) ; per eseguire codice prima o fra delle clausole!
+              (then
+              (if (== (car forms) '=>)
+                ((eval (cadr! forms) env) values)
+                  (apply begin forms env) )
+                (loop clauses) )
             (let1 (env+ (newEnv env))
               (if (bind? env+ dt values)
                 (apply begin forms (if (ignore? ep) env+ (newEnv env+ ep env+)))
@@ -2549,9 +2554,11 @@
    |(type fexpr)
    |
    |(syntax clauses (clause . clauses))
+   |(syntax clause (definiendTree . forms))
+   |(syntax clause (do . forms))
+   |(syntax clause (do => apv1))
    |(syntax clause (else . forms))
    |(syntax clause (else => apv1))
-   |(syntax clause (definiendTree . forms))
    |
    |Return a multi-armed macro operator, when applied go through the <b>clauses</b> in order.
    |If <b>clauses</b> is #null return #inert.
@@ -2585,11 +2592,13 @@
    |(type macro)
    |
    |(syntax clauses (clause . clauses))
+   |(syntax clause (definiendTree . forms))
+   |(syntax clause (do . forms))
+   |(syntax clause (do => apv1))
    |(syntax clause (else . forms))
    |(syntax clause (else => apv1))
-   |(syntax clause (definiendTree . forms))
    |
-   |(derivation (wrap (caseVau . clauses)))
+   |(derivation (wrap (caseVau #ignore . clauses)))
    |
    |Return a multi-armed \ function, when applied go through the <b>clauses</b> in order.
    |If <b>clauses</b> is #null return #inert.
@@ -2624,9 +2633,11 @@
    |(type macro)
    |
    |(syntax clauses (clause . clauses))
+   |(syntax clause (definiendTree . forms))
+   |(syntax clause (do . forms))
+   |(syntax clause (do => apv1))
    |(syntax clause (else . forms))
    |(syntax clause (else => apv1))
-   |(syntax clause (definiendTree . forms))
    |
    |(derivation (wrap (caseVau . clauses)))
    |

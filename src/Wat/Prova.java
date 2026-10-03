@@ -29,7 +29,6 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
@@ -52,7 +51,6 @@ import javax.tools.SimpleJavaFileObject;
 import javax.tools.ToolProvider;
 
 import List.Parser;
-import static List.Parser.datum;
 import Wat.Vm.Keyword;
 import Wat.Vm.Symbol;
 
