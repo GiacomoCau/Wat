@@ -982,7 +982,15 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			return tco(()-> pipe(dbg(e, this, o), ()-> map("evalArg", car-> getTco(evaluate(e, car)), o), res-> tco(()-> cmb.combine(e, (List) res[0]))));
 		}
-		public String toString() { return "{%Apv " + Vm.this.toString(cmb) + "}"; }
+		public String toString() {
+			if (cmb instanceof Opv opv) {
+				if (opv.ep == ignore)
+					return "{%\\ " + opv.pt + toStringForms(opv.xs) + "}";
+				else if (opv.xs != null && opv.xs.car == keyword("de\\"))
+					return "{%de\\ " + opv.e.get("pt") + toStringForms(opv.e.get("forms")) + "}";
+			}
+			return "{%Apv " + Vm.this.toString(cmb) + "}";	
+		}
 		Combinable unwrap() { return cmb; }
 	}
 	Object wrap(Object arg) {
@@ -1048,10 +1056,10 @@ public class Vm {
 				case Integer i-> i >= 0 && i <= 3
 					? pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> bind(dbg, def, i, e, dt, res[0]))
 					: typeError("cannot " + (def ? "def" : "set!") + ", invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
-				case Object obj-> resumeError(obj, symbol("Integer"));
+				case Object obj-> resumeError(obj, symbol("Integer (>= 0) (<= 3)"));
 			};
 		}
-		/*/
+		/* /
 		public Object combine(Env e, List o) {
 			var chk = checkR(this, o, 2, 3); // o = (dt val) | (dt (or #ignore #inert :rhs :prv :cnt) val)
 			if (chk instanceof Suspension s) return s;
@@ -1063,29 +1071,57 @@ public class Vm {
 			var bndRes = (int) obj;
 			var dbg = dbg(e, this, o);
 			return bndRes >= 0 && bndRes <= 3
-				? pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> bind(dbg, def, bndRes, e, dt, res))
+				? pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> bind(dbg, def, bndRes, e, dt, res[0]))
 				: typeError("cannot " + (def ? "def" : "set!") + ", invalid bndRes value, not {expected}: {datum}", bndRes, toChk(or(0, 1, 2, 3)))
 			;
+		}
 		/* /
 		public Object combine(Env e, List o) {
 			return switch(checkR(this, o, 2, 3)) { // o = (dt val) | (dt (or #ignore #inert :rhs :prv :cnt) val)
+				case Suspension s-> s;
 				case Integer len-> {
 					var dt = o.car;
 					yield switch (checkDt(cons(this, o), dt)) {
+						case Suspension s-> s;
 						case null-> switch (bndRes(len != 3 ? ignore : o.car(1))) {
+							case Suspension s-> s;
 							case Integer bndRes-> {
 								var dbg = dbg(e, this, o);
 								yield bndRes >= 0 && bndRes <= 3
 									? pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> bind(dbg, def, bndRes, e, dt, res))
 									: typeError("cannot " + (def ? "def" : "set!") + ", invalid bndRes value, not {expected}: {datum}", bndRes, toChk(or(0, 1, 2, 3)));
 							}
-							case Object s-> s;
+							case Object obj-> typeError("cannot " + (def ? "def" : "set!") + ", invalid bndRes value, not {expected}: {datum}", obj, toChk(or(Integer.class, Suspension.class)));
 						};
-						case Object err-> err;
+						case Object obj-> typeError("cannot " + (def ? "def" : "set!") + ", invalid bndRes value, not {expected}: {datum}", obj, toChk(or(null, Suspension.class)));
 					};
 				}
-				case Object s-> s;
+				case Object obj-> typeError("cannot " + (def ? "def" : "set!") + ", invalid bndRes value, not {expected}: {datum}", obj, toChk(or(Integer.class, Suspension.class)));
 			};
+		}
+		/* /
+		public Object combine(Env e, List o) {
+			var chk = checkR(this, o, 2, 3); // o = (dt val) | (dt (or #ignore #inert :rhs :prv :cnt) val)
+			if (chk instanceof Suspension s) return s;
+			var len = (int) chk;
+			var dt = o.car;
+			if (checkDt(cons(this, o), dt) instanceof Suspension s) return s;
+			var obj = bndRes(len != 3 ? ignore : o.car(1));
+			if (obj instanceof Suspension s) return s;
+			var i = (int) obj;
+			var dbg = dbg(e, this, o);
+			return pipe(dbg, ()-> getTco(evaluate(e, o.car(len-1))), res-> bind(dbg, def, i, e, dt, res[0]));
+		}
+		/* /
+		public Object combine(Env e, List o) {
+			var dbg = dbg(e, this, o);
+			return pipe(dbg,
+				()-> checkR(this, o, 2, 3), // o = (dt val) | (dt (or #ignore #inert :rhs :prv :cnt) val)
+				res-> checkDt(cons(this, o), o.car),
+				res-> bndRes(((int) res[0]) != 3 ? ignore : o.car(1)),
+				res-> getTco(evaluate(e, o.car(((int) res[0])-1))),
+				res-> bind(dbg, def, (int) res[2], e, o.car, res[3]))
+			;
 		}
 		//*/
 		public String toString() { return def ? "%Def" : "%Set!"; }
@@ -1434,7 +1470,7 @@ public class Vm {
 	//non-sealed interface EnvArgsList extends Args { Object apply(Env e, List o); }
 	interface ChkList { Object apply(Symbol sym, List o); }
 	interface LenList { Object apply(Integer len, List o); }
-	interface LenEnvList { Object apply(Integer l, Env e, List o); }
+	interface LenEnvList { Object apply(Integer len, Env e, List o); }
 	
 	class JFun extends Combinable {
 		Symbol op; Args jfun; ChkList check;
@@ -1791,13 +1827,10 @@ public class Vm {
 	}
 	<T> T error(Error err) {
 		var userBreak = bootEnv.lookup(symbol("userBreak")).value;
-		if (userBreak == null) throw err;
-		return (T) pipe(dbg(bootEnv, "userBreak", err), ()-> getTco(evaluate(bootEnv, list(userBreak, err)))
-			/* TODO da problemi al debuger
-			//, val->{ throw thwErr ? err : new Value(ignore, val[1]); }
-			, val->switch (log(val[1])) { case Suspension s-> s; default-> { throw thwErr ? err : new Value(ignore, val); }}
-			//*/
-		);
+		if (!(userBreak instanceof Combinable)) throw err;
+		var val = pipe(dbg(bootEnv, "userBreak", err), ()-> getTco(combine(bootEnv, userBreak, cons(err))));
+		if (val instanceof Suspension) return (T) val; // indispensabile per il debugger di LispX
+		throw thwErr ? err : new Value(ignore, val);
 	}
 	<T> T error(String msg, Object ... objs) { return error(new Error(msg, objs)); }
 	<T> T error(Throwable thw, Object ... objs) { return error(null, thw, objs); }
@@ -1930,8 +1963,8 @@ public class Vm {
 			}
 		}
 		else if (chk instanceof List chkl) {
-			// TODO la seguente if non sembra sia necessaria, verficare
-			if (chkl.car instanceof Object[] chks && chkl.cdr() == null) return checkO(o, chks);
+			// TODO la seguente if non sembra sia necessaria, verificare, si, non sembrerebbe necessaria
+			//if (chkl.car instanceof Object[] chks && chkl.cdr() == null) return checkO(o, chks);
 			if (chkl.car == symbol("and")) {
 				for (var chka = chkl.cdr(); chka != null; chka = chka.cdr()) {
 					try {
