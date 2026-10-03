@@ -138,7 +138,9 @@
                            (@println h (list 'help (list 'quote name) (@toString lh)))) )
                     (div
                       (h3 (pr (encode (getName l0))))
-                      (ul (li (pr (encode l0)))) )))) )))) )) )
+                      (ul (li (pr (encode l0)))) )))) )))) ))
+  (@println h '(set! help (unwrap help)))
+  (eval '(set! help (unwrap help)) (%bootEnv)) )
 
 (log chapter# 'chapters def# 'definitions)
 
