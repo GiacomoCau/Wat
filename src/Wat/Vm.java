@@ -460,7 +460,7 @@ public class Vm {
 		public String toString(boolean t) {
 			//return "{" + (this==theEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" + (t || map.size() > prEnv ? "[" + map.size() + "] ..." : toStringSet(map.reversed().entrySet())) + eIfnull(parent, ()-> " " + parent.toString(t)) + "}";
 			return "{"
-				+ (this==bootEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" + 
+				+ (this==bootEnv ? "The" : this==vmEnv ? "Vm" : "") + "Env" +
 				(map.size() > prEnv || t
 					? "[" + map.size() + "] ..."
 					: t
@@ -494,6 +494,7 @@ public class Vm {
 				default-> {
 					BiFunction f =	o.car == keyword(":def") ? (k,v)-> def(k,v) : o.car == keyword(":set!") ? (k,v)-> set(k,v) : null;
 					if (f == null) f = (BiFunction) (k,v)-> def(k,v); else { len-=1; o=o.cdr(); }
+					/*
 					var bndRes = len % 2 == 0 ? ignore : first(o.car, len-=1, o=o.cdr());
 					for (; len>2; len-=2, o=o.cdr(1)) f.apply(toKey(o.car), o.car(1));
 					var key = toKey(o.car);
@@ -508,6 +509,19 @@ public class Vm {
 						};
 						case Object obj-> resumeError(obj, symbol("Integer"));
 					};
+					/*/
+					var bndRes = bndRes(len % 2 == 0 ? ignore : first(o.car, len-=1, o=o.cdr()));
+					if (bndRes instanceof Suspension s) yield s;
+					for (; len>2; len-=2, o=o.cdr(1)) f.apply(toKey(o.car), o.car(1));
+					var key = toKey(o.car);
+					yield switch((int) bndRes) {
+						case 0-> inert(f.apply(key, o.car(1)));
+						case 1-> { var v = o.car(1); f.apply(key, v); yield v; }
+						case 2-> f.apply(key, o.car(1));
+						case 3-> { f.apply(key, o.car(1)); yield this; }
+						case int i-> typeError("cannot def/set! env, invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
+					};
+					//*/
 				}
 			};
 		}
@@ -525,9 +539,10 @@ public class Vm {
 		@Override public Object apply(List o) { // () | (value) | ((or #inert #ignore :rhs :prv :cnt) value)
 			var chk = checkR(this, o, 0, 2);
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len && len >= 0 && len <= 2)) return resumeError(chk, and("Integer (>= 0) (<= 2)"));
-			return switch (len) {
+			//if (!(chk instanceof Integer len && len >= 0 && len <= 2)) return resumeError(chk, and("Integer (>= 0) (<= 2)"));
+			return switch ((int) chk) {
 				case 0-> value;
+				/*
 				default-> switch (bndRes(len == 2 ? o.car : ignore)) {
 					case Suspension s-> s;
 					case Integer i-> switch(i) {
@@ -539,6 +554,19 @@ public class Vm {
 					};
 					case Object obj-> resumeError(obj, symbol("Integer"));
 				};
+				/*/
+				case int len-> {
+					var bndRes = bndRes(len == 2 ? o.car : ignore);
+					if (bndRes instanceof Suspension s) yield s;
+					yield switch ((int) bndRes) {
+						case 0-> inert(value = o.car(len-1));
+						case 1-> value = o.car(len-1);
+						case 2-> { var v = value; value = o.car(len-1); yield v; }
+						case 3-> { value = o.car(len-1); yield this; }
+						case int i-> typeError("cannot set box, invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
+					};
+				}
+				//*/
 			};
 		}
 		public String toString() { return "{" + toSource(getClass()) + " " + Vm.this.toString(value) + "}"; }
@@ -599,6 +627,7 @@ public class Vm {
 			;
 		}
 		@Override public Object apply(List o) { // () | (value) | (key value ...) | ((or #inert #ignore :rhs :prv :cnt) key value ...)
+			/*
 			var len = len(o);
 			if (len == 0) return this;
 			if (len == 1) return get(o.car);
@@ -616,6 +645,25 @@ public class Vm {
 				};
 				case Object obj-> resumeError(obj, symbol("Integer"));
 			};
+			/*/
+			return switch(len(o)) {
+				case 0-> this;
+				case 1-> get(o.car);
+				case int len->{
+					var bndRes = bndRes(len % 2 == 0 ? ignore : first(o.car, len-=1, o=o.cdr()));
+					if (bndRes instanceof Suspension s) yield s;
+					for (; len>2; len-=2, o=o.cdr(1)) map.put(toKey(o.car), o.car(1));
+					var key = toKey(o.car);
+					yield switch ((int) bndRes) {
+						case 0-> inert(map.put(key, o.car(1)));
+						case 1-> { var v = o.car(1); map.put(key, v); yield v; }
+						case 2-> map.put(key, o.car(1));
+						case 3-> { map.put(key, o.car(1)); yield this; }
+						case int i-> typeError("cannot set obj, invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
+					};
+				}
+			};
+			//*/
 		}
 		private static final Pattern keyword = Pattern.compile("\\{(.+?)\\}");
 		@Override public String getMessage() {
@@ -819,7 +867,7 @@ public class Vm {
 						}
 						else if (car instanceof AtDot atDot)
 							res = bind0(def, bndRes, e, symbol(atDot.name), atDot.apply(cons(rhs)));
-						//* 
+						//*
 						else if (isObjEnv)
 							res = bind0(def, bndRes, e, car, objEnv.get(car instanceof Cons car2 && car2.car == sharpColon ? car2.car(2) : car));
 						else if (isArray)
@@ -925,7 +973,7 @@ public class Vm {
 		Macro(Env e, Object pt, Object ep, List xs) {
 			var expander = e.<Opv>get("expander");
 			var arity = arityPt(expander.pt);
-			super(e, pt, arity, ep, xs); 
+			super(e, pt, arity, ep, xs);
 		}
 		public String toString() {
 			var expander = e.<Opv>get("expander");
@@ -964,9 +1012,9 @@ public class Vm {
 		Colon(Object op) { this.op = op; isCheck = op.equals("check"); arity = isCheck ? 2 : ge(2); }
 		public Object combine(Env e, List o) {
 			return pipe(dbg(e, this, o), ()->{
-				var chk = isCheck ? checkN(this, o, 2) : checkM(this, o, 2); // o = (form check) | (check form . forms) | (#: check form . forms) 
+				var chk = isCheck ? checkN(this, o, 2) : checkM(this, o, 2); // o = (form check) | (check form . forms) | (#: check form . forms)
 				if (chk instanceof Suspension s) return s;
-				if (!(chk instanceof Integer len) || (isCheck ? len != 2 : len < 2)) return resumeError(chk, and("Integer " + "(" + (isCheck ? "==" : ">=") + " 2)"));
+				//if (!(chk instanceof Integer len) || (isCheck ? len != 2 : len < 2)) return resumeError(chk, and("Integer " + "(" + (isCheck ? "==" : ">=") + " 2)"));
 				var val = getTco(isCheck ? evaluate(e, o.car) : begin.combine(e, o.cdr(o.car == sharpColon ? 1 : 0)));
 				if (val instanceof Suspension s) return s;
 				var chk2 = getTco(evalChk.combine(e, cons(o.car(isCheck || o.car == sharpColon ? 1 : 0))));
@@ -989,7 +1037,7 @@ public class Vm {
 				else if (opv.xs != null && opv.xs.car == keyword("de\\"))
 					return "{%de\\ " + opv.e.get("pt") + toStringForms(opv.e.get("forms")) + "}";
 			}
-			return "{%Apv " + Vm.this.toString(cmb) + "}";	
+			return "{%Apv " + Vm.this.toString(cmb) + "}";
 		}
 		Combinable unwrap() { return cmb; }
 	}
@@ -1018,7 +1066,7 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			var chk = checkM(this, o, 2); // o = (pt ep . forms)
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len && len >= 2)) return resumeError(chk, and("Integer (>= 2)"));
+			//if (!(chk instanceof Integer len && len >= 2)) return resumeError(chk, and("Integer (>= 2)"));
 			var pt = o.car;
 			var ep = o.car(1);
 			var err = checkPtEp(cons(this, o), pt, ep); if (err != null) return err;
@@ -1026,7 +1074,7 @@ public class Vm {
 			if (xs != null) {
 				var car = xs.car;
 				if (car == keyword("macro")) {
-					return 
+					return
 						e.get("expander") instanceof CaseOpv
 						? new CaseMacro(e, pt, ep, xs.cdr())
 						: new Macro(e, pt, ep, xs.cdr())
@@ -1034,7 +1082,7 @@ public class Vm {
 				}
 				else if (car == keyword("caseVau"))
 					return new CaseOpv(e, pt, ep, xs.cdr());
-			}		
+			}
 			return new Opv(e, pt, ep, xs);
 		}
 		public String toString() { return "%Vau"; }
@@ -1043,7 +1091,7 @@ public class Vm {
 		{ arity = list(2, 3); }
 		boolean def;
 		DefSet(boolean def) { this.def = def; }
-		//* TODO valutare alternative per il codice dei Combinable
+		/* TODO valutare alternative per il codice dei Combinable
 		public Object combine(Env e, List o) {
 			var chk = checkR(this, o, 2, 3); // o = (dt val) | (dt (or #ignore #inert :rhs :prv :cnt) val)
 			if (chk instanceof Suspension s) return s;
@@ -1099,7 +1147,7 @@ public class Vm {
 				case Object obj-> typeError("cannot " + (def ? "def" : "set!") + ", invalid bndRes value, not {expected}: {datum}", obj, toChk(or(Integer.class, Suspension.class)));
 			};
 		}
-		/* /
+		/*/
 		public Object combine(Env e, List o) {
 			var chk = checkR(this, o, 2, 3); // o = (dt val) | (dt (or #ignore #inert :rhs :prv :cnt) val)
 			if (chk instanceof Suspension s) return s;
@@ -1131,7 +1179,8 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			var chk = checkR(this, o, 1, 2, Any.class, Env.class); // o = (x) | (x eo)
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len && len >= 1 && len <= 2)) return resumeError(chk, and("Integer (>= 1) (<= 2)"));
+			//if (!(chk instanceof Integer len && len >= 1 && len <= 2)) return resumeError(chk, and("Integer (>= 1) (<= 2)"));
+			var len = (int) chk;
 			return evaluate(len == 1 ? e : o.car(1), o.car);
 		}
 		public String toString() { return "%Eval"; }
@@ -1167,13 +1216,14 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			var chk = checkM(this, o, 2); // o = (test then . else)
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len && len >= 2)) return resumeError(chk, and("Integer (>= 2)"));
+			//if (!(chk instanceof Integer len && len >= 2)) return resumeError(chk, and("Integer (>= 2)"));
 			return combine(null, e, o);
 		}
 		Object combine(Resumption r, Env e, List o) {
 			if (o == null) return inert;
 			var car = o.car;
 			if (o.cdr() == null) return tco(()-> evaluate(e, car));
+			/*
 			return tco(()-> pipe(dbg(e, this, o), ()-> getTco(evaluate(e, car)), res->
 				switch (istrue(res[0])) {
 					case Suspension s-> s;
@@ -1181,6 +1231,14 @@ public class Vm {
 					case Object obj-> resumeError(obj, symbol("Boolean"));
 				}
 			));
+			/*/
+			return tco(()-> pipe(dbg(e, this, o), ()-> getTco(evaluate(e, car)), res->{
+					var istrue = istrue(res[0]);
+					if (istrue instanceof Suspension s) return s;
+					return ((boolean) istrue) ? tco(()-> evaluate(e, o.car(1))) : tco(()-> combine(null, e, o.cdr(1)));
+				}
+			));
+			//*/
 		}
 		public String toString() { return "%If"; }
 	}
@@ -1202,7 +1260,7 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			var chk = checkM(this, o, 1); // o = (form . forms)
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
+			//if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
 			return tco(()-> combine(null, e, o));
 		}
 		public Object combine(Resumption r, Env e, List o) {
@@ -1223,7 +1281,7 @@ public class Vm {
 			return tco(()-> pipe(dbg(e, this+"₂", o), ()->{
 				var chk = checkM(this, o, 2);
 				if (chk instanceof Suspension s) return s;
-				if (!(chk instanceof Integer len && len >= 2)) return resumeError(chk, and("Integer (>= 2)"));
+				//if (!(chk instanceof Integer len && len >= 2)) return resumeError(chk, and("Integer (>= 2)"));
 				var tag = getTco(evaluate(e, o.car));
 				if (tag instanceof Suspension s) return s;
 				var hdl = getTco(evaluate(e, o.car(1)));
@@ -1253,6 +1311,7 @@ public class Vm {
 	class ThrowTag extends Combinable {
 		{ arity = ge(1); }
 		public Object combine(Env e, List o) {
+			/*
 			return switch (checkM(this, o, 1)) { // o = (tag . forms)
 				case Suspension s-> s;
 				case Integer len when len >= 1-> pipe(dbg(e, this+"₂", o), ()->{
@@ -1264,6 +1323,18 @@ public class Vm {
 				});
 				case Object obj-> resumeError(obj, and("Integer (>= 1)"));
 			};
+			/*/
+			var checkM = checkM(this, o, 1); // o = (tag . forms)
+			if (checkM instanceof Suspension s) return s;
+			return pipe(dbg(e, this+"₂", o), ()->{
+					var tag = getTco(evaluate(e, o.car));
+					if (tag instanceof Suspension s) return s;
+					var val = getTco(begin.combine(e, o.cdr()));
+					if (val instanceof Suspension s) return s;
+					throw new Value(tag, val);
+				}
+			);
+			//*/
 		}
 		public String toString() { return "%ThrowTag"; }
 	}
@@ -1273,7 +1344,7 @@ public class Vm {
 		public Object combine(Resumption r, Env e, List o) {
 			var chk = checkM(this, o, 2); // o = (cln form . forms)
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len && len >= 2)) return resumeError(chk, and("Integer (>= 2)"));
+			//if (!(chk instanceof Integer len && len >= 2)) return resumeError(chk, and("Integer (>= 2)"));
 			var cln = o.car;
 			try {
 				var res = r != null ? r.resume() : getTco(begin.combine(e, o.cdr()));
@@ -1303,7 +1374,7 @@ public class Vm {
 		public Object combine(Env e, List o) {
 			var chk = checkM(this, o, 1); // o = (prp . forms)
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
+			//if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
 			var dbg = dbg(e, this, o);
 			return pipe(dbg, ()->{
 				var prp = getTco(evaluate(e, o.car));
@@ -1320,7 +1391,7 @@ public class Vm {
 			return pipe(dbg(e, this, o), ()->{
 				var chk = checkM(this, o, 2, Any.class, or(ignore, Symbol.class)); // o = (prp (or #ignore symbol) . forms)
 				if (chk instanceof Suspension s) return s;
-				if (!(chk instanceof Integer len && len >= 2)) return resumeError(chk, and("Integer (>= 2)"));
+				//if (!(chk instanceof Integer len && len >= 2)) return resumeError(chk, and("Integer (>= 2)"));
 				var hdl = lambda(e, cons(o.car(1)), o.cdr(1));
 				var prp = getTco(evaluate(e, o.car));
 				if (prp instanceof Suspension s) return s;
@@ -1335,7 +1406,7 @@ public class Vm {
 			return pipe(dbg(e, this, o), ()->{
 				var chk = checkM(this, o, 1, or(Symbol.class, List.class)); // o = (k . forms)
 				if (chk instanceof Suspension s) return s;
-				if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
+				//if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
 				var res = getTco(evaluate(e, o.car));
 				if (res instanceof Suspension s) return s;
 				return switch (res) {
@@ -1353,7 +1424,7 @@ public class Vm {
 			return pipe(dbg, ()->{
 				var chk = checkM(this, o, 2, Any.class, or(Symbol.class, List.class)); // o = (prp k . forms)
 				if (chk instanceof Suspension s) return s;
-				if (!(chk instanceof Integer len && len >= 2)) return resumeError(chk, and("Integer (>= 2)"));
+				//if (!(chk instanceof Integer len && len >= 2)) return resumeError(chk, and("Integer (>= 2)"));
 				var prp = getTco(evaluate(e, o.car));
 				if (prp instanceof Suspension s) return s;
 				var res = getTco(evaluate(e, o.car(1)));
@@ -1416,7 +1487,7 @@ public class Vm {
 		public Object combine(Resumption r, Env e, List o) {
 			var chk = checkM(this, o, 1, cons(Symbol.class)); // o = ((symbol . symbols) . forms)
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
+			//if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
 			var vars = array(o.car());
 			var vlen = vars.length;
 			var body = o.cdr();
@@ -1482,56 +1553,57 @@ public class Vm {
 			if (arity == null) arity = arity(jfun);
 			this.jfun = switch (jfun) {
 				case ArgsList al-> al;
-				case LenList ll-> (ArgsList) o-> 
+				/*
+				case LenList ll-> (ArgsList) o->
 					switch (check.apply(op, o)) {
 						case Suspension s-> s;
 						case Integer len-> ll.apply(len, o);
 						case Object chk-> resumeError(chk, symbol("Integer"));
 					};
 				case EnvArgsList eal -> eal;
-				case LenEnvList lel-> (EnvArgsList) (e, o)-> 
+				case LenEnvList lel-> (EnvArgsList) (e, o)->
 					switch (check.apply(op, o)) {
 						case Suspension s-> s;
 						case Integer len-> lel.apply(len, e, o);
 						case Object chk-> resumeError(chk, symbol("Integer"));
 					};
-				case Runnable r-> (ArgsList) o-> 
+				case Runnable r-> (ArgsList) o->
 					switch (checkN(op, o, 0)) {
 						case Suspension susp-> susp;
 						case Integer len when len == 0->{ r.run(); yield inert; }
 						case Object chk-> resumeError(chk, and("Integer (== 0)"));
 					};
-				case Supplier s-> (ArgsList) o-> 
+				case Supplier s-> (ArgsList) o->
 					switch (checkN(op, o, 0)) {
 						case Suspension susp-> susp;
 						case Integer len when len == 0-> s.get();
 						case Object chk-> resumeError(chk, and("Integer (== 0)"));
 					};
-				case Consumer c-> (ArgsList) o-> 
+				case Consumer c-> (ArgsList) o->
 					switch (checkN(op, o, 1)) {
 						case Suspension s-> s;
 						case Integer len when len == 1->{ c.accept(o.car); yield inert; }
 						case Object chk-> resumeError(chk, and("Integer (== 1)"));
 					};
-				case Function f-> (ArgsList) o-> 
+				case Function f-> (ArgsList) o->
 					switch (checkN(op, o, 1)) {
 						case Suspension s-> s;
 						case Integer len when len == 1-> f.apply(o.car);
 						case Object chk-> resumeError(chk, and("Integer (== 1)"));
 					};
-				case BiConsumer bc-> (ArgsList) o-> 
+				case BiConsumer bc-> (ArgsList) o->
 					switch (checkN(op, o, 2)) {
 						case Suspension s-> s;
 						case Integer len when len == 2->{ bc.accept(o.car, o.car(1)); yield inert; }
 						case Object chk-> resumeError(chk, and("Integer (== 2)"));
 					};
-				case BiFunction bf-> (ArgsList) o-> 
+				case BiFunction bf-> (ArgsList) o->
 					switch (checkN(op, o, 2)) {
 						case Suspension s-> s;
 						case Integer len when len == 2-> bf.apply(o.car, o.car(1));
 						case Object chk-> resumeError(chk, and("Integer (== 2)"));
 					};
-				case Field f-> (ArgsList) o-> 
+				case Field f-> (ArgsList) o->
 					switch (checkR(op, o, 1, 2)) {
 						case Suspension s-> s;
 						case Integer len when len >= 1 && len <= 2-> len == 1
@@ -1555,6 +1627,64 @@ public class Vm {
 						case Object chk-> resumeError(chk, and("Integer" + (c.isVarArgs() ? "(>="+(pc-1) : "(=="+pc) + ")"));
 					};
 				};
+				/*/
+				case LenList ll-> (ArgsList) o->{
+					var chk = check.apply(op, o);
+					return chk instanceof Suspension s ? s : ll.apply((int) chk, o);
+				};
+				case EnvArgsList eal -> eal;
+				case LenEnvList lel-> (EnvArgsList) (e, o)->{
+					var chk = check.apply(op, o);
+					return chk instanceof Suspension s ? s : lel.apply((int) chk, e, o);
+				};
+				case Runnable r-> (ArgsList) o->{
+					var chk = checkN(op, o, 0);
+					if (chk instanceof Suspension s) return s;
+					r.run(); return inert;
+				};
+				case Supplier sp-> (ArgsList) o->{
+					var chk = checkN(op, o, 0);
+					return chk instanceof Suspension s ? s : sp.get();
+				};
+				case Consumer c-> (ArgsList) o->{
+					var chk = checkN(op, o, 1);
+					if (chk instanceof Suspension s) return s;
+					c.accept(o.car); return inert;
+				};
+				case Function f-> (ArgsList) o->{
+					var chk = checkN(op, o, 1);
+					return chk instanceof Suspension s ? s : f.apply(o.car);
+				};
+				case BiConsumer bc-> (ArgsList) o->{
+					var chk = checkN(op, o, 2);
+					if (chk instanceof Suspension s) return s;
+					bc.accept(o.car, o.car(1)); return inert;
+				};
+				case BiFunction bf-> (ArgsList) o->{
+					var chk = checkN(op, o, 2);
+					if (chk instanceof Suspension s) return s;
+					return bf.apply(o.car, o.car(1));
+				};
+				case Field f-> (ArgsList) o->{
+					var chk = checkR(op, o, 1, 2);
+					if (chk instanceof Suspension s) return s;
+					return (int) chk == 1
+						? uncked(()-> f.get(o.car))
+						: uncked(()->{ f.set(o.car, o.car(1)); return inert; });
+					};
+				case Method m-> (ArgsList) o->{
+					var pc = m.getParameterCount();
+					var chk = m.isVarArgs() ? checkM(op, o, pc) : checkN(op, o, pc+1);
+					if (chk instanceof Suspension s) return s;
+					return uncked(()-> m.invoke(o.car, reorg(m, array(o.cdr()))));
+				};
+				case Constructor c-> (ArgsList) o->{
+					var pc = c.getParameterCount();
+					var chk = c.isVarArgs() ? checkM(op, o, pc-1) : checkN(op, o, pc);
+					if (chk instanceof Suspension s) return s;
+					return uncked(()-> c.newInstance(reorg(c, array(o))));
+				};
+				//*/
 				default->
 					typeError("cannot build JFun, not a {expected}: {datum}", jfun,
 						toChk(
@@ -1593,7 +1723,7 @@ public class Vm {
 						case Condition cnd: throw cnd;
 						case InnerException ie /*when name.equals("%CheckO")*/: throw ie;
 						default: return javaError("error executing: {member} with: {args}", thw, op, o, null);
-					}					
+					}
 				}
 			});
 		}
@@ -1616,10 +1746,10 @@ public class Vm {
 		public Object apply(List o) {
 			var chk = checkM("At", o, 1, Object.class);
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
+			//if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
 			Object o0 = o.car;
 			Object[] args = array(o, 1);
-			// (@new class . objects)            -> class.getConstructor(getClasses(objects)).newInstance(objects) -> constructor.newInstance(objects)
+			// (new class . objects)            -> class.getConstructor(getClasses(objects)).newInstance(objects) -> constructor.newInstance(objects)
 			// (@<name> object . objects)        -> object.getClass().getMethod(name, getClasses(objects)).invoke(object, objects) -> method.invoke(object, objects)
 			// (@getConstructor class . classes) -> class.getConstructor(classes) -> constructor
 			// (@getMethod class name . classes) -> class.getMethod(name, classes) -> method
@@ -1627,8 +1757,8 @@ public class Vm {
 			if (name.equals("new") && o0 instanceof Class c
 			&& (c.getDeclaringClass() == Vm.class || c.getCanonicalName().startsWith("Ext."))
 			&& (args.length == 0 || args[0].getClass() != Vm.class)) {
-				// (@new Error "assert error!") -> (@new Error vm "assert error!")
-				// (@new &Ext.Foo) -> (@new &Ext.Foo vm)
+				// (new Error "assert error!") -> (new Error vm "assert error!")
+				// (new &Ext.Foo) -> (new &Ext.Foo vm)
 				args = headAdd(args, Vm.this);
 			}
 			var classes = getClasses(args);
@@ -1666,7 +1796,7 @@ public class Vm {
 						+ Vm.this.toString(name, classes)
 						+ " of: {object} with: {args}", thw, symbol(name), list(args), o0
 					);
-				}					
+				}
 				//*/
 			}
 		}
@@ -1682,7 +1812,8 @@ public class Vm {
 		public Object apply(List o) {
 			var chk = checkR("Dot", o, 1, 3);
 			if (chk instanceof Suspension s) return s;
-			if (!(chk instanceof Integer len && len >=1 && len <= 3)) return resumeError(chk, and("Integer (>= 1) (<= 3)"));
+			//if (!(chk instanceof Integer len && len >=1 && len <= 3)) return resumeError(chk, and("Integer (>= 1) (<= 3)"));
+			var len = (int) chk;
 			var o0 = o.car;
 			if ("length".equals(name) && len == 1 && o0.getClass().isArray()) return getLength(o0);
 			// (.<name> object)       -> object.getclass().getField(name).get(object) -> field.get(object)
@@ -1716,7 +1847,7 @@ public class Vm {
 		@Override public final <T> T combine(Env e, List o) {
 			var chk = checkM(this, o, 1); // o = (form . forms)
 			if (chk instanceof Suspension s) return (T) s;
-			if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
+			//if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
 			return (T) new Runnable() {
 				@Override public void run() {
 					getTco(begin.combine(e, o));
@@ -1733,7 +1864,7 @@ public class Vm {
 		@Override public final <T> T combine(Env e, List o) {
 			var chk = checkM(this, o, 1, (Object) null); // o = (() . forms)
 			if (chk instanceof Suspension s) return (T) s;
-			if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
+			//if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
 			var opv = opv(e, o.car, ignore, o.cdr());
 			return (T) new Supplier() {
 				@Override public Object get() {
@@ -1751,7 +1882,7 @@ public class Vm {
 		@Override public final <T> T combine(Env e, List o) {
 			var chk = checkM(this, o, 1, list(1, Symbol.class)); // o = ((symbol) . forms)
 			if (chk instanceof Suspension s) return (T) s;
-			if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
+			//if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
 			var opv = opv(e, o.car, ignore, o.cdr());
 			return (T) new Consumer() {
 				@Override public void accept(Object t) {
@@ -1769,7 +1900,7 @@ public class Vm {
 		@Override public final <T> T combine(Env e, List o) {
 			var chk = checkM(this, o, 1, list(1, Symbol.class)); // o = ((symbol) . forms)
 			if (chk instanceof Suspension s) return (T) s;
-			if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
+			//if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
 			var opv = opv(e, o.car, ignore, o.cdr());
 			return (T) new Function() {
 				@Override public Object apply(Object t) {
@@ -1787,7 +1918,7 @@ public class Vm {
 		@Override public final <T> T combine(Env e, List o) {
 			var chk = checkM(this, o, 1, list(2, Symbol.class)); // o = ((symbol symbol) . forms)
 			if (chk instanceof Suspension s) return (T) s;
-			if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
+			//if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
 			var opv = opv(e, o.car, ignore, o.cdr());
 			return (T) new BiConsumer() {
 				@Override public void accept(Object t, Object u) {
@@ -1805,7 +1936,7 @@ public class Vm {
 		@Override public final <T> T combine(Env e, List o) {
 			var chk = checkM(this, o, 1, list(2, Symbol.class)); // o = ((symbol) . forms)
 			if (chk instanceof Suspension s) return (T) s;
-			if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
+			//if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, and("Integer (>= 1)"));
 			var opv = opv(e, o.car, ignore, o.cdr());
 			return (T) new BiFunction() {
 				@Override public Object apply(Object t, Object u) {
@@ -1846,7 +1977,7 @@ public class Vm {
 	<T> T typeError(String msg, Object datum, Object expected) { return error(msg, "type", symbol("type"), "datum", datum, "expected", expected); }
 	<T> T typeError(String msg, Object datum, Object expected, Object expr) { return error(msg, "type", symbol("type"), "datum", datum, "expected", expected, "expr", expr); }
 	<T> T notUniqueError(String msg, Object datum, Object expr) { return error(msg, "type", symbol("syntax"), "datum", datum, "expr", expr); }
-	<T> T resumeError(Object datum, Object expected) { return typeError("invalid resume value, not a {expected}: {datum}", datum, expected); }
+	//<T> T resumeError(Object datum, Object expected) { return typeError("invalid resume value, not a {expected}: {datum}", datum, expected); }
 	<T> T unboundSymbolError(Object name, Env env) { return error("unbound symbol: {symbol} in: {env}", "type", symbol("unboundSymbol"), "symbol", name, "env", env); }
 	<T> T unboundKeyError(String key, Obj obj) { return error("unbound key: {key} in: {obj}", "type", symbol("unboundKey"), "key", key, "obj", obj); }
 	<T> T unboundFieldError(String field, Object object) { return error("unbound field: {field} in: {object}", "type", symbol("unboundField"), "field", field, "object", object); }
@@ -2343,7 +2474,7 @@ public class Vm {
 				"%eval", wrap(new Eval()),
 				"%evalList", wrap(new JFun("%EvalList", list(1, 2),
 					(n, o)-> checkR(n, o, 1, 2, or(null, List.class)),
-					(l, e, o)->{ 
+					(l, e, o)->{
 						Env env = l==1 ? e : o.car(1);
 						return map("%EvalElem", car-> getTco(evaluate(env, car)), o.car());
 				} )),
@@ -2377,12 +2508,13 @@ public class Vm {
 				// Obj
 				//"%obj?", wrap(new JFun("%Obj?", (Function<Object, Boolean>) obj-> obj instanceof Obj )),
 				"%new", wrap(new JFun("%New", ge(1),
-					(n,o)->{ 
+					(n,o)->{
 						var chk = checkM(n, o, 1, Class.class);
 						if (chk instanceof Suspension s) return s;
-						if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, symbol("Integer (>= 1)"));
+						//if (!(chk instanceof Integer len && len >= 1)) return resumeError(chk, symbol("Integer (>= 1)"));
+						var len = (int) chk;
 						return !isSubclass(o.<Class>car(), Box.class, Obj.class)
-							? len 
+							? len
 							: checkM(n, o, 1,
 								or( list(1, 2, Box.class),
 									list(1, more, Obj.class,
@@ -2406,13 +2538,13 @@ public class Vm {
 				"%keys", wrap(new JFun("%Keys", 1, (n,o)-> checkN(n, o, 1, or(ObjEnv.class)), (_,o)-> o.<ObjEnv>car().keys()) ),
 				"%symbols", wrap(new JFun("%Symbols", 1, (n,o)-> checkN(n, o, 1, ObjEnv.class), (_,o)-> o.<ObjEnv>car().symbols()) ),
 				"%keywords", wrap(new JFun("%Keywords", 1, (n,o)-> checkN(n, o, 1, ObjEnv.class), (_,o)-> o.<ObjEnv>car().keywords()) ),
-				"%setValue!", wrap(new JFun("%setValue!", ge(3), (n,o)->checkM(n, o, 3, ObjEnv.class), (_,o)-> o.<ObjEnv>car().apply(o.cdr()) )),		
+				"%setValue!", wrap(new JFun("%setValue!", ge(3), (n,o)->checkM(n, o, 3, ObjEnv.class), (_,o)-> o.<ObjEnv>car().apply(o.cdr()) )),
 				// Cons
 				"%car", wrap(new JFun("%Car", list(1, 2), (n,o)-> checkR(n, o, 1, 2, Cons.class, Integer.class), (l,o)-> apply(c-> l == 1 ? c.car() : c.car(o.<Integer>car(1)), o.<Cons>car()) )),
 				"%cdr", wrap(new JFun("%Car", list(1, 2), (n,o)-> checkR(n, o, 1, 2, Cons.class, Integer.class), (l,o)-> apply(c-> l == 1 ? c.cdr() : c.cdr(o.<Integer>car(1)), o.<Cons>car()) )),
 				"%cnr", wrap(new JFun("%Cnr", 2, (n,o)-> checkN(n, o, 2, Cons.class, Integer.class), (_,o)-> o.<Cons>car().cxr(o.<Integer>car(1)) )),
 				"%csr", wrap(new JFun("%Csr", 2, (n,o)-> checkN(n, o, 2, Cons.class, or(Symbol.class, Keyword.class)), (_,o)-> o.<Cons>car().cxr(o.<Intern>car(1).name) )),
-				"%csr", wrap(new JFun("%Csr", 2, (n,o)-> checkN(n, o, 2, Cons.class, or(Symbol.class, Keyword.class, String.class)), (_,o)-> o.<Cons>car().cxr(apply(a-> a instanceof Intern i ? i.name : (String) a, o.car(1))) )),		
+				"%csr", wrap(new JFun("%Csr", 2, (n,o)-> checkN(n, o, 2, Cons.class, or(Symbol.class, Keyword.class, String.class)), (_,o)-> o.<Cons>car().cxr(apply(a-> a instanceof Intern i ? i.name : (String) a, o.car(1))) )),
 				"%cxr", wrap(new JFun("%Cxr", 2, (n,o)-> checkN(n, o, 2, Cons.class, or(Symbol.class, Keyword.class, String.class, Integer.class)), (_,o)-> at("cxr").apply(list(o.car(), apply(a-> a instanceof Intern i ? i.name : a, o.car(1)) )) )),
 				"%cadr", wrap(new JFun("%Cadr", 1, (n,o)-> checkN(n, o, 1, Cons.class), (_,o)-> o.<Cons>car().car(1) )),
 				"%cddr", wrap(new JFun("%Cddr", 1, (n,o)-> checkN(n, o, 1, Cons.class), (_,o)-> o.<Cons>car().cdr(1) )),
@@ -2420,32 +2552,34 @@ public class Vm {
 				"%setCar!", wrap(new JFun("%SetCar!",
 					list(2, 3),
 					(n,o)-> checkR(n, o, 2, 3, Cons.class),
-					(l,o)->	switch (bndRes(l == 2 ? ignore : o.car(1))) {
-						case Suspension s-> s;
-						case Integer i-> switch(i) {
+					(l,o)->{
+						var bndRes = bndRes(l == 2 ? ignore : o.car(1));
+						if (bndRes instanceof Suspension s) return s;
+						return switch((int) bndRes) {
 							case 0-> inert(o.<Cons>car().setCar(o.car(l-1)));
 							case 1-> { var v = o.car(l-1); o.<Cons>car().setCar(v); yield v; }
 							case 2-> { var cons = o.<Cons>car(); var v = cons.car; cons.setCar(o.car(l-1)); yield v; }
 							case 3-> o.<Cons>car().setCar(o.car(l-1));
-							default-> typeError("cannot set car, invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
+							case int i-> typeError("cannot set car, invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
 						};
-						case Object obj-> resumeError(obj, symbol("Integer"));
 					}
+					//*/
 				)),
 				"%setCdr!", wrap(new JFun("%SetCdr!",
 					list(2, 3),
 					(n,o)-> checkR(n, o, 2, 3, Cons.class),
-					(l,o)->	switch (bndRes(l == 2 ? ignore : o.car(1))) {
-						case Suspension s-> s;
-						case Integer i-> switch(i) {
+					(l,o)->{
+						var bndRes = bndRes(l == 2 ? ignore : o.car(1));
+						if (bndRes instanceof Suspension s) return s;
+						return switch((int) bndRes) {
 							case 0-> inert(o.<Cons>car().setCdr(o.car(l-1)));
 							case 1-> { var v = o.car(l-1); o.<Cons>car().setCdr(v); yield v; }
 							case 2-> { var cons = o.<Cons>car(); var v = cons.cdr; cons.setCdr(o.car(l-1)); yield v; }
 							case 3-> o.<Cons>car().setCdr(o.car(l-1));
-							default-> typeError("cannot set cdr, invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
+							case int i-> typeError("cannot set cdr, invalid bndRes value, not {expected}: {datum}", i, toChk(or(0, 1, 2, 3)));
 						};
-						case Object obj-> resumeError(obj, symbol("Integer"));
 					}
+					//*/
 				)),
 				"%null?", wrap(new JFun("%Null?", (Function<Object, Boolean>) obj-> obj == null)),
 				//"%!null?", wrap(new JFun("%!Null?", (Function<Object, Boolean>) obj-> obj != null)),
@@ -2557,12 +2691,12 @@ public class Vm {
 				// Check
 				"%matchType?", wrap(new JFun("%MatchType?", ge(2),
 					(n,o)-> checkM(n, o, 2,	or(null, Any.class),
-						or( null, 
+						or( null,
 							Class.class,
 							list(1, 2, Box.class, Any.class),
 							list(1, more, Class.class,
 								or(At.class, Dot.class, Symbol.class, Keyword.class, String.class), Any.class)),
-						or( null, 
+						or( null,
 							Class.class,
 							list(1, 2, Box.class, Any.class),
 							list(1, more, Class.class,

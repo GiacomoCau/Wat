@@ -31,7 +31,7 @@
 
 (def chapters 0)
 
-(close1 (w (@new PrintWriter "reference/reference.html"))
+(close1 (w (new PrintWriter "reference/reference.html"))
   (dlet ((htmlWriter w))
     (pr "<!DOCTYPE html>")
     (html
@@ -46,7 +46,7 @@
         (ol (@ 'start 0)
           (li (a (@ 'href "https://github.com/GiacomoCau/Wat?tab=readme-ov-file") (pr "Wat")))
           (doList (file files)
-            (close1 (r (@new BufferedReader (@new FileReader file)))
+            (close1 (r (new BufferedReader (new FileReader file)))
               (log file)
               (for1 (l (readLine r)) (! (null? l)) 
                 (continue? (! (startsWith l "#|!")))
@@ -73,7 +73,7 @@
 	(if (startsWith s "\x28;$nm") (@replace s "$nm" ($ "<b>" name "</b>")) s) )
 
 (doList (file files)
-  (close1 (r (@new BufferedReader (@new FileReader file)))
+  (close1 (r (new BufferedReader (new FileReader file)))
     (log file)
     (loop (set! l (readLine r)) (until? (|| (null? l) (startsWith l "#|!"))))
     (loop (until? (null? l))
@@ -82,7 +82,7 @@
       (def chapter ($ chapter# ". " (subSeq l 4)))
       (log 'chapter chapter)
       (def chapter (encode chapter))
-      (close1 (w (@new PrintWriter ($ "reference/reference" chapter# ".html") "utf-8")) 
+      (close1 (w (new PrintWriter ($ "reference/reference" chapter# ".html") "utf-8")) 
         (dlet ( (htmlDeep 0) (htmlWriter w) )
           ;(log htmlDeep 0) 
           (pr "<!DOCTYPE html>")
@@ -130,6 +130,6 @@
 
 (log chapter# 'chapters def# 'definitions)
 
-(log (@formatted "Reference ended in %tM'%1$TS\"" (@new Date (- (@currentTimeMillis System) milli))))
+(log (@formatted "Reference ended in %tM'%1$TS\"" (new Date (- (@currentTimeMillis System) milli))))
 
 #inert )

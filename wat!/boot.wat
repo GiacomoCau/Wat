@@ -268,8 +268,8 @@
   #|($nm car cdr)
    |(type function)
    |
-   |(derivation (@new vm Cons car cdr))
-   |(derivation (@new Cons car cdr))
+   |(derivation (new vm Cons car cdr))
+   |(derivation (new Cons car cdr))
    |
    |Return a cons with the given <b>car</b> and <b>cdr</b>.
    |#
@@ -4979,11 +4979,11 @@
  |  &Object[]
  |
  |Costructors
- |  (@new class . arguments)
- |  (@new class containerInstance . arguments)
+ |  (new class . arguments)
+ |  (new class containerInstance . arguments)
  |
- |  (@new &java.lang.String "abc")
- |  (@new &Wat.Vm$Cons vm 1 2)
+ |  (new &java.lang.String "abc")
+ |  (new &Wat.Vm$Cons vm 1 2)
  |
  |Fields
  |  (.fieldName object)

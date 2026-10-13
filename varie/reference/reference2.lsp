@@ -12,8 +12,8 @@
     (@substring d (let1 (b1 (1+ b1)) (if (== (@charAt d b1) #\x28) (1+ b1) b1)) b2) ))       
 
 (close
-  ( (r (@new BufferedReader (@new FileReader "lispx/src/boot.lispx")))
-    (w (@new PrintWriter "reference.html")) )
+  ( (r (new BufferedReader (new FileReader "lispx/src/boot.lispx")))
+    (w (new PrintWriter "reference.html")) )
   (def n 0)
   (def print (let1 (print print) (\ (l) #;(print l) (@println w l))))
   (print "<!DOCTYPE html>\n<html><head><title>Reference</title><style>ul { list-style-type: none; }</style></head>")
