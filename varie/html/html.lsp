@@ -1,4 +1,4 @@
-(ddef* (htmlDeep htmlWriter) 0 (@new &java.io.PrintWriter (.out System) #t))
+(ddef* (htmlDeep htmlWriter) 0 (new &java.io.PrintWriter (.out System) #t))
 
 (def pr
   (let ( (print (getMethod &java.io.PrintWriter "print" Object))

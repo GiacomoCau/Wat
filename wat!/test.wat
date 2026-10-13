@@ -309,7 +309,7 @@
 
 (assert (apply (\ (x) x) (list 2)) 2)
 
-(let1 (v (vau () #ignore))  (%assert (unwrap v) v))
+(let1 (v (vau () #ignore)) (assert (unwrap v) v))
 
 (assert (* 1 2 3 4) 24)
 (assert (*) 1)
@@ -325,7 +325,12 @@
 
 (assert (toString (reverse (list 3 2 1))) (toString (list 1 2 3)))
 
-(assert (log "logging" 1 2 3) "logging")
+(let ( (out (.out System))
+       (baos (new &java.io.ByteArrayOutputStream)) )
+  (atEnd (@setOut System out)
+    (@setOut System (new &java.io.PrintStream baos))
+    (assert (log "logging" 1 2 3) "logging")
+    (assert (@toString baos) ($ "logging 1 2 3" (@lineSeparator System)) )))
 
 (assert (&& (== 1 1) (== 4 4) (== 5 5)) #t)
 (assert (&& (== 1 1) (== 4 4) (== 5 10)) #f)

@@ -148,7 +148,7 @@ public class Utility {
 			throw new RuntimeException(e);
 		}
 	}
-	
+
     public static int system(boolean b, String ... args) throws Exception {
 		ProcessBuilder builder = new ProcessBuilder(args);
 		builder.redirectErrorStream(true);
@@ -854,5 +854,5 @@ public class Utility {
 			s.append('\n'); 
 		} while (open > close);
 		return s.toString();
-	}
+	}	
 }

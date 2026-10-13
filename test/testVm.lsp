@@ -106,7 +106,7 @@
 (%assert (%catchTagWth #_ #_ (%begin (%def x 0) (%loop (%if (%== x 10) (%throwTag #_ x)) (%def x (%+ x 1))))) 10)
 
 (%def testTco (%\ (n) (%if (%<= n 0) n (testTco (%- n 1))))) ; (prTrc 3)(testTco 5)(prTrc 0)
-(%def javaStackDeep (%\ () (.length (@getStackTrace (@new &java.lang.Throwable)))))
+(%def javaStackDeep (%\ () (.length (@getStackTrace (%new &java.lang.Throwable)))))
 (%def watStackDeep (%\ () (%takeSubcont %rootPrompt k (%pushDelimSubcont %rootPrompt k (@length k)))))
 
 (%if (doTco)
@@ -121,7 +121,6 @@
         (%def loop (%\ (lst) (%if (%null? lst) #t (%== (%car lst) key) (loop (%cdr lst)) #f)))
         (%if (%! (loop lst)) (%apply log lst)) )
       (javaStackDeep)
-      79
       (%begin (javaStackDeep))
       (%if #t (javaStackDeep))
       (%if #f #inert (javaStackDeep))

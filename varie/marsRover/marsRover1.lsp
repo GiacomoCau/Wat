@@ -39,8 +39,8 @@
     (x 0) (y 0) (i 0) ;; i: 0:Nord 1:Est 2:Sud 3:Ovest
     (set (case\
       ((x y d)
-       	(if (|| (< x mnX) (> x mxX)) (throw (@new &java.lang.IllegalStateException "illegal x!")))
-		(if (|| (< y mnY) (> y mxY)) (throw (@new &java.lang.IllegalStateException "illegal y!")))
+       	(if (|| (< x mnX) (> x mxX)) (throw (new &java.lang.IllegalStateException "illegal x!")))
+		(if (|| (< y mnY) (> y mxY)) (throw (new &java.lang.IllegalStateException "illegal y!")))
         (this :x x :y y :i (->i d)) )
       ((xi yi di s xf yf df) (set xi yi di) (cmd s) (chk xf yf df) (toString)) ))
     ((m) (case i
@@ -61,7 +61,7 @@
         (print "c: " xn " " yn " " dn ": " #f) ))
     ((l) (set! i (if (== i 0) 3 (-1+ i))))
     ((r) (set! i (if (== i 3) 0 (1+ i))))
-    ((->i d) (prog1 (def i :rhs (@indexOf "NESO" d)) (when (== i -1) (throw (@new &java.lang.IllegalStateException "illegal d!")))))
+    ((->i d) (prog1 (def i :rhs (@indexOf "NESO" d)) (when (== i -1) (throw (new &java.lang.IllegalStateException "illegal d!")))))
     ((->d i) (@charAt "NESO" i)) )) ))
 
 (def pl (newe Plateau :mxX 5 :mxY 5))

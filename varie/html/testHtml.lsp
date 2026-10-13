@@ -5,7 +5,7 @@
 
 (html (@ 'aa 1 :bb "2" "cc" #t) (body (br (pr 3))))
 
-(close1 (pw (@new &java.io.PrintWriter "prova.html"))  
+(close1 (pw (new &java.io.PrintWriter "prova.html"))  
   (dlet1 (htmlWriter pw)
     (html (@ 'aa 1 :bb "2" "cc" #t)
       (head

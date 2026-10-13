@@ -119,7 +119,7 @@
       (%if (%if (== end #null) #t (<= (%car end) (.length obj)) #t #f)
         (%apply* @copyOfRange Arrays obj start (%if (%null? end) (.length obj) (%car end)))
         (%error (%new Error "cannot copy range, out of bound!" :type 'outBounds))
-        ;(%error (@new &java.lang.RuntimeException "out of bound!"))
+        ;(%error (%new &java.lang.RuntimeException "out of bound!"))
         ))))
 
 

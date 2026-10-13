@@ -16,7 +16,7 @@
 (help 'car! "(car! cons)\n(type function)\n\n(derivation ((\ ((car)) car)) cons)\n\nReturn the contents of the address part of the register\nif decrement part of the register is #null, signals an error otherwise.")
 (help 'cadr "(cadr cons)\n(type function)\n\n(derivation ((\ ((#_ cadr . #_)) cadr)) cons)\n(derivation (car (cdr cons)))\n(derivation (@car cons 1))\n\nReturn the `car' of the `cdr' of the <cons>.")
 (help 'cdr "(cdr cons)\n(type function)\n\n(derivation ((\ ((#_ . cdr)) cdr)) cons)\n(derivation (@cdr cons))\n\nReturn the contents of the decrement part of the register.")
-(help 'cons "(cons car cdr)\n(type function)\n\n(derivation (@new vm Cons car cdr))\n(derivation (@new Cons car cdr))\n\nReturn a cons with the given <car> and <cdr>.")
+(help 'cons "(cons car cdr)\n(type function)\n\n(derivation (new vm Cons car cdr))\n(derivation (new Cons car cdr))\n\nReturn a cons with the given <car> and <cdr>.")
 (help 'cons? "(cons? object)\n(type function)\n\n(derivation (type? object Cons))\n\nReturn #true if the <object> is a cons, #false otherwise.")
 (help 'atom? "(atom? object)\n(type function)\n\n(derivation (if (cons? object) #f #t))\n\nReturn #true if the <object> is not a cons, #false otherwise.")
 (help 'list "(list . arguments)\n(type function)\n\n(derivation (wrap (vau arguments #ignore arguments)))\n\nReturn the list of evaluated <arguments>.")

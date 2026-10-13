@@ -3,8 +3,8 @@
 (def PrintWriter &java.io.PrintWriter)
 
 (close
-  ( (r (@new BufferedReader (@new FileReader "lispx/src/boot.lispx")))
-    (w (@new PrintWriter "reference.txt")) )
+  ( (r (new BufferedReader (new FileReader "lispx/src/boot.lispx")))
+    (w (new PrintWriter "reference.txt")) )
   (def n 0)
   (def print (let1 (print print) (\ (l) #;(print l) (@println w l))))
   (for (l (@readLine r)) (! (null? l))
