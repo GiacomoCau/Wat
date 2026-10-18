@@ -143,7 +143,7 @@ manuale
       ((intersect a b)
          ((rec\ (loop a) (if (null? a) () (member? (car a) b)  (cons (car a) (loop (cdr a))) (loop (cdr a)))) a) ))
     (\ now
-      (def now (optDft now (@toString (@now LocalTime))))
+      (def now (dft now (@toString (@now LocalTime))))
       (def progs (filter [_ (today? (cdr (assoc _ giorni)))] (map car giorni)))
       (let1 loop (starts (filter [_ (>= _ now)] (map car orari)))
         (ifnull? ((start . starts) starts) ()
@@ -172,7 +172,7 @@ manuale
 (let1 (now (@now LocalTime)) (log now)  (@plus now (log (1+ (@between MINUTES now (@parse LocalTime "23:59:59")))) MINUTES))
 |#
 (def\ (exec tasks . now)
-  (def now (optDft now (@now LocalTime)))
+  (def now (dft now (@now LocalTime)))
   (ifnull? ((first . rest) tasks) 
     (let1 (minuti (+ 2 (@between MINUTES now (@parse LocalTime "23:59"))))
       (log "delay" ($ minuti "'") "fino alle" (@format (@plus now minuti MINUTES) (@ofPattern DateTimeFormatter "HH:mm")) "di domani")

@@ -618,7 +618,7 @@
           ( (SimpleError
               (\ (e)
                 (let*
-                  ( (handler (optDft (some (findRestart 'r e))))
+                  ( (handler (dft (some (findRestart 'r e))))
                     (aCn (getValue handler 'associatedConditions)) )
                   (assert#t (member? e aCn))
                   (returnFrom ok) ))) )
@@ -646,7 +646,7 @@
 
   (defTest invokeRestartInteractively.1a
     (restartBind ((r1 (\ (arg1 arg2) (+ arg1 arg2)) :interactiveFunction (\ () (list 1 2))))
-      (invokeRestartInteractively (optDft (some (findRestart 'r1)))) )
+      (invokeRestartInteractively (dft (some (findRestart 'r1)))) )
     3 )
 
   (defTest invokeRestartInteractively.1b
@@ -656,7 +656,7 @@
 
   (defTest invokeRestartInteractively.1c
     (restartBind ((r1 (\ () (+ 1 2))))
-      (invokeRestartInteractively (optDft (some (findRestart 'r1)))) )
+      (invokeRestartInteractively (dft (some (findRestart 'r1)))) )
     3 )
 
   (defTest invokeRestartInteractively.2

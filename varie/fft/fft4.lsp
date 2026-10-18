@@ -1,6 +1,6 @@
 ;;; fast fourier trasform
 
-(def\ (cx r . i) (list :complex r (optDft i 0d)))
+(def\ (cx r . i) (list :complex r (dft i 0d)))
 
 (def\ (c+ (:complex rx ix) (:complex ry iy))
   (cx (+ rx ry) (+ ix iy)) )

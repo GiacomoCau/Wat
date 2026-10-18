@@ -1,7 +1,7 @@
 ;;; fast fourier trasformation
 
 (def\ (cx r . i)
-  (list :complex r (optDft i 0d)) )
+  (list :complex r (dft i 0d)) )
 
 (def\ (c+ (:complex rx ix) (:complex ry iy))
   (cx (+ rx ry) (+ ix iy)) )
