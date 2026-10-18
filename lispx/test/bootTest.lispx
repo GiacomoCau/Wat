@@ -2733,91 +2733,91 @@
         (set env y (+ y 1))))
     '(5 5)))
 
-(defSuite optDft
+(defSuite dft
 
-  (defTest optDft.1
-    (optDft '())
+  (defTest dft.1
+    (dft '())
     #null)
 
-  (defTest optDft.2
-    (optDft '() "default")
+  (defTest dft.2
+    (dft '() "default")
     "default")
 
-  (defTest optDft.3
-    (optDft (some 1))
+  (defTest dft.3
+    (dft (some 1))
     1)
 
-  (defTest optDft.4
-    (optDft (some 1) "default")
+  (defTest dft.4
+    (dft (some 1) "default")
     1)
 
-  (defTest optDft.5
+  (defTest dft.5
     (signalsError?
-     (optDft)
+     (dft)
      Error :type 'match :operands# +1))
 
-  (defTest optDft.6
+  (defTest dft.6
     (signalsError?
-     (optDft 1)
+     (dft 1)
      Error :type 'type :datum 1 :expected '(or () List)))
 
-  (defTest optDft.lazy.1
-    (optDft (some 1) (error (newSimpleError "foo")))
+  (defTest dft.lazy.1
+    (dft (some 1) (error (newSimpleError "foo")))
     1)
 
-  (defTest optDft.lazy.2
+  (defTest dft.lazy.2
     (signalsError?
-     (optDft #null (error (newSimpleError "foo")))
+     (dft #null (error (newSimpleError "foo")))
      SimpleError :type 'simple @getMessage "foo")))
 
-(defSuite optDft*
+(defSuite dft*
 
-  (defTest optDft*.1
-    (optDft* '())
+  (defTest dft*.1
+    (dft* '())
     '())
 
-  (defTest optDft*.2
-    (optDft* '() 1)
+  (defTest dft*.2
+    (dft* '() 1)
     '(1))
 
-  (defTest optDft*.3
-    (optDft* '() 1 2)
+  (defTest dft*.3
+    (dft* '() 1 2)
     '(1 2))
 
-  (defTest optDft*.4
-    (optDft* '(4) 1 2)
+  (defTest dft*.4
+    (dft* '(4) 1 2)
     '(4 2))
 
-  (defTest optDft*.5
-    (optDft* '(4 5) 1 2)
+  (defTest dft*.5
+    (dft* '(4 5) 1 2)
     '(4 5))
 
-  (defTest optDft*.6
-    (optDft* '(4 5 6) 1 2)
+  (defTest dft*.6
+    (dft* '(4 5 6) 1 2)
     '(4 5 6))
 
-  (defTest optDft*.7
-    (optDft* '(4 5 6))
+  (defTest dft*.7
+    (dft* '(4 5 6))
     '(4 5 6))
     
-  (defTest optDft*.8
-    (optDft* '(4 () 6) 1 2 3 4)
+  (defTest dft*.8
+    (dft* '(4 () 6) 1 2 3 4)
     '(4 2 6 4)) )
 
-(defSuite optDft!
+(defSuite dft!
 
-  (defTest optDft!.1
+  (defTest dft!.1
     (signalsError?
-     (optDft!)
+     (dft!)
      Error :type 'match :operands# +1))
 
-  (defTest optDft!.2
-    (optDft! (some 2))
+  (defTest dft!.2
+    (dft! (some 2))
     2)
 
-  (defTest optDft!.3
+  (defTest dft!.3
     (signalsError?
-     (optDft! #null)
+     (dft! #null)
      Error @getMessage "Option is #null")))
 
 (defSuite some

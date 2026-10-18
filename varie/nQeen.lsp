@@ -39,6 +39,6 @@
     (if (null? env-val) 8 (string->number env-val))))
 
 (def\ (run-benchmark . n)
-  (time (optDft n 1) (print (length (n-queens NQUEEN-N)) " solutions")) #inert)
+  (time (dft n 1) (print (length (n-queens NQUEEN-N)) " solutions")) #inert)
 
 (assert (length (n-queens 8)) 92)

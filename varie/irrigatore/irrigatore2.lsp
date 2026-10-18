@@ -122,7 +122,7 @@ prog stazione durata
   ((rec\ (loop a) (if (null? a) () (member? (car a) b)  (cons (car a) (loop (cdr a))) (loop (cdr a)))) a) )
 
 (def\ (today . now)
-  (def now (optDft now (@toString (@now LocalTime))))
+  (def now (dft now (@toString (@now LocalTime))))
   (def progs (filter [_ (today? (cdr (assoc _ giorni)))] (map car giorni)))
   (let1 loop (starts (filter [_ (>= _ now)] (map car orari)))
     (ifnull? ((start . starts) starts) ()
@@ -170,7 +170,7 @@ prog stazione durata
 (def tasks ("09:30" a (1 . 6) (2 . 4) b (3 . 5) (4 . 2) "10:30" c (1 . 1) "11:30" a (1 . 6) (2 . 4)))
 (def test #t)
 (def\ (exec tasks . now)
-  (def now (optDft now (@now LocalTime)))
+  (def now (dft now (@now LocalTime)))
   (ifnull? ((first . rest) tasks) 
     (let1 (minuti (1+ (@between MINUTES now (@parse LocalTime "23:59"))))
       (log "delay" ($ minuti "'") "fino alle" (@format (@plus now minuti MINUTES) (@ofPattern DateTimeFormatter "HH:mm")) "di domani")

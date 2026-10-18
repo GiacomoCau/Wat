@@ -147,7 +147,7 @@ manuale
       ((intersect a b)
          ((rec\ (loop a) (if (null? a) () (member? (car a) b)  (cons (car a) (loop (cdr a))) (loop (cdr a)))) a) ))
     (\ now
-      (def now (optDft now (@toString (@now LocalTime))))
+      (def now (dft now (@toString (@now LocalTime))))
       (def progs (filter [_ (today? (cdr (assoc _ giorni)))] (map car giorni)))
       (let1 loop (starts (filter [_ (>= _ now)] (map car orari)))
         (ifnull? ((start . starts) starts) ()

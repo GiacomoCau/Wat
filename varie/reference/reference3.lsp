@@ -11,7 +11,7 @@
     (\ (str) (method #null str)) ))
 
 (def\ (tag name . ac)
-  (def ac (optDft ac #f))
+  (def ac (dft ac #f))
   (def\ (attr b forms) (if b (cdar forms) #null)) 
   (def\ (body b forms) (if b (cdr forms) forms))
   (macro forms

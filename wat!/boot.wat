@@ -2885,7 +2885,7 @@
 (assert (caseOpt (1 2) ((a) 1) ((a b) (+ a b))) 3)
 (assert (caseOpt (1 2 3) ((a) 1) ((a b) (+ a b))) #null)
 
-(defVau (optDft opt . dft) env
+(defVau (dft opt . dft) env
   #|($nm option)
    |($nm option default)
    |(type fexpr)
@@ -2898,18 +2898,18 @@
     (whenOpt? ((dft) (eval (cons 'list dft) env)) dft) 
     opt ))
 
-(assert (optDft () 10) 10)
-(assert (optDft (2) 10) 2)
-(assert (optDft (2 3) 10) Error :type 'match :operands# -1)
-(assert (optDft ((2)) 10) (2))
+(assert (dft () 10) 10)
+(assert (dft (2) 10) 2)
+(assert (dft (2 3) 10) Error :type 'match :operands# -1)
+(assert (dft ((2)) 10) (2))
 
-(defVau (optDft* lst . dfts) env
+(defVau (dft* lst . dfts) env
   #|($nm list . defaults)
    |(type fexpr)
    |
    |(syntax defaults (default . defaults))
    |
-   |Similar to `optdft', but provides <b>default</b> for any elements of <b>list</b>.
+   |Similar to `dft', but provides <b>default</b> for any elements of <b>list</b>.
    |This is useful for implementing functions that take multiple optional arguments.
    |Each <b>default</b> is evaluated lazily, only when needed.
    |#
@@ -2924,15 +2924,15 @@
         (cons (car lst)
           (loop (cdr lst) (if (null? dfts) #null (cdr dfts)))) ))))
 
-(assert (optDft* (1 () 3) 1 2 3 4) (1 2 3 4))
+(assert (dft* (1 () 3) 1 2 3 4) (1 2 3 4))
 
-(def\ (optDft! opt)
+(def\ (dft! opt)
   #|($nm option)
    |(type function)
    |
    |Returns the contents of the <b>option</b> or signals an error if it is #null.
    |#
-  (optDft opt (error "Option is #null")) )
+  (dft opt (error "Option is #null")) )
 
 
 #|! OptValue Member Member? !Member? OptKey Assoc Member?*
@@ -2966,9 +2966,9 @@
    |Return, if found it, the tail of the list starting with <b>item</b> after apply the <b>get</b> function (defaults to 'idf'), #null otherwise.
    |The <b>key</b> function is applied to each list element before comparison (defaults to `idf').
    |#
-  (let ( (cmp (optDft (optValue :cmp keywords) ==))
-         (key (optDft (optValue :key keywords) idf))
-         (ret (optDft (optValue :get keywords) idf)) )
+  (let ( (cmp (dft (optValue :cmp keywords) ==))
+         (key (dft (optValue :key keywords) idf))
+         (ret (dft (optValue :get keywords) idf)) )
     (let1 loop (lst lst)
       (if (cons? lst)
         (if (cmp (key (car lst)) k) (ret lst)
@@ -3181,7 +3181,7 @@
    |Return the sorted <b>list</b>, getting the key with the :key function (defaults to 'idf') and up or down with key :up or :dn (defaults to :up).
    |#
   (def cmp (case (optKey (:up :dn) opts) ((#null :up) <) (:dn >=)))
-  (def key (optDft (optValue :key opts) idf))
+  (def key (dft (optValue :key opts) idf))
   (def\ (sort lst)
     (if (<= (len lst) 1) lst
       (let loop ( (left ()) (right ()) (pivot (car lst)) (rest (cdr lst)) )
@@ -3354,7 +3354,7 @@
    |Abort evaluation and return the optional <b>value</b> (which defaults to #inert) from the block named <b>blockName</b>.
    |It is an error to return from a block whose dynamic extent has ended.
    |#
-  (blockName (optDft value #inert)) )
+  (blockName (dft value #inert)) )
 
 (assert (block ciclo (def x 1) (loop (if (== x 4) (returnFrom ciclo 7)) (def x (+ x 1)))) 7)
 
@@ -3427,7 +3427,7 @@
               (check? forms (2 oo 'for ((2 3 Symbol)) )) ;loop for
                 (let ( (for (cadr forms))
                        (forms (cddr forms)) )
-                  (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (optDft incr init)) for)))
+                  (def increments (list* 'def* (map car for) (map (\((#_ init . incr)) (dft incr init)) for)))
                   (catchTag break
                     (eval (list* 'def* (map car for) (map cadr for)) env)
                     (%loop
@@ -3437,7 +3437,7 @@
               (check? forms (2 oo 'for1 (2 3 Symbol))) ;loop for1
                 (let ( ((pt init . incr) (cadr forms))
                        (forms (cddr forms)) )
-                  (def increment (list 'def pt (optDft incr init)))
+                  (def increment (list 'def pt (dft incr init)))
                   (catchTag break
                     (eval (list 'def pt init) env)
                     (%loop
@@ -4257,7 +4257,7 @@
    |The <b>attributes</b> and <b>properties</b> are currently ignored.
    |#
   ;; Attribute-specs are ignored for now, but check that they are symbols nevertheless.
-  (def superClass (findClass (optDft superClass 'Obj) env))
+  (def superClass (findClass (dft superClass 'Obj) env))
   (eval (list 'def name (%newClass name superClass)) env) )
 
 
@@ -4756,7 +4756,7 @@
    |Yield a optional <b>value</b> (which defaults to #inert).
    |#
   (takeSubcont fiberPrompt k
-    (newYieldRecord (optDft v #inert) k)))
+    (newYieldRecord (dft v #inert) k)))
 
 (def\ fiberResume (yieldRecord . v)
   #|($nm yieldRecord)
@@ -4766,7 +4766,7 @@
    |Resume a suspended fiber <b>yieldRecord</b> with an optional <b>value</b> (which defaults to #inert).
    |#
   (pushDelimSubcont fiberPrompt (yieldRecord :continuation)
-    (optDft v #inert)))
+    (dft v #inert)))
 
 (defMacro fiber forms
   #|($nm . forms)
@@ -4834,7 +4834,7 @@
    |#
   (defEnv env
     (newEnv env
-      :yield* (\ value (takeSubcont generatorPrompt k (new Generator :value (optDft value #inert) :continuation k)))
+      :yield* (\ value (takeSubcont generatorPrompt k (new Generator :value (dft value #inert) :continuation k)))
       :yield** (\ ((#: Generator generator)) (pushSubcont (generator :continuation) generator)) ))
   (eval (list '\ pt (list* 'pushPrompt 'generatorPrompt (cons '(yield*) forms))) env) )
 
@@ -4857,7 +4857,7 @@
    |Resume a generator yielded, the optional <b>value</b> or #inert will be the value returned from the yield* resumed.  
    |#
   (let1 ((#: Generator generator) (eval symbol env))
-    (eval (list 'set! symbol :rhs (list 'pushDelimSubcont 'generatorPrompt (list generator :continuation) (list 'optDft value #inert))) env) ))
+    (eval (list 'set! symbol :rhs (list 'pushDelimSubcont 'generatorPrompt (list generator :continuation) (list 'dft value #inert))) env) ))
 
 (let1 (t 0)
   (defVau (+= plc rval) env (def rval (eval rval env)) (env :set! plc (+ (env plc) rval)))

@@ -109,7 +109,7 @@ orari
   ((rec\ (loop a) (if (null? a) () (member? (car a) b)  (cons (car a) (loop (cdr a))) (loop (cdr a)))) a) )
 
 (def\ (today . now)
-  (def now (optDft now (@toString (@now LocalTime))))
+  (def now (dft now (@toString (@now LocalTime))))
   (def prgs (filter [_ (today? (giorni _))] (@symbols giorni)))
   (let1 loop (starts (filter [_ (>= _ now)] (@keys orari)))
     (ifnull? ((start . starts) starts) ()

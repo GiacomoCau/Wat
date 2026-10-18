@@ -10,7 +10,7 @@
    |
    |$(fn (object &key stream))
    |#
-  (%write object (optDft (optValue :stream keywords) (dget *standard-output*))))
+  (%write object (dft (optValue :stream keywords) (dget *standard-output*))))
 
 (def\ write-to-string (object)
   #|Create a string consisting of the printed representation of object.

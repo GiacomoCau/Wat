@@ -43,10 +43,10 @@
   #|Ensure that the following output appears on a new line by itself.
    |The optional STREAM? defaults to `*standard-output*'.
    |#
-  (%fresh-line (optDft stream? (dget *standard-output*))))
+  (%fresh-line (dft stream? (dget *standard-output*))))
 
 (def\ force-output stream?
   #|Initiate the emptying of any internal buffers but don't wait for them to finish.
    |The optional STREAM? defaults to `*standard-output*'.
    |#
-  (%force-output (optDft stream? (dget *standard-output*))))
+  (%force-output (dft stream? (dget *standard-output*))))
