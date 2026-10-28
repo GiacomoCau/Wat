@@ -2410,7 +2410,7 @@
       f* )))
 
 
-#|! Bind Bind? IfBind? CaseVau DefCaseVau Case\ DefCase\ Match Cond
+#|! Bind Bind? IfBind? CaseVau DefCaseVau CaseMacro DefCaseMacro Case\ DefCase\ Match Cond
  |#
 
 (def bind
@@ -2726,7 +2726,7 @@
  |    ( (_ x . d)            'x) ))
  |#
 
-(defVau (%` x) env
+#;(defVau (%` x) env
   #|(let ((a 1) (b 2) (c '(3 4))) `(,@c ,a (,a) (,@c) b ,@c)) -> (3 4 1 (1) (3 4) b 3 4)
    |(let1 (x '(a b c)) ``(,,x ,@,x ,,@x ,@,@x)) -> `(,(a b c) ,@(a b c) ,a ,b ,c ,@a ,@b ,@c)
    |``(,,@'() ,@,@()) -> `()
@@ -2744,6 +2744,23 @@
     ( ((x . y) . d)           (cons (apply** qq x d) (apply** qq y d)) )
     ( (x . d)                 x) )
   (qq x))
+
+(defCaseMacro %`
+  #|(let ((a 1) (b 2) (c '(3 4))) `(,@c ,a (,a) (,@c) b ,@c)) -> (3 4 1 (1) (3 4) b 3 4)
+   |(let1 (x '(a b c)) ``(,,x ,@,x ,,@x ,@,@x)) -> `(,(a b c) ,@(a b c) ,a ,b ,c ,@a ,@b ,@c)
+   |``(,,@'() ,@,@()) -> `()
+   |``(,,@'() ,@,@(list)) -> `()
+   |`````(a ,(b c ,@,,@,@'(a b c))) -> ````(a ,(b c ,@,,@a ,@,,@b ,@,,@c))
+   |`````(a ,(b c ,@,,@,@(list 'a 'b 'c))) -> ````(a ,(b c ,@,,@a ,@,,@b ,@,,@c))
+   |#
+  ( (('%, x))               x)
+  ( ((('%,@ x) . y))        (list 'append x (list '%` y)))
+  ( (('%` x) . d)           (list (\ (z) (cons '%` (list z))) (list* '%` x #f d)))
+  ( (('%, x) #f . d)        (list '%, (list* '%` x d)))
+  ( ((('%,  x) . y) #f . d) (list 'append (list 'map (\ (z) (list '%,  z)) (list* '%` (list x) d)) (list* '%` y #f d)))
+  ( ((('%,@ x) . y) #f . d) (list 'append (list 'map (\ (z) (list '%,@ z)) (list* '%` (list x) d)) (list* '%` y #f d)))
+  ( ((x . y) . d)           (list 'cons (list* '%` x d) (list* '%` y d)))
+  ( (x . d)                 (if (|| (symbol? x) (cons? x)) (list '%' x) x)) )
 
 (assert (let ((a 1) (b 2) (c '(3 4))) `(,@c ,a (,a) (,@c) b ,@c)) '(3 4 1 (1) (3 4) b 3 4))
 (assert (let1 (x '(a b c)) ``(,,x ,@,x ,,@x ,@,@x)) '`(,(a b c) ,@(a b c) ,a ,b ,c ,@a ,@b ,@c))
@@ -2902,6 +2919,17 @@
 (assert (dft (2) 10) 2)
 (assert (dft (2 3) 10) Error :type 'match :operands# -1)
 (assert (dft ((2)) 10) (2))
+
+(defVau (dft' opt . (#: (or #null (1 Any)) dft)) env
+  (ifnull? (opt (eval opt env))
+    (ifnull? ((dft) (eval (cons 'list dft) env)) #null dft) 
+    opt ))
+
+(assert (dft' () 10) 10)
+(assert (dft' 2 10) 2)
+(assert (dft' (2) 10) (2))
+(assert (dft' (2 3) 10) (2 3))
+(assert (dft' ((2)) 10) ((2)))
 
 (defVau (dft* lst . dfts) env
   #|($nm list . defaults)

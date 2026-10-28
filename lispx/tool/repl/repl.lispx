@@ -20,10 +20,14 @@
       (set repl:env (invokeDebugger- invokeDebugger) (list invokeDebugger invokeDebugger+))
       (log "repl:run started!")
       (repl:run) )
-    (else
+    (bound? 'invokeDebugger- repl:env)
+    (then
       (set repl:env invokeDebugger invokeDebugger-)
       (log "repl:run ended!")
-      (invokeRestart 'replEnd) )))
+      (invokeRestart 'replEnd) )
+    (else
+      (log "repl:run not started!")
+      #inert )))
 
 (def debug
   #|Activate and deactivate the debug.
@@ -36,10 +40,15 @@
             (set repl:env (invokeDebugger- invokeDebugger) (list invokeDebugger invokeDebugger+))
             (log "repl:run started!")
             (repl:run) )
-          (else
+          (bound? 'invokeDebugger- repl:env)
+          (then
             (set repl:env invokeDebugger invokeDebugger-)
+            (remove! 'invokeDebugger- repl:env)
             (log "repl:run ended!")
-            (invokeRestart 'replEnd) ))))))
+            (invokeRestart 'replEnd) )
+          (else
+            (log "repl:run not started!")
+            #inert ))))))
 
 (def\ repl:run ()
   #|Run a REPL.
