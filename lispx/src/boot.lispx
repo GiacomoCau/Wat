@@ -2290,7 +2290,7 @@
       f* )))
 
 
-#|! Bind Bind? IfBind? CaseVau DefCaseVau Case\ DefCase\ Match Cond
+#|! Bind Bind? IfBind? CaseVau DefCaseVau CaseMacro DefCaseMacro Case\ DefCase\ Match Cond
  |#
 
 (def bind
@@ -2571,7 +2571,7 @@
  |    ( (_ x . d)            'x) ))
  |#
 
-(defVau (%` x) env
+#;(defVau (%` x) env
   #|(let ((a 1) (b 2) (c '(3 4))) `(,@c ,a (,a) (,@c) b ,@c)) -> (3 4 1 (1) (3 4) b 3 4)
    |(let1 (x '(a b c)) ``(,,x ,@,x ,,@x ,@,@x)) -> `(,(a b c) ,@(a b c) ,a ,b ,c ,@a ,@b ,@c)
    |``(,,@'() ,@,@()) -> `()
@@ -2589,6 +2589,23 @@
     ( ((x . y) . d)           (cons (apply** qq x d) (apply** qq y d)) )
     ( (x . d)                 x) )
   (qq x))
+
+(defCaseMacro %`
+  #|(let ((a 1) (b 2) (c '(3 4))) `(,@c ,a (,a) (,@c) b ,@c)) -> (3 4 1 (1) (3 4) b 3 4)
+   |(let1 (x '(a b c)) ``(,,x ,@,x ,,@x ,@,@x)) -> `(,(a b c) ,@(a b c) ,a ,b ,c ,@a ,@b ,@c)
+   |``(,,@'() ,@,@()) -> `()
+   |``(,,@'() ,@,@(list)) -> `()
+   |`````(a ,(b c ,@,,@,@'(a b c))) -> ````(a ,(b c ,@,,@a ,@,,@b ,@,,@c))
+   |`````(a ,(b c ,@,,@,@(list 'a 'b 'c))) -> ````(a ,(b c ,@,,@a ,@,,@b ,@,,@c))
+   |#
+  ( (('%, x))               x)
+  ( ((('%,@ x) . y))        (list 'append x (list '%` y)))
+  ( (('%` x) . d)           (list (\ (z) (cons '%` (list z))) (list* '%` x #f d)))
+  ( (('%, x) #f . d)        (list '%, (list* '%` x d)))
+  ( ((('%,  x) . y) #f . d) (list 'append (list 'map (\ (z) (list '%,  z)) (list* '%` (list x) d)) (list* '%` y #f d)))
+  ( ((('%,@ x) . y) #f . d) (list 'append (list 'map (\ (z) (list '%,@ z)) (list* '%` (list x) d)) (list* '%` y #f d)))
+  ( ((x . y) . d)           (list 'cons (list* '%` x d) (list* '%` y d)))
+  ( (x . d)                 (if (|| (symbol? x) (cons? x)) (list '%' x) x)) )
 
 
 #|! Options
