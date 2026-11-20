@@ -111,6 +111,7 @@
 
 (%if (doTco)
   (%begin
+    #;(log (watStackDeep) (javaStackDeep))
     (%assert (%== (javaStackDeep) (%begin (javaStackDeep))) #t)
     (%assert (%== (javaStackDeep) (%if #t (javaStackDeep))) #t)
     (%assert (%== (javaStackDeep) (%if #f #inert (javaStackDeep))) #t)

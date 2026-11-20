@@ -135,8 +135,21 @@ public class Prova {
 		//out.println(datum.array);
 		
 		//out.println(Duration.between(LocalDate.now(), LocalDate.now()).toDays());
-		out.println(ChronoUnit.DAYS.between(LocalDate.now(), LocalDate.now()));
-		out.println(ChronoUnit.MINUTES.between(LocalTime.now(), LocalTime.now()));		
+		//out.println(ChronoUnit.DAYS.between(LocalDate.now(), LocalDate.now()));
+		//out.println(ChronoUnit.MINUTES.between(LocalTime.now(), LocalTime.now()));
+		
+		out.println("\\");
+		out.println("\"");
+		out.println("\\\"");
+		out.println("\"\\");
+		out.println("\\\\");
+		out.println();
+		out.println('"' + Utility.toSource("\\") + '"');
+		out.println('"' + Utility.toSource("\"") + '"');
+		out.println('"' + Utility.toSource("\\\"") + '"');
+		out.println('"' + Utility.toSource("\"\\") + '"');
+		out.println('"' + Utility.toSource("\\\\") + '"');
+		
 	}
 	
 	public static void functions() {

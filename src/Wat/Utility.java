@@ -15,6 +15,7 @@ import static java.util.Arrays.copyOfRange;
 import static java.util.Arrays.stream;
 import static java.util.Comparator.comparing;
 import static java.util.Map.of;
+import static java.util.regex.Matcher.quoteReplacement;
 import static java.util.regex.Pattern.compile;
 
 import java.io.BufferedReader;
@@ -171,11 +172,11 @@ public class Utility {
 	}
 	
 	private static Pattern pat1 = compile("\\\\[\"nrtbf\\\\]");
-	private static Map<String,String> map1 = of("\\\"", "\"", "\\n","\n", "\\r","\r", "\\t","\t", "\\b","\b", "\\f","\f", "\\\\", "\\\\\\\\");
+	private static Map<String,String> map1 = of("\\\"", "\"", "\\n","\n", "\\r","\r", "\\t","\t", "\\b","\b", "\\f","\f", "\\\\", "\\");
 	private static Pattern xEscape = Pattern.compile("\\\\x([0-9a-bA-b]{1,4});");
 	
 	public static String toString(String s) {
-		s = pat1.matcher(s).replaceAll(mr-> map1.get(mr.group()));
+		s = pat1.matcher(s).replaceAll(mr-> quoteReplacement(map1.get(mr.group())));
 		var m = xEscape.matcher(s);
 		if (!m.find()) return s;
 		var sb = new StringBuffer();
@@ -184,11 +185,11 @@ public class Utility {
 	}
 	
 	private static Pattern pat2 = compile("[\"\n\r\t\b\f\\\\]");
-	private static Map<String,String> map2 = of("\"","\"", "\n","n", "\r","r", "\t","t", "\b","b", "\f","f", "\\","");
+	private static Map<String,String> map2 = of("\"","\\\"", "\n","\\n", "\r","\\r", "\t","\\t", "\b","\\b", "\f","\\f", "\\","\\\\");
 	private static Pattern isoControl = Pattern.compile("[\\x00-\\x1f\\x7f-\\x9f]");
 	
 	public static String toSource(String s) {
-		s = pat2.matcher(s).replaceAll(mr-> "\\\\" + map2.get(mr.group()));
+		s = pat2.matcher(s).replaceAll(mr-> quoteReplacement(map2.get(mr.group())));
 		var m = isoControl.matcher(s);
 		if (!m.find()) return s;
 		var sb = new StringBuffer();

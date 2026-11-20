@@ -12,19 +12,18 @@ PARSER_BEGIN(Parser)
 
 package List;
 
-import static List.Parser.datum.at;
-import static List.Parser.datum.dot;
-import static List.Parser.datum.eof;
-import static List.Parser.datum.skip;
-import static List.Parser.datum.string;
 import static Wat.Utility.$;
 import static Wat.Utility.classForName;
+import static java.lang.Double.parseDouble;
 import static java.lang.Integer.parseInt;
+import static java.lang.Long.parseLong;
 import static java.lang.System.in;
 import static java.lang.System.out;
 
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -180,6 +179,7 @@ TOKEN:	// reserved words
 |	< Symbol1: "#s" ["#", "," , "'" , "`" , "\u00b4" , "\"" , "|"] >
 |	< # hex: ["0"-"9", "a"-"f", "A"-"f"] >
 |   < Char: "#\\" ( [ "\u0000" - "\uffff" ] | "x" <hex> ( <hex> ( <hex> ( <hex> )? )? )? ) >
+| 	< Invalid: "#" (~["|", ")", "(", " ", "\t" , "\r", "\n"])+ >  // garantisce che #t1 non sia visto come #t seguito da 1 e dia un errore
 }
 
 TOKEN:	// literals
@@ -196,8 +196,9 @@ TOKEN:	// literals
 |	< # exp: ["e","E"] <Int> >
 //|	< isoCtrl: ["\u0000"-"\u001f", "\u007f"-"\u009f"] >
 //|	< String: "\"" ("\\" ["\\","\"","n","r","f","b","t"] | ~["\\","\"","\n","\r","\f","\b","\t"])* "\"" >
-|	< String: "\"" ( "\\\\" | "\\\"" | ~["\"" /*, "\\"*/] )* "\"" >
-|	< DSym:	"\\|" ( "\\\\" | "\\|" | ~["|" /*, "\\", "\u0000"-"\u001f", "\u007f"-"\u009f"*/] )+ "|" >
+|	< String: "\"" ( "\\\\" | "\\\"" | ~["\""] )* "\"" >
+//|	< DlmSym:	"\\|" ( "\\\\" | "\\|" | ~["|" , "\\", "\u0000"-"\u001f", "\u007f"-"\u009f"] )+ "|" >
+|	< DlmSym:	"\\|" ( "\\\\" | "\\|" | ~["|"] )+ "|" >
 |	< Binary: "1" ( ("_")? ("0" | "1")+ )* ( "b" | "B") >
 }
 
@@ -240,23 +241,23 @@ Object Elt(): {
 	|	t=<Ignore>   { return t.image; }    
 	|	t=<SheColon> { return t.image; }    
 	|	t=<Symbol1>  { return t.image.substring(2); }    
-	|	t=<Char>     { return t.image.length() == 3 ? t.image.charAt(2) : (char) parseInt(t.image.substring(3),16); }    
-	|	t=<BDecimal> { return new java.math.BigDecimal(t.image.substring(0,t.image.length()-2).replaceAll("_","")); }
-	|	t=<Double>   { return java.lang.Double.parseDouble(t.image.replaceAll("_","")); }
-	|	t=<BInteger> { return new java.math.BigInteger(t.image.substring(0,t.image.length()-2).replaceAll("_","")); }
-	|	t=<Long>     { return java.lang.Long.parseLong(t.image.substring(0,t.image.length()-1).replaceAll("_","")); }
-	|	t=<Integer>  { return java.lang.Integer.parseInt(t.image.replaceAll("_","")); }
-	|	t=<Binary>   { return java.lang.Integer.parseInt(t.image.substring(0,t.image.length()-1).replaceAll("_",""), 2); }
-	|	t=<String>   { return $(datum.string, toStringTokenImage(t.image.replaceAll("\\\\\\\\", "\\\\"))); }
-	|	t=<DSym>     { return t.image.substring(2,t.image.length()-1).replaceAll("\\\\\\|", "|").replaceAll("\\\\\\\\", "\\\\"); }
+	|	t=<Char>     { return t.image.length() == 3 ? t.image.charAt(2) : (char) parseInt(t.image.substring(3), 16); }    
+	|	t=<BDecimal> { return new BigDecimal(t.image.substring(0, t.image.length()-2).replaceAll("_", "")); }
+	|	t=<Double>   { return parseDouble(t.image.replaceAll("_", "")); }
+	|	t=<BInteger> { return new BigInteger(t.image.substring(0, t.image.length()-2).replaceAll("_", "")); }
+	|	t=<Long>     { return parseLong(t.image.substring(0, t.image.length()-1).replaceAll("_", "")); }
+	|	t=<Integer>  { return parseInt(t.image.replaceAll("_", "")); }
+	|	t=<Binary>   { return parseInt(t.image.substring(0, t.image.length()-1).replaceAll("_", ""), 2); }
+	|	t=<String>   { return $(datum.string, toStringTokenImage(t.image)); }
+	|	t=<DlmSym>   { return t.image.substring(2, t.image.length()-1).replaceAll("\\\\\\|", "|").replaceAll("\\\\\\\\", "\\\\"); }
 	|	t=<Prim>     { return classForName(t.image.substring(1)); }	
 	|	t=<Cls>      { return classForName(t.image.substring(1)); }
-//	|	t=<Cls>      { try { return classForName(t.image.substring(1)); } catch (RuntimeException re) { return t.image.replaceAll("\\\\\\\\", "\\\\"); } }
+//	|	t=<Cls>      { try { return classForName(t.image.substring(1)); } catch (RuntimeException re) { return t.image; } }
 	|	t=<Dot>      { return $(datum.dot, t.image.substring(1)); }
 	|	t=<At>       { return $(datum.at, t.image.substring(1)); }
-	|	t=<Mac> o=Elt() { return $("%"+t, o); }
-	|	t=<Kwd>      { return t.image.replaceAll("\\\\\\\\", "\\\\"); }
-	|	t=<Sym>      { return t.image.replaceAll("\\\\\\\\", "\\\\"); }  	
+	|	t=<Mac> o=Elt() { return $("%" + t, o); }
+	|	t=<Kwd>      { return t.image; }
+	|	t=<Sym>      { return t.image; }  	
 //	|	t=<Sym> ["::" t2=<Sym>] { return t2 == null ? t.image : $("%eval", $("%'", t2.image), t.image); }  	
 	|	"#(" ( o=Elt() { if (o != datum.skip) l.add(o); } )* ")" { return $(datum.array, l.toArray()); }
 	|	"(" ( o=Elt() { if (o != datum.skip) l.add(o); } )+ ")" { return l.toArray(); }
